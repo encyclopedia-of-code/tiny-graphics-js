@@ -4,14 +4,14 @@
          window.classes = {}                    
          </script>          
                                       <!--  Javascript "include" files.  Any code in them gets executed as part of the page loading: //-->
-<script src=   "tiny-graphics.js" ></script>
-<script src=          "common.js" ></script>
-<script src= "collisions-demo.js" ></script>
-<script src=   "obj-file-demo.js" ></script>
-<script src="many-lights-demo.js" ></script>
-<script src=     "axes-viewer.js" ></script>
-<script src=       "text-demo.js" ></script>
-<script src=      "main-scene.js" ></script></head>
+<script src=     "tiny-graphics.js" ></script>
+<script src=            "common.js" ></script>
+<script src="transforms-sandbox.js" ></script>
+<script src=   "collisions-demo.js" ></script>
+<script src=     "obj-file-demo.js" ></script>
+<script src=  "many-lights-demo.js" ></script>
+<script src=       "axes-viewer.js" ></script>
+<script src=         "text-demo.js" ></script></head>
 <body style="background: DarkGray">       <!-- Begin typing your web page here. //-->
 
                               <!-- The following code embeds a WebGL canvas panel widget with certain scenes and their controls. //-->
@@ -24,14 +24,18 @@
                   "Axes_Viewer_Test_Scene"
                  //  "Text_Demo"
 
-                  ]
+                  ];
+
+import test from './modules-test.mjs';
+test();
+                 
   new Canvas_Widget( "main-canvas", scenes );             // Use the Canvas_Widget class to display the WebGL demo.  Pass in
                                                           // the name of the HTML element we are to replace with the widget.
 </script>
                              <!-- The following code embeds a code navigator widget with links to classes. //-->
-<div id="main-code" class="code-widget"></div>
+<!-- <div id="main-code" class="code-widget"></div>
 <script> "use strict"
-  new Code_Widget( "main-code", "Shadow_Mapping_Test" );
-</script>
+  new Code_Widget( "main-code", "Axes_Viewer_Test_Scene" );
+</script> -->
 
 </body></html>
