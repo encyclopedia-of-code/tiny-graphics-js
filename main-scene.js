@@ -75,3 +75,56 @@ class Shadow_Mapping_Test extends Scene_Component
         this.shapes.box_2.draw( graphics_state, this.cube_2, this.materials.twice );
       }
   }
+  
+window.Texture_Scroll_X = window.classes.Texture_Scroll_X =
+class Texture_Scroll_X extends Phong_Shader
+{ fragment_glsl_code()           // ********* FRAGMENT SHADER ********* 
+    {
+      // TODO:  Modify the shader below (right now it's just the same fragment shader as Phong_Shader) for requirement #6.
+      return `
+        uniform sampler2D texture;
+        void main()
+        { if( GOURAUD || COLOR_NORMALS )    // Do smooth "Phong" shading unless options like "Gouraud mode" are wanted instead.
+          { gl_FragColor = VERTEX_COLOR;    // Otherwise, we already have final colors to smear (interpolate) across vertices.            
+            return;
+          }                                 // If we get this far, calculate Smooth "Phong" Shading as opposed to Gouraud Shading.
+                                            // Phong shading is not to be confused with the Phong Reflection Model.
+          vec4 tex_color = texture2D( texture, f_tex_coord + vec2( 2. * mod( animation_time, 1. ), 0 ) );
+                                                                                      // Compute an initial (ambient) color:
+          if( USE_TEXTURE ) gl_FragColor = vec4( ( tex_color.xyz + shapeColor.xyz ) * ambient, shapeColor.w * tex_color.w ); 
+          else gl_FragColor = vec4( shapeColor.xyz * ambient, shapeColor.w );
+          gl_FragColor.xyz += phong_model_lights( N );                            // Compute the final color with contributions from lights.
+        }`;
+    }
+}
+
+  
+window.Texture_Rotate = window.classes.Texture_Rotate =
+class Texture_Rotate extends Phong_Shader
+{ fragment_glsl_code()           // ********* FRAGMENT SHADER ********* 
+    {
+      // TODO:  Modify the shader below (right now it's just the same fragment shader as Phong_Shader) for requirement #7.
+      return `
+        uniform sampler2D texture;
+        void main()
+        { if( GOURAUD || COLOR_NORMALS )    // Do smooth "Phong" shading unless options like "Gouraud mode" are wanted instead.
+          { gl_FragColor = VERTEX_COLOR;    // Otherwise, we already have final colors to smear (interpolate) across vertices.            
+            return;
+          }
+
+          float t = mod( animation_time, 4.) * 2. * 3.14159265359 * 15. / 60.;
+          mat4 r = mat4( cos( t ), sin( t ), 0, 0,
+                        -sin( t ), cos( t ), 0, 0,
+                        0, 0, 1, 0,
+                        0, 0, 0, 1 );
+
+                                            // If we get this far, calculate Smooth "Phong" Shading as opposed to Gouraud Shading.
+                                            // Phong shading is not to be confused with the Phong Reflection Model.
+          vec4 tex_color = texture2D( texture, ( r * vec4( f_tex_coord - vec2(.5,.5), 0, 1 ) ).xy + vec2(.5,.5) ); 
+                                                                                      // Compute an initial (ambient) color:
+          if( USE_TEXTURE ) gl_FragColor = vec4( ( tex_color.xyz + shapeColor.xyz ) * ambient, shapeColor.w * tex_color.w ); 
+          else gl_FragColor = vec4( shapeColor.xyz * ambient, shapeColor.w );
+          gl_FragColor.xyz += phong_model_lights( N );                            // Compute the final color with contributions from lights.
+        }`;
+    }
+}
