@@ -4,6 +4,14 @@
          window.classes = {}                    
          </script>          
                                       <!--  Javascript "include" files.  Any code in them gets executed as part of the page loading: //-->
+<script src=     "tiny-graphics.js" ></script>
+<script src=            "common.js" ></script>
+<script src="transforms-sandbox.js" ></script>
+<script src=   "collisions-demo.js" ></script>
+<script src=     "obj-file-demo.js" ></script>
+<script src=  "many-lights-demo.js" ></script>
+<script src=       "axes-viewer.js" ></script>
+<script src=         "text-demo.js" ></script></head>
 <body style="background: DarkGray">       <!-- Begin typing your web page here. //-->
 
 
@@ -20,6 +28,7 @@
 <script> "use strict"     // ********************* THE ENTRY POINT OF YOUR WHOLE PROGRAM STARTS HERE ********************* 
                                            // Use this code to embed a widget into any web page.  The widget inclues a 3D WebGL area
                                            // (an HTML canvas) and various panels of controls.
+  const scenes = [ "Axes_Viewer_Test_Scene" ]
   new Canvas_Widget( "main-canvas", scenes );             // Use the Canvas_Widget class to display the WebGL demo.  Pass in
                                                           // the name of the HTML element we are to replace with the widget.
 </script> -->
@@ -29,5 +38,9 @@
 <<<<<<< HEAD
   new Code_Widget( "main-code", "Shadow_Mapping_Test" );
 </script> -->
+=======
+  new Code_Widget( "main-code", "Axes_Viewer_Test_Scene" );
+</script>
+>>>>>>> master
 
 </body></html>
