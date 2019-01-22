@@ -1,46 +1,28 @@
 <!-- Graphics Example Code.  index.html - The web page document containing the canvas (drawing surface), that launches your javascript files. //-->
-<!DOCTYPE html> <html> <head> <meta charset="UTF-8"/> <link rel="icon" href="assets/fav.ico">
-<script> window.tiny_graphics = {};             // Store all our JavaScipt code inside of classes here.
-         window.classes = {}                    
-         </script>          
-                                      <!--  Javascript "include" files.  Any code in them gets executed as part of the page loading: //-->
-<script src=     "tiny-graphics.js" ></script>
-<script src=            "common.js" ></script>
-<script src="transforms-sandbox.js" ></script>
-<script src=   "collisions-demo.js" ></script>
-<script src=     "obj-file-demo.js" ></script>
-<script src=  "many-lights-demo.js" ></script>
-<script src=       "axes-viewer.js" ></script>
-<script src=         "text-demo.js" ></script></head>
+<!DOCTYPE html> <html> <head> <meta charset="UTF-8"/> <link rel="icon" href="assets/fav.ico"> </head>
 <body style="background: DarkGray">       <!-- Begin typing your web page here. //-->
 
 
 
-<div id="main-code" class="code-widget"></div>
-<script type=module>
-   import * as classes from './main-scene.js';
-   new Code_Widget( "main-code", "Shadow_Mapping_Test" );
-   new classes.Test();
+              <!-- The following code embeds a WebGL canvas widget panel, with certain scenes and their panels of controls. //-->
+<div id="main-canvas" class="canvas-widget"></div>
+<script type=module>      // ********************* THE ENTRY POINT OF YOUR WHOLE PROGRAM STARTS HERE ********************* 
+  const element_to_replace = "main-canvas";       // Indicate which element on the page you want the Canvas_Widget to replace with a 3D WebGL area.
+  const scenes = [ "Axes_Viewer_Test_Scene" ];    // Indicate the scenes you wish to load and display.
+  import * as module from './axes-viewer.js';     // Inicate the file that defines that scene.
+  Object.assign( window, module );                               // Store these classes in global scope so we can use them anywhere.
+  window.classes = Object.assign( {}, window.classes, module );  // Also copy them to window.classes so we can list them all out anytime.
+  new Canvas_Widget( element_to_replace, scenes );         // The Canvas_Widget class displays a WebGL demo containing the scene(s) you list.
 </script>
 
-                              <!-- The following code embeds a WebGL canvas panel widget with certain scenes and their controls. //-->
-<!-- <div id="main-canvas" class="canvas-widget"></div>
-<script> "use strict"     // ********************* THE ENTRY POINT OF YOUR WHOLE PROGRAM STARTS HERE ********************* 
-                                           // Use this code to embed a widget into any web page.  The widget inclues a 3D WebGL area
-                                           // (an HTML canvas) and various panels of controls.
-  const scenes = [ "Axes_Viewer_Test_Scene" ]
-  new Canvas_Widget( "main-canvas", scenes );             // Use the Canvas_Widget class to display the WebGL demo.  Pass in
-                                                          // the name of the HTML element we are to replace with the widget.
-</script> -->
                              <!-- The following code embeds a code navigator widget with links to classes. //-->
-<!-- <div id="main-code" class="code-widget"></div>
-<script> "use strict"
-<<<<<<< HEAD
-  new Code_Widget( "main-code", "Shadow_Mapping_Test" );
-</script> -->
-=======
-  new Code_Widget( "main-code", "Axes_Viewer_Test_Scene" );
+<div id="main-code" class="code-widget"></div>
+<script type=module>
+    const element_to_replace = "main-code";   // Indicate which element on the page you want the Code_Widget to replace with a code readout.
+    import * as module from './axes-viewer.js';
+    Object.assign( window, module );                               // Store these classes in global scope so we can use them anywhere.
+    window.classes = Object.assign( {}, window.classes, module );  // Also copy them to window.classes so we can list them all out anytime.
+    new Code_Widget( "main-code", "Axes_Viewer_Test_Scene" );      // The Code_Widget displays a code navigator relative to the passed-in class.
 </script>
->>>>>>> master
 
 </body></html>

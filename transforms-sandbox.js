@@ -1,5 +1,8 @@
-window.Tutorial_Animation = window.classes.Tutorial_Animation =
-class Tutorial_Animation extends Scene_Component    // This Scene_Component can be added to a display canvas.  This particular one
+import * as classes from './common.js';
+Object.assign( window, classes );                                // Store these classes in global scope so we can use them anywhere.
+window.classes = Object.assign( {}, window.classes, classes );   // Also copy them to window.classes so we can list them all out anytime.
+
+export class Tutorial_Animation extends Scene_Component    // This Scene_Component can be added to a display canvas.  This particular one
   {                                                 // sets up the machinery to draw a simple scene demonstrating a few concepts.
                                                     // Scroll down to the display() method at the bottom to see where the shapes are drawn.
     constructor( context, control_box )             // The scene begins by requesting the camera, shapes, and materials it will need.
@@ -122,8 +125,7 @@ class Tutorial_Animation extends Scene_Component    // This Scene_Component can 
       }
   }
 
-window.Transforms_Sandbox = window.classes.Transforms_Sandbox =
-class Transforms_Sandbox extends Tutorial_Animation     // This subclass of some other Scene overrides the display() function.  By only
+export class Transforms_Sandbox extends Tutorial_Animation     // This subclass of some other Scene overrides the display() function.  By only
   { display( graphics_state )                           // exposing that one function, which draws everything, this creates a very small code
                                                         // sandbox for editing a simple scene, and for experimenting with matrix transforms.
       { let model_transform = Mat4.identity();      // Variable model_transform will be a temporary matrix that helps us draw most shapes.

@@ -1,5 +1,8 @@
-window.Axes_Viewer = window.classes.Axes_Viewer =
-class Axes_Viewer extends Scene_Component     // A helper scene (a secondary Scene Component) for helping you visualize the
+import * as classes from './common.js';
+Object.assign( window, classes );                                // Store these classes in global scope so we can use them anywhere.
+window.classes = Object.assign( {}, window.classes, classes );   // Also copy them to window.classes so we can list them all out anytime.
+
+export class Axes_Viewer extends Scene_Component     // A helper scene (a secondary Scene Component) for helping you visualize the
 { constructor( context, control_box )         // coordinate bases that are used in your real scene.  Your scene can feed this
     { super(   context, control_box );        // object a list of bases to draw as axis arrows.  Pressing the buttons of this
                                               // helper scene cycles through a list of each basis you have added, drawing
@@ -45,8 +48,7 @@ class Axes_Viewer extends Scene_Component     // A helper scene (a secondary Sce
 }
 
 
-window.Axes_Viewer_Test_Scene = window.classes.Axes_Viewer_Test_Scene =
-class Axes_Viewer_Test_Scene extends Scene_Component
+export class Axes_Viewer_Test_Scene extends Scene_Component
 { constructor( context, control_box )                 // An example of how your scene should properly manaage an Axes_Viewer
     { super(   context, control_box );                // helper scene, so that it is able to help you draw all the
                                                       // coordinate bases in your scene's hierarchy at the correct levels.

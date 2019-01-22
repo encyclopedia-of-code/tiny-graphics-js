@@ -1,5 +1,8 @@
-window.Shadow_Mapping_Test = window.classes.Shadow_Mapping_Test =
-class Shadow_Mapping_Test extends Scene_Component
+import * as classes from './common.js';
+Object.assign( window, classes );                                // Store these classes in global scope so we can use them anywhere.
+window.classes = Object.assign( {}, window.classes, classes );   // Also copy them to window.classes so we can list them all out anytime.
+
+export class Image_Buffer_Test extends Scene_Component
   { constructor( context, control_box )     // The scene begins by requesting the camera, shapes, and materials it will need.
       { super(   context, control_box );    // First, include a secondary Scene that provides movement controls:
         if( !context.globals.has_controls   ) 
@@ -35,9 +38,9 @@ class Shadow_Mapping_Test extends Scene_Component
         //        Make each Material from the correct shader.  Phong_Shader will work initially, but when 
         //        you get to requirements 6 and 7 you will need different ones.
         this.materials =
-          {  once: context.get_instance( Texture_Rotate   ).material( Color.of( 0,0,0,1 ), 
+          {  once: context.get_instance( Phong_Shader   ).material( Color.of( 0,0,0,1 ), 
                              { ambient: 1, texture: context.get_instance( "assets/rgb.jpg", false ) } ),
-            twice: context.get_instance( Texture_Scroll_X ).material( Color.of( 0,0,0,1 ), 
+            twice: context.get_instance( Phong_Shader ).material( Color.of( 0,0,0,1 ), 
                              { ambient: 1, texture: context.get_instance( "assets/grid.png" ) } )
           }
 

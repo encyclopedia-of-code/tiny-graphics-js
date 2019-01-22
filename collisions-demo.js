@@ -1,5 +1,8 @@
-window.Body = window.classes.Body =
-class Body          // Store and update the properties of a 3D body that increntally moves from its previous place due to velocities.
+import * as classes from './common.js';
+Object.assign( window, classes );                                // Store these classes in global scope so we can use them anywhere.
+window.classes = Object.assign( {}, window.classes, classes );   // Also copy them to window.classes so we can list them all out anytime.
+
+export class Body          // Store and update the properties of a 3D body that incrementally moves from its previous place due to velocities.
 { constructor(               shape, material, size )
     { Object.assign( this, { shape, material, size } ) }
   emplace( location_matrix, linear_velocity, angular_velocity, spin_axis = Vec.of(0,0,0).randomized(1).normalized() )
@@ -47,8 +50,7 @@ class Body          // Store and update the properties of a 3D body that incrent
 }
 
 
-window.Simulation = window.classes.Simulation =
-class Simulation extends Scene_Component                // Simulation manages the stepping of simulation time.  Subclass it when making
+export class Simulation extends Scene_Component         // Simulation manages the stepping of simulation time.  Subclass it when making
 { constructor( context, control_box )                   // a Scene that is a physics demo.  This technique is careful to totally
     { super(   context, control_box );                  // decouple the simulation from the frame rate.
       Object.assign( this, { time_accumulator: 0, time_scale: 1, t: 0, dt: 1/20, bodies: [], steps_taken: 0 } );            
@@ -88,8 +90,7 @@ class Simulation extends Scene_Component                // Simulation manages th
 }
 
 
-window.Test_Data = window.classes.Test_Data =
-class Test_Data
+export class Test_Data
 { constructor( context )
     { this.textures = { rgb   : context.get_instance( "/assets/rgb.jpg"   ),
                         earth : context.get_instance( "/assets/earth.gif" ),
@@ -115,8 +116,7 @@ class Test_Data
 }
 
 
-window.Inertia_Demo = window.classes.Inertia_Demo =
-class Inertia_Demo extends Simulation    // Demonstration: Let random initial momentums carry bodies until they fall and bounce.
+export class Inertia_Demo extends Simulation    // Demonstration: Let random initial momentums carry bodies until they fall and bounce.
 { constructor(  context, control_box )
     { super(    context, control_box );
       if( !context.globals.has_controls   )
@@ -161,9 +161,8 @@ class Inertia_Demo extends Simulation    // Demonstration: Let random initial mo
     }
 }
 
-window.Collision_Demo = window.classes.Collision_Demo =
-class Collision_Demo extends Simulation    // Demonstration: Detect when some flying objects collide with one another, coloring them red.
-{ constructor(  context, control_box )
+export class Collision_Demo extends Simulation    // Demonstration: Detect when some flying objects 
+{ constructor(  context, control_box )            // collide with one another, coloring them red.
     { super(    context, control_box );
       if( !context.globals.has_controls   )
         context.register_scene_component( new Movement_Controls( context, control_box.parentElement.insertCell() ) );
