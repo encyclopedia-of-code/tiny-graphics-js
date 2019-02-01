@@ -5,6 +5,8 @@
          </script>          
                                       <!--  Javascript "include" files.  Any code in them gets executed as part of the page loading: //-->
 <script src=     "tiny-graphics.js" ></script>
+<script src="minimal-webgl-demo.js" ></script>
+<script src=     "minimal-phong.js" ></script>
 <script src=            "common.js" ></script>
 <script src="transforms-sandbox.js" ></script>
 <script src=   "collisions-demo.js" ></script>
@@ -19,14 +21,14 @@
 <script> "use strict"     // ********************* THE ENTRY POINT OF YOUR WHOLE PROGRAM STARTS HERE ********************* 
                                            // Use this code to embed a widget into any web page.  The widget inclues a 3D WebGL area
                                            // (an HTML canvas) and various panels of controls.
-  const scenes = [ "Axes_Viewer_Test_Scene" ]
+  const scenes = [ "Minimal_Phong", "Movement_Controls" ]
   new Canvas_Widget( "main-canvas", scenes );             // Use the Canvas_Widget class to display the WebGL demo.  Pass in
                                                           // the name of the HTML element we are to replace with the widget.
 </script>
                              <!-- The following code embeds a code navigator widget with links to classes. //-->
 <div id="main-code" class="code-widget"></div>
 <script> "use strict"
-  new Code_Widget( "main-code", "Axes_Viewer_Test_Scene" );
+  new Code_Widget( "main-code", "Minimal_Phong" );
 </script>
 
 </body></html>

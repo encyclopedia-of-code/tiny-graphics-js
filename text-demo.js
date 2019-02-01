@@ -37,7 +37,7 @@ class Text_Demo extends Scene_Component                   // A scene with a cube
 { constructor( context, control_box )
     { super(   context, control_box )
                                     // Store the desired camera and projection matrices in the shader-bound graphics state:
-      context.globals.graphics_state.    camera_transform = Mat4.look_at( ...Vec.cast( [ 0,0,4 ], [0,0,0], [0,1,0] ) );
+      context.globals.graphics_state.camera_inverse = Mat4.look_at( ...Vec.cast( [ 0,0,4 ], [0,0,0], [0,1,0] ) );
       context.globals.graphics_state.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, .1, 1000 );                 
       
       this.submit_shapes( context, { cube: new Cube(), text: new Text_Line( 35 ) } );

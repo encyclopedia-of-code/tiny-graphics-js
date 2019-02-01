@@ -59,7 +59,7 @@ class Axes_Viewer_Test_Scene extends Scene_Component
       this.material = context.get_instance( Phong_Shader ).material( Color.of( .8,.4,.8,1 ) );
       this.lights = [ new Light( Vec.of( 0,0,1,0 ), Color.of( 0,1,1,1 ), 100000 ) ];
 
-      context.globals.graphics_state.    camera_transform = Mat4.translation([ -1,-1,-20 ]);
+      context.globals.graphics_state.camera_inverse = Mat4.translation([ -1,-1,-20 ]);
       context.globals.graphics_state.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 500 );                   
     }
   make_control_panel()

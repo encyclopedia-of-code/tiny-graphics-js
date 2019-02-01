@@ -85,7 +85,7 @@ class Obj_File_Demo extends Scene_Component     // An example that loads a singl
                                                 // file that fits well.  This demo shows the teapot model twice, with one teapot showing
     constructor( context, control_box )         // off the Fake_Bump_Map effect while the other has a regular texture and Phong lighting.             
       { super(   context, control_box );
-        context.globals.graphics_state.    camera_transform = Mat4.translation([ 0,0,-5 ]);
+        context.globals.graphics_state.camera_inverse = Mat4.translation([ 0,0,-5 ]);
         context.globals.graphics_state.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, .1, 1000 ); 
       
         var shapes = { "teapot": new Shape_From_File( "/assets/teapot.obj" ) };             // Load the model file.
