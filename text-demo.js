@@ -6,7 +6,7 @@ class Text_Line extends Shape                       // Text_Line embeds text in 
                                                     // by calling set_string("your string") on it. Draw the shape on a material
                                                     // with full ambient weight, and text.png assigned as its texture file.  For
   constructor( max_size )                           // multi-line strings, repeat this process and draw with a different matrix.
-    { super( "positions", "normals", "texture_coords" );
+    { super( "position", "normal", "texture_coord" );
       this.max_size = max_size;
       var object_transform = Mat4.identity();
       for( var i = 0; i < max_size; i++ )
@@ -15,7 +15,7 @@ class Text_Line extends Shape                       // Text_Line embeds text in 
       }
     }
   set_string( line, gl = this.gl )        // Overwrite the texture coordinates buffer with new values per quad,
-    { this.texture_coords = [];           // which enclose each of the string's characters.
+    { this.arrays.texture_coord = [];           // which enclose each of the string's characters.
       for( var i = 0; i < this.max_size; i++ )
         {
           var row = Math.floor( ( i < line.length ? line.charCodeAt( i ) : ' '.charCodeAt() ) / 16 ),
@@ -25,9 +25,9 @@ class Text_Line extends Shape                       // Text_Line embeds text in 
           var dim = size * 16,  left  = (col * size + skip) / dim,      top    = (row * size + skip) / dim,
                                 right = (col * size + sizefloor) / dim, bottom = (row * size + sizefloor + 5) / dim;
 
-          this.texture_coords.push( ...Vec.cast( [ left,  1-bottom], [ right, 1-bottom ], [ left,  1-top ], [ right, 1-top ] ) );
+          this.arrays.texture_coord.push( ...Vec.cast( [ left,  1-bottom], [ right, 1-bottom ], [ left,  1-top ], [ right, 1-top ] ) );
         }
-      this.copy_onto_graphics_card( gl, ["texture_coords"], false );
+      this.copy_onto_graphics_card( gl, ["texture_coord"], false );
     }
 }
 

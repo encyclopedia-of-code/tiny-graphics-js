@@ -37,7 +37,7 @@ class Body          // Store and update the properties of a 3D body that incrent
                                           // intersect without discretizing them into points).
     { if ( this == b ) return false;      // Nothing collides with itself.
       var T = a_inv.times( b.drawn_location );                      // Convert sphere b to the frame where a is a unit sphere.
-      for( let p of shape.positions )                               // For each vertex in that b,
+      for( let p of shape.arrays.position )                         // For each vertex in that b,
         { var Tp = T.times( p.to4(1) ).to3();                       // Shift to the coordinate frame of a_inv*b
           if( Tp.dot( Tp ) < 1.1 )                                  // Check if in that coordinate frame it penetrates the unit sphere
             return true;                                            // at the origin.  Leave .1 of leeway.     
@@ -98,14 +98,14 @@ class Test_Data
                         text  : context.get_instance( "/assets/text.png"  )
                       }
       this.shapes = { donut  : new Torus          ( 15, 15 ),
-                      cone   : new Closed_Cone    ( 4, 10 ),
-                      capped : new Capped_Cylinder( 4, 12 ),
-                      ball   : new Subdivision_Sphere( 3 ),
-                      cube   : new Cube(),
-                      axis   : new Axis_Arrows(),
-                      prism  : new ( Capped_Cylinder   .prototype.make_flat_shaded_version() )( 10, 10 ),
-                      gem    : new ( Subdivision_Sphere.prototype.make_flat_shaded_version() )( 2 ),
-                      donut  : new ( Torus             .prototype.make_flat_shaded_version() )( 20, 20 ) 
+                       cone   : new Closed_Cone    ( 4, 10 ),
+                       capped : new Capped_Cylinder( 4, 12 ),
+                       ball   : new Subdivision_Sphere( 3 ),
+                       cube   : new Cube(),
+                       axis   : new Axis_Arrows(),
+                       prism  : new ( Capped_Cylinder   .prototype.make_flat_shaded_version() )( 10, 10 ),
+                       gem    : new ( Subdivision_Sphere.prototype.make_flat_shaded_version() )( 2 ),
+                       donut  : new ( Torus             .prototype.make_flat_shaded_version() )( 20, 20 ) 
                     }; 
     }
   random_shape( shape_list = this.shapes )

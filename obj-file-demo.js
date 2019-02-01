@@ -1,7 +1,7 @@
 window.Shape_From_File = window.classes.Shape_From_File =
 class Shape_From_File extends Shape          // A versatile standalone Shape that imports all its arrays' data from an .obj 3D model file.
 { constructor( filename )
-    { super( "positions", "normals", "texture_coords" );
+    { super( "position", "normal", "texture_coord" );
       this.load_file( filename );      // Begin downloading the mesh. Once that completes, return control to our parse_into_mesh function.
     }
   load_file( filename )
@@ -64,9 +64,9 @@ class Shape_From_File extends Shape          // A versatile standalone Shape tha
       }
       for( var j = 0; j < unpacked.verts.length/3; j++ )
       {
-        this.positions     .push( Vec.of( unpacked.verts[ 3*j ], unpacked.verts[ 3*j + 1 ], unpacked.verts[ 3*j + 2 ] ) );        
-        this.normals       .push( Vec.of( unpacked.norms[ 3*j ], unpacked.norms[ 3*j + 1 ], unpacked.norms[ 3*j + 2 ] ) );
-        this.texture_coords.push( Vec.of( unpacked.textures[ 2*j ], unpacked.textures[ 2*j + 1 ]  ));
+        this.arrays.position     .push( Vec.of( unpacked.verts[ 3*j ], unpacked.verts[ 3*j + 1 ], unpacked.verts[ 3*j + 2 ] ) );        
+        this.arrays.normal       .push( Vec.of( unpacked.norms[ 3*j ], unpacked.norms[ 3*j + 1 ], unpacked.norms[ 3*j + 2 ] ) );
+        this.arrays.texture_coord.push( Vec.of( unpacked.textures[ 2*j ], unpacked.textures[ 2*j + 1 ]  ));
       }
       this.indices = unpacked.indices;
 

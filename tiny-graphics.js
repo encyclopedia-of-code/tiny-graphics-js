@@ -227,18 +227,16 @@ class Vertex_Buffer           // To use Vertex_Buffer, make a subclass of it tha
                               // those lists is an additional array "indices" describing triangles, expressed as triples of vertex indices,
                               // connecting the vertices to one another.
   constructor( ...array_names )                          // This superclass constructor expects a list of names of arrays that you plan for
-    { this.array_names = array_names;                    // your subclass to fill in and associate with the vertices.
-      for( let n of array_names ) this[n] = [];          // Initialize a blank array member of the Shape with each of the names provided.
-      this.indices = [];
+    { Object.assign( this, { arrays: {}, indices: [], WebGL_buffer_pointers: {} } );    // Get ready to associate a GPU buffer with each array.
+      for( let name of array_names ) this.arrays[ name ] = []; // Initialize a blank array member of the Shape with each of the names provided.
       this.indexed = true;                  // By default all shapes assume indexed drawing using drawElements().
-      this.array_names_mapping_to_WebGLBuffers = {};     // Get ready to associate a GPU buffer with each array.
     }
-  copy_onto_graphics_card( gl, selection_of_arrays = this.array_names, write_to_indices = true )
+  copy_onto_graphics_card( gl, selection_of_arrays = Object.keys( this.arrays ), write_to_indices = true )
     {                                        // Send the completed vertex and index lists to their own buffers in the graphics card.
-      for( let n of selection_of_arrays )    // Optional arguments allow calling this again to overwrite some or all GPU buffers as needed.
-        { let buffer = this.array_names_mapping_to_WebGLBuffers[n] = gl.createBuffer();
+      for( let name of selection_of_arrays )    // Optional arguments allow calling this again to overwrite some or all GPU buffers as needed.
+        { let buffer = this.WebGL_buffer_pointers[ name ] = gl.createBuffer();
           gl.bindBuffer( gl.ARRAY_BUFFER, buffer );
-          gl.bufferData( gl.ARRAY_BUFFER, Mat.flatten_2D_to_1D( this[n] ), gl.STATIC_DRAW );
+          gl.bufferData( gl.ARRAY_BUFFER, Mat.flatten_2D_to_1D( this.arrays[ name ] ), gl.STATIC_DRAW );
         }
       if( this.indexed && write_to_indices )
       { gl.getExtension( "OES_element_index_uint" );          // Load an extension to allow shapes with more 
@@ -252,8 +250,8 @@ class Vertex_Buffer           // To use Vertex_Buffer, make a subclass of it tha
     { if( this.indexed )
       { gl.bindBuffer( gl.ELEMENT_ARRAY_BUFFER, this.index_buffer );                          
         gl.drawElements( this.gl[type], this.indices.length, gl.UNSIGNED_INT, 0 ) 
-      }                                                               // If no indices were provided, assume the vertices are arranged
-      else  gl.drawArrays( this.gl[type], 0, this.positions.length ); // as triples in a field called "positions".
+      }                                                                                      // If no indices were provided, assume 
+      else  gl.drawArrays( this.gl[type], 0, Object.values( this.arrays )[0].length );       // the vertices are arranged as triples.
     }
   draw( graphics_state, model_transform, material, type = "TRIANGLES", gl = this.gl )        // To appear onscreen, a shape of any variety
     { if( !this.gl ) throw "This shape's arrays are not copied over to graphics card yet.";  // goes through this draw() function, which
@@ -261,13 +259,12 @@ class Vertex_Buffer           // To use Vertex_Buffer, make a subclass of it tha
       material.shader.update_GPU( graphics_state, model_transform, material );               // draw the right shape due to pre-selecting
                                                                                              // the correct buffer region in the GPU that
       for( let [ attr_name, attribute ] of Object.entries( material.shader.g_addrs.shader_attributes ) )  // holds that shape's data.
-      { const buffer_name = material.shader.map_attribute_name_to_buffer_name( attr_name )
-        if( !buffer_name || !attribute.enabled )
+      { if( !attribute.enabled )
           { if( attribute.index >= 0 ) gl.disableVertexAttribArray( attribute.index );
             continue;
           }
         gl.enableVertexAttribArray( attribute.index );
-        gl.bindBuffer( gl.ARRAY_BUFFER, this.array_names_mapping_to_WebGLBuffers[ buffer_name ] ); // Activate the correct buffer.
+        gl.bindBuffer( gl.ARRAY_BUFFER, this.WebGL_buffer_pointers[ attr_name ] );                  // Activate the correct buffer.
         gl.vertexAttribPointer( attribute.index, attribute.size, attribute.type,                   // Populate each attribute 
                                 attribute.normalized, attribute.stride, attribute.pointer );       // from the active buffer.
       }
@@ -301,14 +298,14 @@ class Shape extends Vertex_Buffer
   static insert_transformed_copy_into( recipient, args, points_transform = Mat4.identity() )    // For building compound shapes.
     { const temp_shape = new this( ...args );  // If you try to bypass making a temporary shape and instead directly insert new data into
                                                // the recipient, you'll run into trouble when the recursion tree stops at different depths.
-      recipient.indices.push( ...temp_shape.indices.map( i => i + recipient.positions.length ) );
+      recipient.indices.push( ...temp_shape.indices.map( i => i + recipient.arrays.position.length ) );
       
-      for( let a of temp_shape.array_names )            // Copy each array from temp_shape into the recipient shape.
-      { if( a == "positions" )                          // Apply points_transform to all points added during this call:
-          recipient[a].push( ...temp_shape[a].map( p => points_transform.times( p.to4(1) ).to3() ) );
-        else if( a == "normals" )                       // Do the same for normals, but use the inverse transpose matrix as math requires:
-          recipient[a].push( ...temp_shape[a].map( n => Mat4.inverse( points_transform.transposed() ).times( n.to4(1) ).to3() ) );
-        else recipient[a].push( ...temp_shape[a] );     // All other arrays get copied in unmodified.
+      for( let a in temp_shape.arrays )                // Copy each array from temp_shape into the recipient shape.
+      { if( a == "position" )                          // Apply points_transform to all points added during this call:
+          recipient.arrays[a].push( ...temp_shape.arrays[a].map( p => points_transform.times( p.to4(1) ).to3() ) );
+        else if( a == "normal" )                       // Do the same for normals, but use the inverse transpose matrix as math requires:
+          recipient.arrays[a].push( ...temp_shape.arrays[a].map( n => Mat4.inverse( points_transform.transposed() ).times( n.to4(1) ).to3() ) );
+        else recipient.arrays[a].push( ...temp_shape.arrays[a] );     // All other arrays get copied in unmodified.
       }
     }
   make_flat_shaded_version()                            // Auto-generate a new class that re-uses any Shape's points, 
@@ -318,36 +315,40 @@ class Shape extends Vertex_Buffer
           {   //  Prepare an indexed shape for flat shading if it is not ready -- that is, if there are any edges where 
               //  the same vertices are indexed by both the adjacent triangles, and those two triangles are not co-planar.
               //  The two would therefore fight over assigning different normal vectors to the shared vertices.
-            const temp_positions = [], temp_tex_coords = [], temp_indices = [];
-            for( let [i, it] of this.indices.entries() )
-              { temp_positions.push( this.positions[it] );  temp_tex_coords.push( this.texture_coords[it] );  temp_indices.push( i ); }
-            this.positions =  temp_positions;       this.indices = temp_indices;    this.texture_coords = temp_tex_coords;
+            const arrays = {};
+            for( let arr in this.arrays ) arrays[ arr ] = [];
+            for( let index of this.indices )
+              for( let arr in this.arrays )
+                arrays[ arr ].push( this.arrays[ arr ][ index ] );      // Make re-arranged versions of each data field, with
+            Object.assign( this.arrays, arrays );                       // copied values every time an index was formerly re-used.
+            this.indices = this.indices.map( (x,i) => i );    // Without shared vertices, we can use sequential numbering.
           }
         flat_shade()                // Automatically assign the correct normals to each triangular element to achieve flat shading.
           {                         // Affect all recently added triangles (those past "offset" in the list).  Assumes that no
             this.indexed = false;   // vertices are shared across seams.   First, iterate through the index or position triples:
-            for( let counter = 0; counter < (this.indexed ? this.indices.length : this.positions.length); counter += 3 )
+            for( let counter = 0; counter < (this.indexed ? this.indices.length : this.arrays.position.length); counter += 3 )
             { const indices = this.indexed ? [ this.indices[ counter ], this.indices[ counter + 1 ], this.indices[ counter + 2 ] ] : 
-                                           [ counter, counter + 1, counter + 2 ];
-              const [ p1, p2, p3 ] = indices.map( i => this.positions[ i ] );
-              const n1 = p1.minus(p2).cross( p3.minus(p1) ).normalized();    // Cross the two edge vectors of this
-                                                                             // triangle together to get its normal.
-               if( n1.times(.1).plus(p1).norm() < p1.norm() ) n1.scale(-1);  // Flip the normal if adding it to the 
-                                                                             // triangle brings it closer to the origin.
-              for( let i of indices ) this.normals[ i ] = Vec.from( n1 );    // Propagate this normal to the 3 vertices.
+                                             [ counter, counter + 1, counter + 2 ];
+              const [ p1, p2, p3 ] = indices.map( i => this.arrays.position[ i ] );
+              const n1 = p1.minus(p2).cross( p3.minus(p1) ).normalized();          // Cross the two edge vectors of this
+                                                                                   // triangle together to get its normal.
+               if( n1.times(.1).plus(p1).norm() < p1.norm() ) n1.scale(-1);        // Flip the normal if adding it to the 
+                                                                                   // triangle brings it closer to the origin.
+              for( let i of indices ) this.arrays.normal[ i ] = Vec.from( n1 );    // Propagate this normal to the 3 vertices.
             }
           }
       }
     }
   normalize_positions( keep_aspect_ratios = true )
-    { const average_position = this.positions.reduce( (acc,p) => acc.plus( p.times( 1/this.positions.length ) ), Vec.of( 0,0,0 ) );
-      this.positions = this.positions.map( p => p.minus( average_position  ) );           // Center the point cloud on the origin.
-      const average_lengths  = this.positions.reduce( (acc,p) => 
-                                         acc.plus( p.map( x => Math.abs(x) ).times( 1/this.positions.length ) ), Vec.of( 0,0,0 ) );
+    { let p_arr = this.arrays.position;
+      const average_position = p_arr.reduce( (acc,p) => acc.plus( p.times( 1/p_arr.length ) ), Vec.of( 0,0,0 ) );
+      p_arr = p_arr.map( p => p.minus( average_position ) );           // Center the point cloud on the origin.
+      const average_lengths  = p_arr.reduce( (acc,p) => 
+                                         acc.plus( p.map( x => Math.abs(x) ).times( 1/p_arr.length ) ), Vec.of( 0,0,0 ) );
       if( keep_aspect_ratios )                            // Divide each axis by its average distance from the origin.
-        this.positions = this.positions.map( p => p.map( (x,i) => x/average_lengths[i] ) );    
+        this.arrays.position = p_arr.map( p => p.map( (x,i) => x/average_lengths[i] ) );    
       else
-        this.positions = this.positions.map( p => p.times( 1/average_lengths.norm() ) );
+        this.arrays.position = p_arr.map( p => p.times( 1/average_lengths.norm() ) );
     }
 }
 
