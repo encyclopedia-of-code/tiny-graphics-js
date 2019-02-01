@@ -124,7 +124,7 @@ class Inertia_Demo extends Simulation    // Demonstration: Let random initial mo
       if( !context.globals.has_info_table )
         context.register_scene_component( new Global_Info_Table( context, control_box.parentElement.insertCell() ) );
         
-      context.globals.graphics_state.    camera_transform = Mat4.translation([ 0,0,-50 ]);
+      context.globals.graphics_state.camera_inverse = Mat4.translation([ 0,0,-50 ]);
       context.globals.graphics_state.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 500 );
       
       this.data = new Test_Data( context );
@@ -170,7 +170,7 @@ class Collision_Demo extends Simulation    // Demonstration: Detect when some fl
       if( !context.globals.has_info_table )
         context.register_scene_component( new Global_Info_Table( context, control_box.parentElement.insertCell() ) );
 
-      context.globals.graphics_state.    camera_transform = Mat4.translation([ 0,0,-50 ]);
+      context.globals.graphics_state.camera_inverse = Mat4.translation([ 0,0,-50 ]);
       context.globals.graphics_state.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 500 );
 
       this.data = new Test_Data( context );
