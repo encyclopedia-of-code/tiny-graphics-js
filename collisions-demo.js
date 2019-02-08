@@ -49,8 +49,8 @@ class Body          // Store and update the properties of a 3D body that incrent
 
 window.Simulation = window.classes.Simulation =
 class Simulation extends Scene_Component                // Simulation manages the stepping of simulation time.  Subclass it when making
-{ constructor( context, control_box )                   // a Scene that is a physics demo.  This technique is careful to totally
-    { super(   context, control_box );                  // decouple the simulation from the frame rate.
+{ constructor( context )                   // a Scene that is a physics demo.  This technique is careful to totally
+    { super(   context );                  // decouple the simulation from the frame rate.
       Object.assign( this, { time_accumulator: 0, time_scale: 1, t: 0, dt: 1/20, bodies: [], steps_taken: 0 } );            
     }
   simulate( frame_time )                              // Carefully advance time according to Glenn Fiedler's "Fix Your Timestep" blog post.
@@ -117,12 +117,12 @@ class Test_Data
 
 window.Inertia_Demo = window.classes.Inertia_Demo =
 class Inertia_Demo extends Simulation    // Demonstration: Let random initial momentums carry bodies until they fall and bounce.
-{ constructor(  context, control_box )
-    { super(    context, control_box );
+{ constructor(  context )
+    { super(    context );
       if( !context.globals.has_controls   )
-        context.register_scene_component( new Movement_Controls( context, control_box.parentElement.insertCell() ) );
+        this.children.push( new Movement_Controls( context ) );
       if( !context.globals.has_info_table )
-        context.register_scene_component( new Global_Info_Table( context, control_box.parentElement.insertCell() ) );
+        this.children.push( new Global_Info_Table( context ) );
         
       context.globals.graphics_state.    camera_transform = Mat4.translation([ 0,0,-50 ]);
       context.globals.graphics_state.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 500 );
@@ -163,12 +163,12 @@ class Inertia_Demo extends Simulation    // Demonstration: Let random initial mo
 
 window.Collision_Demo = window.classes.Collision_Demo =
 class Collision_Demo extends Simulation    // Demonstration: Detect when some flying objects collide with one another, coloring them red.
-{ constructor(  context, control_box )
-    { super(    context, control_box );
+{ constructor(  context )
+    { super(    context );
       if( !context.globals.has_controls   )
-        context.register_scene_component( new Movement_Controls( context, control_box.parentElement.insertCell() ) );
+        this.children.push( new Movement_Controls( context ) );
       if( !context.globals.has_info_table )
-        context.register_scene_component( new Global_Info_Table( context, control_box.parentElement.insertCell() ) );
+        this.children.push( new Global_Info_Table( context ) );
 
       context.globals.graphics_state.    camera_transform = Mat4.translation([ 0,0,-50 ]);
       context.globals.graphics_state.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 500 );

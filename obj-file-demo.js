@@ -83,8 +83,8 @@ class Obj_File_Demo extends Scene_Component     // An example that loads a singl
   {                                             // used in place of simpler primitive-based shapes to add complexity to a scene.  Simpler
                                                 // primitives in your scene can just be thought of as placeholders until you find a model
                                                 // file that fits well.  This demo shows the teapot model twice, with one teapot showing
-    constructor( context, control_box )         // off the Fake_Bump_Map effect while the other has a regular texture and Phong lighting.             
-      { super(   context, control_box );
+    constructor( context )         // off the Fake_Bump_Map effect while the other has a regular texture and Phong lighting.             
+      { super(   context );
         context.globals.graphics_state.    camera_transform = Mat4.translation([ 0,0,-5 ]);
         context.globals.graphics_state.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, .1, 1000 ); 
       

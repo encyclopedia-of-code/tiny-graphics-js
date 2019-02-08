@@ -2,10 +2,10 @@ window.Tutorial_Animation = window.classes.Tutorial_Animation =
 class Tutorial_Animation extends Scene_Component    // This Scene_Component can be added to a display canvas.  This particular one
   {                                                 // sets up the machinery to draw a simple scene demonstrating a few concepts.
                                                     // Scroll down to the display() method at the bottom to see where the shapes are drawn.
-    constructor( context, control_box )             // The scene begins by requesting the camera, shapes, and materials it will need.
-      { super( context, control_box );              // First, include a couple other helpful components, including one that moves you around:
+    constructor( context )             // The scene begins by requesting the camera, shapes, and materials it will need.
+      { super( context );              // First, include a couple other helpful components, including one that moves you around:
         if( !context.globals.has_controls   ) 
-          context.register_scene_component( new Movement_Controls( context, control_box.parentElement.insertCell() ) ); 
+          this.children.push( new Movement_Controls( context ) ); 
 
                 // Define the global camera and projection matrices, which are stored in a scratchpad for globals.  The projection is special 
                 // because it determines how depth is treated when projecting 3D points onto a plane.  The function perspective() makes one.

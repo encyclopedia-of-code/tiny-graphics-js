@@ -354,9 +354,11 @@ class Basic_Shader extends Shader             // Subclasses of Shader each store
     }
 }
 
+
+window.Minimal_Webgl_Demo = window.classes.Minimal_Webgl_Demo =
 class Minimal_Webgl_Demo extends Scene_Component
-{ constructor( context, control_panel )
-    { super( context, control_panel );
+{ constructor( context )
+    { super( context );
       this.submit_shapes( context, { triangle : new Minimal_Shape() } );         // Send a Triangle's vertices to the GPU's buffers.
       this.shader = context.get_instance( Basic_Shader ).material();
     }
@@ -630,8 +632,8 @@ class Movement_Controls extends Scene_Component    // Movement_Controls is a Sce
                                                    // style controls into the website.  These can be uesd to manually move your camera or
                                                    // other objects smoothly through your scene using key, mouse, and HTML button controls
                                                    // to help you explore what's in it.
-  constructor( context, control_box, canvas = context.canvas )
-    { super( context, control_box );
+  constructor( context )
+    { super( context );
       [ this.context, this.roll, this.look_around_locked, this.invert ] = [ context, 0, true, true ];                  // Data members
       [ this.thrust, this.pos, this.z_axis ] = [ Vec.of( 0,0,0 ), Vec.of( 0,0,0 ), Vec.of( 0,0,0 ) ];
                                                  // The camera matrix is not actually stored here inside Movement_Controls; instead, track
@@ -647,13 +649,13 @@ class Movement_Controls extends Scene_Component    // Movement_Controls is a Sce
       
       // *** Mouse controls: ***
       this.mouse = { "from_center": Vec.of( 0,0 ) };                           // Measure mouse steering, for rotating the flyaround camera:
-      const mouse_position = ( e, rect = canvas.getBoundingClientRect() ) => 
+      const mouse_position = ( e, rect = context.canvas.getBoundingClientRect() ) => 
                                    Vec.of( e.clientX - (rect.left + rect.right)/2, e.clientY - (rect.bottom + rect.top)/2 );
                                         // Set up mouse response.  The last one stops us from reacting if the mouse leaves the canvas.
-      document.addEventListener( "mouseup",   e => { this.mouse.anchor = undefined; } );
-      canvas  .addEventListener( "mousedown", e => { e.preventDefault(); this.mouse.anchor      = mouse_position(e); } );
-      canvas  .addEventListener( "mousemove", e => { e.preventDefault(); this.mouse.from_center = mouse_position(e); } );
-      canvas  .addEventListener( "mouseout",  e => { if( !this.mouse.anchor ) this.mouse.from_center.scale(0) } );  
+      document      .addEventListener( "mouseup",   e => { this.mouse.anchor = undefined; } );
+      context.canvas.addEventListener( "mousedown", e => { e.preventDefault(); this.mouse.anchor      = mouse_position(e); } );
+      context.canvas.addEventListener( "mousemove", e => { e.preventDefault(); this.mouse.from_center = mouse_position(e); } );
+      context.canvas.addEventListener( "mouseout",  e => { if( !this.mouse.anchor ) this.mouse.from_center.scale(0) } );  
     }
   show_explanation( document_element ) { }
   make_control_panel()                                                        // This function of a scene sets up its keyboard shortcuts.

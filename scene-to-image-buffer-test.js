@@ -1,9 +1,9 @@
 window.Shadow_Mapping_Test = window.classes.Shadow_Mapping_Test =
 class Shadow_Mapping_Test extends Scene_Component
-  { constructor( context, control_box )     // The scene begins by requesting the camera, shapes, and materials it will need.
-      { super(   context, control_box );    // First, include a secondary Scene that provides movement controls:
+  { constructor( context )     // The scene begins by requesting the camera, shapes, and materials it will need.
+      { super(   context );    // First, include a secondary Scene that provides movement controls:
         if( !context.globals.has_controls   ) 
-          context.register_scene_component( new Movement_Controls( context, control_box.parentElement.insertCell() ) ); 
+          this.children.push( new Movement_Controls( context ) ); 
 
         context.globals.graphics_state.camera_transform = Mat4.look_at( Vec.of( 0,0,5 ), Vec.of( 0,0,0 ), Vec.of( 0,1,0 ) );
 

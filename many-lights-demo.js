@@ -1,7 +1,7 @@
 window.Many_Lights_Demo = window.classes.Many_Lights_Demo =
 class Many_Lights_Demo extends Scene_Component         // How to make the illusion that there are many lights, despite only passing
-{ constructor( context, control_box )                  // two to the shader.  We re-locate the lights in between individual shape draws.
-    { super(   context, control_box );
+{ constructor( context )                  // two to the shader.  We re-locate the lights in between individual shape draws.
+    { super(   context );
       Object.assign( this, { rows: 20, columns: 35 } );                                       // Define how many boxes (buildings) to draw.
       context.globals.graphics_state.    camera_transform = Mat4.look_at( ...Vec.cast( [ this.rows/2,5,5 ], [this.rows/2,0,-4], [0,1,0] ) );
       context.globals.graphics_state.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, .1, 1000 );                 
