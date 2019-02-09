@@ -315,7 +315,7 @@ class Axis_Arrows extends Shape                                   // An axis set
 window.Basic_Shader = window.classes.Basic_Shader =
 class Basic_Shader extends Shader             // Subclasses of Shader each store and manage a complete GPU program.  This Shader is 
 {                                             // the simplest example of one.  It samples pixels from colors that are directly assigned 
-  material() { return { shader: this } }      // to the vertices.  Materials here are minimal, without any settings.
+  material() { return new class extends Material {}( this ) }      // to the vertices.  Materials here are minimal, without any settings.
   update_GPU( g_state, model_transform, material, gpu = this.g_addrs, gl = this.gl )    // Define how to synchronize our JavaScript's variables to the GPU's:
       { const [ P, C, M ] = [ g_state.projection_transform, g_state.camera_transform, model_transform ],
                       PCM = P.times( C ).times( M );
@@ -348,7 +348,7 @@ class Basic_Shader extends Shader             // Subclasses of Shader each store
 
 window.Funny_Shader = window.classes.Funny_Shader =
 class Funny_Shader extends Shader         // Simple "procedural" texture shader, with texture coordinates but without an input image.
-{ material() { return { shader: this } }  // Materials here are minimal, without any settings.
+{ material() { return new class extends Material {}( this ) }  // Materials here are minimal, without any settings.
   update_GPU( g_state, model_transform, material, gpu = this.g_addrs, gl = this.gl )    // Define how to synchronize our JavaScript's variables to the GPU's:
       { const [ P, C, M ] = [ g_state.projection_transform, g_state.camera_transform, model_transform ],
                       PCM = P.times( C ).times( M );
@@ -414,18 +414,11 @@ class Phong_Shader extends Shader          // THE DEFAULT SHADER: This uses the 
                                            // new triangle is closer to the camera, and even if so, blending settings may interpolate some 
                                            // of the old color into the result.  Finally, an image is displayed onscreen.
 { material( color, properties )     // Define an internal class "Material" that stores the standard settings found in Phong lighting.
-  { return new class Material       // Possible properties: ambient, diffusivity, specularity, smoothness, gouraud, texture.
+  { return new class extends Material       // Possible properties: ambient, diffusivity, specularity, smoothness, gouraud, texture.
       { constructor( shader, color = Color.of( 0,0,0,1 ), ambient = 0, diffusivity = 1, specularity = 1, smoothness = 40 )
-          { Object.assign( this, { shader, color, ambient, diffusivity, specularity, smoothness } );  // Assign defaults.
-            Object.assign( this, properties );                                                        // Optionally override defaults.
-          }
-        override( properties )                      // Easily make temporary overridden versions of a base material, such as
-          { const copied = new this.constructor();  // of a different color or diffusivity.  Use "opacity" to override only that.
-            Object.assign( copied, this );
-            Object.assign( copied, properties );
-            copied.color = copied.color.copy();
-            if( properties[ "opacity" ] != undefined ) copied.color[3] = properties[ "opacity" ];
-            return copied;
+          { super( shader );
+            Object.assign( this, { color, ambient, diffusivity, specularity, smoothness } );  // Assign defaults.
+            Object.assign( this, properties );                                                // Optionally override defaults.
           }
       }( this, color );
   }

@@ -386,6 +386,18 @@ window.Color = window.tiny_graphics.Color =
 class Color extends Vec { }    // Just an alias.  Colors are special 4x1 vectors expressed as ( red, green, blue, opacity ) each from 0 to 1.
 
 
+window.Material = window.tiny_graphics.Material =
+class Material
+{ constructor( shader ) { this.shader = shader }
+  override( properties )                      // Easily make temporary overridden versions of a base material, such as
+    { const copied = new this.constructor();  // of a different color or diffusivity.
+      Object.assign( copied, this );
+      Object.assign( copied, properties );
+      return copied;
+    }
+}
+
+
 window.Graphics_Addresses = window.tiny_graphics.Graphics_Addresses =
 class Graphics_Addresses    // For organizing communication with the GPU for Shaders.  Now that we've compiled the Shader, we can query 
 {                           // some things about the compiled program, such as the memory addresses it will use for uniform variables, 
