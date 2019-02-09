@@ -11,13 +11,14 @@ class Minimal_Shape extends Vertex_Buffer    // The simplest possible Shape – 
 
 window.Minimal_Webgl_Demo = window.classes.Minimal_Webgl_Demo =
 class Minimal_Webgl_Demo extends Scene_Component
-{ constructor( context, control_panel )
-    { super( context, control_panel );
-      this.submit_shapes( context, { triangle : new Minimal_Shape() } );         // Send a Triangle's vertices to the GPU's buffers.
-      this.shader = context.get_instance( Basic_Shader ).material();
+{ constructor( webgl_manager, control_panel )
+    { super( webgl_manager, control_panel );
+      this.shapes = { triangle : new Minimal_Shape() };         // Send a Triangle's vertices to the GPU's buffers.
+      this.shader = webgl_manager.get_instance( Basic_Shader ).material();
     }
-  display( graphics_state )                                                      // Do this every frame.
-    { this.shapes.triangle.draw( graphics_state, Mat4.identity(), this.shader ); // Draw the triangle.    
+  display( context, graphics_state )                                                      // Do this every frame.
+    { const packet = new Shader_Packet( graphics_state, Mat4.identity(), this.shader );
+      this.shapes.triangle.draw( context, packet ); // Draw the triangle.    
     }
  make_control_panel()                 // Draw buttons, setup their actions and keyboard shortcuts, and monitor live variables.
     { this.control_panel.innerHTML += "(This one has no controls)";

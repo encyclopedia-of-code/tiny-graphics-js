@@ -219,6 +219,13 @@ class Keyboard_Manager     // This class maintains a running list of which keys 
   }
 
 
+window.Shader_Packet = window.tiny_graphics.Shader_Packet =
+class Shader_Packet
+{ constructor( graphics_state, model_transform = Mat4.identity(), material, type = "TRIANGLES" )
+    { Object.assign( this, { graphics_state, model_transform, material, type } ) }
+}
+
+
 window.Vertex_Buffer = window.tiny_graphics.Vertex_Buffer =
 class Vertex_Buffer           // To use Vertex_Buffer, make a subclass of it that overrides the constructor and fills in the right fields.  
 {                             // Vertex_Buffer organizes data related to one 3D shape and copies it into GPU memory.  That data is broken
@@ -227,14 +234,17 @@ class Vertex_Buffer           // To use Vertex_Buffer, make a subclass of it tha
                               // those lists is an additional array "indices" describing triangles, expressed as triples of vertex indices,
                               // connecting the vertices to one another.
   constructor( ...array_names )                          // This superclass constructor expects a list of names of arrays that you plan for
-    { Object.assign( this, { arrays: {}, indices: [], WebGL_buffer_pointers: {} } );    // Get ready to associate a GPU buffer with each array.
+    { [ this.arrays, this.indices ] = [ {}, [] ];
+      this.WebGL_buffer_pointers = new Map();       // Get ready to associate a GPU buffer with each array.
       for( let name of array_names ) this.arrays[ name ] = []; // Initialize a blank array member of the Shape with each of the names provided.
       this.indexed = true;                  // By default all shapes assume indexed drawing using drawElements().
     }
-  copy_onto_graphics_card( gl, selection_of_arrays = Object.keys( this.arrays ), write_to_indices = true )
-    {                                        // Send the completed vertex and index lists to their own buffers in the graphics card.
-      for( let name of selection_of_arrays )    // Optional arguments allow calling this again to overwrite some or all GPU buffers as needed.
-        { let buffer = this.WebGL_buffer_pointers[ name ] = gl.createBuffer();
+  copy_onto_graphics_card( context, selection_of_arrays = Object.keys( this.arrays ), write_to_indices = true )
+    {     // Send the completed vertex and index lists to their own buffers in the graphics card.
+          // Optional arguments allow calling this again to overwrite some or all GPU buffers as needed.
+      const gl = context;
+      for( let name of selection_of_arrays )
+        { let buffer = this.WebGL_buffer_pointers.get( context )[ name ] = gl.createBuffer();
           gl.bindBuffer( gl.ARRAY_BUFFER, buffer );
           gl.bufferData( gl.ARRAY_BUFFER, Mat.flatten_2D_to_1D( this.arrays[ name ] ), gl.STATIC_DRAW );
         }
@@ -244,27 +254,36 @@ class Vertex_Buffer           // To use Vertex_Buffer, make a subclass of it tha
         gl.bindBuffer( gl.ELEMENT_ARRAY_BUFFER, this.index_buffer );
         gl.bufferData( gl.ELEMENT_ARRAY_BUFFER, new Uint32Array( this.indices ), gl.STATIC_DRAW );
       }
-      this.gl = gl;
     }
   execute_shaders( gl, type )     // Draws this shape's entire vertex buffer.
     { if( this.indexed )
       { gl.bindBuffer( gl.ELEMENT_ARRAY_BUFFER, this.index_buffer );                          
-        gl.drawElements( this.gl[type], this.indices.length, gl.UNSIGNED_INT, 0 ) 
-      }                                                                                      // If no indices were provided, assume 
-      else  gl.drawArrays( this.gl[type], 0, Object.values( this.arrays )[0].length );       // the vertices are arranged as triples.
-    }
-  draw( graphics_state, model_transform, material, type = "TRIANGLES", gl = this.gl )        // To appear onscreen, a shape of any variety
-    { if( !this.gl ) throw "This shape's arrays are not copied over to graphics card yet.";  // goes through this draw() function, which
-      material.shader.activate();                                                            // executes the shader programs.  The shaders
-      material.shader.update_GPU( graphics_state, model_transform, material );               // draw the right shape due to pre-selecting
-                                                                                             // the correct buffer region in the GPU that
-      for( let [ attr_name, attribute ] of Object.entries( material.shader.g_addrs.shader_attributes ) )  // holds that shape's data.
+        gl.drawElements( gl[type], this.indices.length, gl.UNSIGNED_INT, 0 ) 
+      }
+      else  gl.drawArrays( gl[type], 0, Object.values( this.arrays )[0].length );       // If no indices were provided, assume the 
+    }                                                                                        // vertices are arranged as triples.
+  draw( context, shader_values )
+    { 
+      if( !this.WebGL_buffer_pointers.get( context ) )    // Does this vertex array already have a copy on this GPU context?
+      { this.WebGL_buffer_pointers.set( context, {} );    // If not, start a new collection of buffer pointers into this GPU context.
+        this.copy_onto_graphics_card( context );          // Fill the GPU buffers with copies of this shape's current array data.
+      }
+
+      const gl = context;
+
+      shader_values = Object.assign( { type: "TRIANGLES" }, shader_values );    // Default draw type if none is defined in shader_values
+      const { graphics_state, model_transform, material, type } = shader_values;    // Now expand out the shader_values.
+
+      material.shader.activate();
+      material.shader.update_GPU( graphics_state, model_transform, material );
+
+      for( let [ attr_name, attribute ] of Object.entries( material.shader.g_addrs.shader_attributes ) )  // 
       { if( !attribute.enabled )
           { if( attribute.index >= 0 ) gl.disableVertexAttribArray( attribute.index );
             continue;
           }
         gl.enableVertexAttribArray( attribute.index );
-        gl.bindBuffer( gl.ARRAY_BUFFER, this.WebGL_buffer_pointers[ attr_name ] );                  // Activate the correct buffer.
+        gl.bindBuffer( gl.ARRAY_BUFFER, this.WebGL_buffer_pointers.get( context )[ attr_name ] );    // Activate the correct buffer.
         gl.vertexAttribPointer( attribute.index, attribute.size, attribute.type,                   // Populate each attribute 
                                 attribute.normalized, attribute.stride, attribute.pointer );       // from the active buffer.
       }
@@ -366,6 +385,7 @@ class Light                                                     // The propertie
 window.Color = window.tiny_graphics.Color =
 class Color extends Vec { }    // Just an alias.  Colors are special 4x1 vectors expressed as ( red, green, blue, opacity ) each from 0 to 1.
 
+
 window.Graphics_Addresses = window.tiny_graphics.Graphics_Addresses =
 class Graphics_Addresses    // For organizing communication with the GPU for Shaders.  Now that we've compiled the Shader, we can query 
 {                           // some things about the compiled program, such as the memory addresses it will use for uniform variables, 
@@ -452,11 +472,11 @@ class Webgl_Manager      // This class manages a whole graphics program for one 
                          // canvas of which functions to call during events - such as a key getting pressed or it being time to redraw.
   constructor( canvas, background_color, dimensions )
     { let gl, demos = [];
-      Object.assign( this, { instances: new Map(), shapes_in_use: {}, scene_components: [], prev_time: 0, canvas,
+      Object.assign( this, { instances: new Map(), scene_components: [], prev_time: 0, canvas,
                              globals: { animate: true, graphics_state: new Graphics_State() } } );
       
       for ( let name of [ "webgl", "experimental-webgl", "webkit-3d", "moz-webgl" ] )   // Get the GPU ready, creating a new WebGL context
-        if (  gl = this.gl = this.canvas.getContext( name ) ) break;                    // for this canvas.
+        if (  gl = this.context = this.canvas.getContext( name ) ) break;                    // for this canvas.
       if   ( !gl ) throw "Canvas failed to make a WebGL context.";
       
       this.set_size( dimensions );
@@ -478,14 +498,14 @@ class Webgl_Manager      // This class manages a whole graphics program for one 
       this.canvas.style[ "height" ] = height + "px";     
       Object.assign( this,        { width, height } );   // Have to assign to both; these attributes on a canvas 
       Object.assign( this.canvas, { width, height } );   // have a special effect on buffers, separate from their style.
-      this.gl.viewport( 0, 0, width, height );           // Build the canvas's matrix for converting -1 to 1 ranged coords (NCDS)
+      this.context.viewport( 0, 0, width, height );      // Build the canvas's matrix for converting -1 to 1 ranged coords (NCDS)
     }                                                    // into its own pixel coords.
   get_instance( shader_or_texture )                 // If a scene requests that the Canvas keeps a certain resource (a Shader 
     { if( this.instances[ shader_or_texture ] )     // or Texture) loaded, check if we already have one GPU-side first.
         return this.instances[ shader_or_texture ];     // Return the one that already is loaded if it exists.  Otherwise,
       if( typeof shader_or_texture == "string" )        // If a texture was requested, load it onto a GPU buffer.
-        return this.instances[ shader_or_texture ] = new Texture( this.gl, ...arguments );  // Or if it's a shader:
-      return   this.instances[ shader_or_texture ] = new ( shader_or_texture )( this.gl );  // Compile it and put it on the GPU.
+        return this.instances[ shader_or_texture ] = new Texture( this.context, ...arguments );  // Or if it's a shader:
+      return   this.instances[ shader_or_texture ] = new ( shader_or_texture )( this.context );  // Compile it and put it on the GPU.
     }
   register_scene_component( component )     // Allow a Scene_Component to show their control panel and enter the event loop.
     { this.scene_components.unshift( component );  component.make_control_panel( component.controls );
@@ -495,10 +515,11 @@ class Webgl_Manager      // This class manages a whole graphics program for one 
       if( this.globals.animate ) this.globals.graphics_state.animation_time      += this.globals.graphics_state.animation_delta_time;
       this.prev_time = time;
 
-      this.gl.clear( this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);        // Clear the canvas's pixels and z-buffer.
+      const gl = this.context;
+      gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);        // Clear the canvas's pixels and z-buffer.
      
       for( let live_string of document.querySelectorAll(".live_string") ) live_string.onload( live_string );
-      for ( let s of this.scene_components ) s.display( this.globals.graphics_state );            // Draw each registered animation.
+      for ( let s of this.scene_components ) s.display( gl, this.globals.graphics_state );            // Draw each registered animation.
       this.event = window.requestAnimFrame( this.render.bind( this ) );   // Now that this frame is drawn, request that render() happen 
     }                                                                     // again as soon as all other web page events are processed.
 }
@@ -545,16 +566,6 @@ class Scene_Component       // The Scene_Component superclass is the base class 
       button.addEventListener( "touchend", release, { passive: true } );
       if( !shortcut_combination ) return;
       this.key_controls.add( shortcut_combination, press, release );
-    }
-  submit_shapes( webgl_manager, shapes )            // Call this to start using a set of shapes.  It ensures that this scene as well as the
-                                                    // Webgl_Manager has pointers to the shapes when needed.  It also loads each shape onto
-    { if( !this.shapes ) this.shapes = {};          // the GPU if other scenes haven't done so already.  The shapes will be accessible from
-      for( let s in shapes )                        // a scene by calling "this.ahapes".
-        { if( webgl_manager.shapes_in_use[s] )                 // If two scenes give any shape the same name as an existing one, the
-            this.shapes[s] = webgl_manager.shapes_in_use[s];   // existing one is used instead and the new shape is thrown out.
-          else this.shapes[s] = webgl_manager.shapes_in_use[s] = shapes[s];
-          this.shapes[s].copy_onto_graphics_card( webgl_manager.gl );
-        }
     }                                                          // You have to override the following functions to use class Scene_Component.
   make_control_panel(){}  display( graphics_state ){}  show_explanation( document_section ){}
 }
