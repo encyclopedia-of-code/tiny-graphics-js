@@ -17,8 +17,8 @@ class Minimal_Webgl_Demo extends Scene_Component
       this.shader = webgl_manager.get_instance( Basic_Shader ).material();
     }
   display( context, graphics_state )                                                      // Do this every frame.
-    { const packet = new Shader_Packet( graphics_state, Mat4.identity(), this.shader );
-      this.shapes.triangle.draw( context, packet ); // Draw the triangle.    
+    { const packet = new Packet_For_Shader( graphics_state, Mat4.identity(), this.shader );
+      this.shapes.triangle.draw( context, packet ); // Draw the triangle.
     }
  make_control_panel()                 // Draw buttons, setup their actions and keyboard shortcuts, and monitor live variables.
     { this.control_panel.innerHTML += "(This one has no controls)";

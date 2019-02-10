@@ -219,8 +219,8 @@ class Keyboard_Manager     // This class maintains a running list of which keys 
   }
 
 
-window.Shader_Packet = window.tiny_graphics.Shader_Packet =
-class Shader_Packet
+window.Packet_For_Shader = window.tiny_graphics.Packet_For_Shader =
+class Packet_For_Shader
 { constructor( graphics_state, model_transform = Mat4.identity(), material, type = "TRIANGLES" )
     { Object.assign( this, { graphics_state, model_transform, material, type } ) }
 }
@@ -243,6 +243,18 @@ class Vertex_Buffer           // To use Vertex_Buffer, make a subclass of it tha
     {     // Send the completed vertex and index lists to their own buffers in the graphics card.
           // Optional arguments allow calling this again to overwrite some or all GPU buffers as needed.
       const gl = context;
+
+      if( !window.idiot_alarm ) window.idiot_alarm = 0;
+      const is_this_an_advanced_usage_of_this_function = selection_of_arrays.length != Object.keys( this.arrays ).length;
+      if( !is_this_an_advanced_usage_of_this_function ) window.idiot_alarm++;   // Don't let beginners call this expensive function too many times;
+      if( window.idiot_alarm > 200 )                                            // Beginner programs typically only need to call it a few times.
+        throw `Error: You are sending a lot of shape definitions to the GPU, probably by mistake!  Many of them are likely duplicates, 
+               which you don't want since sending each one is very slow.  To avoid this, avoid calling new Shape() inside your display()
+               function, thus causing the definition to be re-created and re-transmitted every frame.  Call it in your scene's
+               constructor instead and keep it as a class member, or otherwise make sure it only happens once.  In the off chance that
+               you have a somehow deformable shape that MUST change every frame, then at least use the selection_of_arrays argument of
+               this function to limit which buffers get overwritten every frame to only the necessary ones.`;
+
       for( let name of selection_of_arrays )
         { let buffer = this.WebGL_buffer_pointers.get( context )[ name ] = gl.createBuffer();
           gl.bindBuffer( gl.ARRAY_BUFFER, buffer );
@@ -277,7 +289,7 @@ class Vertex_Buffer           // To use Vertex_Buffer, make a subclass of it tha
       material.shader.activate();
       material.shader.update_GPU( graphics_state, model_transform, material );
 
-      for( let [ attr_name, attribute ] of Object.entries( material.shader.g_addrs.shader_attributes ) )  // 
+      for( let [ attr_name, attribute ] of Object.entries( material.shader.g_addrs.shader_attributes ) )
       { if( !attribute.enabled )
           { if( attribute.index >= 0 ) gl.disableVertexAttribArray( attribute.index );
             continue;
@@ -483,14 +495,14 @@ class Webgl_Manager      // This class manages a whole graphics program for one 
 {                        // and scenes.  In addition to requesting a WebGL context and storing the aforementioned items, it informs the
                          // canvas of which functions to call during events - such as a key getting pressed or it being time to redraw.
   constructor( canvas, background_color, dimensions )
-    { let gl, demos = [];
-      Object.assign( this, { instances: new Map(), scene_components: [], prev_time: 0, canvas,
+    { Object.assign( this, { instances: new Map(), scene_components: [], prev_time: 0, canvas,
                              globals: { animate: true, graphics_state: new Graphics_State() } } );
       
-      for ( let name of [ "webgl", "experimental-webgl", "webkit-3d", "moz-webgl" ] )   // Get the GPU ready, creating a new WebGL context
-        if (  gl = this.context = this.canvas.getContext( name ) ) break;                    // for this canvas.
-      if   ( !gl ) throw "Canvas failed to make a WebGL context.";
-      
+      for( let name of [ "webgl", "experimental-webgl", "webkit-3d", "moz-webgl" ] )   // Get the GPU ready, creating a new WebGL context
+        if(  this.context = this.canvas.getContext( name ) ) break;                    // for this canvas.          
+      if( !this.context ) throw "Canvas failed to make a WebGL context.";
+      const gl = this.context;
+
       this.set_size( dimensions );
       gl.clearColor.apply( gl, background_color );    // Tell the GPU which color to clear the canvas with each frame.
       gl.enable( gl.DEPTH_TEST );   gl.enable( gl.BLEND );            // Enable Z-Buffering test with blending.
