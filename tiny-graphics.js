@@ -219,13 +219,6 @@ class Keyboard_Manager     // This class maintains a running list of which keys 
   }
 
 
-window.Packet_For_Shader = window.tiny_graphics.Packet_For_Shader =
-class Packet_For_Shader
-{ constructor( graphics_state, model_transform = Mat4.identity(), material, type = "TRIANGLES" )
-    { Object.assign( this, { graphics_state, model_transform, material, type } ) }
-}
-
-
 window.Vertex_Buffer = window.tiny_graphics.Vertex_Buffer =
 class Vertex_Buffer           // To use Vertex_Buffer, make a subclass of it that overrides the constructor and fills in the right fields.  
 {                             // Vertex_Buffer organizes data related to one 3D shape and copies it into GPU memory.  That data is broken
@@ -236,8 +229,7 @@ class Vertex_Buffer           // To use Vertex_Buffer, make a subclass of it tha
   constructor( ...array_names )                          // This superclass constructor expects a list of names of arrays that you plan for
     { [ this.arrays, this.indices ] = [ {}, [] ];
       this.WebGL_buffer_pointers = new Map();       // Get ready to associate a GPU buffer with each array.
-      for( let name of array_names ) this.arrays[ name ] = []; // Initialize a blank array member of the Shape with each of the names provided.
-      this.indexed = true;                  // By default all shapes assume indexed drawing using drawElements().
+      for( let name of array_names ) this.arrays[ name ] = []; // Initialize a blank array member of the Shape with each of the names provided.      
     }
   copy_onto_graphics_card( context, selection_of_arrays = Object.keys( this.arrays ), write_to_indices = true )
     {     // Send the completed vertex and index lists to their own buffers in the graphics card.
@@ -260,7 +252,7 @@ class Vertex_Buffer           // To use Vertex_Buffer, make a subclass of it tha
           gl.bindBuffer( gl.ARRAY_BUFFER, buffer );
           gl.bufferData( gl.ARRAY_BUFFER, Mat.flatten_2D_to_1D( this.arrays[ name ] ), gl.STATIC_DRAW );
         }
-      if( this.indexed && write_to_indices )
+      if( this.indices.length && write_to_indices )
       { gl.getExtension( "OES_element_index_uint" );          // Load an extension to allow shapes with more 
         this.index_buffer = gl.createBuffer();                // vertices than type "short" can hold.
         gl.bindBuffer( gl.ELEMENT_ARRAY_BUFFER, this.index_buffer );
@@ -268,38 +260,21 @@ class Vertex_Buffer           // To use Vertex_Buffer, make a subclass of it tha
       }
     }
   execute_shaders( gl, type )     // Draws this shape's entire vertex buffer.
-    { if( this.indexed )
+    { if( this.indices.length )
       { gl.bindBuffer( gl.ELEMENT_ARRAY_BUFFER, this.index_buffer );                          
         gl.drawElements( gl[type], this.indices.length, gl.UNSIGNED_INT, 0 ) 
       }
       else  gl.drawArrays( gl[type], 0, Object.values( this.arrays )[0].length );       // If no indices were provided, assume the 
     }                                                                                        // vertices are arranged as triples.
-  draw( context, shader_values )
-    { 
+  draw( context, shader, type = "TRIANGLES" )  // To appear onscreen, a shape of any variety goes through the draw() function,
+    {                                                     // which executes the shader programs.  The shaders draw the right shape due to
+                                                          // pre-selecting the correct buffer region in the GPU that holds that shape's data.
       if( !this.WebGL_buffer_pointers.get( context ) )    // Does this vertex array already have a copy on this GPU context?
       { this.WebGL_buffer_pointers.set( context, {} );    // If not, start a new collection of buffer pointers into this GPU context.
         this.copy_onto_graphics_card( context );          // Fill the GPU buffers with copies of this shape's current array data.
       }
-
-      const gl = context;
-
-      shader_values = Object.assign( { type: "TRIANGLES" }, shader_values );    // Default draw type if none is defined in shader_values
-      const { graphics_state, model_transform, material, type } = shader_values;    // Now expand out the shader_values.
-
-      material.shader.activate();
-      material.shader.update_GPU( graphics_state, model_transform, material );
-
-      for( let [ attr_name, attribute ] of Object.entries( material.shader.g_addrs.shader_attributes ) )
-      { if( !attribute.enabled )
-          { if( attribute.index >= 0 ) gl.disableVertexAttribArray( attribute.index );
-            continue;
-          }
-        gl.enableVertexAttribArray( attribute.index );
-        gl.bindBuffer( gl.ARRAY_BUFFER, this.WebGL_buffer_pointers.get( context )[ attr_name ] );    // Activate the correct buffer.
-        gl.vertexAttribPointer( attribute.index, attribute.size, attribute.type,                   // Populate each attribute 
-                                attribute.normalized, attribute.stride, attribute.pointer );       // from the active buffer.
-      }
-      this.execute_shaders( gl, type );                                                // Run the shaders to draw every triangle now.
+      shader.activate( context, this.WebGL_buffer_pointers.get( context ) );
+      this.execute_shaders( context, type );                                                // Run the shaders to draw every triangle now.
     }                                                                  
 }
 
@@ -356,9 +331,9 @@ class Shape extends Vertex_Buffer
           }
         flat_shade()                // Automatically assign the correct normals to each triangular element to achieve flat shading.
           {                         // Affect all recently added triangles (those past "offset" in the list).  Assumes that no
-            this.indexed = false;   // vertices are shared across seams.   First, iterate through the index or position triples:
-            for( let counter = 0; counter < (this.indexed ? this.indices.length : this.arrays.position.length); counter += 3 )
-            { const indices = this.indexed ? [ this.indices[ counter ], this.indices[ counter + 1 ], this.indices[ counter + 2 ] ] : 
+            this.indices.length = false;   // vertices are shared across seams.   First, iterate through the index or position triples:
+            for( let counter = 0; counter < (this.indices.length ? this.indices.length : this.arrays.position.length); counter += 3 )
+            { const indices = this.indices.length ? [ this.indices[ counter ], this.indices[ counter + 1 ], this.indices[ counter + 2 ] ] : 
                                              [ counter, counter + 1, counter + 2 ];
               const [ p1, p2, p3 ] = indices.map( i => this.arrays.position[ i ] );
               const n1 = p1.minus(p2).cross( p3.minus(p1) ).normalized();          // Cross the two edge vectors of this
@@ -384,12 +359,6 @@ class Shape extends Vertex_Buffer
 }
 
 
-window.Graphics_State = window.tiny_graphics.Graphics_State =
-class Graphics_State                                            // Stores things that affect multiple shapes, such as lights and the camera.
-{ constructor( camera_transform = Mat4.identity(), projection_transform = Mat4.identity() ) 
-    { Object.assign( this, { camera_transform, projection_transform, animation_time: 0, animation_delta_time: 0, lights: [] } ); }
-}
-
 window.Light = window.tiny_graphics.Light =
 class Light                                                     // The properties of one light in the scene (Two 4x1 Vecs and a scalar)
 { constructor( position, color, size ) { Object.assign( this, { position, color, attenuation: 1/size } ); }  };
@@ -397,17 +366,6 @@ class Light                                                     // The propertie
 window.Color = window.tiny_graphics.Color =
 class Color extends Vec { }    // Just an alias.  Colors are special 4x1 vectors expressed as ( red, green, blue, opacity ) each from 0 to 1.
 
-
-window.Material = window.tiny_graphics.Material =
-class Material
-{ constructor( shader ) { this.shader = shader }
-  override( properties )                      // Easily make temporary overridden versions of a base material, such as
-    { const copied = new this.constructor();  // of a different color or diffusivity.
-      Object.assign( copied, this );
-      Object.assign( copied, properties );
-      return copied;
-    }
-}
 
 
 window.Graphics_Addresses = window.tiny_graphics.Graphics_Addresses =
@@ -435,10 +393,44 @@ class Graphics_Addresses    // For organizing communication with the GPU for Sha
 }
 
 
+class Overridable     // Class Overridable allows a short way to create modified versions of JavaScript objects.  Some properties are
+{                     // replaced with substitutes that you provide, without having to write out a new object from scratch.
+  helper( replacement, target )
+    { Object.assign( target, this );    // Clone all of our keys/values
+      const matching_keys_by_type = Object.entries( this ).filter( ([key, value]) => replacement instanceof value.constructor );
+      if( matching_keys_by_type[0] ) 
+        target[ matching_keys_by_type[0][0] ] = replacement;      
+      return target;
+    }
+       // To override, simply pass in "replacement", a JS Object of keys/values you want to override, to generate a new object.
+       // For shorthand you can leave off the key and only provide a value (pass in directly as "replacement") and a guess will
+       // be used for which member you want overridden based on type.
+  override( replacement ) { return this.helper( replacement, Object.create( this.constructor.prototype ) ) }
+  replace(  replacement ) { return this.helper( replacement, this ) } // Replace is like override but modifies the original object.
+}
+
+
+
+window.Graphics_State = window.tiny_graphics.Graphics_State =
+class Graphics_State extends Overridable                 // Stores things that affect multiple shapes, such as lights and the camera.
+{ constructor( camera_transform = Mat4.identity(), projection_transform = Mat4.identity() ) 
+    { super(); Object.assign( this, { camera_transform, projection_transform, animation_time: 0, animation_delta_time: 0, lights: [] } ); }
+}
+
+
 window.Shader = window.tiny_graphics.Shader =
-class Shader                   // Your subclasses of Shader will manage strings of GLSL code that will be sent to the GPU and will run, to
-{ constructor( gl )            // draw every shape.  Extend the class and fill in the abstract functions; the constructor needs them.
-    { Object.assign( this, { gl, program: gl.createProgram() } );
+class Shader extends Overridable       // Your subclasses of Shader will manage strings of GLSL code that will be sent to the GPU and will run, to
+{                                      // draw every shape.  Extend the class and fill in the abstract functions; the constructor needs them.
+  constructor( graphics_state = new Graphics_State(), model_transform = new Mat(), material = new class Material{} ) 
+    { super(); 
+      Object.assign( this, { graphics_state, model_transform, material } );
+      this.program_instances_on_GPU = new Map();                                    // We will store one of these for each context.
+    }
+  copy_onto_graphics_card( context )
+    { const gl = context;
+      
+      const program = gl.createProgram();
+
       const shared = this.shared_glsl_code() || "";
       
       const vertShdr = gl.createShader( gl.VERTEX_SHADER );
@@ -451,15 +443,39 @@ class Shader                   // Your subclasses of Shader will manage strings 
       gl.compileShader( fragShdr );
       if( !gl.getShaderParameter(fragShdr, gl.COMPILE_STATUS)    ) throw "Fragment shader compile error: " + gl.getShaderInfoLog( fragShdr );
 
-      gl.attachShader( this.program, vertShdr );
-      gl.attachShader( this.program, fragShdr );
-      gl.linkProgram(  this.program );
-      if( !gl.getProgramParameter( this.program, gl.LINK_STATUS) ) throw "Shader linker error: "           + gl.getProgramInfoLog( 
+      gl.attachShader( program, vertShdr );
+      gl.attachShader( program, fragShdr );
+      gl.linkProgram(  program );
+      if( !gl.getProgramParameter( program, gl.LINK_STATUS) ) throw "Shader linker error: "           + gl.getProgramInfoLog( 
                                                                                                                               this.program );
-      this.g_addrs = new Graphics_Addresses( this.program, this.gl );
+      const gpu_instance = { program, GPU_addresses: new Graphics_Addresses( program, gl ) };
+      this.program_instances_on_GPU.set( context, gpu_instance );
+      return gpu_instance;
+
     }
-    activate() { this.gl.useProgram( this.program ); }                    // You have to override the following five functions:
-    material(){}  update_GPU(){}  shared_glsl_code(){}  vertex_glsl_code(){}  fragment_glsl_code(){}
+  activate( context, buffer_pointers )
+    { let gpu_instance = this.program_instances_on_GPU.get( context );
+      if( !gpu_instance )    // Does this shader already have a copy on this GPU context?
+        gpu_instance = this.copy_onto_graphics_card( context );     
+
+      context.useProgram( gpu_instance.program );
+
+          // --- Turn on all the correct attributes and make sure they're pointing to the correct ranges in GPU memory. ---
+      for( let [ attr_name, attribute ] of Object.entries( gpu_instance.GPU_addresses.shader_attributes ) )
+      { if( !attribute.enabled )
+          { if( attribute.index >= 0 ) context.disableVertexAttribArray( attribute.index );
+            continue;
+          }
+        context.enableVertexAttribArray( attribute.index );
+        context.bindBuffer( context.ARRAY_BUFFER, buffer_pointers[ attr_name ] );    // Activate the correct buffer.
+        context.vertexAttribPointer( attribute.index, attribute.size,   attribute.type,            // Populate each attribute 
+                                attribute.normalized, attribute.stride, attribute.pointer );       // from the active buffer.
+      }
+          // --- Send over all the values needed by this particular shader to the GPU: ---
+      this.update_GPU( context, gpu_instance.GPU_addresses );
+     }                    // You have to override the following five functions:
+    material() { return class Material extends Overridable {} }
+    update_GPU(){}  shared_glsl_code(){}  vertex_glsl_code(){}  fragment_glsl_code(){}
 }
 
 
@@ -524,13 +540,13 @@ class Webgl_Manager      // This class manages a whole graphics program for one 
       Object.assign( this.canvas, { width, height } );   // have a special effect on buffers, separate from their style.
       this.context.viewport( 0, 0, width, height );      // Build the canvas's matrix for converting -1 to 1 ranged coords (NCDS)
     }                                                    // into its own pixel coords.
-  get_instance( shader_or_texture )                 // If a scene requests that the Canvas keeps a certain resource (a Shader 
-    { if( this.instances[ shader_or_texture ] )     // or Texture) loaded, check if we already have one GPU-side first.
-        return this.instances[ shader_or_texture ];     // Return the one that already is loaded if it exists.  Otherwise,
-      if( typeof shader_or_texture == "string" )        // If a texture was requested, load it onto a GPU buffer.
-        return this.instances[ shader_or_texture ] = new Texture( this.context, ...arguments );  // Or if it's a shader:
-      return   this.instances[ shader_or_texture ] = new ( shader_or_texture )( this.context );  // Compile it and put it on the GPU.
-    }
+//   get_instance( shader_or_texture )                 // If a scene requests that the Canvas keeps a certain resource (a Shader 
+//     { if( this.instances[ shader_or_texture ] )     // or Texture) loaded, check if we already have one GPU-side first.
+//         return this.instances[ shader_or_texture ];     // Return the one that already is loaded if it exists.  Otherwise,
+//       if( typeof shader_or_texture == "string" )        // If a texture was requested, load it onto a GPU buffer.
+//         return this.instances[ shader_or_texture ] = new Texture( this.context, ...arguments );  // Or if it's a shader:
+//       return   this.instances[ shader_or_texture ] = new ( shader_or_texture )( this.context );  // Compile it and put it on the GPU.
+//     }
   register_scene_component( component )     // Allow a Scene_Component to show their control panel and enter the event loop.
     { this.scene_components.unshift( component );  component.make_control_panel( component.controls );
     }

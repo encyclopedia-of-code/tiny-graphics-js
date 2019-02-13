@@ -1,7 +1,7 @@
 window.Axes_Viewer = window.classes.Axes_Viewer =
 class Axes_Viewer extends Scene_Component     // A helper scene (a secondary Scene Component) for helping you visualize the
-{ constructor( context, control_box )         // coordinate bases that are used in your real scene.  Your scene can feed this
-    { super(   context, control_box );        // object a list of bases to draw as axis arrows.  Pressing the buttons of this
+{ constructor( webgl_manager, control_box )         // coordinate bases that are used in your real scene.  Your scene can feed this
+    { super(   webgl_manager, control_box );        // object a list of bases to draw as axis arrows.  Pressing the buttons of this
                                               // helper scene cycles through a list of each basis you have added, drawing
                                               // the selected one.  Call insert() and pass it a basis to add one to the list.
                                               // Always reset the data structure by calling reset() before each frame in your scene.
@@ -12,10 +12,10 @@ class Axes_Viewer extends Scene_Component     // A helper scene (a secondary Sce
                                               // omitting it inserts your basis in the next empty group.  To re-use IDs easily,
       this.selected_basis_id = 0;             // obtain the next unused ID by calling next_group_id(), so you can re-use it for
       this.reset();                           // all bases that you want to appear at the same level. 
-      context.globals.axes_viewer = this;
-      this.submit_shapes( context, { axes: new Axis_Arrows() } );
-      this.material = context.get_instance( Fake_Bump_Map ).material( Color.of( 0,0,0,1 ), 
-                            { ambient: 1,  texture: context.get_instance( "/assets/rgb.jpg" ) } );              
+      webgl_manager.globals.axes_viewer = this;
+      this.shapes = { axes: new Axis_Arrows() };
+      this.material = webgl_manager.get_instance( Fake_Bump_Map ).material( Color.of( 0,0,0,1 ), 
+                            { ambient: 1,  texture: webgl_manager.get_instance( "/assets/rgb.jpg" ) } );              
     }
   insert( basis, group_id = ++this.cursor )      // Default to putting the basis in the next empty group; otherwise use group number.
     { this.cursor = group_id;                    // Update the cursor if a group number was supplied.
@@ -36,10 +36,10 @@ class Axes_Viewer extends Scene_Component     // A helper scene (a secondary Sce
     }
   increase() { this.selected_basis_id = Math.min( this.selected_basis_id + 1, this.groups.length-1 ); }
   decrease() { this.selected_basis_id = Math.max( this.selected_basis_id - 1, 0 ); }   // Don't allow selection of negative IDs.
-  display( graphics_state )
+  display( context, graphics_state )
     { if( this.groups[ this.selected_basis_id ] )
         for( let a of this.groups[ this.selected_basis_id ] )         // Draw the selected group of axes arrows.
-          this.shapes.axes.draw( graphics_state, a, this.material );
+          this.shapes.axes.draw( context, new Packet_For_Shader( graphics_state, Mat4.identity(), this.shader ) );
       if( this.selected_basis_id < 0 ) this.selected_basis_id = 0;
     }
 }
@@ -47,15 +47,15 @@ class Axes_Viewer extends Scene_Component     // A helper scene (a secondary Sce
 
 window.Axes_Viewer_Test_Scene = window.classes.Axes_Viewer_Test_Scene =
 class Axes_Viewer_Test_Scene extends Scene_Component
-{ constructor( context, control_box )                 // An example of how your scene should properly manaage an Axes_Viewer
-    { super(   context, control_box );                // helper scene, so that it is able to help you draw all the
+{ constructor( webgl_manager, control_box )                 // An example of how your scene should properly manaage an Axes_Viewer
+    { super(   webgl_manager, control_box );                // helper scene, so that it is able to help you draw all the
                                                       // coordinate bases in your scene's hierarchy at the correct levels.
-      if( !context.globals.axes_viewer )
-        context.register_scene_component( new Axes_Viewer( context, control_box.parentElement.insertCell() ) );      
-      this.axes_viewer = context.globals.axes_viewer;
+      if( !webgl_manager.globals.axes_viewer )
+        webgl_manager.register_scene_component( new Axes_Viewer( webgl_manager, control_box.parentElement.insertCell() ) );      
+      this.axes_viewer = webgl_manager.globals.axes_viewer;
 
                                                                   // Scene defaults:
-      this.submit_shapes( context, { box: new Cube() } );
+      this.shapes = { box: new Cube() };
       this.material = context.get_instance( Phong_Shader ).material( Color.of( .8,.4,.8,1 ) );
       this.lights = [ new Light( Vec.of( 0,0,1,0 ), Color.of( 0,1,1,1 ), 100000 ) ];
 
@@ -64,7 +64,7 @@ class Axes_Viewer_Test_Scene extends Scene_Component
     }
   make_control_panel()
     { this.control_panel.innerHTML += "(Substitute your own scene here)" }
-  display( graphics_state )
+  display( context, graphics_state )
     { graphics_state.lights = this.lights;        // Use the lights stored in this.lights.
       const t = graphics_state.animation_time / 1000, dt = graphics_state.animation_delta_time / 1000;
 

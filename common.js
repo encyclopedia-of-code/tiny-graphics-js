@@ -107,7 +107,6 @@ window.Line_Segment_Array = window.classes.Line_Segment_Array =
 class Line_Segment_Array extends Shape    // Plot 2D points.
 { constructor()
   { super( "position", "color" );
-    this.indexed = false;
   }
   set_data( origins, destinations, colors, gl = this.gl )      // Provide two lists of points (each pair will be connected into a segment),
     { this.arrays.position = [];                               // plus a list of enough colors for each of those two points per segment.
@@ -316,10 +315,11 @@ window.Basic_Shader = window.classes.Basic_Shader =
 class Basic_Shader extends Shader             // Subclasses of Shader each store and manage a complete GPU program.  This Shader is 
 {                                             // the simplest example of one.  It samples pixels from colors that are directly assigned 
   material() { return new class extends Material {}( this ) }      // to the vertices.  Materials here are minimal, without any settings.
-  update_GPU( g_state, model_transform, material, gpu = this.g_addrs, gl = this.gl )    // Define how to synchronize our JavaScript's variables to the GPU's:
-      { const [ P, C, M ] = [ g_state.projection_transform, g_state.camera_transform, model_transform ],
+  update_GPU( context, GPU_addresses )    // Define how to synchronize our JavaScript's variables to the GPU's:
+      { const g_state = this.graphics_state, model_transform = this.model_transform, material = this.material;
+        const [ P, C, M ] = [ g_state.projection_transform, g_state.camera_transform, model_transform ],
                       PCM = P.times( C ).times( M );
-        gl.uniformMatrix4fv( gpu.projection_camera_model_transform_loc, false, Mat.flatten_2D_to_1D( PCM.transposed() ) );
+        context.uniformMatrix4fv( GPU_addresses.projection_camera_model_transform_loc, false, Mat.flatten_2D_to_1D( PCM.transposed() ) );
       }
   shared_glsl_code()            // ********* SHARED CODE, INCLUDED IN BOTH SHADERS *********
     { return `precision mediump float;
@@ -349,11 +349,13 @@ class Basic_Shader extends Shader             // Subclasses of Shader each store
 window.Funny_Shader = window.classes.Funny_Shader =
 class Funny_Shader extends Shader         // Simple "procedural" texture shader, with texture coordinates but without an input image.
 { material() { return new class extends Material {}( this ) }  // Materials here are minimal, without any settings.
-  update_GPU( g_state, model_transform, material, gpu = this.g_addrs, gl = this.gl )    // Define how to synchronize our JavaScript's variables to the GPU's:
-      { const [ P, C, M ] = [ g_state.projection_transform, g_state.camera_transform, model_transform ],
+  update_GPU( packet_for_shader )    // Define how to synchronize our JavaScript's variables to the GPU's:
+      { const gpu = this.g_addrs, gl = this.context, 
+          g_state = this.graphics_state, model_transform = this.model_transform, material = this.material;
+        const [ P, C, M ] = [ graphics_state.projection_transform, graphics_state.camera_transform, model_transform ],
                       PCM = P.times( C ).times( M );
         gl.uniformMatrix4fv( gpu.projection_camera_model_transform_loc, false, Mat.flatten_2D_to_1D( PCM.transposed() ) );
-        gl.uniform1f ( gpu.animation_time_loc, g_state.animation_time / 1000 );
+        gl.uniform1f ( gpu.animation_time_loc, graphics_state.animation_time / 1000 );
       }
   shared_glsl_code()            // ********* SHARED CODE, INCLUDED IN BOTH SHADERS *********
     { return `precision mediump float;
@@ -508,10 +510,10 @@ class Phong_Shader extends Shader          // THE DEFAULT SHADER: This uses the 
           gl_FragColor.xyz += phong_model_lights( N );                     // Compute the final color with contributions from lights.
         }`;
     }
-    // Define how to synchronize our JavaScript's variables to the GPU's:
-  update_GPU( g_state, model_transform, material, gpu = this.g_addrs, gl = this.gl )
-    {                              // First, send the matrices to the GPU, additionally cache-ing some products of them we know we'll need:
-      this.update_matrices( g_state, model_transform, gpu, gl );
+  update_GPU( packet_for_shader )    // Define how to synchronize our JavaScript's variables to the GPU's:
+    { const gpu = this.g_addrs, gl = this.context, 
+        g_state = this.graphics_state, model_transform = this.model_transform, material = this.material;
+      this.update_matrices( g_state, model_transform, gpu, gl );  // First, send the matrices to the GPU.
       gl.uniform1f ( gpu.animation_time_loc, g_state.animation_time / 1000 );
 
       if( g_state.gouraud === undefined ) { g_state.gouraud = g_state.color_normals = false; }    // Keep the flags seen by the shader 
@@ -543,9 +545,9 @@ class Phong_Shader extends Shader          // THE DEFAULT SHADER: This uses the 
       gl.uniform1fv( gpu.attenuation_factor_loc,  lightAttenuations_flattened );
     }
   update_matrices( g_state, model_transform, gpu, gl )                                    // Helper function for sending matrices to GPU.
-    {                                                   // (PCM will mean Projection * Camera * Model)
+    {                                                  // (PCM will mean Projection * Camera * Model)
       let [ P, C, M ]    = [ g_state.projection_transform, g_state.camera_transform, model_transform ],
-            CM     =      C.times(  M ),
+            CM     =      C.times(  M ),     // Cache some extra products of our matrices to save computing them in the shader.
             PCM    =      P.times( CM ),
             inv_CM = Mat4.inverse( CM ).sub_block([0,0], [3,3]);
                                                                   // Send the current matrices to the shader.  Go ahead and pre-compute
