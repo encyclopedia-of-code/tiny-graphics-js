@@ -396,6 +396,9 @@ class Graphics_Addresses    // For organizing communication with the GPU for Sha
 
 class Overridable     // Class Overridable allows a short way to create modified versions of JavaScript objects.  Some properties are
 {                     // replaced with substitutes that you provide, without having to write out a new object from scratch.
+       // To override, simply pass in "replacement", a JS Object of keys/values you want to override, to generate a new object.
+       // For shorthand you can leave off the key and only provide a value (pass in directly as "replacement") and a guess will
+       // be used for which member you want overridden based on type.
   helper( replacement, target )
     { Object.assign( target, this );    // Clone all of our keys/values
       if( replacement.constructor === Object )
@@ -407,9 +410,6 @@ class Overridable     // Class Overridable allows a short way to create modified
       target[ matching_keys_by_type[0][0] ] = replacement;
       return target;
     }
-       // To override, simply pass in "replacement", a JS Object of keys/values you want to override, to generate a new object.
-       // For shorthand you can leave off the key and only provide a value (pass in directly as "replacement") and a guess will
-       // be used for which member you want overridden based on type.
   override( replacement ) { return this.helper( replacement, Object.create( this.constructor.prototype ) ) }
   replace(  replacement ) { return this.helper( replacement, this ) } // Replace is like override but modifies the original object.
 }
