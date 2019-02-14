@@ -314,10 +314,10 @@ class Axis_Arrows extends Shape                                   // An axis set
 window.Basic_Shader = window.classes.Basic_Shader =
 class Basic_Shader extends Shader             // Subclasses of Shader each store and manage a complete GPU program.  This Shader is 
 {                                             // the simplest example of one.  It samples pixels from colors that are directly assigned 
-  material() { return new class extends Material {}( this ) }      // to the vertices.  Materials here are minimal, without any settings.
+                                              // to the vertices.
+  material() { return new class extends Material {}( this ) }      // Materials here are minimal, without any settings.
   update_GPU( context, GPU_addresses )    // Define how to synchronize our JavaScript's variables to the GPU's:
-      { const g_state = this.graphics_state, model_transform = this.model_transform, material = this.material;
-        const [ P, C, M ] = [ g_state.projection_transform, g_state.camera_transform, model_transform ],
+      { const [ P, C, M ] = [ this.graphics_state.projection_transform, this.graphics_state.camera_transform, this.model_transform ],
                       PCM = P.times( C ).times( M );
         context.uniformMatrix4fv( GPU_addresses.projection_camera_model_transform_loc, false, Mat.flatten_2D_to_1D( PCM.transposed() ) );
       }
@@ -340,7 +340,7 @@ class Basic_Shader extends Shader             // Subclasses of Shader each store
   fragment_glsl_code()           // ********* FRAGMENT SHADER *********
     { return `
         void main()
-        { gl_FragColor = VERTEX_COLOR;                                    // The interpolation gets done directly on the per-vertex colors.
+        { gl_FragColor = VERTEX_COLOR;                              // The interpolation gets done directly on the per-vertex colors.
         }`;
     }
 }

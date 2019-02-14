@@ -414,14 +414,14 @@ class Overridable     // Class Overridable allows a short way to create modified
 window.Graphics_State = window.tiny_graphics.Graphics_State =
 class Graphics_State extends Overridable                 // Stores things that affect multiple shapes, such as lights and the camera.
 { constructor( camera_transform = Mat4.identity(), projection_transform = Mat4.identity() ) 
-    { super(); Object.assign( this, { camera_transform, projection_transform, animation_time: 0, animation_delta_time: 0, lights: [] } ); }
+    { super(); Object.assign( this, { camera_transform, projection_transform, animation_time: 0, animation_delta_time: 0 } ); }
 }
 
 
 window.Shader = window.tiny_graphics.Shader =
 class Shader extends Overridable       // Your subclasses of Shader will manage strings of GLSL code that will be sent to the GPU and will run, to
 {                                      // draw every shape.  Extend the class and fill in the abstract functions; the constructor needs them.
-  constructor( graphics_state = new Graphics_State(), model_transform = new Mat(), material = new class Material{} ) 
+  constructor( graphics_state = new Graphics_State(), model_transform = new Mat(), material = new class Material extends Overridable {} ) 
     { super(); 
       Object.assign( this, { graphics_state, model_transform, material } );
       this.program_instances_on_GPU = new Map();                                    // We will store one of these for each context.
