@@ -315,9 +315,9 @@ window.Basic_Shader = window.classes.Basic_Shader =
 class Basic_Shader extends Shader             // Subclasses of Shader each store and manage a complete GPU program.  This Shader is 
 {                                             // the simplest example of one.  It samples pixels from colors that are directly assigned 
                                               // to the vertices.
-  material() { return new class extends Material {}( this ) }      // Materials here are minimal, without any settings.
-  update_GPU( context, GPU_addresses )    // Define how to synchronize our JavaScript's variables to the GPU's:
-      { const [ P, C, M ] = [ this.graphics_state.projection_transform, this.graphics_state.camera_transform, this.model_transform ],
+  material() { return new class Material extends Overridable {}().replace({ shader: this }) }      // Materials here are minimal, without any settings.
+  update_GPU( context, GPU_addresses, graphics_state, model_transform, material )    // Define how to synchronize our JavaScript's variables to the GPU's:
+      { const [ P, C, M ] = [ graphics_state.projection_transform, graphics_state.camera_transform, model_transform ],
                       PCM = P.times( C ).times( M );
         context.uniformMatrix4fv( GPU_addresses.projection_camera_model_transform_loc, false, Mat.flatten_2D_to_1D( PCM.transposed() ) );
       }

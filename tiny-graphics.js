@@ -266,14 +266,15 @@ class Vertex_Buffer           // To use Vertex_Buffer, make a subclass of it tha
       }
       else  gl.drawArrays( gl[type], 0, Object.values( this.arrays )[0].length );       // If no indices were provided, assume the 
     }                                                                                        // vertices are arranged as triples.
-  draw( context, shader, type = "TRIANGLES" )  // To appear onscreen, a shape of any variety goes through the draw() function,
+  draw( context, graphics_state, model_transform, material, type = "TRIANGLES" )  
+                                                          // To appear onscreen, a shape of any variety goes through the draw() function,
     {                                                     // which executes the shader programs.  The shaders draw the right shape due to
                                                           // pre-selecting the correct buffer region in the GPU that holds that shape's data.
       if( !this.WebGL_buffer_pointers.get( context ) )    // Does this vertex array already have a copy on this GPU context?
       { this.WebGL_buffer_pointers.set( context, {} );    // If not, start a new collection of buffer pointers into this GPU context.
         this.copy_onto_graphics_card( context );          // Fill the GPU buffers with copies of this shape's current array data.
       }
-      shader.activate( context, this.WebGL_buffer_pointers.get( context ) );
+      material.shader.activate( context, this.WebGL_buffer_pointers.get( context ), graphics_state, model_transform, material );
       this.execute_shaders( context, type );                                                // Run the shaders to draw every triangle now.
     }                                                                  
 }
@@ -397,6 +398,10 @@ class Overridable     // Class Overridable allows a short way to create modified
 {                     // replaced with substitutes that you provide, without having to write out a new object from scratch.
   helper( replacement, target )
     { Object.assign( target, this );    // Clone all of our keys/values
+      if( replacement.constructor === Object )
+      { Object.assign( target, replacement );       // If a JS object was given, use its entries to override;
+        return target;
+      }                                             // Otherwise we'll try to guess the key to override by type.
       const matching_keys_by_type = Object.entries( this ).filter( ([key, value]) => replacement instanceof value.constructor );
       if( matching_keys_by_type[0] ) 
         target[ matching_keys_by_type[0][0] ] = replacement;      
@@ -421,9 +426,8 @@ class Graphics_State extends Overridable                 // Stores things that a
 window.Shader = window.tiny_graphics.Shader =
 class Shader extends Overridable       // Your subclasses of Shader will manage strings of GLSL code that will be sent to the GPU and will run, to
 {                                      // draw every shape.  Extend the class and fill in the abstract functions; the constructor needs them.
-  constructor( graphics_state = new Graphics_State(), model_transform = new Mat(), material = new class Material extends Overridable {} ) 
-    { super(); 
-      Object.assign( this, { graphics_state, model_transform, material } );
+  constructor() 
+    { super();
       this.program_instances_on_GPU = new Map();                                    // We will store one of these for each context.
     }
   copy_onto_graphics_card( context )
@@ -453,7 +457,7 @@ class Shader extends Overridable       // Your subclasses of Shader will manage 
       return gpu_instance;
 
     }
-  activate( context, buffer_pointers )
+  activate( context, buffer_pointers, graphics_state, model_transform, material )
     { let gpu_instance = this.program_instances_on_GPU.get( context );
       if( !gpu_instance )    // Does this shader already have a copy on this GPU context?
         gpu_instance = this.copy_onto_graphics_card( context );     
@@ -472,7 +476,7 @@ class Shader extends Overridable       // Your subclasses of Shader will manage 
                                 attribute.normalized, attribute.stride, attribute.pointer );       // from the active buffer.
       }
           // --- Send over all the values needed by this particular shader to the GPU: ---
-      this.update_GPU( context, gpu_instance.GPU_addresses );
+      this.update_GPU( context, gpu_instance.GPU_addresses, graphics_state, model_transform, material );
      }                    // You have to override the following five functions:
     material() { return class Material extends Overridable {} }
     update_GPU(){}  shared_glsl_code(){}  vertex_glsl_code(){}  fragment_glsl_code(){}
