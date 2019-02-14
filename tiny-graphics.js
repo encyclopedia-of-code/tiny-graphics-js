@@ -403,8 +403,8 @@ class Overridable     // Class Overridable allows a short way to create modified
         return target;
       }                                             // Otherwise we'll try to guess the key to override by type.
       const matching_keys_by_type = Object.entries( this ).filter( ([key, value]) => replacement instanceof value.constructor );
-      if( matching_keys_by_type[0] ) 
-        target[ matching_keys_by_type[0][0] ] = replacement;      
+      if( !matching_keys_by_type[0] ) throw "Overridable: Can't figure out which value you're trying to replace; nothing matched by type.";
+      target[ matching_keys_by_type[0][0] ] = replacement;
       return target;
     }
        // To override, simply pass in "replacement", a JS Object of keys/values you want to override, to generate a new object.
