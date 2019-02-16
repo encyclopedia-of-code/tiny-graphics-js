@@ -404,9 +404,8 @@ class Overridable     // Class Overridable allows a short way to create modified
   helper( replacement, target )
     { Object.assign( target, this );    // Clone all of our keys/values
       if( replacement.constructor === Object )
-      { Object.assign( target, replacement );       // If a JS object was given, use its entries to override;
-        return target;
-      }                                             // Otherwise we'll try to guess the key to override by type.
+        return Object.assign( target, replacement );       // If a JS object was given, use its entries to override;
+                                                           // Otherwise we'll try to guess the key to override by type.
       const matching_keys_by_type = Object.entries( this ).filter( ([key, value]) => replacement instanceof value.constructor );
       if( !matching_keys_by_type[0] ) throw "Overridable: Can't figure out which value you're trying to replace; nothing matched by type.";
       target[ matching_keys_by_type[0][0] ] = replacement;
