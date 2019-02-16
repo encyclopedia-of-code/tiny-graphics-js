@@ -422,12 +422,9 @@ class Graphics_State extends Overridable                 // Stores things that a
 
 
 window.Shader = window.tiny_graphics.Shader =
-class Shader extends Overridable       // Your subclasses of Shader will manage strings of GLSL code that will be sent to the GPU and will run, to
+class Shader                           // Your subclasses of Shader will manage strings of GLSL code that will be sent to the GPU and will run, to
 {                                      // draw every shape.  Extend the class and fill in the abstract functions; the constructor needs them.
-  constructor() 
-    { super();
-      this.program_instances_on_GPU = new Map();                                    // We will store one of these for each context.
-    }
+  constructor() { this.program_instances_on_GPU = new Map() }                              // We will store one of these for each context.
   copy_onto_graphics_card( context )
     { const gl = context;
       
