@@ -348,14 +348,12 @@ class Basic_Shader extends Shader             // Subclasses of Shader each store
 
 window.Funny_Shader = window.classes.Funny_Shader =
 class Funny_Shader extends Shader         // Simple "procedural" texture shader, with texture coordinates but without an input image.
-{ material() { return new class extends Material {}( this ) }  // Materials here are minimal, without any settings.
-  update_GPU( packet_for_shader )    // Define how to synchronize our JavaScript's variables to the GPU's:
-      { const gpu = this.g_addrs, gl = this.context, 
-          g_state = this.graphics_state, model_transform = this.model_transform, material = this.material;
-        const [ P, C, M ] = [ graphics_state.projection_transform, graphics_state.camera_transform, model_transform ],
+{ material() { return new class Material extends Overridable {}().replace({ shader: this }) }      // Materials here are minimal, without any settings.
+  update_GPU( context, GPU_addresses, graphics_state, model_transform, material )    // Define how to synchronize our JavaScript's variables to the GPU's:
+      { const [ P, C, M ] = [ graphics_state.projection_transform, graphics_state.camera_transform, model_transform ],
                       PCM = P.times( C ).times( M );
-        gl.uniformMatrix4fv( gpu.projection_camera_model_transform_loc, false, Mat.flatten_2D_to_1D( PCM.transposed() ) );
-        gl.uniform1f ( gpu.animation_time_loc, graphics_state.animation_time / 1000 );
+        context.uniformMatrix4fv( GPU_addresses.projection_camera_model_transform_loc, false, Mat.flatten_2D_to_1D( PCM.transposed() ) );
+        context.uniform1f ( GPU_addresses.animation_time_loc, graphics_state.animation_time / 1000 );
       }
   shared_glsl_code()            // ********* SHARED CODE, INCLUDED IN BOTH SHADERS *********
     { return `precision mediump float;
@@ -415,15 +413,15 @@ class Phong_Shader extends Shader          // THE DEFAULT SHADER: This uses the 
                                            // triangles' fragments occupying the same pixels.  The Z-Buffer test is applied to see if the 
                                            // new triangle is closer to the camera, and even if so, blending settings may interpolate some 
                                            // of the old color into the result.  Finally, an image is displayed onscreen.
-{ material( color, properties )     // Define an internal class "Material" that stores the standard settings found in Phong lighting.
-  { return new class extends Material       // Possible properties: ambient, diffusivity, specularity, smoothness, gouraud, texture.
-      { constructor( shader, color = Color.of( 0,0,0,1 ), ambient = 0, diffusivity = 1, specularity = 1, smoothness = 40 )
-          { super( shader );
-            Object.assign( this, { color, ambient, diffusivity, specularity, smoothness } );  // Assign defaults.
-            Object.assign( this, properties );                                                // Optionally override defaults.
-          }
-      }( this, color );
-  }
+{ material( options )
+    { const defaults = { color: Color.of( 0,0,0,1 ), ambient: 0, diffusivity: 1, specularity: 1, smoothness: 40 };
+      return new class Material extends Overridable
+        { constructor()                         // Phong Materials expect you to pass in options like the following:
+            { super();
+              Object.assign( this, defaults, options );
+            }
+        }().replace({ shader: this })
+    }
   shared_glsl_code()            // ********* SHARED CODE, INCLUDED IN BOTH SHADERS *********
     { return `precision mediump float;
         const int N_LIGHTS = 2;             // We're limited to only so many inputs in hardware.  Lights are costly (lots of sub-values).
@@ -510,10 +508,9 @@ class Phong_Shader extends Shader          // THE DEFAULT SHADER: This uses the 
           gl_FragColor.xyz += phong_model_lights( N );                     // Compute the final color with contributions from lights.
         }`;
     }
-  update_GPU( packet_for_shader )    // Define how to synchronize our JavaScript's variables to the GPU's:
-    { const gpu = this.g_addrs, gl = this.context, 
-        g_state = this.graphics_state, model_transform = this.model_transform, material = this.material;
-      this.update_matrices( g_state, model_transform, gpu, gl );  // First, send the matrices to the GPU.
+  update_GPU( context, GPU_addresses, g_state, model_transform, material )    // Define how to synchronize our JavaScript's variables to the GPU's:
+    { const gpu = GPU_addresses, gl = context;
+      this.update_matrices( gl, gpu, g_state, model_transform );  // First, send the matrices to the GPU.
       gl.uniform1f ( gpu.animation_time_loc, g_state.animation_time / 1000 );
 
       if( g_state.gouraud === undefined ) { g_state.gouraud = g_state.color_normals = false; }    // Keep the flags seen by the shader 
@@ -533,7 +530,7 @@ class Phong_Shader extends Shader          // THE DEFAULT SHADER: This uses the 
       }
       else  { gl.uniform1f ( gpu.USE_TEXTURE_loc, 0 );   gpu.shader_attributes["texture_coord"].enabled = false; }
 
-      if( !g_state.lights.length )  return;
+      if( !g_state.lights || !g_state.lights.length )  return;
       var lightPositions_flattened = [], lightColors_flattened = [], lightAttenuations_flattened = [];
       for( var i = 0; i < 4 * g_state.lights.length; i++ )
         { lightPositions_flattened                  .push( g_state.lights[ Math.floor(i/4) ].position[i%4] );
@@ -544,7 +541,7 @@ class Phong_Shader extends Shader          // THE DEFAULT SHADER: This uses the 
       gl.uniform4fv( gpu.lightColor_loc,          lightColors_flattened );
       gl.uniform1fv( gpu.attenuation_factor_loc,  lightAttenuations_flattened );
     }
-  update_matrices( g_state, model_transform, gpu, gl )                                    // Helper function for sending matrices to GPU.
+  update_matrices( gl, gpu, g_state, model_transform )                                    // Helper function for sending matrices to GPU.
     {                                                  // (PCM will mean Projection * Camera * Model)
       let [ P, C, M ]    = [ g_state.projection_transform, g_state.camera_transform, model_transform ],
             CM     =      C.times(  M ),     // Cache some extra products of our matrices to save computing them in the shader.
@@ -595,18 +592,18 @@ class Movement_Controls extends Scene_Component    // Movement_Controls is a Sce
                                                    // style controls into the website.  These can be uesd to manually move your camera or
                                                    // other objects smoothly through your scene using key, mouse, and HTML button controls
                                                    // to help you explore what's in it.
-  constructor( context, control_box, canvas = context.canvas )
-    { super( context, control_box );
-      [ this.context, this.roll, this.look_around_locked, this.invert ] = [ context, 0, true, true ];                  // Data members
+  constructor( webgl_manager, control_box, canvas = webgl_manager.canvas )
+    { super( webgl_manager, control_box );
+      [ this.webgl_manager, this.roll, this.look_around_locked, this.invert ] = [ webgl_manager, 0, true, true ];                  // Data members
       [ this.thrust, this.pos, this.z_axis ] = [ Vec.of( 0,0,0 ), Vec.of( 0,0,0 ), Vec.of( 0,0,0 ) ];
                                                  // The camera matrix is not actually stored here inside Movement_Controls; instead, track
                                                  // an external matrix to modify. This target is a reference (made with closures) kept
                                                  // in "globals" so it can be seen and set by other classes.  Initially, the default target
                                                  // is the camera matrix that Shaders use, stored in the global graphics_state object.
-      this.target = function() { return context.globals.movement_controls_target() }
-      context.globals.movement_controls_target = function(t) { return context.globals.graphics_state.camera_transform };
-      context.globals.movement_controls_invert = this.will_invert = () => true;
-      context.globals.has_controls = true;
+      this.target = function() { return webgl_manager.globals.movement_controls_target() }
+      webgl_manager.globals.movement_controls_target = function(t) { return webgl_manager.globals.graphics_state.camera_transform };
+      webgl_manager.globals.movement_controls_invert = this.will_invert = () => true;
+      webgl_manager.globals.has_controls = true;
 
       [ this.radians_per_frame, this.meters_per_frame, this.speed_multiplier ] = [ 1/200, 20, 1 ];
       
@@ -679,7 +676,7 @@ class Movement_Controls extends Scene_Component    // Movement_Controls is a Sce
       do_operation( Mat4.rotation( radians_per_frame * dragging_vector.norm(), Vec.of( dragging_vector[1], dragging_vector[0], 0 ) ) );
       do_operation( Mat4.translation([ 0,0, sign * -25 ]) );
     }
-  display( graphics_state, dt = graphics_state.animation_delta_time / 1000 )    // Camera code starts here.
+  display( context, graphics_state, dt = graphics_state.animation_delta_time / 1000 )    // Camera code starts here.
     { const m = this.speed_multiplier * this. meters_per_frame,
             r = this.speed_multiplier * this.radians_per_frame;
       this.first_person_flyaround( dt * r, dt * m );     // Do first-person.  Scale the normal camera aiming speed by dt for smoothness.

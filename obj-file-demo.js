@@ -71,11 +71,10 @@ class Shape_From_File extends Shape          // A versatile standalone Shape tha
       this.indices = unpacked.indices;
 
       this.normalize_positions( false );
-      this.copy_onto_graphics_card( this.gl );
       this.ready = true;
     }
-  draw( graphics_state, model_transform, material )       // Cancel all attempts to draw the shape before it loads.
-    { if( this.ready ) super.draw( graphics_state, model_transform, material );   }
+  draw( context, graphics_state, model_transform, material )       // Cancel all attempts to draw the shape before it loads.
+    { if( this.ready ) super.draw( context, graphics_state, model_transform, material );   }
 }
 
 window.Obj_File_Demo = window.classes.Obj_File_Demo =
@@ -83,20 +82,19 @@ class Obj_File_Demo extends Scene_Component     // An example that loads a singl
   {                                             // used in place of simpler primitive-based shapes to add complexity to a scene.  Simpler
                                                 // primitives in your scene can just be thought of as placeholders until you find a model
                                                 // file that fits well.  This demo shows the teapot model twice, with one teapot showing
-    constructor( context, control_box )         // off the Fake_Bump_Map effect while the other has a regular texture and Phong lighting.             
-      { super(   context, control_box );
-        context.globals.graphics_state.    camera_transform = Mat4.translation([ 0,0,-5 ]);
-        context.globals.graphics_state.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, .1, 1000 ); 
+    constructor( webgl_manager, control_box )         // off the Fake_Bump_Map effect while the other has a regular texture and Phong lighting.             
+      { super(   webgl_manager, control_box );
+        webgl_manager.globals.graphics_state.    camera_transform = Mat4.translation([ 0,0,-5 ]);
+        webgl_manager.globals.graphics_state.projection_transform = Mat4.perspective( Math.PI/4, webgl_manager.width/webgl_manager.height, .1, 1000 ); 
       
-        var shapes = { "teapot": new Shape_From_File( "/assets/teapot.obj" ) };             // Load the model file.
-        this.submit_shapes( context, shapes );
+        this.shapes = { "teapot": new Shape_From_File( "/assets/teapot.obj" ) };             // Load the model file.
         
-        this.stars = context.get_instance( Phong_Shader )  .material( Color.of( .5,.5,.5,1 ),       // Non bump mapped:
-          { ambient: .3, diffusivity: .5, specularity: .5, texture: context.get_instance( "/assets/stars.png" ) } );
-        this.bumps = context.get_instance( Fake_Bump_Map ).material( Color.of( .5,.5,.5,1 ),        // Bump mapped:
-          { ambient: .3, diffusivity: .5, specularity: .5, texture: context.get_instance( "/assets/stars.png" ) } );
+        this.stars = new Phong_Shader().material({ ambient: .3, diffusivity: .5, specularity: .5, texture: new Texture( webgl_manager.context, "/assets/stars.png" ) })
+                                .override( Color.of( .5,.5,.5,1 ) );       // Non bump mapped.
+        this.bumps = new Fake_Bump_Map().material({ ambient: .3, diffusivity: .5, specularity: .5, texture: new Texture( webgl_manager.context, "/assets/stars.png" ) })
+                                        .override( Color.of( .5,.5,.5,1 ) );        // Bump mapped.
       }
-    display( graphics_state )
+    display( context, graphics_state )
       { const t = graphics_state.animation_time;
         graphics_state.lights = [ new Light( Mat4.rotation( t/300, Vec.of(1, 0, 0) ).times( Vec.of( 3,  2,  10, 1 ) ), 
                                              Color.of( 1, .7, .7, 1 ), 100000 ) ];        // A spinning light to show off the bump map.
@@ -106,7 +104,7 @@ class Obj_File_Demo extends Scene_Component     // An example that loads a singl
                           .times( Mat4.translation([ 2*i, 0, 0 ]) )
                           .times( Mat4.rotation( t/1500, Vec.of( -1, 2, 0 ) ) )
                           .times( Mat4.rotation( -Math.PI/2, Vec.of( 1, 0, 0 ) ) );
-          this.shapes.teapot.draw( graphics_state, model_transform, i == 1 ? this.stars : this.bumps );   // Draw the shapes.
+          this.shapes.teapot.draw( context, graphics_state, model_transform, i == 1 ? this.stars : this.bumps );   // Draw the shapes.
         }
       }
   show_explanation( document_element )

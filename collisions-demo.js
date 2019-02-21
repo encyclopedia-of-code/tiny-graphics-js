@@ -49,8 +49,8 @@ class Body          // Store and update the properties of a 3D body that incrent
 
 window.Simulation = window.classes.Simulation =
 class Simulation extends Scene_Component                // Simulation manages the stepping of simulation time.  Subclass it when making
-{ constructor( context, control_box )                   // a Scene that is a physics demo.  This technique is careful to totally
-    { super(   context, control_box );                  // decouple the simulation from the frame rate.
+{ constructor( webgl_manager, control_box )                   // a Scene that is a physics demo.  This technique is careful to totally
+    { super(   webgl_manager, control_box );                  // decouple the simulation from the frame rate.
       Object.assign( this, { time_accumulator: 0, time_scale: 1, t: 0, dt: 1/20, bodies: [], steps_taken: 0 } );            
     }
   simulate( frame_time )                              // Carefully advance time according to Glenn Fiedler's "Fix Your Timestep" blog post.
@@ -76,13 +76,11 @@ class Simulation extends Scene_Component                // Simulation manages th
       this.live_string( box => { box.textContent = "Fixed simulation time step size: "  + this.dt                 } ); this.new_line();
       this.live_string( box => { box.textContent = this.steps_taken + " timesteps were taken so far."             } );
     }
-  display( graphics_state )
-    { if( !graphics_state.lights.length ) graphics_state.lights = [ new Light( Vec.of( 7,15,20,0 ), Color.of( 1,1,1,1 ), 100000 ) ];
-
-      if( this.globals.animate ) 
+  display( context, graphics_state )
+    { if( this.globals.animate ) 
         this.simulate( graphics_state.animation_delta_time );                 // Advance the time and state of our whole simulation.
       for( let b of this.bodies ) 
-        b.shape.draw( graphics_state, b.drawn_location, b.material );   // Draw each shape at its current location.
+        b.shape.draw( context, graphics_state, b.drawn_location, b.material );   // Draw each shape at its current location.
     }
   update_state( dt ) { throw "Override this" }          // Your subclass of Simulation has to override this abstract function.
 }
@@ -90,12 +88,12 @@ class Simulation extends Scene_Component                // Simulation manages th
 
 window.Test_Data = window.classes.Test_Data =
 class Test_Data
-{ constructor( context )
-    { this.textures = { rgb   : context.get_instance( "/assets/rgb.jpg"   ),
-                        earth : context.get_instance( "/assets/earth.gif" ),
-                        grid  : context.get_instance( "/assets/grid.png"  ),
-                        stars : context.get_instance( "/assets/stars.png" ),
-                        text  : context.get_instance( "/assets/text.png"  )
+{ constructor( webgl_manager )
+    { this.textures = { rgb   : new Texture( webgl_manager.context, "/assets/rgb.jpg"   ),
+                        earth : new Texture( webgl_manager.context, "/assets/earth.gif" ),
+                        grid  : new Texture( webgl_manager.context, "/assets/grid.png"  ),
+                        stars : new Texture( webgl_manager.context, "/assets/stars.png" ),
+                        text  : new Texture( webgl_manager.context, "/assets/text.png"  )
                       }
       this.shapes = { donut  : new Torus          ( 15, 15 ),
                        cone   : new Closed_Cone    ( 4, 10 ),
@@ -106,7 +104,10 @@ class Test_Data
                        prism  : new ( Capped_Cylinder   .prototype.make_flat_shaded_version() )( 10, 10 ),
                        gem    : new ( Subdivision_Sphere.prototype.make_flat_shaded_version() )( 2 ),
                        donut  : new ( Torus             .prototype.make_flat_shaded_version() )( 20, 20 ) 
-                    }; 
+                    };
+      const lights = webgl_manager.globals.graphics_state.lights;
+      if( !lights || !lights.length ) webgl_manager.globals.graphics_state.lights = [ new Light( Vec.of( 7,15,20,0 ), Color.of( 1,1,1,1 ), 100000 ) ];
+ 
     }
   random_shape( shape_list = this.shapes )
     { const shape_names = Object.keys( shape_list );
@@ -117,23 +118,23 @@ class Test_Data
 
 window.Inertia_Demo = window.classes.Inertia_Demo =
 class Inertia_Demo extends Simulation    // Demonstration: Let random initial momentums carry bodies until they fall and bounce.
-{ constructor(  context, control_box )
-    { super(    context, control_box );
-      if( !context.globals.has_controls   )
-        context.register_scene_component( new Movement_Controls( context, control_box.parentElement.insertCell() ) );
-      if( !context.globals.has_info_table )
-        context.register_scene_component( new Global_Info_Table( context, control_box.parentElement.insertCell() ) );
+{ constructor(  webgl_manager, control_box )
+    { super(    webgl_manager, control_box );
+      if( !webgl_manager.globals.has_controls   )
+        webgl_manager.register_scene_component( new Movement_Controls( webgl_manager, control_box.parentElement.insertCell() ) );
+      if( !webgl_manager.globals.has_info_table )
+        webgl_manager.register_scene_component( new Global_Info_Table( webgl_manager, control_box.parentElement.insertCell() ) );
         
-      context.globals.graphics_state.    camera_transform = Mat4.translation([ 0,0,-50 ]);
-      context.globals.graphics_state.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 500 );
+      webgl_manager.globals.graphics_state.    camera_transform = Mat4.translation([ 0,0,-50 ]);
+      webgl_manager.globals.graphics_state.projection_transform = Mat4.perspective( Math.PI/4, webgl_manager.width/webgl_manager.height, 1, 500 );
       
-      this.data = new Test_Data( context );
-      this.submit_shapes( context, this.data.shapes );
-      this.submit_shapes( context, { square: new Square() } );
-      this.material = context.get_instance( Phong_Shader ).material( Color.of( .4,.8,.4,1 ), 
-                                                                    { ambient:.4, texture: this.data.textures.stars } );
+      this.data = new Test_Data( webgl_manager );
+      this.shapes = Object.assign( {}, this.data.shapes );
+      this.shapes.square = new Square();
+      this.material = new Phong_Shader( webgl_manager ).material({ ambient:.4, texture: this.data.textures.stars })
+                                                       .override( Color.of( .4,.8,.4,1 ) );
     }
-  random_color() { return this.material.override( { color: Color.of( .6,.6*Math.random(),.6*Math.random(),1 ) } ); }
+  random_color() { return this.material.override( Color.of( .6,.6*Math.random(),.6*Math.random(),1 ) ); }
   update_state( dt )
     { while( this.bodies.length < 150 )         // Generate moving bodies:
         this.bodies.push( new Body( this.data.random_shape(), this.random_color(), Vec.of( 1,1+Math.random(),1 ) )
@@ -147,11 +148,11 @@ class Inertia_Demo extends Simulation    // Demonstration: Let random initial mo
       }                                          // Delete bodies that stop or stray too far away.
       this.bodies = this.bodies.filter( b => b.center.norm() < 50 && b.linear_velocity.norm() > 2 );
     }
-  display( graphics_state )                   // Just draw the ground.
-    { super.display( graphics_state );
-      this.shapes.square.draw( graphics_state, Mat4.translation([ 0,-10,0 ])
+  display( context, graphics_state )                   // Just draw the ground.
+    { super.display( context, graphics_state );
+      this.shapes.square.draw( context, graphics_state, Mat4.translation([ 0,-10,0 ])
                                        .times( Mat4.rotation( Math.PI/2, Vec.of( 1,0,0 ) ) ).times( Mat4.scale([ 50,50,1 ]) ),
-                               this.material.override( { texture: this.data.textures.earth } ) );
+                               this.material.override( this.data.textures.earth ) );
     }
   show_explanation( document_element )
     { document_element.innerHTML += `<p>This demo lets random initial momentums carry bodies until they fall and bounce.  It shows a good way to do incremental movements, which are crucial for making objects look like they're moving on their own instead of following a pre-determined path.  Animated objects look more real when they have inertia and obey physical laws, instead of being driven by simple sinusoids or periodic functions.
@@ -163,24 +164,25 @@ class Inertia_Demo extends Simulation    // Demonstration: Let random initial mo
 
 window.Collision_Demo = window.classes.Collision_Demo =
 class Collision_Demo extends Simulation    // Demonstration: Detect when some flying objects collide with one another, coloring them red.
-{ constructor(  context, control_box )
-    { super(    context, control_box );
-      if( !context.globals.has_controls   )
-        context.register_scene_component( new Movement_Controls( context, control_box.parentElement.insertCell() ) );
-      if( !context.globals.has_info_table )
-        context.register_scene_component( new Global_Info_Table( context, control_box.parentElement.insertCell() ) );
+{ constructor(  webgl_manager, control_box )
+    { super(    webgl_manager, control_box );
+      if( !webgl_manager.globals.has_controls   )
+        webgl_manager.register_scene_component( new Movement_Controls( webgl_manager, control_box.parentElement.insertCell() ) );
+      if( !webgl_manager.globals.has_info_table )
+        webgl_manager.register_scene_component( new Global_Info_Table( webgl_manager, control_box.parentElement.insertCell() ) );
 
-      context.globals.graphics_state.    camera_transform = Mat4.translation([ 0,0,-50 ]);
-      context.globals.graphics_state.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 500 );
+      webgl_manager.globals.graphics_state.    camera_transform = Mat4.translation([ 0,0,-50 ]);
+      webgl_manager.globals.graphics_state.projection_transform = Mat4.perspective( Math.PI/4, webgl_manager.width/webgl_manager.height, 1, 500 );
 
-      this.data = new Test_Data( context );
-      this.submit_shapes( context, this.data.shapes );
+      this.data = new Test_Data( webgl_manager );
+      this.shapes = Object.assign( {}, this.data.shapes );
       this.collider = new Subdivision_Sphere(1);        // Make a simpler dummy shape for representing all other shapes during collisions.
 
-      this.inactive_color = context.get_instance( Phong_Shader ).material( Color.of( .5,.5,.5,1 ),
-                                                            { ambient: .2, texture: this.data.textures.rgb } );
+      this.shader = new Phong_Shader();
+      this.inactive_color = this.shader.material({ ambient: .2, texture: this.data.textures.rgb })
+                                              .override( Color.of( .5,.5,.5,1 ) );
       this.active_color = this.inactive_color.override( { color: Color.of( .5,0,0,1 ), ambient: .5 } );
-      this.transparent = context.get_instance( Phong_Shader ).material( Color.of( 1,0,1,.1 ), { ambient: .4 } );
+      this.transparent = this.shader.material({ ambient: .4 }).override( Color.of( 1,0,1,.1 ) );
     }
   update_state( dt, num_bodies = 40 )                                                            
     { if   ( this.bodies.length > num_bodies )  this.bodies = this.bodies.splice( 0, num_bodies );                // Max of 20 bodies
@@ -208,10 +210,10 @@ class Collision_Demo extends Simulation    // Demonstration: Detect when some fl
             }
         }
     }
-  display( graphics_state )           
-    { super.display( graphics_state );                            // Draw an extra bounding sphere around each drawn shape to
+  display( context, graphics_state )           
+    { super.display( context, graphics_state );                   // Draw an extra bounding sphere around each drawn shape to
       for( let b of this.bodies )                                 // show the physical shape that is really being collided with:
-        this.data.shapes.ball.draw( graphics_state, b.drawn_location.times( Mat4.scale([ 1.1,1.1,1.1 ]) ), this.transparent );
+        this.data.shapes.ball.draw( context, graphics_state, b.drawn_location.times( Mat4.scale([ 1.1,1.1,1.1 ]) ), this.transparent );
     }
   show_explanation( document_element )
     { document_element.innerHTML += `<p>This demo detects when some flying objects collide with one another, coloring them red when they do.  For a simpler demo that shows physics-based movement without objects that hit one another, see the demo called <a href=\"https://174a.glitch.me/Inertia_Demo\" target=\"blank\">Inertia_Demo</a>.

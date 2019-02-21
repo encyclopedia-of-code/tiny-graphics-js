@@ -1,15 +1,16 @@
 window.Many_Lights_Demo = window.classes.Many_Lights_Demo =
 class Many_Lights_Demo extends Scene_Component         // How to make the illusion that there are many lights, despite only passing
-{ constructor( context, control_box )                  // two to the shader.  We re-locate the lights in between individual shape draws.
-    { super(   context, control_box );
+{ constructor( webgl_manager, control_box )                  // two to the shader.  We re-locate the lights in between individual shape draws.
+    { super(   webgl_manager, control_box );
       Object.assign( this, { rows: 20, columns: 35 } );                                       // Define how many boxes (buildings) to draw.
-      context.globals.graphics_state.    camera_transform = Mat4.look_at( ...Vec.cast( [ this.rows/2,5,5 ], [this.rows/2,0,-4], [0,1,0] ) );
-      context.globals.graphics_state.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, .1, 1000 );                 
+      webgl_manager.globals.graphics_state.    camera_transform = Mat4.look_at( ...Vec.cast( [ this.rows/2,5,5 ], [this.rows/2,0,-4], [0,1,0] ) );
+      webgl_manager.globals.graphics_state.projection_transform = Mat4.perspective( Math.PI/4, webgl_manager.width/webgl_manager.height, .1, 1000 );                 
       
-      this.submit_shapes( context, { cube: new Cube() } );
-      this.brick = context.get_instance( Fake_Bump_Map ).material( Color.of( 1,1,1,1 ), 
-                            { ambient: .05, diffusivity: .5, specularity: .5, smoothness: 10, 
-                              texture: context.get_instance( "/assets/rgb.jpg" ) } );
+      this.shapes = { cube: new Cube() };
+      this.shader = new Fake_Bump_Map();
+      this.brick = this.shader.material({ ambient: .05, diffusivity: .5, specularity: .5, smoothness: 10, 
+                              texture: new Texture( webgl_manager.context, "/assets/rgb.jpg" ) })
+                              .override( Color.of( 1,1,1,1 ) );
               
       this.box_positions = [];    this.row_lights = {};    this.column_lights = {};
       for( let row = 0; row < this.rows; row++ ) for( let column = 0; column < this.columns; column++ )   // Make initial grid of boxes
@@ -20,12 +21,12 @@ class Many_Lights_Demo extends Scene_Component         // How to make the illusi
       for( let c = 0; c < this.columns; c++ ) this.row_lights    [ ~~(-c) ] = Vec.of( 2*Math.random()*this.rows, -Math.random(), -c     );
       for( let r = 0; r < this.rows;    r++ ) this.column_lights [ ~~( r) ] = Vec.of( r, -Math.random(), -2*Math.random()*this.columns  );
     }
-  display( graphics_state )
+  display( context, graphics_state )
     {                       // To draw each individual box, select the two lights sharing a row and column with it, and draw using those.
       this.box_positions.forEach( (p,i,a) =>
         { graphics_state.lights = [ new Light( this.row_lights   [ ~~p[2] ].to4(1), Color.of(  1,1,.2,1 ), 10 ),
                                     new Light( this.column_lights[ ~~p[0] ].to4(1), Color.of( .2,.2,1,1 ), 10 )];
-          this.shapes.cube.draw( graphics_state, Mat4.translation( p ).times( Mat4.scale([ .3,1,.3 ]) ), this.brick ) // Draw the box.
+          this.shapes.cube.draw( context, graphics_state, Mat4.translation( p ).times( Mat4.scale([ .3,1,.3 ]) ), this.brick ) // Draw the box.
         } );
       if( !this.globals.animate || graphics_state.animation_delta_time > 500 ) return;
       console.log( graphics_state.animation_delta_time );

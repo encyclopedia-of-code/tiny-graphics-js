@@ -228,13 +228,17 @@ class Vertex_Buffer           // To use Vertex_Buffer, make a subclass of it tha
                               // connecting the vertices to one another.
   constructor( ...array_names )                          // This superclass constructor expects a list of names of arrays that you plan for
     { [ this.arrays, this.indices ] = [ {}, [] ];
-      this.WebGL_buffer_pointers = new Map();       // Get ready to associate a GPU buffer with each array.
+      this.gpu_instances = new Map();       // Get ready to associate a GPU buffer with each array.
       for( let name of array_names ) this.arrays[ name ] = []; // Initialize a blank array member of the Shape with each of the names provided.      
     }
   copy_onto_graphics_card( context, selection_of_arrays = Object.keys( this.arrays ), write_to_indices = true )
     {     // Send the completed vertex and index lists to their own buffers in the graphics card.
           // Optional arguments allow calling this again to overwrite some or all GPU buffers as needed.
-      const gl = context;
+      
+      if( !this.gpu_instances.get( context ) )    // If necessary, start a new collection of buffer pointers into this GPU context.
+        this.gpu_instances.set( context, { webGL_buffer_pointers: {} } );
+
+      const gl = context;      
 
       if( !window.idiot_alarm ) window.idiot_alarm = 0;
       const is_this_an_advanced_usage_of_this_function = selection_of_arrays.length != Object.keys( this.arrays ).length;
@@ -248,7 +252,7 @@ class Vertex_Buffer           // To use Vertex_Buffer, make a subclass of it tha
                this function to limit which buffers get overwritten every frame to only the necessary ones.`;
 
       for( let name of selection_of_arrays )
-        { let buffer = this.WebGL_buffer_pointers.get( context )[ name ] = gl.createBuffer();
+        { const buffer = this.gpu_instances.get( context ).webGL_buffer_pointers[ name ] = gl.createBuffer();
           gl.bindBuffer( gl.ARRAY_BUFFER, buffer );
           gl.bufferData( gl.ARRAY_BUFFER, Mat.flatten_2D_to_1D( this.arrays[ name ] ), gl.STATIC_DRAW );
         }
@@ -270,11 +274,10 @@ class Vertex_Buffer           // To use Vertex_Buffer, make a subclass of it tha
                                                           // To appear onscreen, a shape of any variety goes through the draw() function,
     {                                                     // which executes the shader programs.  The shaders draw the right shape due to
                                                           // pre-selecting the correct buffer region in the GPU that holds that shape's data.
-      if( !this.WebGL_buffer_pointers.get( context ) )    // Does this vertex array already have a copy on this GPU context?
-      { this.WebGL_buffer_pointers.set( context, {} );    // If not, start a new collection of buffer pointers into this GPU context.
-        this.copy_onto_graphics_card( context );          // Fill the GPU buffers with copies of this shape's current array data.
-      }
-      material.shader.activate( context, this.WebGL_buffer_pointers.get( context ), graphics_state, model_transform, material );
+      if( !this.gpu_instances.get( context ) )    // Does this vertex array already have a copy on this GPU context?
+        this.copy_onto_graphics_card( context );          // If not, fill the GPU buffers with copies of this shape's current array data.
+        
+      material.shader.activate( context, this.gpu_instances.get( context ).webGL_buffer_pointers, graphics_state, model_transform, material );
       this.execute_shaders( context, type );                                                // Run the shaders to draw every triangle now.
     }                                                                  
 }
@@ -398,7 +401,7 @@ class Overridable     // Class Overridable allows a short way to create modified
 {                     // replaced with substitutes that you provide, without having to write out a new object from scratch.
        // To override, simply pass in "replacement", a JS Object of keys/values you want to override, to generate a new object.
        // For shorthand you can leave off the key and only provide a value (pass in directly as "replacement") and a guess will
-       // be used for which member you want overridden based on type.
+       // be used for which member you want overridden based on type.  
   override( replacement ) { return this.helper( replacement, Object.create( this.constructor.prototype ) ) }
   replace(  replacement ) { return this.helper( replacement, this ) } // Replace is like override but modifies the original object.
   helper( replacement, target )
@@ -435,18 +438,17 @@ class Shader                           // Your subclasses of Shader will manage 
       const vertShdr = gl.createShader( gl.VERTEX_SHADER );
       gl.shaderSource( vertShdr, shared + this.vertex_glsl_code() );
       gl.compileShader( vertShdr );
-      if( !gl.getShaderParameter(vertShdr, gl.COMPILE_STATUS)    ) throw "Vertex shader compile error: "   + gl.getShaderInfoLog( vertShdr );
+      if( !gl.getShaderParameter(vertShdr, gl.COMPILE_STATUS) ) throw "Vertex shader compile error: "   + gl.getShaderInfoLog( vertShdr );
 
       const fragShdr = gl.createShader( gl.FRAGMENT_SHADER );
       gl.shaderSource( fragShdr, shared + this.fragment_glsl_code() );
       gl.compileShader( fragShdr );
-      if( !gl.getShaderParameter(fragShdr, gl.COMPILE_STATUS)    ) throw "Fragment shader compile error: " + gl.getShaderInfoLog( fragShdr );
+      if( !gl.getShaderParameter(fragShdr, gl.COMPILE_STATUS) ) throw "Fragment shader compile error: " + gl.getShaderInfoLog( fragShdr );
 
       gl.attachShader( program, vertShdr );
       gl.attachShader( program, fragShdr );
       gl.linkProgram(  program );
-      if( !gl.getProgramParameter( program, gl.LINK_STATUS) ) throw "Shader linker error: "           + gl.getProgramInfoLog( 
-                                                                                                                              this.program );
+      if( !gl.getProgramParameter( program, gl.LINK_STATUS) ) throw "Shader linker error: "           + gl.getProgramInfoLog( this.program );
       const gpu_instance = { program, GPU_addresses: new Graphics_Addresses( program, gl ) };
       this.program_instances_on_GPU.set( context, gpu_instance );
       return gpu_instance;
@@ -459,6 +461,9 @@ class Shader                           // Your subclasses of Shader will manage 
 
       context.useProgram( gpu_instance.program );
 
+          // --- Send over all the values needed by this particular shader to the GPU: ---
+      this.update_GPU( context, gpu_instance.GPU_addresses, graphics_state, model_transform, material );
+      
           // --- Turn on all the correct attributes and make sure they're pointing to the correct ranges in GPU memory. ---
       for( let [ attr_name, attribute ] of Object.entries( gpu_instance.GPU_addresses.shader_attributes ) )
       { if( !attribute.enabled )
@@ -470,8 +475,6 @@ class Shader                           // Your subclasses of Shader will manage 
         context.vertexAttribPointer( attribute.index, attribute.size,   attribute.type,            // Populate each attribute 
                                 attribute.normalized, attribute.stride, attribute.pointer );       // from the active buffer.
       }
-          // --- Send over all the values needed by this particular shader to the GPU: ---
-      this.update_GPU( context, gpu_instance.GPU_addresses, graphics_state, model_transform, material );
      }                    // You have to override the following five functions:
     material() { return class Material extends Overridable {} }
     update_GPU(){}  shared_glsl_code(){}  vertex_glsl_code(){}  fragment_glsl_code(){}
@@ -539,13 +542,6 @@ class Webgl_Manager      // This class manages a whole graphics program for one 
       Object.assign( this.canvas, { width, height } );   // have a special effect on buffers, separate from their style.
       this.context.viewport( 0, 0, width, height );      // Build the canvas's matrix for converting -1 to 1 ranged coords (NCDS)
     }                                                    // into its own pixel coords.
-//   get_instance( shader_or_texture )                 // If a scene requests that the Canvas keeps a certain resource (a Shader 
-//     { if( this.instances[ shader_or_texture ] )     // or Texture) loaded, check if we already have one GPU-side first.
-//         return this.instances[ shader_or_texture ];     // Return the one that already is loaded if it exists.  Otherwise,
-//       if( typeof shader_or_texture == "string" )        // If a texture was requested, load it onto a GPU buffer.
-//         return this.instances[ shader_or_texture ] = new Texture( this.context, ...arguments );  // Or if it's a shader:
-//       return   this.instances[ shader_or_texture ] = new ( shader_or_texture )( this.context );  // Compile it and put it on the GPU.
-//     }
   register_scene_component( component )     // Allow a Scene_Component to show their control panel and enter the event loop.
     { this.scene_components.unshift( component );  component.make_control_panel( component.controls );
     }
