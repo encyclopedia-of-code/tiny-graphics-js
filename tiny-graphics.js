@@ -237,12 +237,12 @@ class Graphics_Card_Object              // Extending this class allows an object
   check_idiot_alarm( args )                      // Warn the user if they are avoidably making too many GPU objects.
     { Graphics_Card_Object.idiot_alarm |= 0;    // Start a program-wide counter.
       if( Graphics_Card_Object.idiot_alarm++ > 200 )
-        throw `Error: You are sending a lot of object definitions to the GPU, probably by mistake!  Many of them are likely duplicates, 
-               which you don't want since sending each one is very slow.  To avoid this, from your display() function avoid ever calling 
-               new Shape(), new Shader(), or new Texture(), thus causing the definition to be re-created and re-transmitted every frame.  
+        throw `Error: You are sending a lot of object definitions to the GPU, probably by mistake!  Many of them are likely duplicates, which you
+               don't want since sending each one is very slow.  To avoid this, from your display() function avoid ever declaring a Shape Shader
+               or Texture (or subclass of these) with "new", thus causing the definition to be re-created and re-transmitted every frame.  
                Instead, call these in your scene's constructor and keep the result as a class member, or otherwise make sure it only happens 
-               once.  In the off chance that you have a somehow deformable shape that MUST change every frame, then at least use the selection_of_arrays
-               argument of copy_onto_graphics_card to limit which buffers get overwritten every frame to only the necessary ones.`;
+               once.  In the off chance that you have a somehow deformable shape that MUST change every frame, then at least use the special
+               arguments of copy_onto_graphics_card to limit which buffers get overwritten every frame to only the necessary ones.`;
     }
   activate( context, ...args )   // To use this, super call it to retrieve a container of GPU pointers associated with this object.  If 
                                  // none existed one will be created.  Then do any WebGL calls you need that require GPU pointers.
