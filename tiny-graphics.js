@@ -219,40 +219,58 @@ class Keyboard_Manager     // This class maintains a running list of which keys 
   }
 
 
+window.Graphics_Card_Object = window.tiny_graphics.Graphics_Card_Object =
+class Graphics_Card_Object              // Extending this class allows an object to, whenever used, copy
+{                                       // itself onto a GPU context whenever it has not already been.
+  constructor() { this.gpu_instances = new Map() }     // Track which GPU contexts this object has copied itself onto.
+  copy_onto_graphics_card( context, ...args )
+    { // To use this function, super call it, then populate the "gpu instance" object 
+      // it returns with whatever GPU pointers you need (via performing WebGL calls).
+    
+      this.check_idiot_alarm( ...args );    // Don't let beginners call the expensive copy_onto_graphics_card function too many times; 
+                                           // beginner WebGL programs typically only need to call it a few times.
+     
+                                                    // Check if this object already exists on that GPU context.
+      return this.gpu_instances.get( context ) ||   // If necessary, start a new object associated with the context.
+             this.gpu_instances.set( context, this.make_gpu_representation() ).get( context );
+    }
+  check_idiot_alarm( args )                      // Warn the user if they are avoidably making too many GPU objects.
+    { Graphics_Card_Object.idiot_alarm |= 0;    // Start a program-wide counter.
+      if( Graphics_Card_Object.idiot_alarm++ > 200 )
+        throw `Error: You are sending a lot of object definitions to the GPU, probably by mistake!  Many of them are likely duplicates, 
+               which you don't want since sending each one is very slow.  To avoid this, from your display() function avoid ever calling 
+               new Shape(), new Shader(), or new Texture(), thus causing the definition to be re-created and re-transmitted every frame.  
+               Instead, call these in your scene's constructor and keep the result as a class member, or otherwise make sure it only happens 
+               once.  In the off chance that you have a somehow deformable shape that MUST change every frame, then at least use the selection_of_arrays
+               argument of copy_onto_graphics_card to limit which buffers get overwritten every frame to only the necessary ones.`;
+    }
+  activate( context, ...args )   // To use this, super call it to retrieve a container of GPU pointers associated with this object.  If 
+                                 // none existed one will be created.  Then do any WebGL calls you need that require GPU pointers.
+    { return this.gpu_instances.get( context ) || this.copy_onto_graphics_card( context, ...args ) }
+  make_gpu_representation() {}             // Override this in your subclass, defining a blank container of GPU references for itself.
+}
+
+
 window.Vertex_Buffer = window.tiny_graphics.Vertex_Buffer =
-class Vertex_Buffer           // To use Vertex_Buffer, make a subclass of it that overrides the constructor and fills in the right fields.  
+class Vertex_Buffer extends Graphics_Card_Object            // To use Vertex_Buffer, make a subclass of it that overrides the constructor and fills in the right fields.  
 {                             // Vertex_Buffer organizes data related to one 3D shape and copies it into GPU memory.  That data is broken
                               // down per vertex in the shape.  You can make several fields that you can look up in a vertex; for each
                               // field, a whole array will be made here of that data type and it will be indexed per vertex.  Along with
                               // those lists is an additional array "indices" describing triangles, expressed as triples of vertex indices,
                               // connecting the vertices to one another.
   constructor( ...array_names )                          // This superclass constructor expects a list of names of arrays that you plan for
-    { [ this.arrays, this.indices ] = [ {}, [] ];
-      this.gpu_instances = new Map();       // Get ready to associate a GPU buffer with each array.
+    { super();
+      [ this.arrays, this.indices ] = [ {}, [] ];
       for( let name of array_names ) this.arrays[ name ] = []; // Initialize a blank array member of the Shape with each of the names provided.      
     }
   copy_onto_graphics_card( context, selection_of_arrays = Object.keys( this.arrays ), write_to_indices = true )
     {     // Send the completed vertex and index lists to their own buffers in the graphics card.
           // Optional arguments allow calling this again to overwrite some or all GPU buffers as needed.
-      
-      if( !this.gpu_instances.get( context ) )    // If necessary, start a new collection of buffer pointers into this GPU context.
-        this.gpu_instances.set( context, { webGL_buffer_pointers: {} } );
+      const gpu_instance = super.copy_onto_graphics_card( context, selection_of_arrays, write_to_indices );
 
-      const gl = context;      
-
-      if( !window.idiot_alarm ) window.idiot_alarm = 0;
-      const is_this_an_advanced_usage_of_this_function = selection_of_arrays.length != Object.keys( this.arrays ).length;
-      if( !is_this_an_advanced_usage_of_this_function ) window.idiot_alarm++;   // Don't let beginners call this expensive function too many times;
-      if( window.idiot_alarm > 200 )                                            // Beginner programs typically only need to call it a few times.
-        throw `Error: You are sending a lot of shape definitions to the GPU, probably by mistake!  Many of them are likely duplicates, 
-               which you don't want since sending each one is very slow.  To avoid this, avoid calling new Shape() inside your display()
-               function, thus causing the definition to be re-created and re-transmitted every frame.  Call it in your scene's
-               constructor instead and keep it as a class member, or otherwise make sure it only happens once.  In the off chance that
-               you have a somehow deformable shape that MUST change every frame, then at least use the selection_of_arrays argument of
-               this function to limit which buffers get overwritten every frame to only the necessary ones.`;
-
+      const gl = context;
       for( let name of selection_of_arrays )
-        { const buffer = this.gpu_instances.get( context ).webGL_buffer_pointers[ name ] = gl.createBuffer();
+        { const buffer = gpu_instance.webGL_buffer_pointers[ name ] = gl.createBuffer();
           gl.bindBuffer( gl.ARRAY_BUFFER, buffer );
           gl.bufferData( gl.ARRAY_BUFFER, Mat.flatten_2D_to_1D( this.arrays[ name ] ), gl.STATIC_DRAW );
         }
@@ -262,24 +280,28 @@ class Vertex_Buffer           // To use Vertex_Buffer, make a subclass of it tha
         gl.bindBuffer( gl.ELEMENT_ARRAY_BUFFER, this.index_buffer );
         gl.bufferData( gl.ELEMENT_ARRAY_BUFFER, new Uint32Array( this.indices ), gl.STATIC_DRAW );
       }
+      return gpu_instance;
     }
+  check_idiot_alarm( selection_of_arrays )   // Don't trigger the idiot alarm if the user is correctly re-using
+    {                                        // an existing GPU context and merely overwriting parts of itself.
+      if( !selection_of_arrays.length != Object.keys( this.arrays ).length ) super.check_idiot_alarm();
+    }
+  make_gpu_representation() { return { webGL_buffer_pointers: {} } }
   execute_shaders( gl, type )     // Draws this shape's entire vertex buffer.
     { if( this.indices.length )
       { gl.bindBuffer( gl.ELEMENT_ARRAY_BUFFER, this.index_buffer );                          
         gl.drawElements( gl[type], this.indices.length, gl.UNSIGNED_INT, 0 ) 
-      }
-      else  gl.drawArrays( gl[type], 0, Object.values( this.arrays )[0].length );       // If no indices were provided, assume the 
-    }                                                                                        // vertices are arranged as triples.
-  draw( context, graphics_state, model_transform, material, type = "TRIANGLES" )  
+      }                                                                                 // If no indices were provided, assume the 
+      else  gl.drawArrays( gl[type], 0, Object.values( this.arrays )[0].length );       // vertices are arranged as triples.
+    }
+  draw( context, graphics_state, model_transform, material, type = "TRIANGLES" )
                                                           // To appear onscreen, a shape of any variety goes through the draw() function,
     {                                                     // which executes the shader programs.  The shaders draw the right shape due to
                                                           // pre-selecting the correct buffer region in the GPU that holds that shape's data.
-      if( !this.gpu_instances.get( context ) )    // Does this vertex array already have a copy on this GPU context?
-        this.copy_onto_graphics_card( context );          // If not, fill the GPU buffers with copies of this shape's current array data.
-        
-      material.shader.activate( context, this.gpu_instances.get( context ).webGL_buffer_pointers, graphics_state, model_transform, material );
+      const gpu_instance = this.activate( context );
+      material.shader.activate( context, gpu_instance.webGL_buffer_pointers, graphics_state, model_transform, material );
       this.execute_shaders( context, type );                                                // Run the shaders to draw every triangle now.
-    }                                                                  
+    }
 }
 
 
@@ -425,14 +447,13 @@ class Graphics_State extends Overridable                 // Stores things that a
 
 
 window.Shader = window.tiny_graphics.Shader =
-class Shader                           // Your subclasses of Shader will manage strings of GLSL code that will be sent to the GPU and will run, to
-{                                      // draw every shape.  Extend the class and fill in the abstract functions; the constructor needs them.
-  constructor() { this.program_instances_on_GPU = new Map() }                              // We will store one of these for each context.
+class Shader extends Graphics_Card_Object     // Your subclasses of Shader will manage strings of GLSL code that will be sent to the GPU and will run, to
+{                                             // draw every shape.  Extend the class and fill in the abstract functions; the constructor needs them.
   copy_onto_graphics_card( context )
-    { const gl = context;
-      
-      const program = gl.createProgram();
+    { const gpu_instance = super.copy_onto_graphics_card( context ),
+                 program = gpu_instance.program || context.createProgram();
 
+      const gl     = context;
       const shared = this.shared_glsl_code() || "";
       
       const vertShdr = gl.createShader( gl.VERTEX_SHADER );
@@ -449,23 +470,22 @@ class Shader                           // Your subclasses of Shader will manage 
       gl.attachShader( program, fragShdr );
       gl.linkProgram(  program );
       if( !gl.getProgramParameter( program, gl.LINK_STATUS) ) throw "Shader linker error: "           + gl.getProgramInfoLog( this.program );
-      const gpu_instance = { program, GPU_addresses: new Graphics_Addresses( program, gl ) };
-      this.program_instances_on_GPU.set( context, gpu_instance );
-      return gpu_instance;
 
+      if( !gpu_instance.program )
+        Object.assign( gpu_instance, { program, gpu_addresses: new Graphics_Addresses( program, gl ) } );
+      return gpu_instance;
     }
+  make_gpu_representation() { return { program: undefined, gpu_addresses: undefined } }
   activate( context, buffer_pointers, graphics_state, model_transform, material )
-    { let gpu_instance = this.program_instances_on_GPU.get( context );
-      if( !gpu_instance )    // Does this shader already have a copy on this GPU context?
-        gpu_instance = this.copy_onto_graphics_card( context );     
+    { const gpu_instance = super.activate( context );
 
       context.useProgram( gpu_instance.program );
 
           // --- Send over all the values needed by this particular shader to the GPU: ---
-      this.update_GPU( context, gpu_instance.GPU_addresses, graphics_state, model_transform, material );
+      this.update_GPU( context, gpu_instance.gpu_addresses, graphics_state, model_transform, material );
       
           // --- Turn on all the correct attributes and make sure they're pointing to the correct ranges in GPU memory. ---
-      for( let [ attr_name, attribute ] of Object.entries( gpu_instance.GPU_addresses.shader_attributes ) )
+      for( let [ attr_name, attribute ] of Object.entries( gpu_instance.gpu_addresses.shader_attributes ) )
       { if( !attribute.enabled )
           { if( attribute.index >= 0 ) context.disableVertexAttribArray( attribute.index );
             continue;
