@@ -89,11 +89,11 @@ class Simulation extends Scene_Component                // Simulation manages th
 window.Test_Data = window.classes.Test_Data =
 class Test_Data
 { constructor( webgl_manager )
-    { this.textures = { rgb   : new Texture( webgl_manager.context, "/assets/rgb.jpg"   ),
-                        earth : new Texture( webgl_manager.context, "/assets/earth.gif" ),
-                        grid  : new Texture( webgl_manager.context, "/assets/grid.png"  ),
-                        stars : new Texture( webgl_manager.context, "/assets/stars.png" ),
-                        text  : new Texture( webgl_manager.context, "/assets/text.png"  )
+    { this.textures = { rgb   : new Texture( webgl_manager.context, "assets/rgb.jpg"   ),
+                        earth : new Texture( webgl_manager.context, "assets/earth.gif" ),
+                        grid  : new Texture( webgl_manager.context, "assets/grid.png"  ),
+                        stars : new Texture( webgl_manager.context, "assets/stars.png" ),
+                        text  : new Texture( webgl_manager.context, "assets/text.png"  )
                       }
       this.shapes = { donut  : new Torus          ( 15, 15 ),
                        cone   : new Closed_Cone    ( 4, 10 ),

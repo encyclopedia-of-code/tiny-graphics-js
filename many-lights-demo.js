@@ -9,7 +9,7 @@ class Many_Lights_Demo extends Scene_Component         // How to make the illusi
       this.shapes = { cube: new Cube() };
       this.shader = new Fake_Bump_Map();
       this.brick = this.shader.material({ ambient: .05, diffusivity: .5, specularity: .5, smoothness: 10, 
-                              texture: new Texture( webgl_manager.context, "/assets/rgb.jpg" ) })
+                              texture: new Texture( webgl_manager.context, "assets/rgb.jpg" ) })
                               .override( Color.of( 1,1,1,1 ) );
               
       this.box_positions = [];    this.row_lights = {};    this.column_lights = {};

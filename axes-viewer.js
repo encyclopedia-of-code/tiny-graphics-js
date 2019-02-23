@@ -14,7 +14,7 @@ class Axes_Viewer extends Scene_Component     // A helper scene (a secondary Sce
       this.reset();                           // all bases that you want to appear at the same level. 
       webgl_manager.globals.axes_viewer = this;
       this.shapes = { axes: new Axis_Arrows() };
-      this.material = new Fake_Bump_Map().material({ ambient: 1,  texture: new Texture( webgl_manager.context, "/assets/rgb.jpg" ) })
+      this.material = new Fake_Bump_Map().material({ ambient: 1,  texture: new Texture( webgl_manager.context, "assets/rgb.jpg" ) })
                                          .override( Color.of( 0,0,0,1 ) );              
     }
   insert( basis, group_id = ++this.cursor )      // Default to putting the basis in the next empty group; otherwise use group number.

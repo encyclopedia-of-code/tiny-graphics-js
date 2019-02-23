@@ -30,7 +30,7 @@ class Tutorial_Animation extends Scene_Component    // This Scene_Component can 
         this.materials = {};
         this.materials.clay    = this.shader.material({ ambient: .4, diffusivity: .4 }).override( Color.of( .9,.5,.9,1 ) );
         this.materials.plastic = this.materials.clay.override({ specularity: .6 });
-        this.materials.stars   = this.materials.plastic.override({ texture: new Texture( webgl_manager.context, "/assets/stars.png" ) });
+        this.materials.stars   = this.materials.plastic.override({ texture: new Texture( webgl_manager.context, "assets/stars.png" ) });
         this.materials.glass   = this.materials.clay.override( Color.of( .5,.5, 1,.2 ) );
         this.materials.fire    = new Funny_Shader().material();
 
