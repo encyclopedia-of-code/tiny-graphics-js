@@ -319,7 +319,7 @@ class Basic_Shader extends Shader             // Subclasses of Shader each store
   update_GPU( context, gpu_addresses, graphics_state, model_transform, material )    // Define how to synchronize our JavaScript's variables to the GPU's:
       { const [ P, C, M ] = [ graphics_state.projection_transform, graphics_state.camera_transform, model_transform ],
                       PCM = P.times( C ).times( M );
-        context.uniformMatrix4fv( gpu_addresses.projection_camera_model_transform_loc, false, Mat.flatten_2D_to_1D( PCM.transposed() ) );
+        context.uniformMatrix4fv( gpu_addresses.projection_camera_model_transform, false, Mat.flatten_2D_to_1D( PCM.transposed() ) );
       }
   shared_glsl_code()            // ********* SHARED CODE, INCLUDED IN BOTH SHADERS *********
     { return `precision mediump float;
@@ -352,8 +352,8 @@ class Funny_Shader extends Shader         // Simple "procedural" texture shader,
   update_GPU( context, gpu_addresses, graphics_state, model_transform, material )    // Define how to synchronize our JavaScript's variables to the GPU's:
       { const [ P, C, M ] = [ graphics_state.projection_transform, graphics_state.camera_transform, model_transform ],
                       PCM = P.times( C ).times( M );
-        context.uniformMatrix4fv( gpu_addresses.projection_camera_model_transform_loc, false, Mat.flatten_2D_to_1D( PCM.transposed() ) );
-        context.uniform1f ( gpu_addresses.animation_time_loc, graphics_state.animation_time / 1000 );
+        context.uniformMatrix4fv( gpu_addresses.projection_camera_model_transform, false, Mat.flatten_2D_to_1D( PCM.transposed() ) );
+        context.uniform1f ( gpu_addresses.animation_time, graphics_state.animation_time / 1000 );
       }
   shared_glsl_code()            // ********* SHARED CODE, INCLUDED IN BOTH SHADERS *********
     { return `precision mediump float;
@@ -511,24 +511,24 @@ class Phong_Shader extends Shader          // THE DEFAULT SHADER: This uses the 
   update_GPU( context, gpu_addresses, g_state, model_transform, material )    // Define how to synchronize our JavaScript's variables to the GPU's:
     { const gpu = gpu_addresses, gl = context;
       this.update_matrices( gl, gpu, g_state, model_transform );  // First, send the matrices to the GPU.
-      gl.uniform1f ( gpu.animation_time_loc, g_state.animation_time / 1000 );
+      gl.uniform1f ( gpu.animation_time, g_state.animation_time / 1000 );
 
       if( g_state.gouraud === undefined ) { g_state.gouraud = g_state.color_normals = false; }    // Keep the flags seen by the shader 
-      gl.uniform1i( gpu.GOURAUD_loc,        g_state.gouraud || material.gouraud );                // program up-to-date and make sure 
-      gl.uniform1i( gpu.COLOR_NORMALS_loc,  g_state.color_normals );                              // they are declared.
+      gl.uniform1i( gpu.GOURAUD,        g_state.gouraud || material.gouraud );                // program up-to-date and make sure 
+      gl.uniform1i( gpu.COLOR_NORMALS,  g_state.color_normals );                              // they are declared.
 
-      gl.uniform4fv( gpu.shapeColor_loc,     material.color       );    // Send the desired shape-wide material qualities 
-      gl.uniform1f ( gpu.ambient_loc,        material.ambient     );    // to the graphics card, where they will tweak the
-      gl.uniform1f ( gpu.diffusivity_loc,    material.diffusivity );    // Phong lighting formula.
-      gl.uniform1f ( gpu.specularity_loc,    material.specularity );
-      gl.uniform1f ( gpu.smoothness_loc,     material.smoothness  );
+      gl.uniform4fv( gpu.shapeColor,     material.color       );    // Send the desired shape-wide material qualities 
+      gl.uniform1f ( gpu.ambient,        material.ambient     );    // to the graphics card, where they will tweak the
+      gl.uniform1f ( gpu.diffusivity,    material.diffusivity );    // Phong lighting formula.
+      gl.uniform1f ( gpu.specularity,    material.specularity );
+      gl.uniform1f ( gpu.smoothness,     material.smoothness  );
 
       if( material.texture )                           // NOTE: To signal not to draw a texture, omit the texture parameter from Materials.
       { gpu.shader_attributes["texture_coord"].enabled = true;
-        gl.uniform1f ( gpu.USE_TEXTURE_loc, 1 );
+        gl.uniform1f ( gpu.USE_TEXTURE, 1 );
         gl.bindTexture( gl.TEXTURE_2D, material.texture.id );
       }
-      else  { gl.uniform1f ( gpu.USE_TEXTURE_loc, 0 );   gpu.shader_attributes["texture_coord"].enabled = false; }
+      else  { gl.uniform1f ( gpu.USE_TEXTURE, 0 );   gpu.shader_attributes["texture_coord"].enabled = false; }
 
       if( !g_state.lights || !g_state.lights.length )  return;
       var lightPositions_flattened = [], lightColors_flattened = [], lightAttenuations_flattened = [];
@@ -537,9 +537,9 @@ class Phong_Shader extends Shader          // THE DEFAULT SHADER: This uses the 
           lightColors_flattened                     .push( g_state.lights[ Math.floor(i/4) ].color[i%4] );
           lightAttenuations_flattened[ Math.floor(i/4) ] = g_state.lights[ Math.floor(i/4) ].attenuation;
         }
-      gl.uniform4fv( gpu.lightPosition_loc,       lightPositions_flattened );
-      gl.uniform4fv( gpu.lightColor_loc,          lightColors_flattened );
-      gl.uniform1fv( gpu.attenuation_factor_loc,  lightAttenuations_flattened );
+      gl.uniform4fv( gpu.lightPosition,       lightPositions_flattened );
+      gl.uniform4fv( gpu.lightColor,          lightColors_flattened );
+      gl.uniform1fv( gpu.attenuation_factor,  lightAttenuations_flattened );
     }
   update_matrices( gl, gpu, g_state, model_transform )                                    // Helper function for sending matrices to GPU.
     {                                                  // (PCM will mean Projection * Camera * Model)
@@ -552,10 +552,10 @@ class Phong_Shader extends Shader          // THE DEFAULT SHADER: This uses the 
                                                                   // cache and send those.  They will be the same throughout this draw
                                                                   // call, and thus across each instance of the vertex shader.
                                                                   // Transpose them since the GPU expects matrices as column-major arrays.                                  
-      gl.uniformMatrix4fv( gpu.camera_transform_loc,                  false, Mat.flatten_2D_to_1D(     C .transposed() ) );
-      gl.uniformMatrix4fv( gpu.camera_model_transform_loc,            false, Mat.flatten_2D_to_1D(     CM.transposed() ) );
-      gl.uniformMatrix4fv( gpu.projection_camera_model_transform_loc, false, Mat.flatten_2D_to_1D(    PCM.transposed() ) );
-      gl.uniformMatrix3fv( gpu.inverse_transpose_modelview_loc,       false, Mat.flatten_2D_to_1D( inv_CM              ) );       
+      gl.uniformMatrix4fv( gpu.camera_transform,                  false, Mat.flatten_2D_to_1D(     C .transposed() ) );
+      gl.uniformMatrix4fv( gpu.camera_model_transform,            false, Mat.flatten_2D_to_1D(     CM.transposed() ) );
+      gl.uniformMatrix4fv( gpu.projection_camera_model_transform, false, Mat.flatten_2D_to_1D(    PCM.transposed() ) );
+      gl.uniformMatrix3fv( gpu.inverse_transpose_modelview,       false, Mat.flatten_2D_to_1D( inv_CM              ) );       
     }
 }
 

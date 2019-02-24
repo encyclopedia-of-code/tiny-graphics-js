@@ -402,7 +402,7 @@ class Graphics_Addresses    // For organizing communication with the GPU for Sha
   { const num_uniforms = gl.getProgramParameter(program, gl.ACTIVE_UNIFORMS);
     for (let i = 0; i < num_uniforms; ++i)
       { let u = gl.getActiveUniform(program, i).name.split('[')[0];    // Retrieve the GPU addresses of each uniform variable in the shader
-        this[ u + "_loc" ] = gl.getUniformLocation( program, u );      // based on their names, and store these pointers for later.
+        this[ u ] = gl.getUniformLocation( program, u );               // based on their names, and store these pointers for later.
       }
     
     this.shader_attributes = {};                // Assume per-vertex attributes will each be a set of 1 to 4 floats:
@@ -500,6 +500,75 @@ class Shader extends Graphics_Card_Object     // Your subclasses of Shader will 
     update_GPU(){}  shared_glsl_code(){}  vertex_glsl_code(){}  fragment_glsl_code(){}
 }
 
+
+// class Graphics_Card_Object              // Extending this class allows an object to, whenever used, copy
+// {                                       // itself onto a GPU context whenever it has not already been.
+//   constructor() { this.gpu_instances = new Map() }     // Track which GPU contexts this object has copied itself onto.
+//   copy_onto_graphics_card( context, ...args )
+//     { // To use this function, super call it, then populate the "gpu instance" object 
+//       // it returns with whatever GPU pointers you need (via performing WebGL calls).
+    
+//       this.check_idiot_alarm( ...args );    // Don't let beginners call the expensive copy_onto_graphics_card function too many times; 
+//                                            // beginner WebGL programs typically only need to call it a few times.
+     
+//                                                     // Check if this object already exists on that GPU context.
+//       return this.gpu_instances.get( context ) ||   // If necessary, start a new object associated with the context.
+//              this.gpu_instances.set( context, this.make_gpu_representation() ).get( context );
+//     }
+//   check_idiot_alarm( args )                      // Warn the user if they are avoidably making too many GPU objects.
+//     { Graphics_Card_Object.idiot_alarm |= 0;    // Start a program-wide counter.
+//       if( Graphics_Card_Object.idiot_alarm++ > 200 )
+//         throw `Error: You are sending a lot of object definitions to the GPU, probably by mistake!  Many of them are likely duplicates, which you
+//                don't want since sending each one is very slow.  To avoid this, from your display() function avoid ever declaring a Shape Shader
+//                or Texture (or subclass of these) with "new", thus causing the definition to be re-created and re-transmitted every frame.  
+//                Instead, call these in your scene's constructor and keep the result as a class member, or otherwise make sure it only happens 
+//                once.  In the off chance that you have a somehow deformable shape that MUST change every frame, then at least use the special
+//                arguments of copy_onto_graphics_card to limit which buffers get overwritten every frame to only the necessary ones.`;
+//     }
+//   activate( context, ...args )   // To use this, super call it to retrieve a container of GPU pointers associated with this object.  If 
+//                                  // none existed one will be created.  Then do any WebGL calls you need that require GPU pointers.
+//     { return this.gpu_instances.get( context ) || this.copy_onto_graphics_card( context, ...args ) }
+//   make_gpu_representation() {}             // Override this in your subclass, defining a blank container of GPU references for itself.
+// }
+
+window.Texture2 = window.tiny_graphics.Texture2 =
+class Texture2 extends Graphics_Card_Object
+{ constructor( filename, use_mip_map )
+    { Object.assign( this, { filename, use_mip_map } );
+
+      this.image          = new Image();
+      this.image.onload   = () => this.ready = true;
+      this.image.crossOrigin = "Anonymous";
+      this.image.src = filename;
+    }
+  copy_onto_graphics_card( context )
+    { const gpu_instance = super.copy_onto_graphics_card( context );
+
+      if( !gpu_instance.texture_buffer_pointer ) gpu_instance.texture_buffer_pointer = gl.createTexture();
+
+      const gl = context;
+      gl.pixelStorei  ( gl.UNPACK_FLIP_Y_WEBGL, bool_will_copy_to_GPU );
+      gl.bindTexture  ( gl.TEXTURE_2D, this.texture_buffer_pointer );
+      gl.texImage2D   ( gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this.image );
+                                                           // Always use bi-linear sampling when the image will appear magnified:
+      gl.texParameteri( gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR );
+              // When it will appear shrunk, it's best to use tri-linear sampling of its mip maps.  We can alternatively
+              // use the worst sampling method, nearest-neighbor, to illustrate the difference that mip-mapping makes.
+      gl.texParameteri( gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, this.use_mip_map ?
+                                        gl.LINEAR_MIPMAP_LINEAR : gl.NEAREST );      
+      if( use_mip_map ) gl.generateMipmap(gl.TEXTURE_2D);
+    }
+  make_gpu_representation() { return { texture_buffer_pointer: undefined } }
+  activate( context )
+    { if( !this.ready ) return;     // Terminate draw requests until the image file is actually loaded over the network.
+
+      const gpu_instance = super.activate( context );
+
+      gl.uniform1i(u_image0Location, 0);    // Select texture unit 0
+      gl.bindTexture( gl.TEXTURE_2D, gpu_instance.id );
+    }
+
+}
 
 window.Texture = window.tiny_graphics.Texture =
 class Texture                                // The Texture class wraps a pointer to a new texture buffer along with a new HTML image object.
