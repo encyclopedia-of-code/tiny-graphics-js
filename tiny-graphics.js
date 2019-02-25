@@ -333,7 +333,7 @@ class Shape extends Vertex_Buffer
       recipient.indices.push( ...temp_shape.indices.map( i => i + recipient.arrays.position.length ) );
       
       for( let a in temp_shape.arrays )                // Copy each array from temp_shape into the recipient shape.
-      { if( a == "position" )                          // Apply points_transform to all points added during this call:
+      { if( a == "position" || a == "tangents" )       // Apply points_transform to all points added during this call:
           recipient.arrays[a].push( ...temp_shape.arrays[a].map( p => points_transform.times( p.to4(1) ).to3() ) );
         else if( a == "normal" )                       // Do the same for normals, but use the inverse transpose matrix as math requires:
           recipient.arrays[a].push( ...temp_shape.arrays[a].map( n => Mat4.inverse( points_transform.transposed() ).times( n.to4(1) ).to3() ) );

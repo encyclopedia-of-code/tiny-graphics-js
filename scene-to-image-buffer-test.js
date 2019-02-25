@@ -10,9 +10,6 @@ class Shadow_Mapping_Test extends Scene_Component
         const r = webgl_manager.width/webgl_manager.height;
         webgl_manager.globals.graphics_state.projection_transform = Mat4.perspective( Math.PI/4, r, .1, 1000 );
 
-        // TODO:  Create two cubes, including one with the default texture coordinates (from 0 to 1), and one with the modified
-        //        texture coordinates as required for cube #2.  You can either do this by modifying the cube code or by modifying
-        //        a cube instance's texture_coords after it is already created.
         this.shapes = { box:   new Cube(),
                         box_2: new Cube(),
                         axis:  new Axis_Arrows()
@@ -28,10 +25,6 @@ class Shadow_Mapping_Test extends Scene_Component
         this.texture = new Texture ( "" );        // Initial image source: Blank gif file
         this.texture.image.src = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
 
-
-        // TODO:  Create the materials required to texture both cubes with the correct images and settings.
-        //        Make each Material from the correct shader.  Phong_Shader will work initially, but when 
-        //        you get to requirements 6 and 7 you will need different ones.
         this.shader = new Phong_Shader();
         this.materials =
           {  a: this.shader.material({ ambient: 1, texture: new Texture( "assets/rgb.jpg" ) })
@@ -41,14 +34,12 @@ class Shadow_Mapping_Test extends Scene_Component
 
         this.lights = [ new Light( Vec.of( -5,5,5,1 ), Color.of( 0,1,1,1 ), 100000 ) ];
 
-        // TODO:  Create any variables that needs to be remembered from frame to frame, such as for incremental movements over time.
         this.spin = 0;
         this.cube_1 = Mat4.translation([ -2,0,0 ]);
         this.cube_2 = Mat4.translation([  2,0,0 ]);
       }
     make_control_panel()
-      { // TODO:  Implement requirement #5 using a key_triggered_button that responds to the 'c' key.
-        this.key_triggered_button( "Cube rotation",  [ "c" ], () => this.spin ^= 1 );
+      { this.key_triggered_button( "Cube rotation",  [ "c" ], () => this.spin ^= 1 );
 
         this.live_string( box => { box.textContent = this.spin } );  this.new_line();
 
