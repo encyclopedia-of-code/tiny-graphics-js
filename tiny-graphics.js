@@ -228,14 +228,14 @@ class Graphics_Card_Object              // Extending this class allows an object
       // it returns with whatever GPU pointers you need (via performing WebGL calls).
     
       this.check_idiot_alarm( ...args );    // Don't let beginners call the expensive copy_onto_graphics_card function too many times; 
-                                           // beginner WebGL programs typically only need to call it a few times.
+                                            // beginner WebGL programs typically only need to call it a few times.
      
                                                     // Check if this object already exists on that GPU context.
       return this.gpu_instances.get( context ) ||   // If necessary, start a new object associated with the context.
              this.gpu_instances.set( context, this.make_gpu_representation() ).get( context );
     }
   check_idiot_alarm( args )                      // Warn the user if they are avoidably making too many GPU objects.
-    { Graphics_Card_Object.idiot_alarm |= 0;    // Start a program-wide counter.
+    { Graphics_Card_Object.idiot_alarm |= 0;     // Start a program-wide counter.
       if( Graphics_Card_Object.idiot_alarm++ > 200 )
         throw `Error: You are sending a lot of object definitions to the GPU, probably by mistake!  Many of them are likely duplicates, which you
                don't want since sending each one is very slow.  To avoid this, from your display() function avoid ever declaring a Shape Shader
@@ -284,7 +284,7 @@ class Vertex_Buffer extends Graphics_Card_Object            // To use Vertex_Buf
     }
   check_idiot_alarm( selection_of_arrays )   // Don't trigger the idiot alarm if the user is correctly re-using
     {                                        // an existing GPU context and merely overwriting parts of itself.
-      if( !selection_of_arrays.length != Object.keys( this.arrays ).length ) super.check_idiot_alarm();
+      if( selection_of_arrays.length == Object.keys( this.arrays ).length ) super.check_idiot_alarm();
     }
   make_gpu_representation() { return { webGL_buffer_pointers: {} } }
   execute_shaders( gl, type )     // Draws this shape's entire vertex buffer.

@@ -25,7 +25,7 @@ class Shadow_Mapping_Test extends Scene_Component
         this.scratchpad_context = this.scratchpad.getContext('2d');     // A hidden canvas for re-sizing the real canvas to be square.
         this.scratchpad.width   = 256;
         this.scratchpad.height  = 256;
-        this.texture = new Texture ( webgl_manager.context, "", false, false );        // Initial image source: Blank gif file
+        this.texture = new Texture ( "" );        // Initial image source: Blank gif file
         this.texture.image.src = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
 
 
@@ -34,7 +34,7 @@ class Shadow_Mapping_Test extends Scene_Component
         //        you get to requirements 6 and 7 you will need different ones.
         this.shader = new Phong_Shader();
         this.materials =
-          {  a: this.shader.material({ ambient: 1, texture: new Texture( webgl_manager.context, "assets/rgb.jpg", false ) })
+          {  a: this.shader.material({ ambient: 1, texture: new Texture( "assets/rgb.jpg" ) })
                                      .override( Color.of( 0,0,0,1 ) ),
              b: this.shader.material({ ambient: 1, texture: this.texture }).override( Color.of( 0,0,0,1 ) )
           }

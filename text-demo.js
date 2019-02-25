@@ -46,7 +46,7 @@ class Text_Demo extends Scene_Component                   // A scene with a cube
       this.shader = new Phong_Shader();
       this.grey       = this.shader.material({ ambient: 0, diffusivity: .3, specularity: .5, smoothness: 10 })
                              .override( Color.of( .5,.5,.5,1 ) );
-      this.text_image = this.shader.material({ ambient: 1, diffusivity: 0, specularity: 0, texture: new Texture( webgl_manager.context, "assets/text.png" ) })
+      this.text_image = this.shader.material({ ambient: 1, diffusivity: 0, specularity: 0, texture: new Texture( "assets/text.png" ) })
                              .override( Color.of( 0,0,0,1 ) );
     }
   display( context, graphics_state )

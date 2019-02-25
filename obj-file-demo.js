@@ -89,9 +89,9 @@ class Obj_File_Demo extends Scene_Component     // An example that loads a singl
       
         this.shapes = { "teapot": new Shape_From_File( "assets/teapot.obj" ) };             // Load the model file.
         
-        this.stars = new Phong_Shader().material({ ambient: .3, diffusivity: .5, specularity: .5, texture: new Texture( webgl_manager.context, "assets/stars.png" ) })
+        this.stars = new Phong_Shader().material({ ambient: .3, diffusivity: .5, specularity: .5, texture: new Texture( "assets/stars.png" ) })
                                 .override( Color.of( .5,.5,.5,1 ) );       // Non bump mapped.
-        this.bumps = new Fake_Bump_Map().material({ ambient: .3, diffusivity: .5, specularity: .5, texture: new Texture( webgl_manager.context, "assets/stars.png" ) })
+        this.bumps = new Fake_Bump_Map().material({ ambient: .3, diffusivity: .5, specularity: .5, texture: new Texture( "assets/stars.png" ) })
                                         .override( Color.of( .5,.5,.5,1 ) );        // Bump mapped.
       }
     display( context, graphics_state )
