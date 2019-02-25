@@ -501,99 +501,42 @@ class Shader extends Graphics_Card_Object     // Your subclasses of Shader will 
 }
 
 
-// class Graphics_Card_Object              // Extending this class allows an object to, whenever used, copy
-// {                                       // itself onto a GPU context whenever it has not already been.
-//   constructor() { this.gpu_instances = new Map() }     // Track which GPU contexts this object has copied itself onto.
-//   copy_onto_graphics_card( context, ...args )
-//     { // To use this function, super call it, then populate the "gpu instance" object 
-//       // it returns with whatever GPU pointers you need (via performing WebGL calls).
-    
-//       this.check_idiot_alarm( ...args );    // Don't let beginners call the expensive copy_onto_graphics_card function too many times; 
-//                                            // beginner WebGL programs typically only need to call it a few times.
-     
-//                                                     // Check if this object already exists on that GPU context.
-//       return this.gpu_instances.get( context ) ||   // If necessary, start a new object associated with the context.
-//              this.gpu_instances.set( context, this.make_gpu_representation() ).get( context );
-//     }
-//   check_idiot_alarm( args )                      // Warn the user if they are avoidably making too many GPU objects.
-//     { Graphics_Card_Object.idiot_alarm |= 0;    // Start a program-wide counter.
-//       if( Graphics_Card_Object.idiot_alarm++ > 200 )
-//         throw `Error: You are sending a lot of object definitions to the GPU, probably by mistake!  Many of them are likely duplicates, which you
-//                don't want since sending each one is very slow.  To avoid this, from your display() function avoid ever declaring a Shape Shader
-//                or Texture (or subclass of these) with "new", thus causing the definition to be re-created and re-transmitted every frame.  
-//                Instead, call these in your scene's constructor and keep the result as a class member, or otherwise make sure it only happens 
-//                once.  In the off chance that you have a somehow deformable shape that MUST change every frame, then at least use the special
-//                arguments of copy_onto_graphics_card to limit which buffers get overwritten every frame to only the necessary ones.`;
-//     }
-//   activate( context, ...args )   // To use this, super call it to retrieve a container of GPU pointers associated with this object.  If 
-//                                  // none existed one will be created.  Then do any WebGL calls you need that require GPU pointers.
-//     { return this.gpu_instances.get( context ) || this.copy_onto_graphics_card( context, ...args ) }
-//   make_gpu_representation() {}             // Override this in your subclass, defining a blank container of GPU references for itself.
-// }
-
-window.Texture2 = window.tiny_graphics.Texture2 =
-class Texture2 extends Graphics_Card_Object
-{ constructor( filename, use_mip_map )
-    { Object.assign( this, { filename, use_mip_map } );
+window.Texture = window.tiny_graphics.Texture =
+class Texture extends Graphics_Card_Object                            // The Texture class wraps a pointer to a new texture
+{ constructor( filename, min_filter = "LINEAR_MIPMAP_LINEAR" )        // buffer along with a new HTML image object. 
+    { super();
+      Object.assign( this, { filename, min_filter } );
 
       this.image          = new Image();
       this.image.onload   = () => this.ready = true;
-      this.image.crossOrigin = "Anonymous";
-      this.image.src = filename;
+      this.image.crossOrigin = "Anonymous";           // Avoid a browser warning.
+      this.image.src = filename;                      // Load the image file to this HTML page.
     }
   copy_onto_graphics_card( context )
     { const gpu_instance = super.copy_onto_graphics_card( context );
 
-      if( !gpu_instance.texture_buffer_pointer ) gpu_instance.texture_buffer_pointer = gl.createTexture();
+      if( !gpu_instance.texture_buffer_pointer ) gpu_instance.texture_buffer_pointer = context.createTexture();
 
       const gl = context;
-      gl.pixelStorei  ( gl.UNPACK_FLIP_Y_WEBGL, bool_will_copy_to_GPU );
-      gl.bindTexture  ( gl.TEXTURE_2D, this.texture_buffer_pointer );
+      gl.pixelStorei  ( gl.UNPACK_FLIP_Y_WEBGL, true );
+      gl.bindTexture  ( gl.TEXTURE_2D, gpu_instance.texture_buffer_pointer );
       gl.texImage2D   ( gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this.image );
-                                                           // Always use bi-linear sampling when the image will appear magnified:
-      gl.texParameteri( gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR );
-              // When it will appear shrunk, it's best to use tri-linear sampling of its mip maps.  We can alternatively
-              // use the worst sampling method, nearest-neighbor, to illustrate the difference that mip-mapping makes.
-      gl.texParameteri( gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, this.use_mip_map ?
-                                        gl.LINEAR_MIPMAP_LINEAR : gl.NEAREST );      
-      if( use_mip_map ) gl.generateMipmap(gl.TEXTURE_2D);
+      gl.texParameteri( gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR );         // Always use bi-linear sampling when zoomed out.
+      gl.texParameteri( gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl[ this.min_filter ]  );  // Let the user to set the sampling method 
+                                                                                         // when zoomed in.     
+      if( this.min_filter = "LINEAR_MIPMAP_LINEAR" )      // If the user picked tri-linear sampling (the default) then generate
+        gl.generateMipmap(gl.TEXTURE_2D);                 // the necessary "mips" of the texture and store them on the GPU with it.
+      return gpu_instance;
     }
   make_gpu_representation() { return { texture_buffer_pointer: undefined } }
-  activate( context )
+  activate( context, texture_unit = 0 )   // Optionally select a texture unit in case you're using a shader with many samplers.
     { if( !this.ready ) return;     // Terminate draw requests until the image file is actually loaded over the network.
 
       const gpu_instance = super.activate( context );
-
-      gl.uniform1i(u_image0Location, 0);    // Select texture unit 0
-      gl.bindTexture( gl.TEXTURE_2D, gpu_instance.id );
+      context.activeTexture( context[ "TEXTURE" + texture_unit ] );
+      context.bindTexture( context.TEXTURE_2D, gpu_instance.texture_buffer_pointer );
     }
 
-}
-
-window.Texture = window.tiny_graphics.Texture =
-class Texture                                // The Texture class wraps a pointer to a new texture buffer along with a new HTML image object.
-{ constructor(             gl, filename, use_mipMap = true, bool_will_copy_to_GPU = true )
-    { Object.assign( this, {   filename, use_mipMap,        bool_will_copy_to_GPU,       id: gl.createTexture() } );
-
-      gl.bindTexture(gl.TEXTURE_2D, this.id );
-      gl.texImage2D (gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE,
-                    new Uint8Array([255, 0, 0, 255]));    // A single red pixel, as a placeholder image to prevent a console warning.
-      this.image          = new Image();
-      this.image.onload   = () =>                         // Instructions for whenever the real image file is ready
-        { gl.pixelStorei  ( gl.UNPACK_FLIP_Y_WEBGL, bool_will_copy_to_GPU );
-          gl.bindTexture  ( gl.TEXTURE_2D, this.id );
-          gl.texImage2D   ( gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this.image );
-          gl.texParameteri( gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR );  // Always use bi-linear sampling when the image
-                                                                                // will appear magnified. When it will appear shrunk,
-          if( use_mipMap )                                                      // it's best to use tri-linear sampling of its mip maps:
-            { gl.texParameteri( gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR); gl.generateMipmap(gl.TEXTURE_2D); }
-          else                                                                        // We can also use the worst sampling method, to
-              gl.texParameteri( gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST );   // illustrate the difference that mip-mapping makes.
-          this.loaded = true;
-        }
-      if( bool_will_copy_to_GPU )                                               // Avoid a browser warning, and load the image file.
-        { this.image.crossOrigin = "Anonymous"; this.image.src = this.filename; }
-    }
 }
 
 

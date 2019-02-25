@@ -526,7 +526,8 @@ class Phong_Shader extends Shader          // THE DEFAULT SHADER: This uses the 
       if( material.texture )                           // NOTE: To signal not to draw a texture, omit the texture parameter from Materials.
       { gpu.shader_attributes["texture_coord"].enabled = true;
         gl.uniform1f ( gpu.USE_TEXTURE, 1 );
-        gl.bindTexture( gl.TEXTURE_2D, material.texture.id );
+        gl.uniform1i( gpu.texture, 0);            // Select texture unit 0 for the fragment shader Sampler2D uniform called "texture"
+        material.texture.activate( context );
       }
       else  { gl.uniform1f ( gpu.USE_TEXTURE, 0 );   gpu.shader_attributes["texture_coord"].enabled = false; }
 
