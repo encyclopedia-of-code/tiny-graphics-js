@@ -56,8 +56,10 @@ class Shadow_Mapping_Test extends Scene_Component
         this.shapes.box.draw( context, graphics_state, this.cube_1, this.materials.a );
 
         this.scratchpad_context.drawImage( this.webgl_manager.canvas, 0, 0, 256, 256 );
-        this.materials.b.texture.image.src = this.result_img.src = this.scratchpad.toDataURL("image/png");
-        this.materials.b.texture.copy_onto_graphics_card( context );
+        this.texture.image.src = this.result_img.src = this.scratchpad.toDataURL("image/png");
+        if( this.skipped_first_frame )
+            this.texture.copy_onto_graphics_card( context );    // Don't call copy to GPU until the event loop has had a chance to act on our SRC setting once.
+        this.skipped_first_frame = true;
         context.clear( context.COLOR_BUFFER_BIT | context.DEPTH_BUFFER_BIT);
 
             // Draw Scene 2:

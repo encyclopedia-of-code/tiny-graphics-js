@@ -518,7 +518,7 @@ class Texture extends Graphics_Card_Object                            // The Tex
 
       const gl = context;
       gl.pixelStorei  ( gl.UNPACK_FLIP_Y_WEBGL, true );
-      gl.bindTexture  ( gl.TEXTURE_2D, gpu_instance.texture_buffer_pointer );      
+      gl.bindTexture  ( gl.TEXTURE_2D, gpu_instance.texture_buffer_pointer );
       gl.texImage2D   ( gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this.image );
       gl.texParameteri( gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR );         // Always use bi-linear sampling when zoomed out.
       gl.texParameteri( gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl[ this.min_filter ]  );  // Let the user to set the sampling method 
