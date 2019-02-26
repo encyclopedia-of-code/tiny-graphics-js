@@ -523,7 +523,7 @@ class Phong_Shader extends Shader          // THE DEFAULT SHADER: This uses the 
       gl.uniform1f ( gpu.specularity,    material.specularity );
       gl.uniform1f ( gpu.smoothness,     material.smoothness  );
 
-      if( material.texture )                           // NOTE: To signal not to draw a texture, omit the texture parameter from Materials.
+      if( material.texture && material.texture.ready )                // NOTE: To signal not to draw a texture, omit the texture parameter from Materials.
       { gpu.shader_attributes["texture_coord"].enabled = true;
         gl.uniform1f ( gpu.USE_TEXTURE, 1 );
         gl.uniform1i( gpu.texture, 0);            // Select texture unit 0 for the fragment shader Sampler2D uniform called "texture"

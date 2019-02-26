@@ -21,15 +21,13 @@ class Shadow_Mapping_Test extends Scene_Component
         this.scratchpad = document.createElement('canvas');
         this.scratchpad_context = this.scratchpad.getContext('2d');     // A hidden canvas for re-sizing the real canvas to be square.
         this.scratchpad.width   = 256;
-        this.scratchpad.height  = 256;
-        this.texture = new Texture ( "" );        // Initial image source: Blank gif file
-        this.texture.image.src = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+        this.scratchpad.height  = 256;                // Initial image source: Blank gif file:
+        this.texture = new Texture ( "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" );
 
         this.shader = new Phong_Shader();
         this.materials =
-          {  a: this.shader.material({ ambient: 1, texture: new Texture( "assets/rgb.jpg" ) })
-                                     .override( Color.of( 0,0,0,1 ) ),
-             b: this.shader.material({ ambient: 1, texture: this.texture }).override( Color.of( 0,0,0,1 ) )
+          {  a: this.shader.material({ ambient: 1, texture: new Texture( "assets/rgb.jpg" ) }),
+             b: this.shader.material({ ambient: 1, texture: this.texture })
           }
 
         this.lights = [ new Light( Vec.of( -5,5,5,1 ), Color.of( 0,1,1,1 ), 100000 ) ];
@@ -50,17 +48,19 @@ class Shadow_Mapping_Test extends Scene_Component
       { graphics_state.lights = this.lights;        // Use the lights stored in this.lights.
         const t = graphics_state.animation_time / 1000, dt = graphics_state.animation_delta_time / 1000;
 
-        
+            // Update persistent matrix state:
         this.cube_1.post_multiply( Mat4.rotation( this.spin * dt * 30 / 60 * 2*Math.PI, [ 1,0,0 ] ) );
         this.cube_2.post_multiply( Mat4.rotation( this.spin * dt * 20 / 60 * 2*Math.PI, [ 0,1,0 ] ) );
-
+        
+            // Draw Scene 1:
         this.shapes.box.draw( context, graphics_state, this.cube_1, this.materials.a );
+
         this.scratchpad_context.drawImage( this.webgl_manager.canvas, 0, 0, 256, 256 );
         this.materials.b.texture.image.src = this.result_img.src = this.scratchpad.toDataURL("image/png");
+        this.materials.b.texture.copy_onto_graphics_card( context );
         context.clear( context.COLOR_BUFFER_BIT | context.DEPTH_BUFFER_BIT);
 
-
-        // Draw the required boxes.
+            // Draw Scene 2:
         this.shapes.box  .draw( context, graphics_state, this.cube_1, this.materials.a );
         this.shapes.box_2.draw( context, graphics_state, this.cube_2, this.materials.b );
       }

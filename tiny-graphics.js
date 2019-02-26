@@ -227,11 +227,15 @@ class Graphics_Card_Object              // Extending this class allows an object
     { // To use this function, super call it, then populate the "gpu instance" object 
       // it returns with whatever GPU pointers you need (via performing WebGL calls).
     
-      this.check_idiot_alarm( ...args );    // Don't let beginners call the expensive copy_onto_graphics_card function too many times; 
-                                            // beginner WebGL programs typically only need to call it a few times.
+      const existing_instance = this.gpu_instances.get( context );
+      if( !existing_instance )
+        this.check_idiot_alarm( ...args );    // Don't let beginners call the expensive copy_onto_graphics_card function too many times; 
+                                              // beginner WebGL programs typically only need to call it a few times.
+                                              // Don't trigger the idiot alarm if the user is correctly re-using
+                                              // an existing GPU context and merely overwriting parts of itself.
      
-                                                    // Check if this object already exists on that GPU context.
-      return this.gpu_instances.get( context ) ||   // If necessary, start a new object associated with the context.
+                                              // Check if this object already exists on that GPU context.
+      return existing_instance ||             // If necessary, start a new object associated with the context.
              this.gpu_instances.set( context, this.make_gpu_representation() ).get( context );
     }
   check_idiot_alarm( args )                      // Warn the user if they are avoidably making too many GPU objects.
@@ -281,10 +285,6 @@ class Vertex_Buffer extends Graphics_Card_Object            // To use Vertex_Buf
         gl.bufferData( gl.ELEMENT_ARRAY_BUFFER, new Uint32Array( this.indices ), gl.STATIC_DRAW );
       }
       return gpu_instance;
-    }
-  check_idiot_alarm( selection_of_arrays )   // Don't trigger the idiot alarm if the user is correctly re-using
-    {                                        // an existing GPU context and merely overwriting parts of itself.
-      if( selection_of_arrays.length == Object.keys( this.arrays ).length ) super.check_idiot_alarm();
     }
   make_gpu_representation() { return { webGL_buffer_pointers: {} } }
   execute_shaders( gl, type )     // Draws this shape's entire vertex buffer.
@@ -514,12 +514,11 @@ class Texture extends Graphics_Card_Object                            // The Tex
     }
   copy_onto_graphics_card( context )
     { const gpu_instance = super.copy_onto_graphics_card( context );
-
       if( !gpu_instance.texture_buffer_pointer ) gpu_instance.texture_buffer_pointer = context.createTexture();
 
       const gl = context;
       gl.pixelStorei  ( gl.UNPACK_FLIP_Y_WEBGL, true );
-      gl.bindTexture  ( gl.TEXTURE_2D, gpu_instance.texture_buffer_pointer );
+      gl.bindTexture  ( gl.TEXTURE_2D, gpu_instance.texture_buffer_pointer );      
       gl.texImage2D   ( gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this.image );
       gl.texParameteri( gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR );         // Always use bi-linear sampling when zoomed out.
       gl.texParameteri( gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl[ this.min_filter ]  );  // Let the user to set the sampling method 
@@ -531,7 +530,7 @@ class Texture extends Graphics_Card_Object                            // The Tex
   make_gpu_representation() { return { texture_buffer_pointer: undefined } }
   activate( context, texture_unit = 0 )   // Optionally select a texture unit in case you're using a shader with many samplers.
     { if( !this.ready ) return;     // Terminate draw requests until the image file is actually loaded over the network.
-
+      
       const gpu_instance = super.activate( context );
       context.activeTexture( context[ "TEXTURE" + texture_unit ] );
       context.bindTexture( context.TEXTURE_2D, gpu_instance.texture_buffer_pointer );
