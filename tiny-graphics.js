@@ -512,17 +512,20 @@ class Texture extends Graphics_Card_Object                            // The Tex
       this.image.crossOrigin = "Anonymous";           // Avoid a browser warning.
       this.image.src = filename;                      // Load the image file to this HTML page.
     }
-  copy_onto_graphics_card( context )
+  copy_onto_graphics_card( context, need_initial_settings = true )
     { const gpu_instance = super.copy_onto_graphics_card( context );
       if( !gpu_instance.texture_buffer_pointer ) gpu_instance.texture_buffer_pointer = context.createTexture();
 
       const gl = context;
-      gl.pixelStorei  ( gl.UNPACK_FLIP_Y_WEBGL, true );
       gl.bindTexture  ( gl.TEXTURE_2D, gpu_instance.texture_buffer_pointer );
+      
+      if( need_initial_settings )
+      { gl.pixelStorei  ( gl.UNPACK_FLIP_Y_WEBGL, true );
+        gl.texParameteri( gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR );         // Always use bi-linear sampling when zoomed out.
+        gl.texParameteri( gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl[ this.min_filter ]  );  // Let the user to set the sampling method 
+      }                                                                                    // when zoomed in.
+      
       gl.texImage2D   ( gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this.image );
-      gl.texParameteri( gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR );         // Always use bi-linear sampling when zoomed out.
-      gl.texParameteri( gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl[ this.min_filter ]  );  // Let the user to set the sampling method 
-                                                                                         // when zoomed in.     
       if( this.min_filter = "LINEAR_MIPMAP_LINEAR" )      // If the user picked tri-linear sampling (the default) then generate
         gl.generateMipmap(gl.TEXTURE_2D);                 // the necessary "mips" of the texture and store them on the GPU with it.
       return gpu_instance;

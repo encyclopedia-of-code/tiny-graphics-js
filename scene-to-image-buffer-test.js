@@ -51,14 +51,15 @@ class Shadow_Mapping_Test extends Scene_Component
             // Update persistent matrix state:
         this.cube_1.post_multiply( Mat4.rotation( this.spin * dt * 30 / 60 * 2*Math.PI, [ 1,0,0 ] ) );
         this.cube_2.post_multiply( Mat4.rotation( this.spin * dt * 20 / 60 * 2*Math.PI, [ 0,1,0 ] ) );
-        
+
+                      // Perform two rendering passes.  The first one we erase and don't display after using to it generate our texture.
             // Draw Scene 1:
         this.shapes.box.draw( context, graphics_state, this.cube_1, this.materials.a );
 
         this.scratchpad_context.drawImage( this.webgl_manager.canvas, 0, 0, 256, 256 );
         this.texture.image.src = this.result_img.src = this.scratchpad.toDataURL("image/png");
-        if( this.skipped_first_frame )
-            this.texture.copy_onto_graphics_card( context );    // Don't call copy to GPU until the event loop has had a chance to act on our SRC setting once.
+        if( this.skipped_first_frame )  // Don't call copy to GPU until the event loop has had a chance to act on our SRC setting once.            
+            this.texture.copy_onto_graphics_card( context, false );     // Update the texture with the current scene.
         this.skipped_first_frame = true;
         context.clear( context.COLOR_BUFFER_BIT | context.DEPTH_BUFFER_BIT);
 
