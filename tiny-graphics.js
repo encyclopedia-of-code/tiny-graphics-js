@@ -774,7 +774,6 @@ export class Code_Widget
     { let rules = [ ".code-widget .code-panel { background:white; overflow:auto; font-family:monospace; width:1060px; padding:10px; padding-bottom:40px; max-height: 500px; \
                                                   border-radius:12px; box-shadow: 20px 20px 90px 0px powderblue inset, 5px 5px 30px 0px blue inset }",
                 ".code-widget .code-display { min-width:1800px; padding:10px; white-space:pre-wrap; background:transparent }",
-                ".code-widget .edit-button { left:800px; z-index:2; position:absolute; outline:0; height:80px; width:80px; border-radius:50% }",
                 ".code-widget table { display:block; overflow-x:auto; width:1080px; border-radius:25px; border-collapse:collapse; border: 2px solid black }",
                 ".code-widget table.class-list td { border-width:thin; background: #EEEEEE; padding:12px; font-family:monospace; border: 1px solid black }"
                  ];
@@ -863,6 +862,7 @@ export class Code_Widget
     }
 }
 
+
 export class Text_Widget
 { constructor( element, selected_class )
     { if( !window[ selected_class ] ) throw "Class " + selected_class + " not found.";
@@ -870,5 +870,62 @@ export class Text_Widget
       element = document.querySelector( "#" + element );
 
       selected_class.show_explanation( element );
+    }
+}
+
+
+export class Editor_Widget
+{ constructor( element, selected_class )
+    { let rules = [ ".editor-widget { background:white; overflow:auto; font-family:monospace; width:1060px; padding:10px; \
+                                      border-radius:12px; box-shadow: 20px 20px 90px 0px powderblue inset, 5px 5px 30px 0px blue inset }",
+                    ".editor-widget button { background: #4C9F50; color: white; padding: 6px; border-radius:9px; margin-right:5px; \
+                                             box-shadow: 4px 6px 16px 0px rgba(0,0,0,0.3); transition: background .3s, transform .3s }",
+                    ".editor-widget input { margin-right:5px }",
+                    ".editor-widget div   { margin: 10px 0 }",
+                    ".editor-widget textarea { white-space:pre; width:1040px; margin-bottom:30px }",
+                    ".editor-widget button:hover, button:focus { transform: scale(1.3); color:gold }"
+                  ];
+
+      for( const r of rules ) document.styleSheets[0].insertRule( r, 1 );      
+      if( !window[ selected_class ] ) throw "Class " + selected_class + " not found.";
+      selected_class = window[ selected_class ];
+      element = document.querySelector( "#" + element );
+
+
+      const form = element.appendChild( document.createElement( "form" ) );
+      const toggle_controls = form.appendChild( document.createElement( "button" ) );
+      toggle_controls.type = "button";
+      toggle_controls.textContent = "Shrink/Open Controls";
+      form.appendChild( document.createElement( "br" ) );
+      const explanation = form.appendChild( document.createElement( "p" ) );
+      explanation.innerHTML = `<p><i><b>What can I put here?</b></i>  A JavaScript class, with any valid JavaScript inside.  Your code can use classes from this demo,
+                               <br>or from ANY demo on the Encyclopedia of Code --  the dependencies will automatically be pulled in to run your demo!<br></p>`;
+      const run_button            = form.appendChild( document.createElement( "button" ) );
+      run_button.type             = "button";
+      run_button.style            = "background:maroon";
+      run_button.textContent      = "Run with Changes";
+      const submit                = form.appendChild( document.createElement( "button" ) );
+      submit.type                 = "submit";
+      submit.textContent          = "Save as New Webpage";
+      const author_box            = form.appendChild( document.createElement( "input" ) );
+      author_box.name             = "author";
+      author_box.type             = "text";
+      author_box.placeholder      = "Author name";
+//    const password_box          = form.appendChild( document.createElement( "input" ) );
+//    password_box.name           = "password";
+//    password_box.type           = "text";
+//    password_box.placeholder    = "Password";
+//    password_box.style          = "display:none";
+
+      const overwrite_panel       = form.appendChild( document.createElement( "span" ) );
+      overwrite_panel.style       = "display:none";
+      overwrite_panel.innerHTML   = "<label>Overwrite?<input type='checkbox' name='overwrite' autocomplete='off'></label>";
+
+      const submit_result         = form.appendChild( document.createElement( "div" ) );
+      submit_result.style         = "margin: 10px 0";
+      const new_demo_code         = form.appendChild( document.createElement( "textarea" ) );
+      new_demo_code.name          = new_demo_code;
+      new_demo_code.rows          = 25;
+      new_demo_code.cols          = 140;
     }
 }
