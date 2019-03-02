@@ -782,11 +782,10 @@ export class Code_Widget
       if( document.styleSheets.length == 0 ) document.head.appendChild( document.createElement( "style" ) );
       for( const r of rules ) document.styleSheets[document.styleSheets.length - 1].insertRule( r, 0 )
       
-      if( !window[ selected_class ] ) throw "Class not found.";
+      if( !window[ selected_class ] ) throw "Class " + selected_class + " not found.";
       selected_class = window[ selected_class ];
-      
-
       element = document.querySelector( "#" + element );
+      
       const code_panel = element.appendChild( document.createElement( "div" ) );
       code_panel.className = "code-panel";
       const text        = code_panel.appendChild( document.createElement( "p" ) );
@@ -861,5 +860,15 @@ export class Code_Widget
             span.style.color = color_map[t.type];
             span.textContent = t.value;
           }
+    }
+}
+
+export class Text_Widget
+{ constructor( element, selected_class )
+    { if( !window[ selected_class ] ) throw "Class " + selected_class + " not found.";
+      selected_class = window[ selected_class ];
+      element = document.querySelector( "#" + element );
+
+      selected_class.show_explanation( element );
     }
 }
