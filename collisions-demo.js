@@ -1,5 +1,8 @@
-window.Body = window.classes.Body =
-class Body          // Store and update the properties of a 3D body that increntally moves from its previous place due to velocities.
+import * as classes from './common.js';
+Object.assign( window, classes );                                // Store these classes in global scope so we can use them anywhere.
+window.classes = Object.assign( {}, window.classes, classes );   // Also copy them to window.classes so we can list them all out anytime.
+
+export class Body          // Store and update the properties of a 3D body that incrementally moves from its previous place due to velocities.
 { constructor(               shape, material, size )
     { Object.assign( this, { shape, material, size } ) }
   emplace( location_matrix, linear_velocity, angular_velocity, spin_axis = Vec.of(0,0,0).randomized(1).normalized() )
@@ -47,10 +50,9 @@ class Body          // Store and update the properties of a 3D body that incrent
 }
 
 
-window.Simulation = window.classes.Simulation =
-class Simulation extends Scene_Component         // Simulation manages the stepping of simulation time.  Subclass it when making
-{ constructor( webgl_manager )                   // a Scene that is a physics demo.  This technique is careful to totally
-    { super(   webgl_manager );                  // decouple the simulation from the frame rate.
+export class Simulation extends Scene_Component         // Simulation manages the stepping of simulation time.  Subclass it when making
+{ constructor( webgl_manager )                          // a Scene that is a physics demo.  This technique is careful to totally
+    { super(   webgl_manager );                         // decouple the simulation from the frame rate.
       Object.assign( this, { time_accumulator: 0, time_scale: 1, t: 0, dt: 1/20, bodies: [], steps_taken: 0 } );            
     }
   simulate( frame_time )                              // Carefully advance time according to Glenn Fiedler's "Fix Your Timestep" blog post.
@@ -86,8 +88,7 @@ class Simulation extends Scene_Component         // Simulation manages the stepp
 }
 
 
-window.Test_Data = window.classes.Test_Data =
-class Test_Data
+export class Test_Data
 { constructor( webgl_manager )
     { this.textures = { rgb   : new Texture( "assets/rgb.jpg"   ),
                         earth : new Texture( "assets/earth.gif" ),
@@ -116,15 +117,14 @@ class Test_Data
 }
 
 
-window.Inertia_Demo = window.classes.Inertia_Demo =
-class Inertia_Demo extends Simulation    // Demonstration: Let random initial momentums carry bodies until they fall and bounce.
+export class Inertia_Demo extends Simulation    // Demonstration: Let random initial momentums carry bodies until they fall and bounce.
 { constructor(  webgl_manager )
     { super(    webgl_manager );
       if( !webgl_manager.globals.has_controls   )
         this.children.push( new Movement_Controls( webgl_manager ) );
       if( !webgl_manager.globals.has_info_table )
         this.children.push( new Global_Info_Table( webgl_manager ) );
-        
+      
       webgl_manager.globals.graphics_state.    camera_transform = Mat4.translation([ 0,0,-50 ]);
       webgl_manager.globals.graphics_state.projection_transform = Mat4.perspective( Math.PI/4, webgl_manager.width/webgl_manager.height, 1, 500 );
       
@@ -162,14 +162,14 @@ class Inertia_Demo extends Simulation    // Demonstration: Let random initial mo
     }
 }
 
-window.Collision_Demo = window.classes.Collision_Demo =
-class Collision_Demo extends Simulation    // Demonstration: Detect when some flying objects collide with one another, coloring them red.
-{ constructor(  webgl_manager )
+
+export class Collision_Demo extends Simulation    // Demonstration: Detect when some flying objects
+{ constructor(  webgl_manager )                   // collide with one another, coloring them red.
     { super(    webgl_manager );
       if( !webgl_manager.globals.has_controls   )
         this.children.push( new Movement_Controls( webgl_manager ) );
       if( !webgl_manager.globals.has_info_table )
-        this.children.push( new Global_Info_Table( webgl_manager ) );
+        this.children.push( new Global_Info_Table( webgl_manager ) );       
 
       webgl_manager.globals.graphics_state.    camera_transform = Mat4.translation([ 0,0,-50 ]);
       webgl_manager.globals.graphics_state.projection_transform = Mat4.perspective( Math.PI/4, webgl_manager.width/webgl_manager.height, 1, 500 );

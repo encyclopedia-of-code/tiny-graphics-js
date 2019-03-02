@@ -1,5 +1,8 @@
-window.Text_Line = window.classes.Text_Line =
-class Text_Line extends Shape                       // Text_Line embeds text in the 3D world, using a crude texture method.  This
+import * as classes from './common.js';
+Object.assign( window, classes );                                // Store these classes in global scope so we can use them anywhere.
+window.classes = Object.assign( {}, window.classes, classes );   // Also copy them to window.classes so we can list them all out anytime.
+
+export class Text_Line extends Shape                // Text_Line embeds text in the 3D world, using a crude texture method.  This
 {                                                   // Shape is made of a horizontal arrangement of quads. Each is textured over with
                                                     // images of ASCII characters, spelling out a string.  Usage:  Instantiate the
                                                     // Shape with the desired character line width.  Assign it a single-line string
@@ -32,8 +35,7 @@ class Text_Line extends Shape                       // Text_Line embeds text in 
 }
 
 
-window.Text_Demo = window.classes.Text_Demo =
-class Text_Demo extends Scene_Component                   // A scene with a cube, for showing the Text_Line utility Shape.
+export class Text_Demo extends Scene_Component                   // A scene with a cube, for showing the Text_Line utility Shape.
 { constructor( webgl_manager )
     { super(   webgl_manager )
                                     // Store the desired camera and projection matrices in the shader-bound graphics state:

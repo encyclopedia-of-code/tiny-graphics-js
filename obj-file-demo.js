@@ -1,5 +1,8 @@
-window.Shape_From_File = window.classes.Shape_From_File =
-class Shape_From_File extends Shape          // A versatile standalone Shape that imports all its arrays' data from an .obj 3D model file.
+import * as classes from './common.js';
+Object.assign( window, classes );                                // Store these classes in global scope so we can use them anywhere.
+window.classes = Object.assign( {}, window.classes, classes );   // Also copy them to window.classes so we can list them all out anytime.
+
+export class Shape_From_File extends Shape   // A versatile standalone Shape that imports all its arrays' data from an .obj 3D model file.
 { constructor( filename )
     { super( "position", "normal", "texture_coord" );
       this.load_file( filename );      // Begin downloading the mesh. Once that completes, return control to our parse_into_mesh function.
@@ -77,9 +80,9 @@ class Shape_From_File extends Shape          // A versatile standalone Shape tha
     { if( this.ready ) super.draw( context, graphics_state, model_transform, material );   }
 }
 
-window.Obj_File_Demo = window.classes.Obj_File_Demo =
-class Obj_File_Demo extends Scene_Component     // An example that loads a single 3D model from an OBJ file.  Detailed model files can be
-  {                                             // used in place of simpler primitive-based shapes to add complexity to a scene.  Simpler
+export class Obj_File_Demo extends Scene_Component     
+  {                                             // An example that loads a single 3D model from an OBJ file.  Detailed model files can be
+                                                // used in place of simpler primitive-based shapes to add complexity to a scene.  Simpler
                                                 // primitives in your scene can just be thought of as placeholders until you find a model
                                                 // file that fits well.  This demo shows the teapot model twice, with one teapot showing
     constructor( webgl_manager )                // off the Fake_Bump_Map effect while the other has a regular texture and Phong lighting.             

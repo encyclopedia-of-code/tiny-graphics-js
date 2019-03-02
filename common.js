@@ -1,7 +1,10 @@
-window.Triangle = window.classes.Triangle =
-class Triangle extends Shape    // The simplest possible Shape – one triangle.  It has 3 vertices, each
-{ constructor()                 // having their own 3D position, normal vector, and texture-space coordinate.
-    { super( "position", "normal", "texture_coord" );
+import * as tiny_graphics from './tiny-graphics.js';
+Object.assign( window, tiny_graphics );                                            // Store these classes in global scope so we can use them anywhere.
+window.tiny_graphics = Object.assign( {}, window.tiny_graphics, tiny_graphics );   // Also copy them to window.classes so we can list them all out anytime.
+
+export class Triangle extends Shape    // The simplest possible Shape – one triangle.  It has 3 vertices, each
+{ constructor()                        // having their own 3D position, normal vector, and texture-space coordinate.
+    { super( "position", "normal", "texture_coord" );                              // Name the values we'll define per each vertex.
                                   // First, specify the vertex positions -- the three point locations of an imaginary triangle.
                                   // Next, supply vectors that point away from the triangle face.  They should match up with the points in 
                                   // the above list.  Normal vectors are needed so the graphics engine can know if the shape is pointed at 
@@ -17,8 +20,7 @@ class Triangle extends Shape    // The simplest possible Shape – one triangle.
 }
 
 
-window.Square = window.classes.Square =
-class Square extends Shape              // A square, demonstrating two triangles that share vertices.  On any planar surface, the interior 
+export class Square extends Shape       // A square, demonstrating two triangles that share vertices.  On any planar surface, the interior 
                                         // edges don't make any important seams.  In these cases there's no reason not to re-use data of
 {                                       // the common vertices between triangles.  This makes all the vertex arrays (position, normals, 
   constructor()                         // etc) smaller and more cache friendly.
@@ -31,8 +33,7 @@ class Square extends Shape              // A square, demonstrating two triangles
 }
 
 
-window.Tetrahedron = window.classes.Tetrahedron =
-class Tetrahedron extends Shape                       // The Tetrahedron shape demonstrates flat vs smooth shading (a boolean argument 
+export class Tetrahedron extends Shape                // The Tetrahedron shape demonstrates flat vs smooth shading (a boolean argument 
 { constructor( using_flat_shading )                   // selects which one).  It is also our first 3D, non-planar shape.
     { super( "position", "normal", "texture_coord" );
       var a = 1/Math.sqrt(3);
@@ -65,8 +66,7 @@ class Tetrahedron extends Shape                       // The Tetrahedron shape d
 }
 
 
-window.Windmill = window.classes.Windmill =
-class Windmill extends Shape                     // Windmill Shape.  As our shapes get more complicated, we begin using matrices and flow
+export class Windmill extends Shape              // Windmill Shape.  As our shapes get more complicated, we begin using matrices and flow
 { constructor( num_blades )                      // control (including loops) to generate non-trivial point clouds and connect them.
     { super( "position", "normal", "texture_coord" );
       for( var i = 0; i < num_blades; i++ )     // A loop to automatically generate the triangles.
@@ -89,8 +89,7 @@ class Windmill extends Shape                     // Windmill Shape.  As our shap
     }
 }
 
-window.Cube = window.classes.Cube =
-class Cube extends Shape    // A cube inserts six square strips into its arrays.
+export class Cube extends Shape    // A cube inserts six square strips into its arrays.
 { constructor()  
     { super( "position", "normal", "texture_coord" );
       for( var i = 0; i < 3; i++ )                    
@@ -103,8 +102,7 @@ class Cube extends Shape    // A cube inserts six square strips into its arrays.
     }
 }
 
-window.Line_Segment_Array = window.classes.Line_Segment_Array =
-class Line_Segment_Array extends Shape    // Plot 2D points.
+export class Line_Segment_Array extends Shape    // Plot 2D points.
 { constructor()
   { super( "position", "color" );
   }
@@ -120,9 +118,8 @@ class Line_Segment_Array extends Shape    // Plot 2D points.
 }
 
 
-window.Subdivision_Sphere = window.classes.Subdivision_Sphere =
-class Subdivision_Sphere extends Shape  // This Shape defines a Sphere surface, with nice uniform triangles.  A subdivision surface (see
-{                                       // Wikipedia article on those) is initially simple, then builds itself into a more and more 
+export class Subdivision_Sphere extends Shape   // This Shape defines a Sphere surface, with nice uniform triangles.  A subdivision surface
+{                                       // (see Wikipedia article on those) is initially simple, then builds itself into a more and more 
                                         // detailed shape of the same layout.  Each act of subdivision makes it a better approximation of 
                                         // some desired mathematical surface by projecting each new point onto that surface's known 
                                         // implicit equation.  For a sphere, we begin with a closed 3-simplex (a tetrahedron).  For each
@@ -165,8 +162,7 @@ class Subdivision_Sphere extends Shape  // This Shape defines a Sphere surface, 
 }
 
 
-window.Grid_Patch = window.classes.Grid_Patch =
-class Grid_Patch extends Shape              // A grid of rows and columns you can distort. A tesselation of triangles connects the
+export class Grid_Patch extends Shape       // A grid of rows and columns you can distort. A tesselation of triangles connects the
 {                                           // points, generated with a certain predictable pattern of indices.  Two callbacks
                                             // allow you to dynamically define how to reach the next row or column.
   constructor( rows, columns, next_row_function, next_column_function, texture_coord_range = [ [ 0, rows ], [ 0, columns ] ]  )
@@ -214,13 +210,13 @@ class Grid_Patch extends Shape              // A grid of rows and columns you ca
     }
 }
 
-window.Surface_Of_Revolution = window.classes.Surface_Of_Revolution =
-class Surface_Of_Revolution extends Grid_Patch      // SURFACE OF REVOLUTION: Produce a curved "sheet" of triangles with rows and columns.
+export class Surface_Of_Revolution extends Grid_Patch      
+{                                                   // SURFACE OF REVOLUTION: Produce a curved "sheet" of triangles with rows and columns.
                                                     // Begin with an input array of points, defining a 1D path curving through 3D space -- 
                                                     // now let each such point be a row.  Sweep that whole curve around the Z axis in equal 
                                                     // steps, stopping and storing new points along the way; let each step be a column. Now
                                                     // we have a flexible "generalized cylinder" spanning an area until total_curvature_angle.
-{ constructor( rows, columns, points, texture_coord_range, total_curvature_angle = 2*Math.PI )
+  constructor( rows, columns, points, texture_coord_range, total_curvature_angle = 2*Math.PI )
     { const row_operation =     i => Grid_Patch.sample_array( points, i ),
          column_operation = (j,p) => Mat4.rotation( total_curvature_angle/columns, Vec.of( 0,0,1 ) ).times(p.to4(1)).to3();
          
@@ -228,23 +224,19 @@ class Surface_Of_Revolution extends Grid_Patch      // SURFACE OF REVOLUTION: Pr
     }
 }
 
-window.Regular_2D_Polygon = window.classes.Regular_2D_Polygon =
-class Regular_2D_Polygon extends Surface_Of_Revolution  // Approximates a flat disk / circle
+export class Regular_2D_Polygon extends Surface_Of_Revolution     // Approximates a flat disk / circle
   { constructor( rows, columns )
       { super( rows, columns, Vec.cast( [0, 0, 0], [1, 0, 0] ) ); 
         this.arrays.normal = this.arrays.normal.map( x => Vec.of( 0,0,1 ) );
         this.arrays.texture_coord.forEach( (x, i, a) => a[i] = this.arrays.position[i].map( x => x/2 + .5 ).slice(0,2) ); } }
 
-window.Cylindrical_Tube = window.classes.Cylindrical_Tube =
-class Cylindrical_Tube extends Surface_Of_Revolution    // An open tube shape with equally sized sections, pointing down Z locally.    
+export class Cylindrical_Tube extends Surface_Of_Revolution    // An open tube shape with equally sized sections, pointing down Z locally.    
   { constructor( rows, columns, texture_range ) { super( rows, columns, Vec.cast( [1, 0, .5], [1, 0, -.5] ), texture_range ); } }
 
-window.Cone_Tip = window.classes.Cone_Tip =
-class Cone_Tip extends Surface_Of_Revolution        // Note:  Touches the Z axis; squares degenerate into triangles as they sweep around.
+export class Cone_Tip extends Surface_Of_Revolution    // Note:  Touches the Z axis; squares degenerate into triangles as they sweep around.
   { constructor( rows, columns, texture_range ) { super( rows, columns, Vec.cast( [0, 0, 1],  [1, 0, -1]  ), texture_range ); } }
 
-window.Torus = window.classes.Torus =
-class Torus extends Shape                                         // Build a donut shape.  An example of a surface of revolution.
+export class Torus extends Shape                                         // Build a donut shape.  An example of a surface of revolution.
   { constructor( rows, columns )  
       { super( "position", "normal", "texture_coord" );
         const circle_points = Array( rows ).fill( Vec.of( 1/3,0,0 ) )
@@ -256,8 +248,7 @@ class Torus extends Shape                                         // Build a don
         Surface_Of_Revolution.insert_transformed_copy_into( this, [ rows, columns, circle_points ] );         
       } }
 
-window.Grid_Sphere = window.classes.Grid_Sphere =
-class Grid_Sphere extends Shape                         // With lattitude / longitude divisions; this means singularities are at 
+export class Grid_Sphere extends Shape                  // With lattitude / longitude divisions; this means singularities are at 
   { constructor( rows, columns, texture_range )         // the mesh's top and bottom.  Subdivision_Sphere is a better alternative.
       { super( "position", "normal", "texture_coord" );
         const semi_circle_points = Array( rows ).fill( Vec.of( 0,0,1 ) ).map( (x,i,a) =>
@@ -266,33 +257,28 @@ class Grid_Sphere extends Shape                         // With lattitude / long
         Surface_Of_Revolution.insert_transformed_copy_into( this, [ rows, columns, semi_circle_points, texture_range ] );
       } }
 
-window.Closed_Cone = window.classes.Closed_Cone =
-class Closed_Cone extends Shape     // Combine a cone tip and a regular polygon to make a closed cone.
+export class Closed_Cone extends Shape     // Combine a cone tip and a regular polygon to make a closed cone.
   { constructor( rows, columns, texture_range )
       { super( "position", "normal", "texture_coord" );
         Cone_Tip          .insert_transformed_copy_into( this, [ rows, columns, texture_range ]);    
         Regular_2D_Polygon.insert_transformed_copy_into( this, [ 1, columns ], Mat4.rotation( Math.PI, Vec.of(0, 1, 0) )
                                                                        .times( Mat4.translation([ 0, 0, 1 ]) ) ); } }
 
-window.Rounded_Closed_Cone = window.classes.Rounded_Closed_Cone =
-class Rounded_Closed_Cone extends Surface_Of_Revolution   // An alternative without two separate sections
+export class Rounded_Closed_Cone extends Surface_Of_Revolution   // An alternative without two separate sections
   { constructor( rows, columns, texture_range ) { super( rows, columns, Vec.cast( [0, 0, 1], [1, 0, -1], [0, 0, -1] ), texture_range ) ; } }
 
-window.Capped_Cylinder = window.classes.Capped_Cylinder =
-class Capped_Cylinder extends Shape                       // Combine a tube and two regular polygons to make a closed cylinder.
+export class Capped_Cylinder extends Shape                // Combine a tube and two regular polygons to make a closed cylinder.
   { constructor( rows, columns, texture_range )           // Flat shade this to make a prism, where #columns = #sides.
       { super( "position", "normal", "texture_coord" );
         Cylindrical_Tube  .insert_transformed_copy_into( this, [ rows, columns, texture_range ] );
         Regular_2D_Polygon.insert_transformed_copy_into( this, [ 1, columns ],                                                  Mat4.translation([ 0, 0, .5 ]) );
         Regular_2D_Polygon.insert_transformed_copy_into( this, [ 1, columns ], Mat4.rotation( Math.PI, Vec.of(0, 1, 0) ).times( Mat4.translation([ 0, 0, .5 ]) ) ); } }
 
-window.Rounded_Capped_Cylinder = window.classes.Rounded_Capped_Cylinder =
-class Rounded_Capped_Cylinder extends Surface_Of_Revolution   // An alternative without three separate sections
+export class Rounded_Capped_Cylinder extends Surface_Of_Revolution   // An alternative without three separate sections
   { constructor ( rows, columns, texture_range ) { super( rows, columns, Vec.cast( [0, 0, .5], [1, 0, .5], [1, 0, -.5], [0, 0, -.5] ), texture_range ); } }
   
   
-window.Axis_Arrows = window.classes.Axis_Arrows =
-class Axis_Arrows extends Shape                                   // An axis set with arrows, made out of a lot of various primitives.
+export class Axis_Arrows extends Shape                               // An axis set with arrows, made out of a lot of various primitives.
 { constructor()
     { super( "position", "normal", "texture_coord" );
       var stack = [];       
@@ -311,8 +297,31 @@ class Axis_Arrows extends Shape                                   // An axis set
 }
 
 
-window.Basic_Shader = window.classes.Basic_Shader =
-class Basic_Shader extends Shader             // Subclasses of Shader each store and manage a complete GPU program.  This Shader is 
+export class Minimal_Shape extends Vertex_Buffer    // The simplest possible Shape – one triangle.  It has 3 vertices, each
+{ constructor()                                     // containing two values: a 3D position and a color.
+    { super( "position", "color" );
+      this.arrays.position = [ Vec.of(0,0,0), Vec.of(1,0,0), Vec.of(0,1,0) ];   // Describe the where the points of a triangle are in space.
+      this.arrays.color    = [ Color.of(1,0,0,1), Color.of(0,1,0,1), Color.of(0,0,1,1) ];   // Besides a position, vertices also have a color.      
+    }
+}
+
+
+export class Minimal_Webgl_Demo extends Scene_Component
+{ constructor( webgl_manager, control_panel )
+    { super( webgl_manager, control_panel );
+      this.shapes = { triangle : new Minimal_Shape() };         // Send a Triangle's vertices to the GPU's buffers.
+      this.shader = new Basic_Shader();
+    }
+  display( context, graphics_state )                                                      // Do this every frame.
+    { this.shapes.triangle.draw( context, graphics_state, Mat4.identity(), this.shader.material() );  // Draw the triangle.
+    }
+ make_control_panel()                 // Draw buttons, setup their actions and keyboard shortcuts, and monitor live variables.
+    { this.control_panel.innerHTML += "(This one has no controls)";
+    }
+}
+
+
+export class Basic_Shader extends Shader      // Subclasses of Shader each store and manage a complete GPU program.  This Shader is 
 {                                             // the simplest example of one.  It samples pixels from colors that are directly assigned 
                                               // to the vertices.
   material() { return new class Material extends Overridable {}().replace({ shader: this }) }      // Materials here are minimal, without any settings.
@@ -346,8 +355,7 @@ class Basic_Shader extends Shader             // Subclasses of Shader each store
 }
 
 
-window.Funny_Shader = window.classes.Funny_Shader =
-class Funny_Shader extends Shader         // Simple "procedural" texture shader, with texture coordinates but without an input image.
+export class Funny_Shader extends Shader         // Simple "procedural" texture shader, with texture coordinates but without an input image.
 { material() { return new class Material extends Overridable {}().replace({ shader: this }) }      // Materials here are minimal, without any settings.
   update_GPU( context, gpu_addresses, graphics_state, model_transform, material )    // Define how to synchronize our JavaScript's variables to the GPU's:
       { const [ P, C, M ] = [ graphics_state.projection_transform, graphics_state.camera_transform, model_transform ],
@@ -387,8 +395,7 @@ class Funny_Shader extends Shader         // Simple "procedural" texture shader,
 }
 
 
-window.Phong_Shader = window.classes.Phong_Shader =
-class Phong_Shader extends Shader          // THE DEFAULT SHADER: This uses the Phong Reflection Model, with optional Gouraud shading. 
+export class Phong_Shader extends Shader   // THE DEFAULT SHADER: This uses the Phong Reflection Model, with optional Gouraud shading. 
                                            // Wikipedia has good defintions for these concepts.  Subclasses of class Shader each store 
                                            // and manage a complete GPU program.  This particular one is a big "master shader" meant to 
                                            // handle all sorts of lighting situations in a configurable way. 
@@ -561,8 +568,7 @@ class Phong_Shader extends Shader          // THE DEFAULT SHADER: This uses the 
 }
 
 
-window.Fake_Bump_Map = window.classes.Fake_Bump_Map =
-class Fake_Bump_Map extends Phong_Shader                         // Same as Phong_Shader, except this adds one line of code.
+export class Fake_Bump_Map extends Phong_Shader                         // Same as Phong_Shader, except this adds one line of code.
 { fragment_glsl_code()           // ********* FRAGMENT SHADER ********* 
     { return `
         uniform sampler2D texture;
@@ -586,13 +592,12 @@ class Fake_Bump_Map extends Phong_Shader                         // Same as Phon
 }
 
 
-window.Movement_Controls = window.classes.Movement_Controls =
-class Movement_Controls extends Scene_Component    // Movement_Controls is a Scene_Component that can be attached to a canvas, like any 
-{                                                  // other Scene, but it is a Secondary Scene Component -- meant to stack alongside other
-                                                   // scenes.  Rather than drawing anything it embeds both first-person and third-person
-                                                   // style controls into the website.  These can be uesd to manually move your camera or
-                                                   // other objects smoothly through your scene using key, mouse, and HTML button controls
-                                                   // to help you explore what's in it.
+export class Movement_Controls extends Scene_Component    // Movement_Controls is a Scene_Component that can be attached to a canvas, like
+{                                                  // any other Scene, but it is a Secondary Scene Component -- meant to stack alongside
+                                                   // other scenes.  Rather than drawing anything it embeds both first-person and third-
+                                                   // person style controls into the website.  These can be uesd to manually move your
+                                                   // camera or other objects smoothly through your scene using key, mouse, and HTML
+                                                   // button controls to help you explore what's in it.
 
   constructor( webgl_manager )
     { super( webgl_manager );
@@ -690,8 +695,7 @@ class Movement_Controls extends Scene_Component    // Movement_Controls is a Sce
     }
 }
 
-window.Global_Info_Table = window.classes.Global_Info_Table =
-class Global_Info_Table extends Scene_Component                 // A class that just toggles, monitors, and reports some 
+export class Global_Info_Table extends Scene_Component          // A class that just toggles, monitors, and reports some 
 { make_control_panel()                                          // global values via its control panel.
     { const globals = this.globals;
       globals.has_info_table = true;

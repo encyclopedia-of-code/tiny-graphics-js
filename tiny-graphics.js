@@ -1,9 +1,8 @@
 // tiny-graphics.js - A file that shows how to organize a complete graphics program.
 // It wraps common WebGL commands, math, and web page interactions.  (by Garett)
 
-window.Vec = window.tiny_graphics.Vec =
-class Vec extends Float32Array        // Vectors of floating point numbers.  This puts vector math into JavaScript.
-                                      // See these examples for usage of each function:
+export class Vec extends Float32Array       // Vectors of floating point numbers.  This puts vector math into JavaScript.
+                                            // See these examples for usage of each function:
   //     equals: "Vec.of( 1,0,0 ).equals( Vec.of( 1,0,0 ) )" returns true.
   //       plus: "Vec.of( 1,0,0 ).plus  ( Vec.of( 1,0,0 ) )" returns the Vec [ 2,0,0 ].
   //      minus: "Vec.of( 1,0,0 ).minus ( Vec.of( 1,0,0 ) )" returns the Vec [ 0,0,0 ].
@@ -49,8 +48,7 @@ class Vec extends Float32Array        // Vectors of floating point numbers.  Thi
 }
 
 
-window.Mat = window.tiny_graphics.Mat =
-class Mat extends Array                         // M by N matrices of floats.  Enables matrix and vector math.  Usage:
+export class Mat extends Array                         // M by N matrices of floats.  Enables matrix and vector math.  Usage:
   //  "Mat( rows )" returns a Mat with those rows, where rows is an array of float arrays.
   //  "M.set_identity( m, n )" assigns the m by n identity matrix to Mat M.
   //  "M.sub_block( start, end )" where start and end are each a [ row, column ] pair returns a sub-rectangle cut out from M.
@@ -101,8 +99,7 @@ class Mat extends Array                         // M by N matrices of floats.  E
 }
 
 
-window.Mat4 = window.tiny_graphics.Mat4 =
-class Mat4 extends Mat                               // Generate special 4x4 matrices that are useful for graphics.
+export class Mat4 extends Mat                               // Generate special 4x4 matrices that are useful for graphics.
 { static identity()       { return Mat.of( [ 1,0,0,0 ], [ 0,1,0,0 ], [ 0,0,1,0 ], [ 0,0,0,1 ] ); };
   static rotation( angle, axis )                                                    // Requires a scalar (angle) and a 3x1 Vec (axis)
                           { let [ x, y, z ] = Vec.from( axis ).normalized(), 
@@ -172,8 +169,7 @@ class Mat4 extends Mat                               // Generate special 4x4 mat
 }
 
 
-window.Keyboard_Manager = window.tiny_graphics.Keyboard_Manager =
-class Keyboard_Manager     // This class maintains a running list of which keys are depressed.  You can map combinations of shortcut
+export class Keyboard_Manager     // This class maintains a running list of which keys are depressed.  You can map combinations of shortcut
   {                        // keys to trigger callbacks you provide by calling add().  See add()'s arguments.  The shortcut list is 
                            // indexed by convenient strings showing each bound shortcut combination.  The constructor optionally
                            // takes "target", which is the desired DOM element for keys to be pressed inside of, and
@@ -219,8 +215,7 @@ class Keyboard_Manager     // This class maintains a running list of which keys 
   }
 
 
-window.Graphics_Card_Object = window.tiny_graphics.Graphics_Card_Object =
-class Graphics_Card_Object              // Extending this class allows an object to, whenever used, copy
+export class Graphics_Card_Object       // Extending this class allows an object to, whenever used, copy
 {                                       // itself onto a GPU context whenever it has not already been.
   constructor() { this.gpu_instances = new Map() }     // Track which GPU contexts this object has copied itself onto.
   copy_onto_graphics_card( context, ...args )
@@ -255,8 +250,8 @@ class Graphics_Card_Object              // Extending this class allows an object
 }
 
 
-window.Vertex_Buffer = window.tiny_graphics.Vertex_Buffer =
-class Vertex_Buffer extends Graphics_Card_Object            // To use Vertex_Buffer, make a subclass of it that overrides the constructor and fills in the right fields.  
+
+export class Vertex_Buffer extends Graphics_Card_Object    // To use Vertex_Buffer, make a subclass of it that overrides the constructor and fills in the right fields.  
 {                             // Vertex_Buffer organizes data related to one 3D shape and copies it into GPU memory.  That data is broken
                               // down per vertex in the shape.  You can make several fields that you can look up in a vertex; for each
                               // field, a whole array will be made here of that data type and it will be indexed per vertex.  Along with
@@ -305,8 +300,7 @@ class Vertex_Buffer extends Graphics_Card_Object            // To use Vertex_Buf
 }
 
 
-window.Shape = window.tiny_graphics.Shape =
-class Shape extends Vertex_Buffer
+export class Shape extends Vertex_Buffer
 {           // This class is used the same way as Vertex_Buffer, by subclassing it and writing a constructor that fills in certain fields.
             // Shape extends Vertex_Buffer's functionality for copying shapes into buffers the graphics card's memory.  It also adds the
             // basic assumption that each vertex will have a 3D position and a 3D normal vector as available fields to look up.  This means
@@ -385,17 +379,14 @@ class Shape extends Vertex_Buffer
 }
 
 
-window.Light = window.tiny_graphics.Light =
-class Light                                                     // The properties of one light in the scene (Two 4x1 Vecs and a scalar)
+
+export class Light                                             // The properties of one light in the scene (Two 4x1 Vecs and a scalar)
 { constructor( position, color, size ) { Object.assign( this, { position, color, attenuation: 1/size } ); }  };
 
-window.Color = window.tiny_graphics.Color =
-class Color extends Vec { }    // Just an alias.  Colors are special 4x1 vectors expressed as ( red, green, blue, opacity ) each from 0 to 1.
+export class Color extends Vec { }    // Just an alias.  Colors are special 4x1 vectors expressed as ( red, green, blue, opacity ) each from 0 to 1.
 
 
-
-window.Graphics_Addresses = window.tiny_graphics.Graphics_Addresses =
-class Graphics_Addresses    // For organizing communication with the GPU for Shaders.  Now that we've compiled the Shader, we can query 
+export class Graphics_Addresses    // For organizing communication with the GPU for Shaders.  Now that we've compiled the Shader, we can query 
 {                           // some things about the compiled program, such as the memory addresses it will use for uniform variables, 
                             // and the types and indices of its per-vertex attributes.  We'll need those for building vertex buffers.
   constructor( program, gl )
@@ -419,7 +410,7 @@ class Graphics_Addresses    // For organizing communication with the GPU for Sha
 }
 
 
-class Overridable     // Class Overridable allows a short way to create modified versions of JavaScript objects.  Some properties are
+export class Overridable     // Class Overridable allows a short way to create modified versions of JavaScript objects.  Some properties are
 {                     // replaced with substitutes that you provide, without having to write out a new object from scratch.
        // To override, simply pass in "replacement", a JS Object of keys/values you want to override, to generate a new object.
        // For shorthand you can leave off the key and only provide a value (pass in directly as "replacement") and a guess will
@@ -439,15 +430,13 @@ class Overridable     // Class Overridable allows a short way to create modified
 
 
 
-window.Graphics_State = window.tiny_graphics.Graphics_State =
-class Graphics_State extends Overridable                 // Stores things that affect multiple shapes, such as lights and the camera.
+export class Graphics_State extends Overridable                 // Stores things that affect multiple shapes, such as lights and the camera.
 { constructor( camera_transform = Mat4.identity(), projection_transform = Mat4.identity() ) 
     { super(); Object.assign( this, { camera_transform, projection_transform, animation_time: 0, animation_delta_time: 0 } ); }
 }
 
 
-window.Shader = window.tiny_graphics.Shader =
-class Shader extends Graphics_Card_Object     // Your subclasses of Shader will manage strings of GLSL code that will be sent to the GPU and will run, to
+export class Shader extends Graphics_Card_Object     // Your subclasses of Shader will manage strings of GLSL code that will be sent to the GPU and will run, to
 {                                             // draw every shape.  Extend the class and fill in the abstract functions; the constructor needs them.
   copy_onto_graphics_card( context )
     { const gpu_instance = super.copy_onto_graphics_card( context ),
@@ -501,8 +490,7 @@ class Shader extends Graphics_Card_Object     // Your subclasses of Shader will 
 }
 
 
-window.Texture = window.tiny_graphics.Texture =
-class Texture extends Graphics_Card_Object                            // The Texture class wraps a pointer to a new texture
+export class Texture extends Graphics_Card_Object                     // The Texture class wraps a pointer to a new texture
 { constructor( filename, min_filter = "LINEAR_MIPMAP_LINEAR" )        // buffer along with a new HTML image object. 
     { super();
       Object.assign( this, { filename, min_filter } );
@@ -542,8 +530,7 @@ class Texture extends Graphics_Card_Object                            // The Tex
 }
 
 
-window.Webgl_Manager = window.tiny_graphics.Webgl_Manager =
-class Webgl_Manager      // This class manages a whole graphics program for one on-page canvas, including its textures, shapes, shaders,
+export class Webgl_Manager      // This class manages a whole graphics program for one on-page canvas, including its textures, shapes, shaders,
 {                        // and scenes.  In addition to requesting a WebGL context and storing the aforementioned items, it informs the
                          // canvas of which functions to call during events - such as a key getting pressed or it being time to redraw.
   constructor( canvas, background_color, dimensions )
@@ -593,8 +580,7 @@ class Webgl_Manager      // This class manages a whole graphics program for one 
     }                                                                     // again as soon as all other web page events are processed.
 }
 
-window.Scene_Component = window.tiny_graphics.Scene_Component =
-class Scene_Component       // The Scene_Component superclass is the base class for any scene part or code snippet that you can add to a
+export class Scene_Component       // The Scene_Component superclass is the base class for any scene part or code snippet that you can add to a
 {                           // canvas.  Make your own subclass(es) of this and override their methods "display()" and "make_control_panel()"
                             // to make them do something.  Finally, push them onto your Webgl_Manager's "scene_components" array.
   constructor( webgl_manager )
@@ -641,15 +627,14 @@ class Scene_Component       // The Scene_Component superclass is the base class 
 }
 
 
-window.Canvas_Widget = window.tiny_graphics.Canvas_Widget =
-class Canvas_Widget                    // Canvas_Widget embeds a WebGL demo onto a website, along with various panels of controls.
+export class Canvas_Widget                    // Canvas_Widget embeds a WebGL demo onto a website, along with various panels of controls.
 { constructor( element, scenes, show_controls = true )   // One panel exists per each scene that's used in the canvas.  You can use up
     { this.create( element, scenes, show_controls )      // to 16 Canvas_Widgets; browsers support up to 16 WebGL contexts per page.    
 
       const rules = [ ".canvas-widget { width: 1080px; background: DimGray }",
                       ".canvas-widget canvas { width: 1080px; height: 600px; margin-bottom:-3px }" ];
                       
-      const style = document.head.appendChild( document.createElement( "style" ) );
+      if( document.styleSheets.length == 0 ) document.head.appendChild( document.createElement( "style" ) );
       for( const r of rules ) document.styleSheets[document.styleSheets.length - 1].insertRule( r, 0 )
     }
   create( element, scenes, show_controls )
@@ -685,8 +670,7 @@ class Canvas_Widget                    // Canvas_Widget embeds a WebGL demo onto
 }
 
 
-window.Controls_Widget = window.tiny_graphics.Controls_Widget =
-class Controls_Widget
+export class Controls_Widget
 { constructor( scenes, element )
     { if( typeof( element ) === "String" ) element = document.querySelector( "#" + element );
 
@@ -754,8 +738,7 @@ class Controls_Widget
 }
 
   
-window.Code_Manager = window.tiny_graphics.Code_Manager =
-class Code_Manager                            // Break up a string containing code (any es6 JavaScript).  The parser expression
+export class Code_Manager                     // Break up a string containing code (any es6 JavaScript).  The parser expression
 {                                             // is from https://github.com/lydell/js-tokens which states the following limitation:
   constructor( code )                         // "If the end of a statement looks like a regex literal (even if it isn’t), it will 
     { const es6_tokens_parser = RegExp( [     // be treated as one."  (This can miscolor lines of code containing divisions and comments).
@@ -786,22 +769,22 @@ class Code_Manager                            // Break up a string containing co
 }
 
 
-window.Code_Widget = window.tiny_graphics.Code_Widget =
-class Code_Widget
+export class Code_Widget
 { constructor( element, selected_class )
     { let rules = [ ".code-widget .code-panel { background:white; overflow:auto; font-family:monospace; width:1060px; padding:10px; padding-bottom:40px; max-height: 500px; \
                                                   border-radius:12px; box-shadow: 20px 20px 90px 0px powderblue inset, 5px 5px 30px 0px blue inset }",
                 ".code-widget .code-display { min-width:1800px; padding:10px; white-space:pre-wrap; background:transparent }",
                 ".code-widget .edit-button { left:800px; z-index:2; position:absolute; outline:0; height:80px; width:80px; border-radius:50% }",
                 ".code-widget table { display:block; overflow-x:auto; width:1080px; border-radius:25px; border-collapse:collapse; border: 2px solid black }",
-               ".code-widget table.class-list td { border-width:thin; background: #EEEEEE; padding:12px; font-family:monospace; border: 1px solid black }"
+                ".code-widget table.class-list td { border-width:thin; background: #EEEEEE; padding:12px; font-family:monospace; border: 1px solid black }"
                  ];
 
-      for( const r of rules ) document.styleSheets[0].insertRule( r, 1 );
+      if( document.styleSheets.length == 0 ) document.head.appendChild( document.createElement( "style" ) );
+      for( const r of rules ) document.styleSheets[document.styleSheets.length - 1].insertRule( r, 0 )
       
       if( !window[ selected_class ] ) throw "Class not found.";
       selected_class = window[ selected_class ];
-        
+      
 
       element = document.querySelector( "#" + element );
       const code_panel = element.appendChild( document.createElement( "div" ) );
