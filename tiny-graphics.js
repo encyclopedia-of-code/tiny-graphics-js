@@ -576,9 +576,6 @@ class Webgl_Manager      // This class manages a whole graphics program for one 
       Object.assign( this.canvas, { width, height } );   // have a special effect on buffers, separate from their style.
       this.context.viewport( 0, 0, width, height );      // Build the canvas's matrix for converting -1 to 1 ranged coords (NCDS)
     }                                                    // into its own pixel coords.
-  register_scene_component( component )     // Allow a Scene_Component to show their control panel and enter the event loop.
-    { this.scene_components.unshift( component );  component.make_control_panel( component.controls );
-    }
   render( time=0 )                                                // Animate shapes based upon how much measured real time has transpired.
     {                            this.globals.graphics_state.animation_delta_time = time - this.prev_time;
       if( this.globals.animate ) this.globals.graphics_state.animation_time      += this.globals.graphics_state.animation_delta_time;
@@ -587,8 +584,11 @@ class Webgl_Manager      // This class manages a whole graphics program for one 
       const gl = this.context;
       gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);        // Clear the canvas's pixels and z-buffer.
      
-      for( let live_string of document.querySelectorAll(".live_string") ) live_string.onload( live_string );
-      for ( let s of this.scene_components ) s.display( gl, this.globals.graphics_state );            // Draw each registered animation.
+      const open_list = [ ...this.scene_components ];
+      while( open_list.length )                       // Traverse all scenes and their children, recursively
+      { open_list.push( ...open_list[0].children );
+        open_list.shift().display( gl, this.globals.graphics_state );           // Draw each registered animation.
+      }
       this.event = window.requestAnimFrame( this.render.bind( this ) );   // Now that this frame is drawn, request that render() happen 
     }                                                                     // again as soon as all other web page events are processed.
 }
@@ -597,16 +597,17 @@ window.Scene_Component = window.tiny_graphics.Scene_Component =
 class Scene_Component       // The Scene_Component superclass is the base class for any scene part or code snippet that you can add to a
 {                           // canvas.  Make your own subclass(es) of this and override their methods "display()" and "make_control_panel()"
                             // to make them do something.  Finally, push them onto your Webgl_Manager's "scene_components" array.
-  constructor( webgl_manager, control_box )
-    { const callback_behavior = ( callback, event ) => 
+  constructor( webgl_manager )
+    { this.children = [];
+      this.desired_controls_position = 0; // Set as undefined to omit this scene's control panel.  Set to negative/positive to move its panel.
+      this.globals = webgl_manager.globals;      
+
+      const callback_behavior = ( callback, event ) => 
            { callback( event );
              event.preventDefault();    // Fire the callback and cancel any default browser shortcut that is an exact match.
              event.stopPropagation();   // Don't bubble the event to parent nodes; let child elements be targetted in isolation.
            }
-      Object.assign( this, { key_controls: new Keyboard_Manager( document, callback_behavior), globals: webgl_manager.globals } );
-      control_box.appendChild( Object.assign( document.createElement("div"), { textContent: this.constructor.name, className: "control-title" } ) )
-      this.control_panel = control_box.appendChild( document.createElement( "div" ) );
-      this.control_panel.className = "control-div";        
+      this.key_controls = new Keyboard_Manager( document, callback_behavior);     
     }
   new_line( parent=this.control_panel ) { parent.appendChild( document.createElement( "br" ) ) }    // Format a scene's control panel.
   live_string( callback, parent=this.control_panel )    // Create an element somewhere in the control panel that does reporting of the
@@ -646,40 +647,16 @@ class Canvas_Widget                    // Canvas_Widget embeds a WebGL demo onto
     { this.create( element, scenes, show_controls )      // to 16 Canvas_Widgets; browsers support up to 16 WebGL contexts per page.    
 
       const rules = [ ".canvas-widget { width: 1080px; background: DimGray }",
-                      ".canvas-widget * { font-family: monospace }",
-                      ".canvas-widget canvas { width: 1080px; height: 600px; margin-bottom:-3px }",
-                      ".canvas-widget div { background: white }",
-                      ".canvas-widget table { border-collapse: collapse; display:block; overflow-x: auto; }",
-                      ".canvas-widget table.control-box { width: 1080px; border:0; margin:0; max-height:380px; transition:.5s; overflow-y:scroll; background:DimGray }",
-                      ".canvas-widget table.control-box:hover { max-height:500px }",
-                      ".canvas-widget table.control-box td { overflow:hidden; border:0; background:DimGray; border-radius:30px }",
-                      ".canvas-widget table.control-box td .control-div { background: #EEEEEE; height:338px; padding: 5px 5px 5px 30px; box-shadow: 25px 0px 60px -15px inset }",
-                      ".canvas-widget table.control-box td * { background:transparent }",
-                      ".canvas-widget table.control-box .control-div td { border-radius:unset }",
-                      ".canvas-widget table.control-box .control-title { padding:7px 40px; color:white; background:DarkSlateGray; box-shadow: 25px 0px 70px -15px inset black }",
-                      ".canvas-widget *.live_string { display:inline-block; background:unset }",
-                      ".dropdown { display:inline-block }",
-                      ".dropdown-content { display:inline-block; transition:.2s; transform: scaleY(0); overflow:hidden; position: absolute; \
-                                            z-index: 1; background:#E8F6FF; padding: 16px; margin-left:30px; min-width: 100px; \
-                                            box-shadow: 5px 10px 16px 0px rgba(0,0,0,0.2) inset; border-radius:10px }",
-                      ".dropdown-content a { color: black; padding: 4px 4px; display: block }",
-                      ".dropdown a:hover { background: #f1f1f1 }",
-                      ".canvas-widget button { background: #4C9F50; color: white; padding: 6px; border-radius:9px; \
-                                                box-shadow: 4px 6px 16px 0px rgba(0,0,0,0.3); transition: background .3s, transform .3s }",
-                      ".canvas-widget button:hover, button:focus { transform: scale(1.3); color:gold }",
-                      ".link { text-decoration:underline; cursor: pointer }",
-                      ".show { transform: scaleY(1); height:200px; overflow:auto }",
-                      ".hide { transform: scaleY(0); height:0px; overflow:hidden  }" ];
+                      ".canvas-widget canvas { width: 1080px; height: 600px; margin-bottom:-3px }" ];
                       
       const style = document.head.appendChild( document.createElement( "style" ) );
       for( const r of rules ) document.styleSheets[document.styleSheets.length - 1].insertRule( r, 0 )
     }
   create( element, scenes, show_controls )
     { this.patch_ios_bug();
-      element = document.querySelector( "#" + element );
       try  { this.populate_canvas( element, scenes, show_controls );
            } catch( error )
-           { element.innerHTML = "<H1>Error loading the demo.</H1>" + error }
+           { document.querySelector( "#" + element ).innerHTML = "<H1>Error loading the demo.</H1>" + error }
     }
   patch_ios_bug()                               // Correct a flaw in Webkit (iPhone devices; safari mobile) that 
     { try{ Vec.of( 1,2,3 ).times(2) }           // breaks TypedArray.from() and TypedArray.of() in subclasses.
@@ -691,17 +668,88 @@ class Canvas_Widget                    // Canvas_Widget embeds a WebGL demo onto
   populate_canvas( element, scenes, show_controls )   // Assign a Webgl_Manager to the WebGL canvas.
     { if( !scenes.every( x => window[ x ] ) )         // Make sure each scene class really exists.
         throw "(Featured class not found)";
-      const canvas = element.appendChild( document.createElement( "canvas" ) );
-      const control_panels = element.appendChild( document.createElement( "table" ) );
-      control_panels.className = "control-box";      
-      if( !show_controls ) control_panels.style.display = "none";
-      const row = control_panels.insertRow( 0 );
+      const canvas = document.querySelector( "#" + element ).appendChild( document.createElement( "canvas" ) );
+
       this.webgl_manager = new Webgl_Manager( canvas, Color.of( 0,0,0,1 ) );  // Second parameter sets background color.
 
-      for( let scene_class_name of scenes )                  // Register the initially requested scenes to the render loop.
-        this.webgl_manager.register_scene_component( new window[ scene_class_name ]( this.webgl_manager, row.insertCell() ) );   
+      for( let scene_class_name of scenes )                  // Register the initially requested scenes to the render loop. 
+        this.webgl_manager.scene_components.push( new window[ scene_class_name ]( this.webgl_manager ) );
+
+
+      this.embedded_controls = document.querySelector( "#" + element ).appendChild( document.createElement( "div" ) );
+      this.embedded_controls.className = "controls-widget";
+      if( show_controls ) new Controls_Widget( this.webgl_manager.scene_components, this.embedded_controls );
                            
       this.webgl_manager.render();   // Start WebGL initialization.  Note that render() will re-queue itself for more calls.
+    }
+}
+
+
+window.Controls_Widget = window.tiny_graphics.Controls_Widget =
+class Controls_Widget
+{ constructor( scenes, element )
+    { if( typeof( element ) === "String" ) element = document.querySelector( "#" + element );
+
+      const rules = [ ".controls-widget * { font-family: monospace }",
+                      ".controls-widget div { background: white }",
+                      ".controls-widget table { border-collapse: collapse; display:block; overflow-x: auto; }",
+                      ".controls-widget table.control-box { width: 1080px; border:0; margin:0; max-height:380px; transition:.5s; overflow-y:scroll; background:DimGray }",
+                      ".controls-widget table.control-box:hover { max-height:500px }",
+                      ".controls-widget table.control-box td { overflow:hidden; border:0; background:DimGray; border-radius:30px }",
+                      ".controls-widget table.control-box td .control-div { background: #EEEEEE; height:338px; padding: 5px 5px 5px 30px; box-shadow: 25px 0px 60px -15px inset }",
+                      ".controls-widget table.control-box td * { background:transparent }",
+                      ".controls-widget table.control-box .control-div td { border-radius:unset }",
+                      ".controls-widget table.control-box .control-title { padding:7px 40px; color:white; background:DarkSlateGray; box-shadow: 25px 0px 70px -15px inset black }",
+                      ".controls-widget *.live_string { display:inline-block; background:unset }",
+                      ".dropdown { display:inline-block }",
+                      ".dropdown-content { display:inline-block; transition:.2s; transform: scaleY(0); overflow:hidden; position: absolute; \
+                                            z-index: 1; background:#E8F6FF; padding: 16px; margin-left:30px; min-width: 100px; \
+                                            box-shadow: 5px 10px 16px 0px rgba(0,0,0,0.2) inset; border-radius:10px }",
+                      ".dropdown-content a { color: black; padding: 4px 4px; display: block }",
+                      ".dropdown a:hover { background: #f1f1f1 }",
+                      ".controls-widget button { background: #4C9F50; color: white; padding: 6px; border-radius:9px; \
+                                                box-shadow: 4px 6px 16px 0px rgba(0,0,0,0.3); transition: background .3s, transform .3s }",
+                      ".controls-widget button:hover, button:focus { transform: scale(1.3); color:gold }",
+                      ".link { text-decoration:underline; cursor: pointer }",
+                      ".show { transform: scaleY(1); height:200px; overflow:auto }",
+                      ".hide { transform: scaleY(0); height:0px; overflow:hidden  }" ];
+                      
+      const style = document.head.appendChild( document.createElement( "style" ) );
+      for( const r of rules ) document.styleSheets[document.styleSheets.length - 1].insertRule( r, 0 )
+
+      const table = element.appendChild( document.createElement( "table" ) );
+      table.className = "control-box";
+      const row = table.insertRow( 0 );
+
+      this.panels = [];
+
+      const open_list = [ ...scenes ];
+      while( open_list.length )                       // Traverse all scenes and their children, recursively
+      { open_list.push( ...open_list[0].children );
+        const scene = open_list.shift();
+
+        const control_box = row.insertCell();
+        this.panels.push( control_box );
+
+        control_box.appendChild( Object.assign( document.createElement("div"), { 
+                                      textContent: scene.constructor.name, className: "control-title" } ) )   // Draw label bar.
+                                              
+        const control_panel = control_box.appendChild( document.createElement( "div" ) );
+        control_panel.className = "control-div";
+        scene.control_panel = control_panel;
+        scene.make_control_panel();           // Draw each registered animation.
+      }
+
+      this.render();
+    }
+  render( time=0 )
+    { for( let panel of this.panels )
+        for( let live_string of panel.querySelectorAll(".live_string") ) live_string.onload( live_string );
+
+      // TODO: Check for updates to each scene's desired_controls_position, including if the 
+      // scene just appeared in the tree, in which case call make_control_panel().
+
+      this.event = window.requestAnimFrame( this.render.bind( this ) );   // TODO: Cap this so that it can't be called faster than a human can read
     }
 }
 

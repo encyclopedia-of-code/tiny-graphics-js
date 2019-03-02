@@ -34,8 +34,8 @@ class Text_Line extends Shape                       // Text_Line embeds text in 
 
 window.Text_Demo = window.classes.Text_Demo =
 class Text_Demo extends Scene_Component                   // A scene with a cube, for showing the Text_Line utility Shape.
-{ constructor( webgl_manager, control_box )
-    { super(   webgl_manager, control_box )
+{ constructor( webgl_manager )
+    { super(   webgl_manager )
                                     // Store the desired camera and projection matrices in the shader-bound graphics state:
       webgl_manager.globals.graphics_state.    camera_transform = Mat4.look_at( ...Vec.cast( [ 0,0,4 ], [0,0,0], [0,1,0] ) );
       webgl_manager.globals.graphics_state.projection_transform = Mat4.perspective( Math.PI/4, webgl_manager.width/webgl_manager.height, .1, 1000 );                 

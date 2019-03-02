@@ -1,7 +1,7 @@
 window.Axes_Viewer = window.classes.Axes_Viewer =
 class Axes_Viewer extends Scene_Component     // A helper scene (a secondary Scene Component) for helping you visualize the
-{ constructor( webgl_manager, control_box )         // coordinate bases that are used in your real scene.  Your scene can feed this
-    { super(   webgl_manager, control_box );        // object a list of bases to draw as axis arrows.  Pressing the buttons of this
+{ constructor( webgl_manager )         // coordinate bases that are used in your real scene.  Your scene can feed this
+    { super(   webgl_manager );        // object a list of bases to draw as axis arrows.  Pressing the buttons of this
                                               // helper scene cycles through a list of each basis you have added, drawing
                                               // the selected one.  Call insert() and pass it a basis to add one to the list.
                                               // Always reset the data structure by calling reset() before each frame in your scene.
@@ -46,11 +46,12 @@ class Axes_Viewer extends Scene_Component     // A helper scene (a secondary Sce
 
 window.Axes_Viewer_Test_Scene = window.classes.Axes_Viewer_Test_Scene =
 class Axes_Viewer_Test_Scene extends Scene_Component
-{ constructor( webgl_manager, control_box )                 // An example of how your scene should properly manaage an Axes_Viewer
-    { super(   webgl_manager, control_box );                // helper scene, so that it is able to help you draw all the
+{ constructor( webgl_manager )                 // An example of how your scene should properly manaage an Axes_Viewer
+    { super(   webgl_manager );                // helper scene, so that it is able to help you draw all the
                                                       // coordinate bases in your scene's hierarchy at the correct levels.
+           
       if( !webgl_manager.globals.axes_viewer )
-        webgl_manager.register_scene_component( new Axes_Viewer( webgl_manager, control_box.parentElement.insertCell() ) );      
+        this.children.push( new Axes_Viewer( webgl_manager ) );
       this.axes_viewer = webgl_manager.globals.axes_viewer;
 
                                                                   // Scene defaults:

@@ -1,9 +1,9 @@
 window.Shadow_Mapping_Test = window.classes.Shadow_Mapping_Test =
 class Shadow_Mapping_Test extends Scene_Component
-  { constructor( webgl_manager, control_box )     // The scene begins by requesting the camera, shapes, and materials it will need.
-      { super(   webgl_manager, control_box );    // First, include a secondary Scene that provides movement controls:
+  { constructor( webgl_manager )     // The scene begins by requesting the camera, shapes, and materials it will need.
+      { super(   webgl_manager );    // First, include a secondary Scene that provides movement controls:
         if( !webgl_manager.globals.has_controls   ) 
-          webgl_manager.register_scene_component( new Movement_Controls( webgl_manager, control_box.parentElement.insertCell() ) ); 
+          this.children.push( new Movement_Controls( webgl_manager ) );
 
         webgl_manager.globals.graphics_state.camera_transform = Mat4.look_at( Vec.of( 0,0,5 ), Vec.of( 0,0,0 ), Vec.of( 0,1,0 ) );
 

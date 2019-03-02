@@ -2,11 +2,11 @@ window.Tutorial_Animation = window.classes.Tutorial_Animation =
 class Tutorial_Animation extends Scene_Component    // This Scene_Component can be added to a display canvas.  This particular one
   {                                                 // sets up the machinery to draw a simple scene demonstrating a few concepts.
                                                     // Scroll down to the display() method at the bottom to see where the shapes are drawn.
-    constructor( webgl_manager, control_box )             // The scene begins by requesting the camera, shapes, and materials it will need.
-      { super( webgl_manager, control_box );              // First, include a couple other helpful components, including one that moves you around:
+    constructor( webgl_manager )             // The scene begins by requesting the camera, shapes, and materials it will need.
+      { super( webgl_manager );              // First, include a couple other helpful components, including one that moves you around:
         if( !webgl_manager.globals.has_controls   ) 
-          webgl_manager.register_scene_component( new Movement_Controls( webgl_manager, control_box.parentElement.insertCell() ) ); 
-
+          this.children.push( new Movement_Controls( webgl_manager ) ); 
+          
                 // Define the global camera and projection matrices, which are stored in a scratchpad for globals.  The projection is special 
                 // because it determines how depth is treated when projecting 3D points onto a plane.  The function perspective() makes one.
                 // Its input arguments are field of view, aspect ratio, and distances to the near plane and far plane.

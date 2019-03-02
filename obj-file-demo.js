@@ -82,11 +82,11 @@ class Obj_File_Demo extends Scene_Component     // An example that loads a singl
   {                                             // used in place of simpler primitive-based shapes to add complexity to a scene.  Simpler
                                                 // primitives in your scene can just be thought of as placeholders until you find a model
                                                 // file that fits well.  This demo shows the teapot model twice, with one teapot showing
-    constructor( webgl_manager, control_box )         // off the Fake_Bump_Map effect while the other has a regular texture and Phong lighting.             
-      { super(   webgl_manager, control_box );
+    constructor( webgl_manager )                // off the Fake_Bump_Map effect while the other has a regular texture and Phong lighting.             
+      { super(   webgl_manager );
         webgl_manager.globals.graphics_state.    camera_transform = Mat4.translation([ 0,0,-5 ]);
         webgl_manager.globals.graphics_state.projection_transform = Mat4.perspective( Math.PI/4, webgl_manager.width/webgl_manager.height, .1, 1000 ); 
-      
+
         this.shapes = { "teapot": new Shape_From_File( "assets/teapot.obj" ) };             // Load the model file.
         
         this.stars = new Phong_Shader().material({ ambient: .3, diffusivity: .5, specularity: .5, texture: new Texture( "assets/stars.png" ) })

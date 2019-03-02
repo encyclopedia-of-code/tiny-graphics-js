@@ -593,8 +593,9 @@ class Movement_Controls extends Scene_Component    // Movement_Controls is a Sce
                                                    // style controls into the website.  These can be uesd to manually move your camera or
                                                    // other objects smoothly through your scene using key, mouse, and HTML button controls
                                                    // to help you explore what's in it.
-  constructor( webgl_manager, control_box, canvas = webgl_manager.canvas )
-    { super( webgl_manager, control_box );
+
+  constructor( webgl_manager )
+    { super( webgl_manager );
       [ this.webgl_manager, this.roll, this.look_around_locked, this.invert ] = [ webgl_manager, 0, true, true ];                  // Data members
       [ this.thrust, this.pos, this.z_axis ] = [ Vec.of( 0,0,0 ), Vec.of( 0,0,0 ), Vec.of( 0,0,0 ) ];
                                                  // The camera matrix is not actually stored here inside Movement_Controls; instead, track
@@ -610,13 +611,13 @@ class Movement_Controls extends Scene_Component    // Movement_Controls is a Sce
       
       // *** Mouse controls: ***
       this.mouse = { "from_center": Vec.of( 0,0 ) };                           // Measure mouse steering, for rotating the flyaround camera:
-      const mouse_position = ( e, rect = canvas.getBoundingClientRect() ) => 
+      const mouse_position = ( e, rect = webgl_manager.canvas.getBoundingClientRect() ) => 
                                    Vec.of( e.clientX - (rect.left + rect.right)/2, e.clientY - (rect.bottom + rect.top)/2 );
                                         // Set up mouse response.  The last one stops us from reacting if the mouse leaves the canvas.
-      document.addEventListener( "mouseup",   e => { this.mouse.anchor = undefined; } );
-      canvas  .addEventListener( "mousedown", e => { e.preventDefault(); this.mouse.anchor      = mouse_position(e); } );
-      canvas  .addEventListener( "mousemove", e => { e.preventDefault(); this.mouse.from_center = mouse_position(e); } );
-      canvas  .addEventListener( "mouseout",  e => { if( !this.mouse.anchor ) this.mouse.from_center.scale(0) } );  
+      document      .addEventListener( "mouseup",   e => { this.mouse.anchor = undefined; } );
+      webgl_manager.canvas.addEventListener( "mousedown", e => { e.preventDefault(); this.mouse.anchor      = mouse_position(e); } );
+      webgl_manager.canvas.addEventListener( "mousemove", e => { e.preventDefault(); this.mouse.from_center = mouse_position(e); } );
+      webgl_manager.canvas.addEventListener( "mouseout",  e => { if( !this.mouse.anchor ) this.mouse.from_center.scale(0) } );  
     }
   show_explanation( document_element ) { }
   make_control_panel()                                                        // This function of a scene sets up its keyboard shortcuts.
