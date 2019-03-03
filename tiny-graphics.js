@@ -284,7 +284,7 @@ export class Vertex_Buffer extends Graphics_Card_Object    // To use Vertex_Buff
   make_gpu_representation() { return { webGL_buffer_pointers: {} } }
   execute_shaders( gl, type )     // Draws this shape's entire vertex buffer.
     { if( this.indices.length )
-      { gl.bindBuffer( gl.ELEMENT_ARRAY_BUFFER, this.index_buffer );                          
+      { gl.bindBuffer( gl.ELEMENT_ARRAY_BUFFER, this.index_buffer );
         gl.drawElements( gl[type], this.indices.length, gl.UNSIGNED_INT, 0 ) 
       }                                                                                 // If no indices were provided, assume the 
       else  gl.drawArrays( gl[type], 0, Object.values( this.arrays )[0].length );       // vertices are arranged as triples.
@@ -353,8 +353,8 @@ export class Shape extends Vertex_Buffer
           {                         // Affect all recently added triangles (those past "offset" in the list).  Assumes that no
             this.indices.length = false;   // vertices are shared across seams.   First, iterate through the index or position triples:
             for( let counter = 0; counter < (this.indices.length ? this.indices.length : this.arrays.position.length); counter += 3 )
-            { const indices = this.indices.length ? [ this.indices[ counter ], this.indices[ counter + 1 ], this.indices[ counter + 2 ] ] : 
-                                             [ counter, counter + 1, counter + 2 ];
+            { const indices = this.indices.length ? [ this.indices[ counter ], this.indices[ counter + 1 ], this.indices[ counter + 2 ] ]
+                                                  : [ counter, counter + 1, counter + 2 ];
               const [ p1, p2, p3 ] = indices.map( i => this.arrays.position[ i ] );
               const n1 = p1.minus(p2).cross( p3.minus(p1) ).normalized();          // Cross the two edge vectors of this
                                                                                    // triangle together to get its normal.
@@ -377,7 +377,6 @@ export class Shape extends Vertex_Buffer
         this.arrays.position = p_arr.map( p => p.times( 1/average_lengths.norm() ) );
     }
 }
-
 
 
 export class Light                                             // The properties of one light in the scene (Two 4x1 Vecs and a scalar)
@@ -432,7 +431,8 @@ export class Overridable     // Class Overridable allows a short way to create m
 
 export class Graphics_State extends Overridable                 // Stores things that affect multiple shapes, such as lights and the camera.
 { constructor( camera_transform = Mat4.identity(), projection_transform = Mat4.identity() ) 
-    { super(); Object.assign( this, { camera_transform, projection_transform, animation_time: 0, animation_delta_time: 0 } ); }
+    { super(); Object.assign( this, { camera_transform, camera_inverse: Mat4.inverse( camera_transform ), projection_transform, 
+                                      animation_time: 0, animation_delta_time: 0 } ); }
 }
 
 

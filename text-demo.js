@@ -39,7 +39,7 @@ export class Text_Demo extends Scene_Component                   // A scene with
 { constructor( webgl_manager )
     { super(   webgl_manager )
                                     // Store the desired camera and projection matrices in the shader-bound graphics state:
-      webgl_manager.globals.graphics_state.    camera_transform = Mat4.look_at( ...Vec.cast( [ 0,0,4 ], [0,0,0], [0,1,0] ) );
+      webgl_manager.globals.graphics_state.      camera_inverse = Mat4.look_at( ...Vec.cast( [ 0,0,4 ], [0,0,0], [0,1,0] ) );
       webgl_manager.globals.graphics_state.projection_transform = Mat4.perspective( Math.PI/4, webgl_manager.width/webgl_manager.height, .1, 1000 );                 
       
       this.shapes = { cube: new Cube(), text: new Text_Line( 35 ) };

@@ -6,14 +6,52 @@
 
               <!-- The following code embeds a WebGL canvas widget panel, with certain scenes and their panels of controls. //-->
 <div id="main-canvas" class="canvas-widget"></div>
-
 <script type=module >      // ********************* THE ENTRY POINT OF YOUR WHOLE PROGRAM STARTS HERE ********************* 
-  const element_to_replace = "main-canvas";       // Indicate which element on the page you want the Canvas_Widget to replace with a 3D WebGL area.
-  const scenes = [ "Axes_Viewer_Test_Scene" ];    // Indicate the scenes you wish to load and display.
-  import * as module from './axes-viewer.js';     // Inicate the file that defines that scene.
-  Object.assign( window, module );                               // Store these classes in global scope so we can use them anywhere.
-  window.classes = Object.assign( {}, window.classes, module );  // Also copy them to window.classes so we can list them all out anytime.
-  new Canvas_Widget( element_to_replace, scenes );         // The Canvas_Widget class displays a WebGL demo containing the scene(s) you list.
+
+
+
+// Do the following when you're working with a codebase that is divided into separate files instead of all in dependencies.js.
+const scenes = { 
+        //                   Axes_Viewer_Test_Scene: "./axes-viewer.js",            // Indicate the scenes that you want, and what files to find them in.
+        //                             Inertia_Demo: "./collisions-demo.js",
+        //                          Collision_Demo: "./collisions-demo.js",
+        //                        Many_Lights_Demo: "./many-lights-demo.js",
+        //                      Minimal_Webgl_Demo: "./common.js",
+        //                           Minimal_Phong: "./minimal-phong.js",
+        //                           Obj_File_Demo: "./obj-file-demo.js",
+        //                   Scene_To_Texture_Demo: "./scene-to-texture-demo.js",
+        //                               Text_Demo: "./text-demo.js",
+        //                      Tutorial_Animation: "./transforms-sandbox.js",
+                                Transforms_Sandbox: "./transforms-sandbox.js",
+
+                       };
+        const element_to_replace = "main-canvas";       // Indicate which element on the page you want the Canvas_Widget to replace with a 3D WebGL area.
+
+        ( async () =>
+          { const modules = [];
+            for( let entry of Object.values( scenes ) )
+              try { modules.push( await import( entry ) ); }          // Import all classes from the files listed above by loading them as JS modules.
+              catch (error) {  throw "file not found, or error when parsing file." }
+
+            Object.assign( window, ...modules );                              // Store these classes in global scope so we can use them anywhere.
+            window.classes = Object.assign( {}, window.classes, ...modules ); // Also copy them to window.classes so we can list them all out anytime.
+            new Canvas_Widget( element_to_replace, Object.keys( scenes ) );   // The Canvas_Widget class displays a WebGL demo containing the scenes you listed.
+            window.scrollTo(0, 0);              // Once the document fully loads, reset the scroll to the top in case elements loaded out of order.
+        } )();
+
+
+
+
+
+
+
+
+//   const element_to_replace = "main-canvas";       // Indicate which element on the page you want the Canvas_Widget to replace with a 3D WebGL area.
+//   const scenes = [ "Axes_Viewer_Test_Scene" ];    // Indicate the scenes you wish to load and display.
+//   import * as module from './axes-viewer.js';     // Inicate the file that defines that scene.
+//   Object.assign( window, module );                               // Store these classes in global scope so we can use them anywhere.
+//   window.classes = Object.assign( {}, window.classes, module );  // Also copy them to window.classes so we can list them all out anytime.
+//   new Canvas_Widget( element_to_replace, scenes );         // The Canvas_Widget class displays a WebGL demo containing the scene(s) you list.
 </script>
 
                              <!-- The following code embeds a code navigator widget with links to classes. //-->

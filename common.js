@@ -224,6 +224,7 @@ export class Surface_Of_Revolution extends Grid_Patch
     }
 }
 
+
 export class Regular_2D_Polygon extends Surface_Of_Revolution     // Approximates a flat disk / circle
   { constructor( rows, columns )
       { super( rows, columns, Vec.cast( [0, 0, 0], [1, 0, 0] ) ); 
@@ -326,7 +327,7 @@ export class Basic_Shader extends Shader      // Subclasses of Shader each store
                                               // to the vertices.
   material() { return new class Material extends Overridable {}().replace({ shader: this }) }      // Materials here are minimal, without any settings.
   update_GPU( context, gpu_addresses, graphics_state, model_transform, material )    // Define how to synchronize our JavaScript's variables to the GPU's:
-      { const [ P, C, M ] = [ graphics_state.projection_transform, graphics_state.camera_transform, model_transform ],
+      { const [ P, C, M ] = [ graphics_state.projection_transform, graphics_state.camera_inverse, model_transform ],
                       PCM = P.times( C ).times( M );
         context.uniformMatrix4fv( gpu_addresses.projection_camera_model_transform, false, Mat.flatten_2D_to_1D( PCM.transposed() ) );
       }
@@ -358,7 +359,7 @@ export class Basic_Shader extends Shader      // Subclasses of Shader each store
 export class Funny_Shader extends Shader         // Simple "procedural" texture shader, with texture coordinates but without an input image.
 { material() { return new class Material extends Overridable {}().replace({ shader: this }) }      // Materials here are minimal, without any settings.
   update_GPU( context, gpu_addresses, graphics_state, model_transform, material )    // Define how to synchronize our JavaScript's variables to the GPU's:
-      { const [ P, C, M ] = [ graphics_state.projection_transform, graphics_state.camera_transform, model_transform ],
+      { const [ P, C, M ] = [ graphics_state.projection_transform, graphics_state.camera_inverse, model_transform ],
                       PCM = P.times( C ).times( M );
         context.uniformMatrix4fv( gpu_addresses.projection_camera_model_transform, false, Mat.flatten_2D_to_1D( PCM.transposed() ) );
         context.uniform1f ( gpu_addresses.animation_time, graphics_state.animation_time / 1000 );
@@ -420,10 +421,10 @@ export class Phong_Shader extends Shader   // THE DEFAULT SHADER: This uses the 
                                            // triangles' fragments occupying the same pixels.  The Z-Buffer test is applied to see if the 
                                            // new triangle is closer to the camera, and even if so, blending settings may interpolate some 
                                            // of the old color into the result.  Finally, an image is displayed onscreen.
-{ material( options )
+{ material( options )                      // Phong Materials expect you to pass in options like the following:
     { const defaults = { color: Color.of( 0,0,0,1 ), ambient: 0, diffusivity: 1, specularity: 1, smoothness: 40 };
       return new class Material extends Overridable
-        { constructor()                         // Phong Materials expect you to pass in options like the following:
+        { constructor()                         
             { super();
               Object.assign( this, defaults, options );
             }
@@ -520,7 +521,7 @@ export class Phong_Shader extends Shader   // THE DEFAULT SHADER: This uses the 
       this.update_matrices( gl, gpu, g_state, model_transform );  // First, send the matrices to the GPU.
       gl.uniform1f ( gpu.animation_time, g_state.animation_time / 1000 );
 
-      if( g_state.gouraud === undefined ) { g_state.gouraud = g_state.color_normals = false; }    // Keep the flags seen by the shader 
+      if( g_state.gouraud === undefined ) { g_state.gouraud = g_state.color_normals = false; }    // Keep the flags seen by the shader
       gl.uniform1i( gpu.GOURAUD,        g_state.gouraud || material.gouraud );                // program up-to-date and make sure 
       gl.uniform1i( gpu.COLOR_NORMALS,  g_state.color_normals );                              // they are declared.
 
@@ -551,7 +552,7 @@ export class Phong_Shader extends Shader   // THE DEFAULT SHADER: This uses the 
     }
   update_matrices( gl, gpu, g_state, model_transform )                                    // Helper function for sending matrices to GPU.
     {                                                  // (PCM will mean Projection * Camera * Model)
-      let [ P, C, M ]    = [ g_state.projection_transform, g_state.camera_transform, model_transform ],
+      let [ P, C, M ]    = [ g_state.projection_transform, g_state.camera_inverse, model_transform ],
             CM     =      C.times(  M ),     // Cache some extra products of our matrices to save computing them in the shader.
             PCM    =      P.times( CM ),
             inv_CM = Mat4.inverse( CM ).sub_block([0,0], [3,3]);
@@ -593,36 +594,40 @@ export class Fake_Bump_Map extends Phong_Shader                         // Same 
 
 
 export class Movement_Controls extends Scene_Component    // Movement_Controls is a Scene_Component that can be attached to a canvas, like
-{                                                  // any other Scene, but it is a Secondary Scene Component -- meant to stack alongside
-                                                   // other scenes.  Rather than drawing anything it embeds both first-person and third-
-                                                   // person style controls into the website.  These can be uesd to manually move your
-                                                   // camera or other objects smoothly through your scene using key, mouse, and HTML
-                                                   // button controls to help you explore what's in it.
-
+{                                                         // any other Scene, but it is a Secondary Scene Component -- meant to stack alongside
+                                                          // other scenes.  Rather than drawing anything it embeds both first-person and third-
+                                                          // person style controls into the website.  These can be used to manually move your
+                                                          // camera or other objects smoothly through your scene using key, mouse, and HTML
+                                                          // button controls to help you explore what's in it.
   constructor( webgl_manager )
     { super( webgl_manager );
-      [ this.webgl_manager, this.roll, this.look_around_locked, this.invert ] = [ webgl_manager, 0, true, true ];                  // Data members
+      [ this.webgl_manager, this.roll, this.look_around_locked ] = [ webgl_manager, 0, true, true ];                  // Data members.
       [ this.thrust, this.pos, this.z_axis ] = [ Vec.of( 0,0,0 ), Vec.of( 0,0,0 ), Vec.of( 0,0,0 ) ];
-                                                 // The camera matrix is not actually stored here inside Movement_Controls; instead, track
-                                                 // an external matrix to modify. This target is a reference (made with closures) kept
-                                                 // in "globals" so it can be seen and set by other classes.  Initially, the default target
-                                                 // is the camera matrix that Shaders use, stored in the global graphics_state object.
-      this.target = function() { return webgl_manager.globals.movement_controls_target() }
-      webgl_manager.globals.movement_controls_target = function(t) { return webgl_manager.globals.graphics_state.camera_transform };
-      webgl_manager.globals.movement_controls_invert = this.will_invert = () => true;
-      webgl_manager.globals.has_controls = true;
+      [ this.radians_per_frame, this.meters_per_frame, this.speed_multiplier ] = [ 1/200, 20, 1 ];                    // Constants.
 
-      [ this.radians_per_frame, this.meters_per_frame, this.speed_multiplier ] = [ 1/200, 20, 1 ];
-      
-      // *** Mouse controls: ***
+      webgl_manager.globals.controls = this;
+      this.add_mouse_controls();
+      this.reset();
+    }                                        // The camera matrix is not actually stored here inside Movement_Controls; instead, track an
+                                             // external target matrix to modify.  Targets must be pointer references made using closures.
+  set_recipient( matrix_closure, inverse_closure )
+    { this.matrix  =  matrix_closure;
+      this.inverse = inverse_closure;
+    }                               // Initially, the default target is the camera matrix that Shaders use, stored in the 
+  reset()                           // global graphics_state object.  Targets must be pointer references made using closures.
+    { this.set_recipient( () => this.webgl_manager.globals.graphics_state.camera_transform, 
+                          () => this.webgl_manager.globals.graphics_state.camera_inverse   );
+    }
+  add_mouse_controls()
+    { const canvas = this.webgl_manager.canvas;
       this.mouse = { "from_center": Vec.of( 0,0 ) };                           // Measure mouse steering, for rotating the flyaround camera:
-      const mouse_position = ( e, rect = webgl_manager.canvas.getBoundingClientRect() ) => 
+      const mouse_position = ( e, rect = canvas.getBoundingClientRect() ) => 
                                    Vec.of( e.clientX - (rect.left + rect.right)/2, e.clientY - (rect.bottom + rect.top)/2 );
                                         // Set up mouse response.  The last one stops us from reacting if the mouse leaves the canvas.
-      document      .addEventListener( "mouseup",   e => { this.mouse.anchor = undefined; } );
-      webgl_manager.canvas.addEventListener( "mousedown", e => { e.preventDefault(); this.mouse.anchor      = mouse_position(e); } );
-      webgl_manager.canvas.addEventListener( "mousemove", e => { e.preventDefault(); this.mouse.from_center = mouse_position(e); } );
-      webgl_manager.canvas.addEventListener( "mouseout",  e => { if( !this.mouse.anchor ) this.mouse.from_center.scale(0) } );  
+      document.addEventListener( "mouseup",   e => { this.mouse.anchor = undefined; } );
+      canvas  .addEventListener( "mousedown", e => { e.preventDefault(); this.mouse.anchor      = mouse_position(e); } );
+      canvas  .addEventListener( "mousemove", e => { e.preventDefault(); this.mouse.from_center = mouse_position(e); } );
+      canvas  .addEventListener( "mouseout",  e => { if( !this.mouse.anchor ) this.mouse.from_center.scale(0) } );
     }
   show_explanation( document_element ) { }
   make_control_panel()                                                        // This function of a scene sets up its keyboard shortcuts.
@@ -651,47 +656,53 @@ export class Movement_Controls extends Scene_Component    // Movement_Controls i
       this.live_string( box => box.textContent = "Facing: " + ( ( this.z_axis[0] > 0 ? "West " : "East ")
                    + ( this.z_axis[1] > 0 ? "Down " : "Up " ) + ( this.z_axis[2] > 0 ? "North" : "South" ) ) );
       this.new_line();     
-      this.key_triggered_button( "Go to world origin", [ "r" ], () => this.target().set_identity( 4,4 ), "orange" );  this.new_line();
-      this.key_triggered_button( "Attach to global camera", [ "Shift", "R" ], () => 
-                                          globals.movement_controls_target = () => globals.graphics_state.camera_transform, "blue" );
+      this.key_triggered_button( "Go to world origin", [ "r" ], () => { this. matrix().set_identity( 4,4 );
+                                                                        this.inverse().set_identity( 4,4 ) }, "orange" );  this.new_line();
+      this.key_triggered_button( "Attach to global camera", [ "Shift", "R" ], this.reset, "blue" );
       this.new_line();
     }
   first_person_flyaround( radians_per_frame, meters_per_frame, leeway = 70 )
-    { const sign = this.will_invert ? 1 : -1;
-      const do_operation = this.target()[ this.will_invert ? "pre_multiply" : "post_multiply" ].bind( this.target() );
-                                                                      // Compare mouse's location to all four corners of a dead box.
+    {                                                         // Compare mouse's location to all four corners of a dead box:
       const offsets_from_dead_box = { plus: [ this.mouse.from_center[0] + leeway, this.mouse.from_center[1] + leeway ],
                                      minus: [ this.mouse.from_center[0] - leeway, this.mouse.from_center[1] - leeway ] }; 
                 // Apply a camera rotation movement, but only when the mouse is past a minimum distance (leeway) from the canvas's center:
       if( !this.look_around_locked ) 
-        for( let i = 0; i < 2; i++ )      // Steer according to "mouse_from_center" vector, but don't 
-        {                                 // start increasing until outside a leeway window from the center.
+        for( let i = 0; i < 2; i++ )      // Steer according to "mouse_from_center" vector, but don't start
+        {                                 // increasing until outside a leeway window from the center.
           let o = offsets_from_dead_box,                                          // The &&'s in the next line might zero the vectors out:
             velocity = ( ( o.minus[i] > 0 && o.minus[i] ) || ( o.plus[i] < 0 && o.plus[i] ) ) * radians_per_frame;
-          do_operation( Mat4.rotation( sign * velocity, Vec.of( i, 1-i, 0 ) ) );   // On X step, rotate around Y axis, and vice versa.
+          this.matrix().post_multiply( Mat4.rotation( -velocity, Vec.of( i, 1-i, 0 ) ) );   // On X step, rotate around Y axis, and vice versa.
+          this.inverse().pre_multiply( Mat4.rotation( +velocity, Vec.of( i, 1-i, 0 ) ) );
         }
-      if( this.roll != 0 ) do_operation( Mat4.rotation( sign * .1, Vec.of(0, 0, this.roll ) ) );
+      this.matrix().post_multiply( Mat4.rotation( -.1 * this.roll, Vec.of( 0,0,1 ) ) );
+      this.inverse().pre_multiply( Mat4.rotation( +.1 * this.roll, Vec.of( 0,0,1 ) ) );
                                                   // Now apply translation movement of the camera, in the newest local coordinate frame.
-      do_operation( Mat4.translation( this.thrust.times( sign * meters_per_frame ) ) );
+      this.matrix().post_multiply( Mat4.translation( this.thrust.times( -meters_per_frame ) ) );
+      this.inverse().pre_multiply( Mat4.translation( this.thrust.times( +meters_per_frame ) ) );
     }
   third_person_arcball( radians_per_frame )
-    { const sign = this.will_invert ? 1 : -1;
-      const do_operation = this.target()[ this.will_invert ? "pre_multiply" : "post_multiply" ].bind( this.target() );
-      const dragging_vector = this.mouse.from_center.minus( this.mouse.anchor );               // Spin the scene around a point on an
+    { const dragging_vector = this.mouse.from_center.minus( this.mouse.anchor );               // Spin the scene around a point on an
       if( dragging_vector.norm() <= 0 ) return;                                                // axis determined by user mouse drag.
-      do_operation( Mat4.translation([ 0,0, sign *  25 ]) );           // The presumed distance to the scene is a hard-coded 25 units.
-      do_operation( Mat4.rotation( radians_per_frame * dragging_vector.norm(), Vec.of( dragging_vector[1], dragging_vector[0], 0 ) ) );
-      do_operation( Mat4.translation([ 0,0, sign * -25 ]) );
+
+      this.matrix().post_multiply( Mat4.translation([ 0,0, -25 ]) );
+      this.inverse().pre_multiply( Mat4.translation([ 0,0, +25 ]) );
+
+      const rotation = Mat4.rotation( radians_per_frame * dragging_vector.norm(), Vec.of( dragging_vector[1], dragging_vector[0], 0 ) );
+      this.matrix().post_multiply( rotation );
+      this.inverse().pre_multiply( rotation );
+
+      this. matrix().post_multiply( Mat4.translation([ 0,0, +25 ]) );
+      this.inverse().pre_multiply( Mat4.translation([ 0,0, -25 ]) );
     }
   display( context, graphics_state, dt = graphics_state.animation_delta_time / 1000 )    // Camera code starts here.
     { const m = this.speed_multiplier * this. meters_per_frame,
             r = this.speed_multiplier * this.radians_per_frame;
       this.first_person_flyaround( dt * r, dt * m );     // Do first-person.  Scale the normal camera aiming speed by dt for smoothness.
       if( this.mouse.anchor )                            // Also apply third-person "arcball" camera mode if a mouse drag is occurring.  
-        this.third_person_arcball( dt * r);           
+        this.third_person_arcball( dt * r );           
       
-      const inv = Mat4.inverse( this.target() );
-      this.pos = inv.times( Vec.of( 0,0,0,1 ) ); this.z_axis = inv.times( Vec.of( 0,0,1,0 ) );      // Log some values.
+      this.pos    = this.inverse().times( Vec.of( 0,0,0,1 ) );      // Log some values.
+      this.z_axis = this.inverse().times( Vec.of( 0,0,1,0 ) );
     }
 }
 

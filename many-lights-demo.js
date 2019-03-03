@@ -6,9 +6,9 @@ export class Many_Lights_Demo extends Scene_Component  // How to make the illusi
 { constructor( webgl_manager )                         // two to the shader.  We re-locate the lights in between individual shape draws.
     { super(   webgl_manager );
       Object.assign( this, { rows: 20, columns: 35 } );                                       // Define how many boxes (buildings) to draw.
-      webgl_manager.globals.graphics_state.    camera_transform = Mat4.look_at( ...Vec.cast( [ this.rows/2,5,5 ], [this.rows/2,0,-4], [0,1,0] ) );
+      webgl_manager.globals.graphics_state.      camera_inverse = Mat4.look_at( ...Vec.cast( [ this.rows/2,5,5 ], [this.rows/2,0,-4], [0,1,0] ) );
       webgl_manager.globals.graphics_state.projection_transform = Mat4.perspective( Math.PI/4, webgl_manager.width/webgl_manager.height, .1, 1000 );                 
-      
+
       this.shapes = { cube: new Cube() };
       this.shader = new Fake_Bump_Map();
       this.brick = this.shader.material({ ambient: .05, diffusivity: .5, specularity: .5, smoothness: 10, 
