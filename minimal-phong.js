@@ -3,8 +3,15 @@ Object.assign( window, classes );                                // Store these 
 window.classes = Object.assign( {}, window.classes, classes );   // Also copy them to window.classes so we can list them all out anytime.
 
 export class Basic_Phong extends Shader 
-{ material( color = Color.of( 0,0,0,1 ), properties )     // Define an internal class "Material" that stores the standard settings found in Phong lighting.
-    { return Object.assign( { shader: this, color, ambient: 0, diffusivity: 1, specularity: 1, smoothness: 40 }, properties ) }
+{ material( options )                      // Phong Materials expect you to pass in options like the following:
+    { const defaults = { color: Color.of( 0,0,0,1 ), ambient: 0, diffusivity: 1, specularity: 1, smoothness: 40 };
+      return new class Material extends Overridable
+        { constructor()                         
+            { super();
+              Object.assign( this, defaults, options );
+            }
+        }().replace({ shader: this })
+    }
   shared_glsl_code()            // ********* SHARED CODE, INCLUDED IN BOTH SHADERS *********
     { return ` precision mediump float;
         uniform float ambient, diffusivity, specularity, smoothness;
@@ -48,21 +55,21 @@ export class Basic_Phong extends Shader
           } ` ;
     }
     // Define how to synchronize our JavaScript's variables to the GPU's:
-  update_GPU( g_state, model_transform, material, gpu = this.g_addrs, gl = this.gl )
-    {                              // First, send the matrices to the GPU, additionally cache-ing some products of them we know we'll need:
-      this.update_matrices( g_state, model_transform, gpu, gl );
+  update_GPU( context, gpu_addresses, g_state, model_transform, material )
+    { const gpu = gpu_addresses, gl = context;
+      this.update_matrices( gl, gpu, g_state, model_transform );  // First, send the matrices to the GPU.
 
-      gl.uniform4fv( gpu.shapeColor_loc,     material.color       );    // Send the desired shape-wide material qualities 
-      gl.uniform1f ( gpu.ambient_loc,        material.ambient     );    // to the graphics card, where they will tweak the
-      gl.uniform1f ( gpu.diffusivity_loc,    material.diffusivity );    // Phong lighting formula.
-      gl.uniform1f ( gpu.specularity_loc,    material.specularity );
-      gl.uniform1f ( gpu.smoothness_loc,     material.smoothness  );
+      gl.uniform4fv( gpu.shapeColor,     material.color       );    // Send the desired shape-wide material qualities 
+      gl.uniform1f ( gpu.ambient,        material.ambient     );    // to the graphics card, where they will tweak the
+      gl.uniform1f ( gpu.diffusivity,    material.diffusivity );    // Phong lighting formula.
+      gl.uniform1f ( gpu.specularity,    material.specularity );
+      gl.uniform1f ( gpu.smoothness,     material.smoothness  );
 
       if( !g_state.lights.length ) return;      // Omitting lights will show only the material color scaled by the ambient coeff.
-      gl.uniform4fv( gpu.lightPosition_loc,       g_state.lights[0].position );
-      gl.uniform4fv( gpu.lightColor_loc,          g_state.lights[0].color );
+      gl.uniform4fv( gpu.lightPosition,       g_state.lights[0].position );
+      gl.uniform4fv( gpu.lightColor,          g_state.lights[0].color );
     }
-  update_matrices( g_state, model_transform, gpu, gl )                                    // Helper function for sending matrices to GPU.
+  update_matrices( gl, gpu, g_state, model_transform )                                    // Helper function for sending matrices to GPU.
     {                                                   // (PCM will mean Projection * Camera * Model)
       let [ P, C, M ]    = [ g_state.projection_transform, g_state.camera_inverse, model_transform ],
             CM     =      C.times(  M ),
@@ -73,10 +80,10 @@ export class Basic_Phong extends Shader
                                                                   // cache and send those.  They will be the same throughout this draw
                                                                   // call, and thus across each instance of the vertex shader.
                                                                   // Transpose them since the GPU expects matrices as column-major arrays.                                  
-      gl.uniformMatrix4fv( gpu.camera_transform_loc,                  false, Mat.flatten_2D_to_1D(     C .transposed() ) );
-      gl.uniformMatrix4fv( gpu.camera_model_transform_loc,            false, Mat.flatten_2D_to_1D(     CM.transposed() ) );
-      gl.uniformMatrix4fv( gpu.projection_camera_model_transform_loc, false, Mat.flatten_2D_to_1D(    PCM.transposed() ) );
-      gl.uniformMatrix3fv( gpu.inverse_transpose_modelview_loc,       false, Mat.flatten_2D_to_1D( inv_CM              ) );       
+      gl.uniformMatrix4fv( gpu.camera_transform,                  false, Mat.flatten_2D_to_1D(     C .transposed() ) );
+      gl.uniformMatrix4fv( gpu.camera_model_transform,            false, Mat.flatten_2D_to_1D(     CM.transposed() ) );
+      gl.uniformMatrix4fv( gpu.projection_camera_model_transform, false, Mat.flatten_2D_to_1D(    PCM.transposed() ) );
+      gl.uniformMatrix3fv( gpu.inverse_transpose_modelview,       false, Mat.flatten_2D_to_1D( inv_CM              ) );       
     }
 }
 
@@ -85,8 +92,15 @@ export class Basic_Phong extends Shader
 
 
 export class Basic_Phong_Minimal extends Shader      // Simplified; light and eye vectors as emerge from the center of the object.
-{ material( color = Color.of( 0,0,0,1 ), properties )     // Define an internal class "Material" that stores the standard settings found in Phong lighting.
-    { return Object.assign( { shader: this, color, ambient: 0, diffusivity: 1, specularity: 1, smoothness: 40 }, properties ) }
+{ material( options )                      // Phong Materials expect you to pass in options like the following:
+    { const defaults = { color: Color.of( 0,0,0,1 ), ambient: 0, diffusivity: 1, specularity: 1, smoothness: 40 };
+      return new class Material extends Overridable
+        { constructor()                         
+            { super();
+              Object.assign( this, defaults, options );
+            }
+        }().replace({ shader: this })
+    }
   shared_glsl_code()            // ********* SHARED CODE, INCLUDED IN BOTH SHADERS *********
     { return ` precision mediump float;
         uniform float ambient, diffusivity, specularity, smoothness;
@@ -107,7 +121,6 @@ export class Basic_Phong_Minimal extends Shader      // Simplified; light and ey
           { gl_Position = projection_camera_model_transform * vec4( position, 1.0 );           // The vertex's final resting place (in NDCS).
             N = normalize( model_transform * normal / squared_scale );                         // The final normal vector in screen space.
 
-
           } ` ;
     }
   fragment_glsl_code()        // ********* FRAGMENT SHADER ********* 
@@ -122,37 +135,43 @@ export class Basic_Phong_Minimal extends Shader      // Simplified; light and ey
             gl_FragColor.xyz += phong_model_light( N );                      // Compute the final color with contributions from lights.
           } ` ;
     }
+
     // Define how to synchronize our JavaScript's variables to the GPU's.  This is where the shader recieves ALL of its inputs.  Every
     // value the GPU wants is divided into two categories:  Values that belong to individual object being drawn (which we call "Material")
     // and values belonging to the whole scene or program (which we call the "Graphics State").  Send both a material and a graphics state
     // to the shaders to fully initialize them.
-  update_GPU( g_state, model_transform, material, gpu = this.g_addrs, gl = this.gl )
-    {                              // First, send the matrices to the GPU, additionally cache-ing some products of them we know we'll need:
+  update_GPU( context, gpu_addresses, g_state, model_transform, material )
+    { const gpu = gpu_addresses, gl = context;
+                                                                  // Send the current matrices to the shader.  Go ahead and pre-compute
+                                                                  // the products we'll need of the of the three special matrices and just
+                                                                  // cache and send those.  They will be the same throughout this draw
+                                                                  // call, and thus across each instance of the vertex shader.
+                                                                  // Transpose them since the GPU expects matrices as column-major arrays.
       const PCM = g_state.projection_transform.times( g_state.camera_inverse ).times( model_transform );
-      gl.uniformMatrix3fv( gpu.                  model_transform_loc, false, Mat.flatten_2D_to_1D( model_transform.sub_block([0,0], [3,3]).transposed() ) );
-      gl.uniformMatrix4fv( gpu.projection_camera_model_transform_loc, false, Mat.flatten_2D_to_1D(             PCM.transposed() ) );
+      gl.uniformMatrix3fv( gpu.                  model_transform, false, Mat.flatten_2D_to_1D( model_transform.sub_block([0,0], [3,3]).transposed() ) );
+      gl.uniformMatrix4fv( gpu.projection_camera_model_transform, false, Mat.flatten_2D_to_1D(             PCM.transposed() ) );
 
       const squared_scale = model_transform.reduce( (acc,r) => { return acc.plus( Vec.from(r).mult_pairs(r) ) }, Vec.of( 0,0,0,0 ) ).to3();
-      gl.uniform3fv( gpu.squared_scale_loc, squared_scale );
+      gl.uniform3fv( gpu.squared_scale, squared_scale );
 
 
-      gl.uniform4fv( gpu.shapeColor_loc,     material.color       );    // Send the desired shape-wide material qualities 
-      gl.uniform1f ( gpu.ambient_loc,        material.ambient     );    // to the graphics card, where they will tweak the
-      gl.uniform1f ( gpu.diffusivity_loc,    material.diffusivity );    // Phong lighting formula.
-      gl.uniform1f ( gpu.specularity_loc,    material.specularity );
-      gl.uniform1f ( gpu.smoothness_loc,     material.smoothness  );
+      gl.uniform4fv( gpu.shapeColor,     material.color       );    // Send the desired shape-wide material qualities 
+      gl.uniform1f ( gpu.ambient,        material.ambient     );    // to the graphics card, where they will tweak the
+      gl.uniform1f ( gpu.diffusivity,    material.diffusivity );    // Phong lighting formula.
+      gl.uniform1f ( gpu.specularity,    material.specularity );
+      gl.uniform1f ( gpu.smoothness,     material.smoothness  );
 
 
       const O = Vec.of( 0,0,0,1 ), center = model_transform.times( O );
    //   const E = Mat4.inverse( 
 
       if( !g_state.lights.length ) return;      // Omitting lights will show only the material color, scaled by the ambient term.
-      gl.uniform4fv( gpu.lightColor_loc,          g_state.lights[0].color );
+      gl.uniform4fv( gpu.lightColor,          g_state.lights[0].color );
       
       const P = g_state.lights[0].position;  // Light position "P" uses homogeneous coords.
       let L = P[3] ? P.minus( center ) : P;  // Use w = 0 for a directional light source -- a vector instead of a point.
           L = L.to3().normalized();
-      gl.uniform4fv( gpu.L_loc, L );
+      gl.uniform4fv( gpu.L, L );
     }
 }
 
@@ -168,7 +187,7 @@ export class Minimal_Phong extends Scene_Component
       webgl_manager.globals.graphics_state.camera_inverse = Mat4.translation([ 0,0,-15 ]);
       webgl_manager.globals.graphics_state.projection_transform = Mat4.perspective( Math.PI/4, webgl_manager.width/webgl_manager.height, 1, 50 );  
 
-      this.shader = new Phong_Shader();
+      this.shader = new Basic_Phong_Minimal();
       this.material = this.shader.material({ ambient:.2 }).override( Color.of( 1,1,0,1 ) );
     }
   display( context, graphics_state )                                                      // Do this every frame.
