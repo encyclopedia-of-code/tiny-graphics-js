@@ -466,7 +466,7 @@ export class Phong_Shader extends Shader   // THE DEFAULT SHADER: This uses the 
 
         void main()
         { gl_Position = projection_camera_model_transform * vec4( position, 1.0 );            // The vertex's final resting place (in NDCS).
-          N = inverse_transpose_modelview * normal;                         // The final normal vector in screen space.
+          N = normalize( inverse_transpose_modelview * normal );                              // The final normal vector in screen space.
           f_tex_coord = texture_coord;                                      // Directly use original texture coords and interpolate between.
           
           if( COLOR_NORMALS )                                     // Bypass all lighting code if we're lighting up vertices some other way.
