@@ -29,7 +29,7 @@ export class Basic_Phong extends Shader
 
         void main()
           { gl_Position = projection_camera_model_transform * vec4( position, 1.0 );           // The vertex's final resting place (in NDCS).
-            N = normalize( inverse_transpose_modelview * normal );                             // The final normal vector in screen space.
+            N = inverse_transpose_modelview * normal;                             // The final normal vector in screen space.
 
                                                     // The rest of this shader calculates some quantities that the Fragment shader will need:
             vec3 view_space_pos = ( camera_model_transform * vec4( position, 1.0 ) ).xyz;
@@ -37,21 +37,21 @@ export class Basic_Phong extends Shader
 
             // Light positions use homogeneous coords.  Use w = 0 for a directional light source -- a vector instead of a point.
             L = normalize( ( camera_transform * lightPosition ).xyz - lightPosition.w * view_space_pos );
-            H = normalize( L + E );
+            H = L + E;
           } ` ;
     }
   fragment_glsl_code()        // ********* FRAGMENT SHADER ********* 
     {   // A fragment is a pixel that's overlapped by the current triangle.  Fragments affect the final image or get discarded due to depth.                                 
       return ` 
         vec3 phong_model_light( vec3 N )
-          { float diffuse  =      max( dot(N, L), 0.0 );
-            float specular = pow( max( dot(N, H), 0.0 ), smoothness );
+          { float diffuse  =      max( dot(N, normalize( L ) ), 0.0 );
+            float specular = pow( max( dot(N, normalize( H ) ), 0.0 ), smoothness );
 
             return shapeColor.xyz * diffusivity * diffuse + lightColor.xyz * specularity * specular;
           }
         void main()
           { gl_FragColor = vec4( shapeColor.xyz * ambient, shapeColor.w );   // Compute an initial (ambient) color:
-            gl_FragColor.xyz += phong_model_light( N );                      // Compute the final color with contributions from lights.
+            gl_FragColor.xyz += phong_model_light( normalize( N ) );                      // Compute the final color with contributions from lights.
           } ` ;
     }
     // Define how to synchronize our JavaScript's variables to the GPU's:
@@ -119,20 +119,21 @@ export class Basic_Phong_Minimal extends Shader      // Simplified; light and ey
 
         void main()
           { gl_Position = projection_camera_model_transform * vec4( position, 1.0 );           // The vertex's final resting place (in NDCS).
-            N = normalize( model_transform * normal / squared_scale );                         // The final normal vector in screen space.
-
+            N = model_transform * normal / squared_scale;                         // The final normal vector in screen space.
           } ` ;
     }
   fragment_glsl_code()        // ********* FRAGMENT SHADER ********* 
     {   // A fragment is a pixel that's overlapped by the current triangle.  Fragments affect the final image or get discarded due to depth.                                 
       return ` 
         vec3 phong_model_light( vec3 N )
-          { 
-            return N;
+          { float diffuse  =      max( dot(N, L), 0.0 );
+            float specular = pow( max( dot(N, H), 0.0 ), smoothness );
+
+            return shapeColor.xyz * diffusivity * diffuse + lightColor.xyz * specularity * specular;
           }
         void main()
           { gl_FragColor = vec4( shapeColor.xyz * ambient, shapeColor.w );   // Compute an initial (ambient) color:
-            gl_FragColor.xyz += phong_model_light( N );                      // Compute the final color with contributions from lights.
+            gl_FragColor.xyz += phong_model_light( normalize( N ) );         // Compute the final color with contributions from lights.
           } ` ;
     }
 
@@ -163,7 +164,8 @@ export class Basic_Phong_Minimal extends Shader      // Simplified; light and ey
 
 
       const O = Vec.of( 0,0,0,1 ), center = model_transform.times( O );
-   //   const E = Mat4.inverse( 
+
+      const E = g_state.camera_inverse.times( O ).minus( center ).to3().normalized();
 
       if( !g_state.lights.length ) return;      // Omitting lights will show only the material color, scaled by the ambient term.
       gl.uniform4fv( gpu.lightColor,          g_state.lights[0].color );
@@ -171,7 +173,11 @@ export class Basic_Phong_Minimal extends Shader      // Simplified; light and ey
       const P = g_state.lights[0].position;  // Light position "P" uses homogeneous coords.
       let L = P[3] ? P.minus( center ) : P;  // Use w = 0 for a directional light source -- a vector instead of a point.
           L = L.to3().normalized();
-      gl.uniform4fv( gpu.L, L );
+
+      const H = L.plus( E ).normalized();
+
+      gl.uniform3fv( gpu.L, L );
+      gl.uniform3fv( gpu.H, H );
     }
 }
 
@@ -187,7 +193,7 @@ export class Minimal_Phong extends Scene_Component
       webgl_manager.globals.graphics_state.camera_inverse = Mat4.translation([ 0,0,-15 ]);
       webgl_manager.globals.graphics_state.projection_transform = Mat4.perspective( Math.PI/4, webgl_manager.width/webgl_manager.height, 1, 50 );  
 
-      this.shader = new Basic_Phong_Minimal();
+      this.shader = new Basic_Phong();
       this.material = this.shader.material({ ambient:.2 }).override( Color.of( 1,1,0,1 ) );
     }
   display( context, graphics_state )                                                      // Do this every frame.

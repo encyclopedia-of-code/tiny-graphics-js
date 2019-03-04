@@ -466,7 +466,7 @@ export class Phong_Shader extends Shader   // THE DEFAULT SHADER: This uses the 
 
         void main()
         { gl_Position = projection_camera_model_transform * vec4( position, 1.0 );            // The vertex's final resting place (in NDCS).
-          N = normalize( inverse_transpose_modelview * normal );                             // The final normal vector in screen space.
+          N = inverse_transpose_modelview * normal;                         // The final normal vector in screen space.
           f_tex_coord = texture_coord;                                      // Directly use original texture coords and interpolate between.
           
           if( COLOR_NORMALS )                                     // Bypass all lighting code if we're lighting up vertices some other way.
@@ -493,7 +493,7 @@ export class Phong_Shader extends Shader   // THE DEFAULT SHADER: This uses the 
           {                               // one per vertex, before we even break it down to pixels in the fragment shader.   As opposed 
                                           // to Smooth "Phong" Shading, where we *do* wait to calculate final color until the next shader.
             VERTEX_COLOR      = vec4( shapeColor.xyz * ambient, shapeColor.w);
-            VERTEX_COLOR.xyz += phong_model_lights( N );
+            VERTEX_COLOR.xyz += phong_model_lights( normalize( N ) );
           }
         }`;
     }
@@ -513,7 +513,7 @@ export class Phong_Shader extends Shader   // THE DEFAULT SHADER: This uses the 
                                                                                       // Compute an initial (ambient) color:
           if( USE_TEXTURE ) gl_FragColor = vec4( ( tex_color.xyz + shapeColor.xyz ) * ambient, shapeColor.w * tex_color.w ); 
           else gl_FragColor = vec4( shapeColor.xyz * ambient, shapeColor.w );
-          gl_FragColor.xyz += phong_model_lights( N );                     // Compute the final color with contributions from lights.
+          gl_FragColor.xyz += phong_model_lights( normalize( N ) );                     // Compute the final color with contributions from lights.
         }`;
     }
   update_GPU( context, gpu_addresses, g_state, model_transform, material )    // Define how to synchronize our JavaScript's variables to the GPU's:
