@@ -153,7 +153,7 @@ export class Basic_Phong_Compute_H_E_L_Outside extends Shader      // Simplified
       gl.uniformMatrix4fv( gpu.projection_camera_model_transform, false, Mat.flatten_2D_to_1D(             PCM.transposed() ) );
 
       const squared_scale = model_transform.reduce( (acc,r) => { return acc.plus( Vec.from(r).mult_pairs(r) ) }, Vec.of( 0,0,0,0 ) ).to3();
-      gl.uniform3fv( gpu.squared_scale, squared_scale );
+      gl.uniform3fv( gpu.squared_scale, squared_scale );          // Use the squared scale trick from Eric's blog instead of inverse transpose.
 
 
       gl.uniform4fv( gpu.shapeColor,     material.color       );    // Send the desired shape-wide material qualities 
@@ -245,7 +245,7 @@ export class Basic_Phong_Compute_H_E_Outside extends Shader      // Simplified; 
       gl.uniformMatrix4fv( gpu.projection_camera_model_transform, false, Mat.flatten_2D_to_1D(             PCM.transposed() ) );
 
       const squared_scale = model_transform.reduce( (acc,r) => { return acc.plus( Vec.from(r).mult_pairs(r) ) }, Vec.of( 0,0,0,0 ) ).to3();
-      gl.uniform3fv( gpu.squared_scale, squared_scale );
+      gl.uniform3fv( gpu.squared_scale, squared_scale );          // Use the squared scale trick from Eric's blog instead of inverse transpose.
 
 
       gl.uniform4fv( gpu.shapeColor,     material.color       );    // Send the desired shape-wide material qualities 
