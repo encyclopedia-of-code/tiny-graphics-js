@@ -87,7 +87,7 @@ export class Obj_File_Demo extends Scene_Component
                                                 // file that fits well.  This demo shows the teapot model twice, with one teapot showing
     constructor( webgl_manager )                // off the Fake_Bump_Map effect while the other has a regular texture and Phong lighting.             
       { super(   webgl_manager );
-        webgl_manager.globals.graphics_state.      camera_inverse = Mat4.translation([ 0,0,-5 ]);
+        webgl_manager.globals.graphics_state.set_camera( Mat4.translation([ 0,0,-5 ]) );
         webgl_manager.globals.graphics_state.projection_transform = Mat4.perspective( Math.PI/4, webgl_manager.width/webgl_manager.height, .1, 1000 ); 
 
         this.shapes = { "teapot": new Shape_From_File( "assets/teapot.obj" ) };             // Load the model file.

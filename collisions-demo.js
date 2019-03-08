@@ -125,7 +125,7 @@ export class Inertia_Demo extends Simulation    // Demonstration: Let random ini
       if( !webgl_manager.globals.has_info_table )
         this.children.push( new Global_Info_Table( webgl_manager ) );
       
-      webgl_manager.globals.graphics_state.      camera_inverse = Mat4.translation([ 0,0,-50 ]);
+      webgl_manager.globals.graphics_state.set_camera( Mat4.translation([ 0,0,-50 ]) );
       webgl_manager.globals.graphics_state.projection_transform = Mat4.perspective( Math.PI/4, webgl_manager.width/webgl_manager.height, 1, 500 );
       
       this.data = new Test_Data( webgl_manager );
@@ -171,7 +171,7 @@ export class Collision_Demo extends Simulation    // Demonstration: Detect when 
       if( !webgl_manager.globals.has_info_table )
         this.children.push( new Global_Info_Table( webgl_manager ) );       
 
-      webgl_manager.globals.graphics_state.      camera_inverse = Mat4.translation([ 0,0,-50 ]);
+      webgl_manager.globals.graphics_state.set_camera( Mat4.translation([ 0,0,-50 ]) );
       webgl_manager.globals.graphics_state.projection_transform = Mat4.perspective( Math.PI/4, webgl_manager.width/webgl_manager.height, 1, 500 );
 
       this.data = new Test_Data( webgl_manager );

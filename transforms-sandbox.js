@@ -13,7 +13,7 @@ export class Tutorial_Animation extends Scene_Component    // This Scene_Compone
                 // Define the global camera and projection matrices, which are stored in a scratchpad for globals.  The projection is special 
                 // because it determines how depth is treated when projecting 3D points onto a plane.  The function perspective() makes one.
                 // Its input arguments are field of view, aspect ratio, and distances to the near plane and far plane.
-        webgl_manager.globals.graphics_state.      camera_inverse = Mat4.translation([ 0,0,-30 ]);    // Locate the camera here (inverted matrix).
+        webgl_manager.globals.graphics_state.set_camera( Mat4.translation([ 0,0,-30 ]) );    // Locate the camera here (inverted matrix).
         webgl_manager.globals.graphics_state.projection_transform = Mat4.perspective( Math.PI/4, webgl_manager.width/webgl_manager.height, .1, 1000 );
 
         this.shapes = { 'triangle'        : new Triangle(),                // At the beginning of our program, load one of each of these shape 

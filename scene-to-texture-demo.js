@@ -8,7 +8,7 @@ export class Scene_To_Texture_Demo extends Scene_Component
         if( !webgl_manager.globals.has_controls   ) 
           this.children.push( new Movement_Controls( webgl_manager ) );
 
-        webgl_manager.globals.graphics_state.camera_inverse = Mat4.look_at( Vec.of( 0,0,5 ), Vec.of( 0,0,0 ), Vec.of( 0,1,0 ) );
+        webgl_manager.globals.graphics_state.set_camera( Mat4.look_at( Vec.of( 0,0,5 ), Vec.of( 0,0,0 ), Vec.of( 0,1,0 ) ) );
 
         const r = webgl_manager.width/webgl_manager.height;
         webgl_manager.globals.graphics_state.projection_transform = Mat4.perspective( Math.PI/4, r, .1, 1000 );

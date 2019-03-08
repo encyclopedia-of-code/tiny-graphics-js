@@ -65,7 +65,7 @@ export class Basic_Phong extends Shader
       gl.uniform1f ( gpu.specularity,    material.specularity );
       gl.uniform1f ( gpu.smoothness,     material.smoothness  );
 
-      if( !g_state.lights.length ) return;      // Omitting lights will show only the material color scaled by the ambient coeff.
+      if( !g_state.lights.length ) return;      // Omitting lights will show only the material color, scaled by the ambient term.
       gl.uniform4fv( gpu.lightPosition,       g_state.lights[0].position );
       gl.uniform4fv( gpu.lightColor,          g_state.lights[0].color );
     }
@@ -126,8 +126,8 @@ export class Basic_Phong_Compute_H_E_L_Outside extends Shader      // Simplified
     {   // A fragment is a pixel that's overlapped by the current triangle.  Fragments affect the final image or get discarded due to depth.                                 
       return ` 
         vec3 phong_model_light( vec3 N )
-          { float diffuse  =      max( dot(N, L), 0.0 );
-            float specular = pow( max( dot(N, H), 0.0 ), smoothness );
+          { float diffuse  =      max( dot(N, normalize( L ) ), 0.0 );
+            float specular = pow( max( dot(N, normalize( H ) ), 0.0 ), smoothness );
 
             return shapeColor.xyz * diffusivity * diffuse + lightColor.xyz * specularity * specular;
           }
@@ -165,7 +165,7 @@ export class Basic_Phong_Compute_H_E_L_Outside extends Shader      // Simplified
 
       const O = Vec.of( 0,0,0,1 ), center = model_transform.times( O );
 
-      const E = g_state.camera_inverse.times( O ).minus( center ).to3().normalized();
+      const E = g_state.camera_transform.times( O ).minus( center ).to3().normalized();
 
       if( !g_state.lights.length ) return;      // Omitting lights will show only the material color, scaled by the ambient term.
       gl.uniform4fv( gpu.lightColor,          g_state.lights[0].color );
@@ -220,8 +220,8 @@ export class Basic_Phong_Compute_H_E_Outside extends Shader      // Simplified; 
     {   // A fragment is a pixel that's overlapped by the current triangle.  Fragments affect the final image or get discarded due to depth.                                 
       return ` 
         vec3 phong_model_light( vec3 N )
-          { float diffuse  =      max( dot( N, vL ), 0.0 );
-            float specular = pow( max( dot( N, H  ), 0.0 ), smoothness );
+          { float diffuse  =      max( dot( N, normalize( vL ) ), 0.0 );
+            float specular = pow( max( dot( N, normalize(  H ) ), 0.0 ), smoothness );
 
             return shapeColor.xyz * diffusivity * diffuse + lightColor.xyz * specularity * specular;
           }
@@ -257,8 +257,8 @@ export class Basic_Phong_Compute_H_E_Outside extends Shader      // Simplified; 
       gl.uniform1f ( gpu.smoothness,     material.smoothness  );
 
 
-      const O = Vec.of( 0,0,0,1 ), model_center =        model_transform.times( O ),
-                                  camera_center = g_state.camera_inverse.times( O );
+      const O = Vec.of( 0,0,0,1 ), model_center =          model_transform.times( O ),
+                                  camera_center = g_state.camera_transform.times( O );
 
       if( !g_state.lights.length ) return;      // Omitting lights will show only the material color, scaled by the ambient term.
       gl.uniform4fv( gpu.lightColor,          g_state.lights[0].color );
@@ -279,7 +279,7 @@ export class Basic_Phong_Compute_H_E_Outside extends Shader      // Simplified; 
 }
 
 
-export class Basic_Phong_Optimized extends Shader      // Simplified; light and eye vectors as emerge from the center of the object.
+export class Basic_Phong_Optimized extends Shader
 { material( options )                                  // Phong Materials expect you to pass in options like the following:
     { const defaults = { color: Color.of( 0,0,0,1 ), ambient: 0, diffusivity: 1, specularity: 1, smoothness: 40 };
       return new class Material extends Overridable
@@ -308,11 +308,12 @@ export class Basic_Phong_Optimized extends Shader      // Simplified; light and 
         void main()
           { gl_Position = projection_camera_model_transform * vec4( position, 1.0 );           // The vertex's final resting place (in NDCS).
             vN = normalize( mat3( model_transform ) * normal / squared_scale);                         // The final normal vector in screen space.
-                      
-            vec3 E = normalize( camera_center - ( model_transform * vec4( position, 1.0 ) ).xyz );
+            
+            vec3 vertex_worldspace = ( model_transform * vec4( position, 1.0 ) ).xyz;
+            vec3 E = normalize( camera_center - vertex_worldspace );
 
             // Light positions use homogeneous coords.  Use w = 0 for a directional light source -- a vector instead of a point.
-            vL = normalize( light_position_or_vector.xyz - light_position_or_vector.w * position );
+            vL = normalize( light_position_or_vector.xyz - light_position_or_vector.w * vertex_worldspace );
             vH = normalize( vL + E );
           } ` ;
     }
@@ -320,8 +321,8 @@ export class Basic_Phong_Optimized extends Shader      // Simplified; light and 
     {   // A fragment is a pixel that's overlapped by the current triangle.  Fragments affect the final image or get discarded due to depth.                                 
       return ` 
         vec3 phong_model_light( vec3 N )
-          { float diffuse  =      max( dot( N, vL ), 0.0 );
-            float specular = pow( max( dot( N, vH  ), 0.0 ), smoothness );
+          { float diffuse  =      max( dot( N, normalize( vL ) ), 0.0 );
+            float specular = pow( max( dot( N, normalize( vH ) ), 0.0 ), smoothness );
 
             return shapeColor.xyz * diffusivity * diffuse + lightColor.xyz * specularity * specular;
           }
@@ -356,13 +357,13 @@ export class Basic_Phong_Optimized extends Shader      // Simplified; light and 
       gl.uniform1f ( gpu.specularity,    material.specularity );
       gl.uniform1f ( gpu.smoothness,     material.smoothness  );
 
-      const O = Vec.of( 0,0,0,1 ), camera_center = g_state.camera_inverse.times( O ).to3();
+      const O = Vec.of( 0,0,0,1 ), camera_center = g_state.camera_transform.times( O ).to3();
       gl.uniform3fv( gpu.camera_center, camera_center );
 
       if( !g_state.lights.length ) return;      // Omitting lights will show only the material color, scaled by the ambient term.
       gl.uniform4fv( gpu.lightColor,          g_state.lights[0].color );
       
-      const light_position_or_vector = g_state.lights[0].position;  // Light position "P" uses homogeneous coords.
+      const light_position_or_vector = g_state.lights[0].position;  // Light position uses homogeneous coords.
       gl.uniform4fv( gpu.light_position_or_vector, light_position_or_vector );
     }
 }
@@ -374,19 +375,29 @@ export class Minimal_Phong extends Scene_Component
     { super( webgl_manager );
       this.shapes = { ball : new Subdivision_Sphere(3) }
 
-      this.lights = [ new Light( Vec.of( 1,3,15,1 ), Color.of( 0,1,1,1 ), 10000 ) ];
-
-      webgl_manager.globals.graphics_state.camera_inverse = Mat4.translation([ 0,0,-15 ]);
+      webgl_manager.globals.graphics_state.set_camera( Mat4.translation([ 0,0,-15 ]) );
       webgl_manager.globals.graphics_state.projection_transform = Mat4.perspective( Math.PI/4, webgl_manager.width/webgl_manager.height, 1, 50 );  
 
-      this.shader = new Basic_Phong_Optimized();
-      this.material = this.shader.material({ ambient:.2, smoothness:10 }).override( Color.of( 1,1,0,1 ) );
+      this.index = 0;
+      this.shaders = [ new Phong_Shader(), new Basic_Phong(), new Basic_Phong_Optimized(), 
+                       new Basic_Phong_Compute_H_E_Outside(), new Basic_Phong_Compute_H_E_L_Outside() ];
+
+      this.materials = this.shaders.map( s => s.material({ ambient:.2, smoothness:10 }).override( Color.of( 1,1,0,1 ) ) );
     }
   display( context, graphics_state )                                                      // Do this every frame.
-    { graphics_state.lights = this.lights;
-      this.shapes.ball.draw( context, graphics_state, Mat4.scale([ graphics_state.animation_time/1000,3,4 ]), this.material );
+    { const light_pos = Mat4.rotation( graphics_state.animation_time/1340, Vec.of( 0,1,0 ) ).times( Vec.of( 0,4,15,1 ) );
+
+      graphics_state.lights = [ new Light( light_pos, Color.of( 0,1,1,1 ), 10000 ) ];
+
+      const material = this.materials[ this.index ];
+
+      const model_transform = Mat4.scale( Vec.of( 10 + 10*Math.sin( graphics_state.animation_time/2000 ),2,2 ) );
+      this.shapes.ball.draw( context, graphics_state, model_transform, material.override({ specularity:1 }) );
     }
  make_control_panel()                 // Draw buttons, setup their actions and keyboard shortcuts, and monitor live variables.
-    { this.control_panel.innerHTML += "(This one has no controls)";
+    { this.key_triggered_button( "Next",   [ "n" ], () => this.index = Math.min( this.index+1, this.shaders.length-1 ) ); 
+      this.key_triggered_button( "Prev",   [ "b" ], () => this.index = Math.max( this.index-1, 0                     ) );
+
+      this.live_string( box => { box.textContent = this.shaders[ this.index ].constructor.name } );
     }
 }

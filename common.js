@@ -447,14 +447,13 @@ export class Phong_Shader extends Shader   // THE DEFAULT SHADER: This uses the 
             for(int i = 0; i < N_LIGHTS; i++)
               {
                 float attenuation_multiplier = 1.0 / (1.0 + attenuation_factor[i] * (dist[i] * dist[i]));
-                float diffuse  =      max( dot(N, L[i]), 0.0 );
-                float specular = pow( max( dot(N, H[i]), 0.0 ), smoothness );
+                float diffuse  =      max( dot(N, normalize( L[i] ) ), 0.0 );
+                float specular = pow( max( dot(N, normalize( H[i] ) ), 0.0 ), smoothness );
 
                 result += attenuation_multiplier * ( shapeColor.xyz * diffusivity * diffuse + lightColor[i].xyz * specularity * specular );
               }
             return result;
-          }
-        `;
+          } ` ;
     }
   vertex_glsl_code()           // ********* VERTEX SHADER *********
     { return `
@@ -495,7 +494,7 @@ export class Phong_Shader extends Shader   // THE DEFAULT SHADER: This uses the 
             VERTEX_COLOR      = vec4( shapeColor.xyz * ambient, shapeColor.w);
             VERTEX_COLOR.xyz += phong_model_lights( normalize( N ) );
           }
-        }`;
+        } ` ;
     }
   fragment_glsl_code()           // ********* FRAGMENT SHADER ********* 
     {                            // A fragment is a pixel that's overlapped by the current triangle.
@@ -514,7 +513,7 @@ export class Phong_Shader extends Shader   // THE DEFAULT SHADER: This uses the 
           if( USE_TEXTURE ) gl_FragColor = vec4( ( tex_color.xyz + shapeColor.xyz ) * ambient, shapeColor.w * tex_color.w ); 
           else gl_FragColor = vec4( shapeColor.xyz * ambient, shapeColor.w );
           gl_FragColor.xyz += phong_model_lights( normalize( N ) );                     // Compute the final color with contributions from lights.
-        }`;
+        } ` ;
     }
   update_GPU( context, gpu_addresses, g_state, model_transform, material )    // Define how to synchronize our JavaScript's variables to the GPU's:
     { const gpu = gpu_addresses, gl = context;

@@ -431,8 +431,16 @@ export class Overridable     // Class Overridable allows a short way to create m
 
 export class Graphics_State extends Overridable                 // Stores things that affect multiple shapes, such as lights and the camera.
 { constructor( camera_transform = Mat4.identity(), projection_transform = Mat4.identity() ) 
-    { super(); Object.assign( this, { camera_transform, camera_inverse: Mat4.inverse( camera_transform ), projection_transform, 
-                                      animation_time: 0, animation_delta_time: 0 } ); }
+    { super();
+      this.set_camera( camera_transform );
+      Object.assign( this, { projection_transform, animation_time: 0, animation_delta_time: 0 } );
+    }
+  set_camera( matrix )      // It's often useful to cache both the camera matrix and its inverse.  Both are needed
+    {                       // often and matrix inversion is too slow to recompute needlessly.  
+                            // Note that setting a camera matrix traditionally means storing the inverted version, 
+                            // so that's the one this function expects to receive; it automatically sets the other.
+      Object.assign( this, { camera_transform: Mat4.inverse( matrix ), camera_inverse: matrix } )
+    }
 }
 
 
