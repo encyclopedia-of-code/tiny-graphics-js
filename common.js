@@ -307,7 +307,7 @@ export class Minimal_Shape extends Vertex_Buffer    // The simplest possible Sha
 }
 
 
-export class Minimal_Webgl_Demo extends Scene_Component
+export class Minimal_Webgl_Demo extends Scene
 { constructor( webgl_manager, control_panel )
     { super( webgl_manager, control_panel );
       this.shapes = { triangle : new Minimal_Shape() };         // Send a Triangle's vertices to the GPU's buffers.
@@ -592,7 +592,7 @@ export class Fake_Bump_Map extends Phong_Shader                         // Same 
 }
 
 
-export class Movement_Controls extends Scene_Component    // Movement_Controls is a Scene_Component that can be attached to a canvas, like
+export class Movement_Controls extends Scene    // Movement_Controls is a Scene that can be attached to a canvas, like
 {                                                         // any other Scene, but it is a Secondary Scene Component -- meant to stack alongside
                                                           // other scenes.  Rather than drawing anything it embeds both first-person and third-
                                                           // person style controls into the website.  These can be used to manually move your
@@ -705,7 +705,7 @@ export class Movement_Controls extends Scene_Component    // Movement_Controls i
     }
 }
 
-export class Global_Info_Table extends Scene_Component          // A class that just toggles, monitors, and reports some 
+export class Global_Info_Table extends Scene          // A class that just toggles, monitors, and reports some 
 { make_control_panel()                                          // global values via its control panel.
     { const globals = this.globals;
       globals.has_info_table = true;
@@ -719,7 +719,7 @@ export class Global_Info_Table extends Scene_Component          // A class that 
       
       const label = this.control_panel.appendChild( document.createElement( "p" ) );
       label.style = "align:center";
-      label.innerHTML = "A shared scratchpad is <br> accessible to all Scene_Components. <br> Navigate its values here:";
+      label.innerHTML = "A shared scratchpad is <br> accessible to all Scenes. <br> Navigate its values here:";
 
       const show_object = ( element, obj = globals ) => 
       { if( this.box ) this.box.innerHTML = "";

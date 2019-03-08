@@ -35,7 +35,7 @@ export class Text_Line extends Shape                // Text_Line embeds text in 
 }
 
 
-export class Text_Demo extends Scene_Component                   // A scene with a cube, for showing the Text_Line utility Shape.
+export class Text_Demo extends Scene                   // A scene with a cube, for showing the Text_Line utility Shape.
 { constructor( webgl_manager )
     { super(   webgl_manager )
                                     // Store the desired camera and projection matrices in the shader-bound graphics state:
@@ -48,8 +48,7 @@ export class Text_Demo extends Scene_Component                   // A scene with
       this.shader = new Phong_Shader();
       this.grey       = this.shader.material({ ambient: 0, diffusivity: .3, specularity: .5, smoothness: 10 })
                              .override( Color.of( .5,.5,.5,1 ) );
-      this.text_image = this.shader.material({ ambient: 1, diffusivity: 0, specularity: 0, texture: new Texture( "assets/text.png" ) })
-                             .override( Color.of( 0,0,0,1 ) );
+      this.text_image = this.shader.material({ ambient: 1, diffusivity: 0, specularity: 0, texture: new Texture( "assets/text.png" ) });
     }
   display( context, graphics_state )
     { graphics_state.lights = [ new Light( Vec.of( 3,2,1,0 ),   Color.of( 1,1,1,1 ),  1000000 ),

@@ -2,7 +2,7 @@ import * as classes from './common.js';
 Object.assign( window, classes );                                // Store these classes in global scope so we can use them anywhere.
 window.classes = Object.assign( {}, window.classes, classes );   // Also copy them to window.classes so we can list them all out anytime.
 
-export class Tutorial_Animation extends Scene_Component    // This Scene_Component can be added to a display canvas.  This particular one
+export class Tutorial_Animation extends Scene    // This Scene can be added to a display canvas.  This particular one
   {                                                 // sets up the machinery to draw a simple scene demonstrating a few concepts.
                                                     // Scroll down to the display() method at the bottom to see where the shapes are drawn.
     constructor( webgl_manager )             // The scene begins by requesting the camera, shapes, and materials it will need.

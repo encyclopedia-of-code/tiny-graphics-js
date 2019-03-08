@@ -2,7 +2,7 @@ import * as classes from './common.js';
 Object.assign( window, classes );                                // Store these classes in global scope so we can use them anywhere.
 window.classes = Object.assign( {}, window.classes, classes );   // Also copy them to window.classes so we can list them all out anytime.
 
-export class Axes_Viewer extends Scene_Component     // A helper scene (a secondary Scene Component) for helping you visualize the
+export class Axes_Viewer extends Scene     // A helper scene (a secondary Scene Component) for helping you visualize the
 { constructor( webgl_manager )                       // coordinate bases that are used in your real scene.  Your scene can feed this
     { super(   webgl_manager );                      // object a list of bases to draw as axis arrows.  Pressing the buttons of this
                                               // helper scene cycles through a list of each basis you have added, drawing
@@ -48,7 +48,7 @@ export class Axes_Viewer extends Scene_Component     // A helper scene (a second
 
 
 
-export class Axes_Viewer_Test_Scene extends Scene_Component
+export class Axes_Viewer_Test_Scene extends Scene
 { constructor( webgl_manager )                 // An example of how your scene should properly manaage an Axes_Viewer
     { super(   webgl_manager );                // helper scene, so that it is able to help you draw all the
                                                // coordinate bases in your scene's hierarchy at the correct levels.

@@ -2,7 +2,7 @@ import * as classes from './common.js';
 Object.assign( window, classes );                                // Store these classes in global scope so we can use them anywhere.
 window.classes = Object.assign( {}, window.classes, classes );   // Also copy them to window.classes so we can list them all out anytime.
 
-export class Scene_To_Texture_Demo extends Scene_Component
+export class Scene_To_Texture_Demo extends Scene
   { constructor( webgl_manager )     // The scene begins by requesting the camera, shapes, and materials it will need.
       { super(   webgl_manager );    // First, include a secondary Scene that provides movement controls:
         if( !webgl_manager.globals.has_controls   ) 

@@ -50,7 +50,7 @@ export class Body          // Store and update the properties of a 3D body that 
 }
 
 
-export class Simulation extends Scene_Component         // Simulation manages the stepping of simulation time.  Subclass it when making
+export class Simulation extends Scene         // Simulation manages the stepping of simulation time.  Subclass it when making
 { constructor( webgl_manager )                          // a Scene that is a physics demo.  This technique is careful to totally
     { super(   webgl_manager );                         // decouple the simulation from the frame rate.
       Object.assign( this, { time_accumulator: 0, time_scale: 1, t: 0, dt: 1/20, bodies: [], steps_taken: 0 } );            

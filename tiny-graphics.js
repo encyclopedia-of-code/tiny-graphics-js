@@ -274,8 +274,7 @@ export class Vertex_Buffer extends Graphics_Card_Object    // To use Vertex_Buff
           gl.bufferData( gl.ARRAY_BUFFER, Mat.flatten_2D_to_1D( this.arrays[ name ] ), gl.STATIC_DRAW );
         }
       if( this.indices.length && write_to_indices )
-      { gl.getExtension( "OES_element_index_uint" );          // Load an extension to allow shapes with more 
-        this.index_buffer = gl.createBuffer();                // vertices than type "short" can hold.
+      { this.index_buffer = gl.createBuffer();
         gl.bindBuffer( gl.ELEMENT_ARRAY_BUFFER, this.index_buffer );
         gl.bufferData( gl.ELEMENT_ARRAY_BUFFER, new Uint32Array( this.indices ), gl.STATIC_DRAW );
       }
@@ -313,9 +312,7 @@ export class Shape extends Vertex_Buffer
             // abruptly vary as we cross over a triangle edge (such as texture images).
 
             // Like in class Vertex_Buffer we have an array "indices" to fill in as well, a list of index triples defining which three 
-            // vertices belong to each triangle.  Call new on a Shape and fill its arrays (probably in an overridden constructor).  Then,
-            // submit it to Scene_Component's submit_shapes() and the GPU buffers will receive all the per-vertex data and the triangles
-            // list needed to draw the shape correctly.
+            // vertices belong to each triangle.  Call new on a Shape and fill its arrays (probably in an overridden constructor).
 
             // IMPORTANT: To use this class you must define all fields for every single vertex by filling in the arrays of each field, so 
             // this includes positions, normals, any more fields a specific Shape subclass decides to include per vertex, such as texture 
@@ -542,7 +539,7 @@ export class Webgl_Manager      // This class manages a whole graphics program f
 {                        // and scenes.  In addition to requesting a WebGL context and storing the aforementioned items, it informs the
                          // canvas of which functions to call during events - such as a key getting pressed or it being time to redraw.
   constructor( canvas, background_color, dimensions )
-    { Object.assign( this, { instances: new Map(), scene_components: [], prev_time: 0, canvas,
+    { Object.assign( this, { instances: new Map(), scenes: [], prev_time: 0, canvas,
                              globals: { animate: true, graphics_state: new Graphics_State() } } );
       
       for( let name of [ "webgl", "experimental-webgl", "webkit-3d", "moz-webgl" ] )   // Get the GPU ready, creating a new WebGL context
@@ -551,7 +548,9 @@ export class Webgl_Manager      // This class manages a whole graphics program f
       const gl = this.context;
 
       this.set_size( dimensions );
-      gl.clearColor.apply( gl, background_color );    // Tell the GPU which color to clear the canvas with each frame.
+               
+      gl.clearColor.apply( gl, background_color );           // Tell the GPU which color to clear the canvas with each frame.
+      gl.getExtension( "OES_element_index_uint" );           // Load an extension to allow shapes with more than 65535 vertices.
       gl.enable( gl.DEPTH_TEST );   gl.enable( gl.BLEND );            // Enable Z-Buffering test with blending.
       gl.blendFunc( gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA );           // Specify an interpolation method for blending "transparent" 
                                                                       // triangles over the existing pixels.
@@ -579,7 +578,7 @@ export class Webgl_Manager      // This class manages a whole graphics program f
       const gl = this.context;
       gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);        // Clear the canvas's pixels and z-buffer.
      
-      const open_list = [ ...this.scene_components ];
+      const open_list = [ ...this.scenes ];
       while( open_list.length )                       // Traverse all scenes and their children, recursively
       { open_list.push( ...open_list[0].children );
         open_list.shift().display( gl, this.globals.graphics_state );           // Draw each registered animation.
@@ -588,9 +587,9 @@ export class Webgl_Manager      // This class manages a whole graphics program f
     }                                                                     // again as soon as all other web page events are processed.
 }
 
-export class Scene_Component       // The Scene_Component superclass is the base class for any scene part or code snippet that you can add to a
+export class Scene       // The Scene superclass is the base class for any scene part or code snippet that you can add to a
 {                           // canvas.  Make your own subclass(es) of this and override their methods "display()" and "make_control_panel()"
-                            // to make them do something.  Finally, push them onto your Webgl_Manager's "scene_components" array.
+                            // to make them do something.  Finally, push them onto your Webgl_Manager's "scenes" array.
   constructor( webgl_manager )
     { this.children = [];
       this.desired_controls_position = 0; // Set as undefined to omit this scene's control panel.  Set to negative/positive to move its panel.
@@ -630,7 +629,7 @@ export class Scene_Component       // The Scene_Component superclass is the base
       button.addEventListener( "touchend", release, { passive: true } );
       if( !shortcut_combination ) return;
       this.key_controls.add( shortcut_combination, press, release );
-    }                                                          // You have to override the following functions to use class Scene_Component.
+    }                                                          // You have to override the following functions to use class Scene.
   make_control_panel(){}  display( graphics_state ){}  show_explanation( document_section ){}
 }
 
@@ -666,12 +665,12 @@ export class Canvas_Widget                    // Canvas_Widget embeds a WebGL de
       this.webgl_manager = new Webgl_Manager( canvas, Color.of( 0,0,0,1 ) );  // Second parameter sets background color.
 
       for( let scene_class_name of scenes )                  // Register the initially requested scenes to the render loop. 
-        this.webgl_manager.scene_components.push( new window[ scene_class_name ]( this.webgl_manager ) );
+        this.webgl_manager.scenes.push( new window[ scene_class_name ]( this.webgl_manager ) );
 
 
       this.embedded_controls = document.querySelector( "#" + element ).appendChild( document.createElement( "div" ) );
       this.embedded_controls.className = "controls-widget";
-      if( show_controls ) new Controls_Widget( this.webgl_manager.scene_components, this.embedded_controls );
+      if( show_controls ) new Controls_Widget( this.webgl_manager.scenes, this.embedded_controls );
                            
       this.webgl_manager.render();   // Start WebGL initialization.  Note that render() will re-queue itself for more calls.
     }

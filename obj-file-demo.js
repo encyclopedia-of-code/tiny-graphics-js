@@ -80,7 +80,7 @@ export class Shape_From_File extends Shape   // A versatile standalone Shape tha
     { if( this.ready ) super.draw( context, graphics_state, model_transform, material );   }
 }
 
-export class Obj_File_Demo extends Scene_Component     
+export class Obj_File_Demo extends Scene     
   {                                             // An example that loads a single 3D model from an OBJ file.  Detailed model files can be
                                                 // used in place of simpler primitive-based shapes to add complexity to a scene.  Simpler
                                                 // primitives in your scene can just be thought of as placeholders until you find a model

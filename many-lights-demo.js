@@ -2,7 +2,7 @@ import * as classes from './common.js';
 Object.assign( window, classes );                                // Store these classes in global scope so we can use them anywhere.
 window.classes = Object.assign( {}, window.classes, classes );   // Also copy them to window.classes so we can list them all out anytime.
 
-export class Many_Lights_Demo extends Scene_Component  // How to make the illusion that there are many lights, despite only passing
+export class Many_Lights_Demo extends Scene  // How to make the illusion that there are many lights, despite only passing
 { constructor( webgl_manager )                         // two to the shader.  We re-locate the lights in between individual shape draws.
     { super(   webgl_manager );
       Object.assign( this, { rows: 20, columns: 35 } );                                       // Define how many boxes (buildings) to draw.
