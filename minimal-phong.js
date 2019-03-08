@@ -368,9 +368,13 @@ export class Basic_Phong_Optimized extends Shader
     }
 }
 
+export class Phong_Shader_1 extends Basic_Phong_Compute_H_E_L_Outside { }
+export class Phong_Shader_2 extends Basic_Phong_Compute_H_E_Outside   { }
+export class Phong_Shader_3 extends Basic_Phong_Optimized             { }
 
 
-export class Minimal_Phong extends Scene_Component
+
+export class Phong_Comparison_Demo extends Scene_Component
 { constructor( webgl_manager )
     { super( webgl_manager );
       this.shapes = { ball : new Subdivision_Sphere(3) }
