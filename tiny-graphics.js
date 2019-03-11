@@ -653,8 +653,8 @@ export class Canvas_Widget                    // Canvas_Widget embeds a WebGL de
   patch_ios_bug()                               // Correct a flaw in Webkit (iPhone devices; safari mobile) that 
     { try{ Vec.of( 1,2,3 ).times(2) }           // breaks TypedArray.from() and TypedArray.of() in subclasses.
       catch 
-      { Vec.of   = function()      { return new Vec( Array.from( arguments ) ) }
-        Vec.from = function( arr ) { return new Vec( Array.from( arr       ) ) }
+      { Vec.of   = function( ...arr ) { return new Vec( Array.from( ...arr ) ) }
+        Vec.from = function(    arr ) { return new Vec( Array.from(    arr ) ) }
       }
     }
   populate_canvas( element, scenes, show_controls )   // Assign a Webgl_Manager to the WebGL canvas.
