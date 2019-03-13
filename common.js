@@ -2,6 +2,11 @@ import * as tiny_graphics from './tiny-graphics.js';
 Object.assign( window, tiny_graphics );                                            // Store these classes in global scope so we can use them anywhere.
 window.tiny_graphics = Object.assign( {}, window.tiny_graphics, tiny_graphics );   // Also copy them to window.classes so we can list them all out anytime.
 
+import * as widgets from './tiny-graphics-widgets.js';
+Object.assign( window, widgets );
+window.tiny_graphics = Object.assign( {}, window.tiny_graphics, widgets );
+
+
 export class Triangle extends Shape    // The simplest possible Shape – one triangle.  It has 3 vertices, each
 { constructor()                        // having their own 3D position, normal vector, and texture-space coordinate.
     { super( "position", "normal", "texture_coord" );                              // Name the values we'll define per each vertex.
