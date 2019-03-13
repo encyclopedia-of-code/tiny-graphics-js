@@ -123,8 +123,9 @@ export class Line_Segment_Array extends Shape    // Plot 2D points.
 }
 
 
-export class Subdivision_Sphere extends Shape   // This Shape defines a Sphere surface, with nice uniform triangles.  A subdivision surface
-{                                       // (see Wikipedia article on those) is initially simple, then builds itself into a more and more 
+export class Subdivision_Sphere extends Shape   
+{                                       // This Shape defines a Sphere surface, with nice uniform triangles.  A subdivision surface
+                                        // (see Wikipedia article on those) is initially simple, then builds itself into a more and more 
                                         // detailed shape of the same layout.  Each act of subdivision makes it a better approximation of 
                                         // some desired mathematical surface by projecting each new point onto that surface's known 
                                         // implicit equation.  For a sphere, we begin with a closed 3-simplex (a tetrahedron).  For each
@@ -598,11 +599,11 @@ export class Fake_Bump_Map extends Phong_Shader                         // Same 
 
 
 export class Movement_Controls extends Scene    // Movement_Controls is a Scene that can be attached to a canvas, like
-{                                                         // any other Scene, but it is a Secondary Scene Component -- meant to stack alongside
-                                                          // other scenes.  Rather than drawing anything it embeds both first-person and third-
-                                                          // person style controls into the website.  These can be used to manually move your
-                                                          // camera or other objects smoothly through your scene using key, mouse, and HTML
-                                                          // button controls to help you explore what's in it.
+{                                               // any other Scene, but it is a Secondary Scene Component -- meant to stack alongside
+                                                // other scenes.  Rather than drawing anything it embeds both first-person and third-
+                                                // person style controls into the website.  These can be used to manually move your
+                                                // camera or other objects smoothly through your scene using key, mouse, and HTML
+                                                // button controls to help you explore what's in it.
   constructor( webgl_manager )
     { super( webgl_manager );
       [ this.webgl_manager, this.roll, this.look_around_locked ] = [ webgl_manager, 0, true, true ];                  // Data members.
@@ -711,7 +712,7 @@ export class Movement_Controls extends Scene    // Movement_Controls is a Scene 
 }
 
 export class Global_Info_Table extends Scene          // A class that just toggles, monitors, and reports some 
-{ make_control_panel()                                          // global values via its control panel.
+{ make_control_panel()                                // global values via its control panel.
     { const globals = this.globals;
       globals.has_info_table = true;
       this.key_triggered_button( "(Un)pause animation", ["Alt", "a"], function() { globals.animate ^= 1; } ); this.new_line();

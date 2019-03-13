@@ -102,7 +102,7 @@ export class Mat extends Array                         // M by N matrices of flo
 
 export class Mat4 extends Mat                               // Generate special 4x4 matrices that are useful for graphics.
 { static identity()       { return Mat.of( [ 1,0,0,0 ], [ 0,1,0,0 ], [ 0,0,1,0 ], [ 0,0,0,1 ] ); };
-  static rotation( angle, axis )                                                    // Requires a scalar (angle) and a 3x1 Vec (axis)
+  static rotation( angle, axis )                                             // Requires a scalar (angle) and a 3x1 Vec (axis)
                           { let [ x, y, z ] = Vec.from( axis ).normalized(), 
                                    [ c, s ] = [ Math.cos( angle ), Math.sin( angle ) ], omc = 1.0 - c;
                             return Mat.of( [ x*x*omc + c,   x*y*omc - z*s, x*z*omc + y*s, 0 ],
@@ -252,8 +252,9 @@ export class Graphics_Card_Object       // Extending this class allows an object
 
 
 
-export class Vertex_Buffer extends Graphics_Card_Object    // To use Vertex_Buffer, make a subclass of it that overrides the constructor and fills in the right fields.  
-{                             // Vertex_Buffer organizes data related to one 3D shape and copies it into GPU memory.  That data is broken
+export class Vertex_Buffer extends Graphics_Card_Object
+{                             // To use Vertex_Buffer, make a subclass of it that overrides the constructor and fills in the right fields.  
+                              // Vertex_Buffer organizes data related to one 3D shape and copies it into GPU memory.  That data is broken
                               // down per vertex in the shape.  You can make several fields that you can look up in a vertex; for each
                               // field, a whole array will be made here of that data type and it will be indexed per vertex.  Along with
                               // those lists is an additional array "indices" describing triangles, expressed as triples of vertex indices,
@@ -383,7 +384,7 @@ export class Light                                             // The properties
 export class Color extends Vec { }    // Just an alias.  Colors are special 4x1 vectors expressed as ( red, green, blue, opacity ) each from 0 to 1.
 
 
-export class Graphics_Addresses    // For organizing communication with the GPU for Shaders.  Now that we've compiled the Shader, we can query 
+export class Graphics_Addresses    // For organizing communication with the GPU for Shaders.  Once we've compiled the Shader, we can query 
 {                           // some things about the compiled program, such as the memory addresses it will use for uniform variables, 
                             // and the types and indices of its per-vertex attributes.  We'll need those for building vertex buffers.
   constructor( program, gl )
@@ -408,7 +409,7 @@ export class Graphics_Addresses    // For organizing communication with the GPU 
 
 
 export class Overridable     // Class Overridable allows a short way to create modified versions of JavaScript objects.  Some properties are
-{                     // replaced with substitutes that you provide, without having to write out a new object from scratch.
+{                            // replaced with substitutes that you provide, without having to write out a new object from scratch.
        // To override, simply pass in "replacement", a JS Object of keys/values you want to override, to generate a new object.
        // For shorthand you can leave off the key and only provide a value (pass in directly as "replacement") and a guess will
        // be used for which member you want overridden based on type.  
@@ -442,8 +443,9 @@ export class Graphics_State extends Overridable                 // Stores things
 }
 
 
-export class Shader extends Graphics_Card_Object     // Your subclasses of Shader will manage strings of GLSL code that will be sent to the GPU and will run, to
-{                                             // draw every shape.  Extend the class and fill in the abstract functions; the constructor needs them.
+export class Shader extends Graphics_Card_Object
+{                           // Your subclasses of Shader will manage strings of GLSL code that will be sent to the GPU and will run, to
+                            // draw every shape.  Extend the class and fill in the abstract functions; the constructor needs them.
   copy_onto_graphics_card( context )
     { const gpu_instance = super.copy_onto_graphics_card( context ),
                  program = gpu_instance.program || context.createProgram();
@@ -588,14 +590,14 @@ export class Webgl_Manager      // This class manages a whole graphics program f
     }                                                                     // again as soon as all other web page events are processed.
 }
 
-export class Scene       // The Scene superclass is the base class for any scene part or code snippet that you can add to a
+export class Scene          // The Scene superclass is the base class for any scene part or code snippet that you can add to a
 {                           // canvas.  Make your own subclass(es) of this and override their methods "display()" and "make_control_panel()"
                             // to make them do something.  Finally, push them onto your Webgl_Manager's "scenes" array.
   constructor( webgl_manager )
     { this.children = [];
       this.desired_controls_position = 0; // Set as undefined to omit this scene's control panel.  Set to negative/positive to move its panel.
       this.globals = webgl_manager.globals;      
-
+                                                          // Set up how we'll handle key presses for the scene's control panel:
       const callback_behavior = ( callback, event ) => 
            { callback( event );
              event.preventDefault();    // Fire the callback and cancel any default browser shortcut that is an exact match.

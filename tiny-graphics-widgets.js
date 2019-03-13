@@ -43,7 +43,7 @@ export class Canvas_Widget                    // Canvas_Widget embeds a WebGL de
 }
 
 
-export class Controls_Widget
+export class Controls_Widget                  // One of these widgets can draw one panel of controls per scene.
 { constructor( scenes, element )
     { if( typeof( element ) === "String" ) element = document.querySelector( "#" + element );
 
@@ -142,7 +142,7 @@ export class Code_Manager                     // Break up a string containing co
 }
 
 
-export class Code_Widget
+export class Code_Widget                      // One of these panels draws a code navigator with inline links to the entire source code.
 { constructor( element, selected_class )
     { let rules = [ ".code-widget .code-panel { background:white; overflow:auto; font-family:monospace; width:1060px; padding:10px; padding-bottom:40px; max-height: 500px; \
                                                   border-radius:12px; box-shadow: 20px 20px 90px 0px powderblue inset, 5px 5px 30px 0px blue inset }",
@@ -236,7 +236,7 @@ export class Code_Widget
 }
 
 
-export class Text_Widget
+export class Text_Widget                              // In progress feature
 { constructor( element, selected_class )
     { if( !window[ selected_class ] ) throw "Class " + selected_class + " not found.";
       selected_class = window[ selected_class ];
@@ -247,7 +247,7 @@ export class Text_Widget
 }
 
 
-export class Editor_Widget
+export class Editor_Widget                            // In progress feature
 { constructor( element, selected_class )
     { let rules = [ ".editor-widget { background:white; overflow:auto; font-family:monospace; width:1060px; padding:10px; \
                                       border-radius:12px; box-shadow: 20px 20px 90px 0px powderblue inset, 5px 5px 30px 0px blue inset }",
