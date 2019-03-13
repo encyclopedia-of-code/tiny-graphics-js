@@ -197,12 +197,12 @@ export class Basic_Phong_Compute_H_E_Outside extends Shader      // Simplified; 
         uniform float ambient, diffusivity, specularity, smoothness;
         uniform vec4 lightColor, shapeColor, light_position_or_vector;
         uniform vec3 H, squared_scale;
-        varying vec3 vN, vL;           // Specifier "varying" means a variable's final value will be passed from the vertex shader 
-                                           // on to the next phase (fragment shader), then interpolated per-fragment, weighted by the 
-                                           // pixel fragment's proximity to each of the 3 vertices (barycentric interpolation).
+        varying vec3 N, L;           // Specifier "varying" means a variable's final value will be passed from the vertex shader 
+                                     // on to the next phase (fragment shader), then interpolated per-fragment, weighted by the 
+                                     // pixel fragment's proximity to each of the 3 vertices (barycentric interpolation).
         vec3 phong_model_light( vec3 N )
-          { float diffuse  =      max( dot( N, normalize( vL ) ), 0.0 );
-            float specular = pow( max( dot( N, normalize(  H ) ), 0.0 ), smoothness );
+          { float diffuse  =      max( dot( N, normalize( L ) ), 0.0 );
+            float specular = pow( max( dot( N, normalize( H ) ), 0.0 ), smoothness );
 
             return shapeColor.xyz * diffusivity * diffuse + lightColor.xyz * specularity * specular;
           } ` ;
@@ -216,10 +216,10 @@ export class Basic_Phong_Compute_H_E_Outside extends Shader      // Simplified; 
 
         void main()
           { gl_Position = projection_camera_model_transform * vec4( position, 1.0 );           // The vertex's final resting place (in NDCS).
-            vN = normalize( model_transform * normal / squared_scale);                         // The final normal vector in screen space.
+            N = normalize( model_transform * normal / squared_scale);                         // The final normal vector in screen space.
 
             // Light positions use homogeneous coords.  Use w = 0 for a directional light source -- a vector instead of a point.
-            vL = normalize( light_position_or_vector.xyz - light_position_or_vector.w * position );
+            L = normalize( light_position_or_vector.xyz - light_position_or_vector.w * position );
           } ` ;
     }
   fragment_glsl_code()        // ********* FRAGMENT SHADER ********* 
@@ -227,7 +227,7 @@ export class Basic_Phong_Compute_H_E_Outside extends Shader      // Simplified; 
       return ` 
         void main()
           { gl_FragColor = vec4( shapeColor.xyz * ambient, shapeColor.w );   // Compute an initial (ambient) color:
-            gl_FragColor.xyz += phong_model_light( normalize( vN ) );         // Compute the final color with contributions from lights.
+            gl_FragColor.xyz += phong_model_light( normalize( N ) );         // Compute the final color with contributions from lights.
           } ` ;
     }
 
@@ -294,12 +294,12 @@ export class Basic_Phong_Optimized extends Shader
         uniform float ambient, diffusivity, specularity, smoothness;
         uniform vec4 lightColor, shapeColor, light_position_or_vector;
         uniform vec3 squared_scale, camera_center;
-        varying vec3 vN, vL, vH;           // Specifier "varying" means a variable's final value will be passed from the vertex shader 
-                                           // on to the next phase (fragment shader), then interpolated per-fragment, weighted by the 
-                                           // pixel fragment's proximity to each of the 3 vertices (barycentric interpolation).                                            
+        varying vec3 N, L, H;           // Specifier "varying" means a variable's final value will be passed from the vertex shader 
+                                        // on to the next phase (fragment shader), then interpolated per-fragment, weighted by the 
+                                        // pixel fragment's proximity to each of the 3 vertices (barycentric interpolation).                                            
         vec3 phong_model_light( vec3 N )
-          { float diffuse  =      max( dot( N, normalize( vL ) ), 0.0 );
-            float specular = pow( max( dot( N, normalize( vH ) ), 0.0 ), smoothness );
+          { float diffuse  =      max( dot( N, normalize( L ) ), 0.0 );
+            float specular = pow( max( dot( N, normalize( H ) ), 0.0 ), smoothness );
 
             return shapeColor.xyz * diffusivity * diffuse + lightColor.xyz * specularity * specular;
           } ` ;
@@ -313,14 +313,14 @@ export class Basic_Phong_Optimized extends Shader
 
         void main()
           { gl_Position = projection_camera_model_transform * vec4( position, 1.0 );           // The vertex's final resting place (in NDCS).
-            vN = normalize( mat3( model_transform ) * normal / squared_scale);                         // The final normal vector in screen space.
+            N = normalize( mat3( model_transform ) * normal / squared_scale);                         // The final normal vector in screen space.
             
             vec3 vertex_worldspace = ( model_transform * vec4( position, 1.0 ) ).xyz;
             vec3 E = normalize( camera_center - vertex_worldspace );
 
             // Light positions use homogeneous coords.  Use w = 0 for a directional light source -- a vector instead of a point.
-            vL = normalize( light_position_or_vector.xyz - light_position_or_vector.w * vertex_worldspace );
-            vH = normalize( vL + E );
+            L = normalize( light_position_or_vector.xyz - light_position_or_vector.w * vertex_worldspace );
+            H = normalize( L + E );
           } ` ;
     }
   fragment_glsl_code()        // ********* FRAGMENT SHADER ********* 
@@ -328,7 +328,7 @@ export class Basic_Phong_Optimized extends Shader
       return `
         void main()
           { gl_FragColor = vec4( shapeColor.xyz * ambient, shapeColor.w );   // Compute an initial (ambient) color:
-            gl_FragColor.xyz += phong_model_light( normalize( vN ) );         // Compute the final color with contributions from lights.
+            gl_FragColor.xyz += phong_model_light( normalize( N ) );         // Compute the final color with contributions from lights.
           } ` ;
     }
 
