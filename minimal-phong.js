@@ -18,7 +18,13 @@ export class Basic_Phong extends Shader
         uniform vec4 lightPosition, lightColor, shapeColor;
         varying vec3 N, E;                    // Specifier "varying" means a variable's final value will be passed from the vertex shader 
         varying vec3 L, H;                    // on to the next phase (fragment shader), then interpolated per-fragment, weighted by the 
-                                              // pixel fragment's proximity to each of the 3 vertices (barycentric interpolation). ` ;
+                                              // pixel fragment's proximity to each of the 3 vertices (barycentric interpolation).
+        vec3 phong_model_light( vec3 N )
+          { float diffuse  =      max( dot(N, normalize( L ) ), 0.0 );
+            float specular = pow( max( dot(N, normalize( H ) ), 0.0 ), smoothness );
+
+            return shapeColor.xyz * diffusivity * diffuse + lightColor.xyz * specularity * specular;
+          } ` ;
     }
   vertex_glsl_code()           // ********* VERTEX SHADER *********
     { return `
@@ -42,13 +48,7 @@ export class Basic_Phong extends Shader
     }
   fragment_glsl_code()        // ********* FRAGMENT SHADER ********* 
     {   // A fragment is a pixel that's overlapped by the current triangle.  Fragments affect the final image or get discarded due to depth.                                 
-      return ` 
-        vec3 phong_model_light( vec3 N )
-          { float diffuse  =      max( dot(N, normalize( L ) ), 0.0 );
-            float specular = pow( max( dot(N, normalize( H ) ), 0.0 ), smoothness );
-
-            return shapeColor.xyz * diffusivity * diffuse + lightColor.xyz * specularity * specular;
-          }
+      return `
         void main()
           { gl_FragColor = vec4( shapeColor.xyz * ambient, shapeColor.w );   // Compute an initial (ambient) color:
             gl_FragColor.xyz += phong_model_light( normalize( N ) );                      // Compute the final color with contributions from lights.
@@ -108,7 +108,13 @@ export class Basic_Phong_Compute_H_E_L_Outside extends Shader      // Simplified
         uniform vec3 L, H, squared_scale;
         varying vec3 N;                    // Specifier "varying" means a variable's final value will be passed from the vertex shader 
                                            // on to the next phase (fragment shader), then interpolated per-fragment, weighted by the 
-                                           // pixel fragment's proximity to each of the 3 vertices (barycentric interpolation). ` ;
+                                           // pixel fragment's proximity to each of the 3 vertices (barycentric interpolation).
+        vec3 phong_model_light( vec3 N )
+          { float diffuse  =      max( dot(N, normalize( L ) ), 0.0 );
+            float specular = pow( max( dot(N, normalize( H ) ), 0.0 ), smoothness );
+
+            return shapeColor.xyz * diffusivity * diffuse + lightColor.xyz * specularity * specular;
+          } ` ;
     }
   vertex_glsl_code()           // ********* VERTEX SHADER *********
     { return `
@@ -124,13 +130,7 @@ export class Basic_Phong_Compute_H_E_L_Outside extends Shader      // Simplified
     }
   fragment_glsl_code()        // ********* FRAGMENT SHADER ********* 
     {   // A fragment is a pixel that's overlapped by the current triangle.  Fragments affect the final image or get discarded due to depth.                                 
-      return ` 
-        vec3 phong_model_light( vec3 N )
-          { float diffuse  =      max( dot(N, normalize( L ) ), 0.0 );
-            float specular = pow( max( dot(N, normalize( H ) ), 0.0 ), smoothness );
-
-            return shapeColor.xyz * diffusivity * diffuse + lightColor.xyz * specularity * specular;
-          }
+      return `
         void main()
           { gl_FragColor = vec4( shapeColor.xyz * ambient, shapeColor.w );   // Compute an initial (ambient) color:
             gl_FragColor.xyz += phong_model_light( normalize( N ) );         // Compute the final color with contributions from lights.
@@ -199,7 +199,13 @@ export class Basic_Phong_Compute_H_E_Outside extends Shader      // Simplified; 
         uniform vec3 H, squared_scale;
         varying vec3 vN, vL;           // Specifier "varying" means a variable's final value will be passed from the vertex shader 
                                            // on to the next phase (fragment shader), then interpolated per-fragment, weighted by the 
-                                           // pixel fragment's proximity to each of the 3 vertices (barycentric interpolation). ` ;
+                                           // pixel fragment's proximity to each of the 3 vertices (barycentric interpolation).
+        vec3 phong_model_light( vec3 N )
+          { float diffuse  =      max( dot( N, normalize( vL ) ), 0.0 );
+            float specular = pow( max( dot( N, normalize(  H ) ), 0.0 ), smoothness );
+
+            return shapeColor.xyz * diffusivity * diffuse + lightColor.xyz * specularity * specular;
+          } ` ;
     }
   vertex_glsl_code()           // ********* VERTEX SHADER *********
     { return `
@@ -219,12 +225,6 @@ export class Basic_Phong_Compute_H_E_Outside extends Shader      // Simplified; 
   fragment_glsl_code()        // ********* FRAGMENT SHADER ********* 
     {   // A fragment is a pixel that's overlapped by the current triangle.  Fragments affect the final image or get discarded due to depth.                                 
       return ` 
-        vec3 phong_model_light( vec3 N )
-          { float diffuse  =      max( dot( N, normalize( vL ) ), 0.0 );
-            float specular = pow( max( dot( N, normalize(  H ) ), 0.0 ), smoothness );
-
-            return shapeColor.xyz * diffusivity * diffuse + lightColor.xyz * specularity * specular;
-          }
         void main()
           { gl_FragColor = vec4( shapeColor.xyz * ambient, shapeColor.w );   // Compute an initial (ambient) color:
             gl_FragColor.xyz += phong_model_light( normalize( vN ) );         // Compute the final color with contributions from lights.
@@ -296,7 +296,13 @@ export class Basic_Phong_Optimized extends Shader
         uniform vec3 squared_scale, camera_center;
         varying vec3 vN, vL, vH;           // Specifier "varying" means a variable's final value will be passed from the vertex shader 
                                            // on to the next phase (fragment shader), then interpolated per-fragment, weighted by the 
-                                           // pixel fragment's proximity to each of the 3 vertices (barycentric interpolation). ` ;
+                                           // pixel fragment's proximity to each of the 3 vertices (barycentric interpolation).                                            
+        vec3 phong_model_light( vec3 N )
+          { float diffuse  =      max( dot( N, normalize( vL ) ), 0.0 );
+            float specular = pow( max( dot( N, normalize( vH ) ), 0.0 ), smoothness );
+
+            return shapeColor.xyz * diffusivity * diffuse + lightColor.xyz * specularity * specular;
+          } ` ;
     }
   vertex_glsl_code()           // ********* VERTEX SHADER *********
     { return `
@@ -319,13 +325,7 @@ export class Basic_Phong_Optimized extends Shader
     }
   fragment_glsl_code()        // ********* FRAGMENT SHADER ********* 
     {   // A fragment is a pixel that's overlapped by the current triangle.  Fragments affect the final image or get discarded due to depth.                                 
-      return ` 
-        vec3 phong_model_light( vec3 N )
-          { float diffuse  =      max( dot( N, normalize( vL ) ), 0.0 );
-            float specular = pow( max( dot( N, normalize( vH ) ), 0.0 ), smoothness );
-
-            return shapeColor.xyz * diffusivity * diffuse + lightColor.xyz * specularity * specular;
-          }
+      return `
         void main()
           { gl_FragColor = vec4( shapeColor.xyz * ambient, shapeColor.w );   // Compute an initial (ambient) color:
             gl_FragColor.xyz += phong_model_light( normalize( vN ) );         // Compute the final color with contributions from lights.
