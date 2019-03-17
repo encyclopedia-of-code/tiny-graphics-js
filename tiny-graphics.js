@@ -1,7 +1,11 @@
 // tiny-graphics.js - A file that shows how to organize a complete graphics program.  It wraps common WebGL commands and math.
 // The file tiny-graphics-widgets.js additionally wraps web page interactions.  By Garett.
 
-export class Vec extends Float32Array       // Vectors of floating point numbers.  This puts vector math into JavaScript.
+export const tiny = {};       // We want to access our exports through normal JS objects, not ES Modules, to preserve
+                              // the order of definitions in our files (ES Modules alphabetize them). 
+
+const Vec = tiny.Vec =
+class Vec extends Float32Array       // Vectors of floating point numbers.  This puts vector math into JavaScript.
                                             // See these examples for usage of each function:
   //     equals: "Vec.of( 1,0,0 ).equals( Vec.of( 1,0,0 ) )" returns true.
   //       plus: "Vec.of( 1,0,0 ).plus  ( Vec.of( 1,0,0 ) )" returns the Vec [ 2,0,0 ].
@@ -47,8 +51,8 @@ export class Vec extends Float32Array       // Vectors of floating point numbers
   to_string() { return "[vec " + this.join( ", " ) + "]" }
 }
 
-
-export class Mat extends Array                         // M by N matrices of floats.  Enables matrix and vector math.  Usage:
+const Mat = tiny.Mat =
+class Mat extends Array                         // M by N matrices of floats.  Enables matrix and vector math.  Usage:
   //  "Mat( rows )" returns a Mat with those rows, where rows is an array of float arrays.
   //  "M.set_identity( m, n )" assigns the m by n identity matrix to Mat M.
   //  "M.sub_block( start, end )" where start and end are each a [ row, column ] pair returns a sub-rectangle cut out from M.
@@ -100,7 +104,8 @@ export class Mat extends Array                         // M by N matrices of flo
 }
 
 
-export class Mat4 extends Mat                               // Generate special 4x4 matrices that are useful for graphics.
+const Mat4 = tiny.Mat4 =
+class Mat4 extends Mat                               // Generate special 4x4 matrices that are useful for graphics.
 { static identity()       { return Mat.of( [ 1,0,0,0 ], [ 0,1,0,0 ], [ 0,0,1,0 ], [ 0,0,0,1 ] ); };
   static rotation( angle, axis )                                             // Requires a scalar (angle) and a 3x1 Vec (axis)
                           { let [ x, y, z ] = Vec.from( axis ).normalized(), 
@@ -170,53 +175,55 @@ export class Mat4 extends Mat                               // Generate special 
 }
 
 
-export class Keyboard_Manager     // This class maintains a running list of which keys are depressed.  You can map combinations of shortcut
-  {                        // keys to trigger callbacks you provide by calling add().  See add()'s arguments.  The shortcut list is 
-                           // indexed by convenient strings showing each bound shortcut combination.  The constructor optionally
-                           // takes "target", which is the desired DOM element for keys to be pressed inside of, and
-                           // "callback_behavior", which will be called for every key action and allows extra behavior on each event
-                           // -- giving an opportunity to customize their bubbling, preventDefault, and more.  It defaults to no
-                           // additional behavior besides the callback itself on each assigned key action.
-    constructor( target = document, callback_behavior = ( callback, event ) => callback( event ) )
-      { this.saved_controls = {};     
-        this.actively_pressed_keys = new Set();
-        this.callback_behavior = callback_behavior;
-        target.addEventListener( "keydown",     this.key_down_handler.bind( this ) );
-        target.addEventListener( "keyup",       this.  key_up_handler.bind( this ) );
-        window.addEventListener( "focus", () => this.actively_pressed_keys.clear() );  // Deal with stuck keys during focus change.
+const Keyboard_Manager = tiny.Keyboard_Manager =
+class Keyboard_Manager     // This class maintains a running list of which keys are depressed.  You can map combinations of shortcut
+{                        // keys to trigger callbacks you provide by calling add().  See add()'s arguments.  The shortcut list is 
+                         // indexed by convenient strings showing each bound shortcut combination.  The constructor optionally
+                         // takes "target", which is the desired DOM element for keys to be pressed inside of, and
+                         // "callback_behavior", which will be called for every key action and allows extra behavior on each event
+                         // -- giving an opportunity to customize their bubbling, preventDefault, and more.  It defaults to no
+                         // additional behavior besides the callback itself on each assigned key action.
+  constructor( target = document, callback_behavior = ( callback, event ) => callback( event ) )
+    { this.saved_controls = {};     
+      this.actively_pressed_keys = new Set();
+      this.callback_behavior = callback_behavior;
+      target.addEventListener( "keydown",     this.key_down_handler.bind( this ) );
+      target.addEventListener( "keyup",       this.  key_up_handler.bind( this ) );
+      window.addEventListener( "focus", () => this.actively_pressed_keys.clear() );  // Deal with stuck keys during focus change.
+    }
+  key_down_handler( event )
+    { if( [ "INPUT", "TEXTAREA" ].includes( event.target.tagName ) ) return;    // Don't interfere with typing.
+      this.actively_pressed_keys.add( event.key );                              // Track the pressed key.
+      for( let saved of Object.values( this.saved_controls ) )                  // Re-check all the keydown handlers.
+      { if( saved.shortcut_combination.every( s => this.actively_pressed_keys.has( s ) )
+          && event. ctrlKey   == saved.shortcut_combination.includes( "Control" )
+          && event.shiftKey   == saved.shortcut_combination.includes( "Shift" )
+          && event.  altKey   == saved.shortcut_combination.includes( "Alt" )
+          && event. metaKey   == saved.shortcut_combination.includes( "Meta" ) )  // Modifiers must exactly match.
+            this.callback_behavior( saved.callback, event );                      // The keys match, so fire the callback.
       }
-    key_down_handler( event )
-      { if( [ "INPUT", "TEXTAREA" ].includes( event.target.tagName ) ) return;    // Don't interfere with typing.
-        this.actively_pressed_keys.add( event.key );                              // Track the pressed key.
-        for( let saved of Object.values( this.saved_controls ) )                  // Re-check all the keydown handlers.
-        { if( saved.shortcut_combination.every( s => this.actively_pressed_keys.has( s ) )
-            && event. ctrlKey   == saved.shortcut_combination.includes( "Control" )
-            && event.shiftKey   == saved.shortcut_combination.includes( "Shift" )
-            && event.  altKey   == saved.shortcut_combination.includes( "Alt" )
-            && event. metaKey   == saved.shortcut_combination.includes( "Meta" ) )  // Modifiers must exactly match.
-              this.callback_behavior( saved.callback, event );                      // The keys match, so fire the callback.
-        }
-      }
-    key_up_handler( event )
-      { const lower_symbols = "qwertyuiopasdfghjklzxcvbnm1234567890-=[]\\;',./",
-              upper_symbols = "QWERTYUIOPASDFGHJKLZXCVBNM!@#$%^&*()_+{}|:\"<>?";
-        
-        const lifted_key_symbols = [ event.key, upper_symbols[ lower_symbols.indexOf( event.key ) ],
-                                                lower_symbols[ upper_symbols.indexOf( event.key ) ] ];
-                                                                                          // Call keyup for any shortcuts 
-        for( let saved of Object.values( this.saved_controls ) )                          // that depended on the released
-          if( lifted_key_symbols.some( s => saved.shortcut_combination.includes( s ) ) )  // key or its shift-key counterparts.
-            this.callback_behavior( saved.keyup_callback, event );                  // The keys match, so fire the callback.
-        lifted_key_symbols.forEach( k => this.actively_pressed_keys.delete( k ) );
-      }
-      // Method add() adds a keyboard operation.  The argument shortcut_combination wants an array of strings that follow 
-      // standard KeyboardEvent key names. Both the keyup and keydown callbacks for any key combo are optional.
-    add( shortcut_combination, callback = () => {}, keyup_callback = () => {} )
-      { this.saved_controls[ shortcut_combination.join('+') ] = { shortcut_combination, callback, keyup_callback }; }
-  }
+    }
+  key_up_handler( event )
+    { const lower_symbols = "qwertyuiopasdfghjklzxcvbnm1234567890-=[]\\;',./",
+            upper_symbols = "QWERTYUIOPASDFGHJKLZXCVBNM!@#$%^&*()_+{}|:\"<>?";
+
+      const lifted_key_symbols = [ event.key, upper_symbols[ lower_symbols.indexOf( event.key ) ],
+                                              lower_symbols[ upper_symbols.indexOf( event.key ) ] ];
+                                                                                        // Call keyup for any shortcuts 
+      for( let saved of Object.values( this.saved_controls ) )                          // that depended on the released
+        if( lifted_key_symbols.some( s => saved.shortcut_combination.includes( s ) ) )  // key or its shift-key counterparts.
+          this.callback_behavior( saved.keyup_callback, event );                  // The keys match, so fire the callback.
+      lifted_key_symbols.forEach( k => this.actively_pressed_keys.delete( k ) );
+    }
+    // Method add() adds a keyboard operation.  The argument shortcut_combination wants an array of strings that follow 
+    // standard KeyboardEvent key names. Both the keyup and keydown callbacks for any key combo are optional.
+  add( shortcut_combination, callback = () => {}, keyup_callback = () => {} )
+    { this.saved_controls[ shortcut_combination.join('+') ] = { shortcut_combination, callback, keyup_callback }; }
+}
 
 
-export class Graphics_Card_Object       // Extending this class allows an object to, whenever used, copy
+const Graphics_Card_Object = tiny.Graphics_Card_Object =
+class Graphics_Card_Object       // Extending this class allows an object to, whenever used, copy
 {                                       // itself onto a GPU context whenever it has not already been.
   constructor() { this.gpu_instances = new Map() }     // Track which GPU contexts this object has copied itself onto.
   copy_onto_graphics_card( context, ...args )
@@ -251,8 +258,8 @@ export class Graphics_Card_Object       // Extending this class allows an object
 }
 
 
-
-export class Vertex_Buffer extends Graphics_Card_Object
+const Vertex_Buffer = tiny.Vertex_Buffer =
+class Vertex_Buffer extends Graphics_Card_Object
 {                             // To use Vertex_Buffer, make a subclass of it that overrides the constructor and fills in the right fields.  
                               // Vertex_Buffer organizes data related to one 3D shape and copies it into GPU memory.  That data is broken
                               // down per vertex in the shape.  You can make several fields that you can look up in a vertex; for each
@@ -301,7 +308,8 @@ export class Vertex_Buffer extends Graphics_Card_Object
 }
 
 
-export class Shape extends Vertex_Buffer
+const Shape = tiny.Shape =
+class Shape extends Vertex_Buffer
 {           // This class is used the same way as Vertex_Buffer, by subclassing it and writing a constructor that fills in certain fields.
             // Shape extends Vertex_Buffer's functionality for copying shapes into buffers the graphics card's memory.  It also adds the
             // basic assumption that each vertex will have a 3D position and a 3D normal vector as available fields to look up.  This means
@@ -377,14 +385,14 @@ export class Shape extends Vertex_Buffer
     }
 }
 
+const Light = tiny.Light =
+class Light                                             // The properties of one light in the scene (Two 4x1 Vecs and a scalar)
+{ constructor( position, color, size ) { Object.assign( this, { position, color, attenuation: 1/size } ); }  }
 
-export class Light                                             // The properties of one light in the scene (Two 4x1 Vecs and a scalar)
-{ constructor( position, color, size ) { Object.assign( this, { position, color, attenuation: 1/size } ); }  };
+const Color = tiny.Color = Vec;    // Just an alias.  Colors are special 4x1 vectors expressed as ( red, green, blue, opacity ) each from 0 to 1.
 
-export class Color extends Vec { }    // Just an alias.  Colors are special 4x1 vectors expressed as ( red, green, blue, opacity ) each from 0 to 1.
-
-
-export class Graphics_Addresses    // For organizing communication with the GPU for Shaders.  Once we've compiled the Shader, we can query 
+const Graphics_Addresses = tiny.Graphics_Addresses =
+class Graphics_Addresses    // For organizing communication with the GPU for Shaders.  Once we've compiled the Shader, we can query 
 {                           // some things about the compiled program, such as the memory addresses it will use for uniform variables, 
                             // and the types and indices of its per-vertex attributes.  We'll need those for building vertex buffers.
   constructor( program, gl )
@@ -408,7 +416,8 @@ export class Graphics_Addresses    // For organizing communication with the GPU 
 }
 
 
-export class Overridable     // Class Overridable allows a short way to create modified versions of JavaScript objects.  Some properties are
+const Overridable = tiny.Overridable =
+class Overridable     // Class Overridable allows a short way to create modified versions of JavaScript objects.  Some properties are
 {                            // replaced with substitutes that you provide, without having to write out a new object from scratch.
        // To override, simply pass in "replacement", a JS Object of keys/values you want to override, to generate a new object.
        // For shorthand you can leave off the key and only provide a value (pass in directly as "replacement") and a guess will
@@ -428,7 +437,8 @@ export class Overridable     // Class Overridable allows a short way to create m
 
 
 
-export class Graphics_State extends Overridable                 // Stores things that affect multiple shapes, such as lights and the camera.
+const Graphics_State = tiny.Graphics_State =
+class Graphics_State extends Overridable                 // Stores things that affect multiple shapes, such as lights and the camera.
 { constructor( camera_transform = Mat4.identity(), projection_transform = Mat4.identity() ) 
     { super();
       this.set_camera( camera_transform );
@@ -443,7 +453,8 @@ export class Graphics_State extends Overridable                 // Stores things
 }
 
 
-export class Shader extends Graphics_Card_Object
+const Shader = tiny.Shader =
+class Shader extends Graphics_Card_Object
 {                           // Your subclasses of Shader will manage strings of GLSL code that will be sent to the GPU and will run, to
                             // draw every shape.  Extend the class and fill in the abstract functions; the constructor needs them.
   copy_onto_graphics_card( context )
@@ -498,7 +509,8 @@ export class Shader extends Graphics_Card_Object
 }
 
 
-export class Texture extends Graphics_Card_Object                     // The Texture class wraps a pointer to a new texture
+const Texture = tiny.Texture =
+class Texture extends Graphics_Card_Object                     // The Texture class wraps a pointer to a new texture
 { constructor( filename, min_filter = "LINEAR_MIPMAP_LINEAR" )        // buffer along with a new HTML image object. 
     { super();
       Object.assign( this, { filename, min_filter } );
@@ -534,11 +546,11 @@ export class Texture extends Graphics_Card_Object                     // The Tex
       context.activeTexture( context[ "TEXTURE" + texture_unit ] );
       context.bindTexture( context.TEXTURE_2D, gpu_instance.texture_buffer_pointer );
     }
-
 }
 
 
-export class Webgl_Manager      // This class manages a whole graphics program for one on-page canvas, including its textures, shapes, shaders,
+const Webgl_Manager = tiny.Webgl_Manager =
+class Webgl_Manager      // This class manages a whole graphics program for one on-page canvas, including its textures, shapes, shaders,
 {                        // and scenes.  In addition to requesting a WebGL context and storing the aforementioned items, it informs the
                          // canvas of which functions to call during events - such as a key getting pressed or it being time to redraw.
   constructor( canvas, background_color, dimensions )
@@ -590,7 +602,9 @@ export class Webgl_Manager      // This class manages a whole graphics program f
     }                                                                     // again as soon as all other web page events are processed.
 }
 
-export class Scene          // The Scene superclass is the base class for any scene part or code snippet that you can add to a
+
+const Scene = tiny.Scene =
+class Scene          // The Scene superclass is the base class for any scene part or code snippet that you can add to a
 {                           // canvas.  Make your own subclass(es) of this and override their methods "display()" and "make_control_panel()"
                             // to make them do something.  Finally, push them onto your Webgl_Manager's "scenes" array.
   constructor( webgl_manager )

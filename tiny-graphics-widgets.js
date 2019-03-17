@@ -1,8 +1,14 @@
 // This file defines a lot of panels that can be placed on websites to create interactive graphics programs that use tiny-graphics.js.
 
-export class Canvas_Widget                    // Canvas_Widget embeds a WebGL demo onto a website, along with various panels of controls.
-{ constructor( element, scenes, show_controls = true )   // One panel exists per each scene that's used in the canvas.  You can use up
-    { this.create( element, scenes, show_controls )      // to 16 Canvas_Widgets; browsers support up to 16 WebGL contexts per page.    
+import {tiny} from './tiny-graphics.js';
+const { Vec, Mat, Mat4, Color, Shape, Shader, Scene } = tiny;           // Pull these names into this module's scope for convenience.
+
+export const widgets = {};
+
+const Canvas_Widget = widgets.Canvas_Widget =
+class Canvas_Widget                    // Canvas_Widget embeds a WebGL demo onto a website, along with various panels of controls.
+{ constructor(     element, main_scene, additional_scenes, show_controls = true )   // One panel exists per each scene that's used in the canvas.  You can use up
+    { this.create( element, main_scene, additional_scenes, show_controls )      // to 16 Canvas_Widgets; browsers support up to 16 WebGL contexts per page.    
 
       const rules = [ ".canvas-widget { width: 1080px; background: DimGray }",
                       ".canvas-widget canvas { width: 1080px; height: 600px; margin-bottom:-3px }" ];
@@ -10,9 +16,9 @@ export class Canvas_Widget                    // Canvas_Widget embeds a WebGL de
       if( document.styleSheets.length == 0 ) document.head.appendChild( document.createElement( "style" ) );
       for( const r of rules ) document.styleSheets[document.styleSheets.length - 1].insertRule( r, 0 )
     }
-  create( element, scenes, show_controls )
+  create( element, main_scene, additional_scenes, show_controls )
     { this.patch_ios_bug();
-      try  { this.populate_canvas( element, scenes, show_controls );
+      try  { this.populate_canvas( element, main_scene, additional_scenes, show_controls );
            } catch( error )
            { document.querySelector( "#" + element ).innerHTML = "<H1>Error loading the demo.</H1>" + error }
     }
@@ -23,15 +29,13 @@ export class Canvas_Widget                    // Canvas_Widget embeds a WebGL de
         Vec.from = function(    arr ) { return new Vec( Array.from(    arr ) ) }
       }
     }
-  populate_canvas( element, scenes, show_controls )   // Assign a Webgl_Manager to the WebGL canvas.
-    { if( !scenes.every( x => window[ x ] ) )         // Make sure each scene class really exists.
-        throw "(Featured class not found)";
-      const canvas = document.querySelector( "#" + element ).appendChild( document.createElement( "canvas" ) );
+  populate_canvas( element, main_scene, additional_scenes, show_controls )   // Assign a Webgl_Manager to the WebGL canvas.
+    { const canvas = document.querySelector( "#" + element ).appendChild( document.createElement( "canvas" ) );
 
-      this.webgl_manager = new Webgl_Manager( canvas, Color.of( 0,0,0,1 ) );  // Second parameter sets background color.
+      this.webgl_manager = new tiny.Webgl_Manager( canvas, Color.of( 0,0,0,1 ) );  // Second parameter sets background color.
 
-      for( let scene_class_name of scenes )                  // Register the initially requested scenes to the render loop. 
-        this.webgl_manager.scenes.push( new window[ scene_class_name ]( this.webgl_manager ) );
+      for( let scene_class_name of [ main_scene, ...additional_scenes ] )   // Register the initially requested scenes to the render loop. 
+        this.webgl_manager.scenes.push( new scene_class_name( this.webgl_manager ) );
 
 
       this.embedded_controls = document.querySelector( "#" + element ).appendChild( document.createElement( "div" ) );
@@ -43,7 +47,8 @@ export class Canvas_Widget                    // Canvas_Widget embeds a WebGL de
 }
 
 
-export class Controls_Widget                  // One of these widgets can draw one panel of controls per scene.
+const Controls_Widget = widgets.Controls_Widget =
+class Controls_Widget                  // One of these widgets can draw one panel of controls per scene.
 { constructor( scenes, element )
     { if( typeof( element ) === "String" ) element = document.querySelector( "#" + element );
 
@@ -111,7 +116,8 @@ export class Controls_Widget                  // One of these widgets can draw o
 }
 
   
-export class Code_Manager                     // Break up a string containing code (any es6 JavaScript).  The parser expression
+const Code_Manager = widgets.Code_Manager =
+class Code_Manager                     // Break up a string containing code (any es6 JavaScript).  The parser expression
 {                                             // is from https://github.com/lydell/js-tokens which states the following limitation:
   constructor( code )                         // "If the end of a statement looks like a regex literal (even if it isn’t), it will 
     { const es6_tokens_parser = RegExp( [     // be treated as one."  (This can miscolor lines of code containing divisions and comments).
@@ -142,8 +148,9 @@ export class Code_Manager                     // Break up a string containing co
 }
 
 
-export class Code_Widget                      // One of these panels draws a code navigator with inline links to the entire source code.
-{ constructor( element, selected_class )
+const Code_Widget = widgets.Code_Widget =
+class Code_Widget                      // One of these panels draws a code navigator with inline links to the entire source code.
+{ constructor( element, main_scene, additional_scenes, definitions )
     { let rules = [ ".code-widget .code-panel { background:white; overflow:auto; font-family:monospace; width:1060px; padding:10px; padding-bottom:40px; max-height: 500px; \
                                                   border-radius:12px; box-shadow: 20px 20px 90px 0px powderblue inset, 5px 5px 30px 0px blue inset }",
                 ".code-widget .code-display { min-width:1800px; padding:10px; white-space:pre-wrap; background:transparent }",
@@ -154,10 +161,9 @@ export class Code_Widget                      // One of these panels draws a cod
       if( document.styleSheets.length == 0 ) document.head.appendChild( document.createElement( "style" ) );
       for( const r of rules ) document.styleSheets[document.styleSheets.length - 1].insertRule( r, 0 )
       
-      if( !window[ selected_class ] ) throw "Class " + selected_class + " not found.";
-      selected_class = window[ selected_class ];
       element = document.querySelector( "#" + element );
       
+      this.definitions = definitions;
       const code_panel = element.appendChild( document.createElement( "div" ) );
       code_panel.className = "code-panel";
       const text        = code_panel.appendChild( document.createElement( "p" ) );
@@ -175,8 +181,8 @@ export class Code_Widget                      // One of these panels draws a cod
       content.innerHTML = "main-scene.js<br>Main Scene: ";
       const main_scene_link = content.appendChild( document.createElement( "a" ) );
       main_scene_link.href = "javascript:void(0);"
-      main_scene_link.addEventListener( 'click', () => this.display_code( selected_class ) );
-      main_scene_link.textContent = selected_class.name;
+      main_scene_link.addEventListener( 'click', () => this.display_code( main_scene ) );
+      main_scene_link.textContent = main_scene.name;
 
       const second_cell = class_list.insertRow( -1 ).insertCell( -1 );
       second_cell.colSpan = 2;
@@ -193,20 +199,20 @@ export class Code_Widget                      // One of these panels draws a cod
     
       const fourth_row = class_list.insertRow( -1 );
 
-      for( let list of [ tiny_graphics, classes ] )
+      for( let list of [ tiny, definitions ] )
       { const cell = fourth_row.appendChild( document.createElement( "td" ) );
-        const class_names = Object.keys( list ).filter( x => x != selected_class.name );     // List all class names except the main one,
+        const class_names = Object.keys( list ).filter( x => x != main_scene.name );     // List all class names except the main one,
         cell.style = "white-space:normal"                                                    // which we'll display separately.
         for( let name of class_names )
         { const class_link = cell.appendChild( document.createElement( "a" ) );
           class_link.style["margin-right"] = "80px"
           class_link.href = "javascript:void(0);"
-          class_link.addEventListener( 'click', () => this.display_code( window[name] ) );
+          class_link.addEventListener( 'click', () => this.display_code( tiny[name] || definitions[name] ) );
           class_link.textContent = name;
           cell.appendChild( document.createTextNode(" ") );
         }
       }
-      this.display_code( selected_class );
+      this.display_code( main_scene );
     }
   display_code( class_to_display )                                                           // Pass undefined to choose index.html source.
     { this.selected_class = class_to_display;
@@ -221,10 +227,10 @@ export class Code_Widget                      // One of these panels draws a cod
                             name: "black", punctuator: "red", whitespace: "black" };
 
       for( let t of new Code_Manager( code_string ).tokens )
-        if( t.type == "name" && [ ...Object.keys( tiny_graphics ), ...Object.keys( classes ) ].includes( t.value ) )
+        if( t.type == "name" && [ ...Object.keys( tiny ), ...Object.keys( this.definitions ) ].includes( t.value ) )
           { const link = this.code_display.appendChild( document.createElement( 'a' ) );
             link.href = "javascript:void(0);"
-            link.addEventListener( 'click', () => this.display_code( window[ t.value ] ) );
+            link.addEventListener( 'click', () => this.display_code( tiny[t.value] || this.definitions[t.value] ) );
             link.textContent = t.value;
           }
         else

@@ -1,6 +1,7 @@
-import * as classes from './common.js';
-Object.assign( window, classes );                                // Store these classes in global scope so we can use them anywhere.
-window.classes = Object.assign( {}, window.classes, classes );   // Also copy them to window.classes so we can list them all out anytime.
+import {tiny, defs} from './common.js';
+const { Vec, Mat, Mat4, Color, Light, 
+        Shape, Shader, Scene, Texture } = tiny;           // Pull these names into this module's scope for convenience.
+const { Triangle, Square, Tetrahedron, Windmill, Cube, Subdivision_Sphere } = defs;
 
 export class Tutorial_Animation extends Scene    // This Scene can be added to a display canvas.  This particular one
   {                                                 // sets up the machinery to draw a simple scene demonstrating a few concepts.
@@ -8,7 +9,7 @@ export class Tutorial_Animation extends Scene    // This Scene can be added to a
     constructor( webgl_manager )             // The scene begins by requesting the camera, shapes, and materials it will need.
       { super( webgl_manager );              // First, include a couple other helpful components, including one that moves you around:
         if( !webgl_manager.globals.has_controls   ) 
-          this.children.push( new Movement_Controls( webgl_manager ) ); 
+          this.children.push( new defs.Movement_Controls( webgl_manager ) ); 
           
                 // Define the global camera and projection matrices, which are stored in a scratchpad for globals.  The projection is special 
                 // because it determines how depth is treated when projecting 3D points onto a plane.  The function perspective() makes one.
@@ -29,13 +30,13 @@ export class Tutorial_Animation extends Scene    // This Scene can be added to a
         // *** Materials: *** Define more data members here, returned from the material() function of our shader.  Material objects contain
         //                    shader configurations.  They are used to light and color each shape.  Declare new materials as temps when
         //                    needed; they're just cheap wrappers for some numbers.  1st parameter:  Color (4 floats in RGBA format).
-        this.shader = new Phong_Shader();
+        this.shader = new defs.Phong_Shader();
         this.materials = {};
         this.materials.clay    = this.shader.material({ ambient: .4, diffusivity: .4 }).override( Color.of( .9,.5,.9,1 ) );
         this.materials.plastic = this.materials.clay.override({ specularity: .6 });
         this.materials.stars   = this.materials.plastic.override({ texture: new Texture( "assets/stars.png" ) });
         this.materials.glass   = this.materials.clay.override( Color.of( .5,.5, 1,.2 ) );
-        this.materials.fire    = new Funny_Shader().material();
+        this.materials.fire    = new defs.Funny_Shader().material();
 
         // *** Lights: *** Values of vector or point lights.  They'll be consulted by the shader when coloring shapes.  Two different lights 
         //                 *per shape* are supported by in the example shader; more requires changing a number in it or other tricks.

@@ -1,7 +1,7 @@
-import * as classes from './common.js';
-Object.assign( window, classes );                                // Store these classes in global scope so we can use them anywhere.
-window.classes = Object.assign( {}, window.classes, classes );   // Also copy them to window.classes so we can list them all out anytime.
-
+import {tiny, defs} from './common.js';
+const { Vec, Mat, Mat4, Color, Light, 
+        Shape, Shader, Scene, Texture } = tiny;           // Pull these names into this module's scope for convenience.
+        
 export class Shape_From_File extends Shape   // A versatile standalone Shape that imports all its arrays' data from an .obj 3D model file.
 { constructor( filename )
     { super( "position", "normal", "texture_coord" );
@@ -92,9 +92,9 @@ export class Obj_File_Demo extends Scene
 
         this.shapes = { "teapot": new Shape_From_File( "assets/teapot.obj" ) };             // Load the model file.
         
-        this.stars = new Phong_Shader().material({ ambient: .3, diffusivity: .5, specularity: .5, texture: new Texture( "assets/stars.png" ) })
+        this.stars = new defs.Phong_Shader().material({ ambient: .3, diffusivity: .5, specularity: .5, texture: new Texture( "assets/stars.png" ) })
                                 .override( Color.of( .5,.5,.5,1 ) );       // Non bump mapped.
-        this.bumps = new Fake_Bump_Map().material({ ambient: .3, diffusivity: .5, specularity: .5, texture: new Texture( "assets/stars.png" ) })
+        this.bumps = new defs.Fake_Bump_Map().material({ ambient: .3, diffusivity: .5, specularity: .5, texture: new Texture( "assets/stars.png" ) })
                                         .override( Color.of( .5,.5,.5,1 ) );        // Bump mapped.
       }
     display( context, graphics_state )

@@ -1,6 +1,6 @@
-import * as classes from './common.js';
-Object.assign( window, classes );                                // Store these classes in global scope so we can use them anywhere.
-window.classes = Object.assign( {}, window.classes, classes );   // Also copy them to window.classes so we can list them all out anytime.
+import {tiny, defs} from './common.js';
+const { Vec, Mat, Mat4, Color, Light, 
+        Shape, Shader, Scene, Texture } = tiny;           // Pull these names into this module's scope for convenience.
 
 export class Text_Line extends Shape                // Text_Line embeds text in the 3D world, using a crude texture method.  This
 {                                                   // Shape is made of a horizontal arrangement of quads. Each is textured over with
@@ -13,7 +13,7 @@ export class Text_Line extends Shape                // Text_Line embeds text in 
       this.max_size = max_size;
       var object_transform = Mat4.identity();
       for( var i = 0; i < max_size; i++ )
-      { Square.insert_transformed_copy_into( this, [], object_transform );   // Each quad is a separate Square instance.
+      { defs.Square.insert_transformed_copy_into( this, [], object_transform );   // Each quad is a separate Square instance.
         object_transform.post_multiply( Mat4.translation([ 1.5,0,0 ]) );
       }
     }
@@ -42,10 +42,10 @@ export class Text_Demo extends Scene                   // A scene with a cube, f
       webgl_manager.globals.graphics_state.set_camera( Mat4.look_at( ...Vec.cast( [ 0,0,4 ], [0,0,0], [0,1,0] ) ) );
       webgl_manager.globals.graphics_state.projection_transform = Mat4.perspective( Math.PI/4, webgl_manager.width/webgl_manager.height, .1, 1000 );                 
       
-      this.shapes = { cube: new Cube(), text: new Text_Line( 35 ) };
+      this.shapes = { cube: new defs.Cube(), text: new Text_Line( 35 ) };
       this.shapes.text.copy_onto_graphics_card( webgl_manager.context );
       
-      this.shader = new Phong_Shader();
+      this.shader = new defs.Phong_Shader();
       this.grey       = this.shader.material({ ambient: 0, diffusivity: .3, specularity: .5, smoothness: 10 })
                              .override( Color.of( .5,.5,.5,1 ) );
       this.text_image = this.shader.material({ ambient: 1, diffusivity: 0, specularity: 0, texture: new Texture( "assets/text.png" ) });

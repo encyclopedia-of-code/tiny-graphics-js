@@ -1,6 +1,6 @@
-import * as classes from './common.js';
-Object.assign( window, classes );                                // Store these classes in global scope so we can use them anywhere.
-window.classes = Object.assign( {}, window.classes, classes );   // Also copy them to window.classes so we can list them all out anytime.
+import {tiny, defs} from './common.js';
+const { Vec, Mat, Mat4, Color, Light, 
+        Shape, Shader, Scene, Texture } = tiny;           // Pull these names into this module's scope for convenience.
 
 export class Axes_Viewer extends Scene     // A helper scene (a secondary Scene Component) for helping you visualize the
 { constructor( webgl_manager )                       // coordinate bases that are used in your real scene.  Your scene can feed this
@@ -16,8 +16,8 @@ export class Axes_Viewer extends Scene     // A helper scene (a secondary Scene 
       this.selected_basis_id = 0;             // obtain the next unused ID by calling next_group_id(), so you can re-use it for
       this.reset();                           // all bases that you want to appear at the same level. 
       webgl_manager.globals.axes_viewer = this;
-      this.shapes = { axes: new Axis_Arrows() };
-      this.material = new Fake_Bump_Map().material({ ambient: 1,  texture: new Texture( "assets/rgb.jpg" ) })
+      this.shapes = { axes: new defs.Axis_Arrows() };
+      this.material = new defs.Fake_Bump_Map().material({ ambient: 1,  texture: new Texture( "assets/rgb.jpg" ) })
                                          .override( Color.of( 0,0,0,1 ) );              
     }
   insert( basis, group_id = ++this.cursor )      // Default to putting the basis in the next empty group; otherwise use group number.
@@ -58,8 +58,8 @@ export class Axes_Viewer_Test_Scene extends Scene
       this.axes_viewer = webgl_manager.globals.axes_viewer;
 
                                                                   // Scene defaults:
-      this.shapes = { box: new Cube() };
-      this.material = new Phong_Shader().material().override( Color.of( .8,.4,.8,1 ) );
+      this.shapes = { box: new defs.Cube() };
+      this.material = new defs.Phong_Shader().material().override( Color.of( .8,.4,.8,1 ) );
       this.lights = [ new Light( Vec.of( 0,0,1,0 ), Color.of( 0,1,1,1 ), 100000 ) ];
 
       webgl_manager.globals.graphics_state.set_camera( Mat4.translation([ -1,-1,-20 ]) );

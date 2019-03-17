@@ -1,21 +1,21 @@
-import * as classes from './common.js';
-Object.assign( window, classes );                                // Store these classes in global scope so we can use them anywhere.
-window.classes = Object.assign( {}, window.classes, classes );   // Also copy them to window.classes so we can list them all out anytime.
+import {tiny, defs} from './common.js';
+const { Vec, Mat, Mat4, Color, Light, 
+        Shape, Shader, Scene, Texture } = tiny;           // Pull these names into this module's scope for convenience.
 
 export class Scene_To_Texture_Demo extends Scene
   { constructor( webgl_manager )     // The scene begins by requesting the camera, shapes, and materials it will need.
       { super(   webgl_manager );    // First, include a secondary Scene that provides movement controls:
         if( !webgl_manager.globals.has_controls   ) 
-          this.children.push( new Movement_Controls( webgl_manager ) );
+          this.children.push( new defs.Movement_Controls( webgl_manager ) );
 
         webgl_manager.globals.graphics_state.set_camera( Mat4.look_at( Vec.of( 0,0,5 ), Vec.of( 0,0,0 ), Vec.of( 0,1,0 ) ) );
 
         const r = webgl_manager.width/webgl_manager.height;
         webgl_manager.globals.graphics_state.projection_transform = Mat4.perspective( Math.PI/4, r, .1, 1000 );
 
-        this.shapes = { box:   new Cube(),
-                        box_2: new Cube(),
-                        axis:  new Axis_Arrows()
+        this.shapes = { box:   new defs.Cube(),
+                        box_2: new defs.Cube(),
+                        axis:  new defs.Axis_Arrows()
                       }
         this.shapes.box_2.arrays.texture_coord = this.shapes.box_2.arrays.texture_coord.map( p => p.times( 2 ) );
 
@@ -27,7 +27,7 @@ export class Scene_To_Texture_Demo extends Scene
         this.scratchpad.height  = 256;                // Initial image source: Blank gif file:
         this.texture = new Texture ( "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" );
 
-        this.shader = new Phong_Shader();
+        this.shader = new defs.Phong_Shader();
         this.materials =
           {  a: this.shader.material({ ambient: 1, texture: new Texture( "assets/rgb.jpg" ) }),
              b: this.shader.material({ ambient: 1, texture: this.texture })

@@ -1,7 +1,7 @@
-import * as classes from './common.js';
-Object.assign( window, classes );                                // Store these classes in global scope so we can use them anywhere.
-window.classes = Object.assign( {}, window.classes, classes );   // Also copy them to window.classes so we can list them all out anytime.
-
+import {tiny, defs} from './common.js';
+const { Vec, Mat, Mat4, Color, Light, 
+        Shape, Shader, Scene, Texture } = tiny;           // Pull these names into this module's scope for convenience.
+        
 export class Many_Lights_Demo extends Scene  // How to make the illusion that there are many lights, despite only passing
 { constructor( webgl_manager )                         // two to the shader.  We re-locate the lights in between individual shape draws.
     { super(   webgl_manager );
@@ -9,8 +9,8 @@ export class Many_Lights_Demo extends Scene  // How to make the illusion that th
       webgl_manager.globals.graphics_state.set_camera( Mat4.look_at( ...Vec.cast( [ this.rows/2,5,5 ], [this.rows/2,0,-4], [0,1,0] ) ) );
       webgl_manager.globals.graphics_state.projection_transform = Mat4.perspective( Math.PI/4, webgl_manager.width/webgl_manager.height, .1, 1000 );                 
 
-      this.shapes = { cube: new Cube() };
-      this.shader = new Fake_Bump_Map();
+      this.shapes = { cube: new defs.Cube() };
+      this.shader = new defs.Fake_Bump_Map();
       this.brick = this.shader.material({ ambient: .05, diffusivity: .5, specularity: .5, smoothness: 10, 
                               texture: new Texture( "assets/rgb.jpg" ) })
                               .override( Color.of( 1,1,1,1 ) );

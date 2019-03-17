@@ -1,6 +1,6 @@
-import * as classes from './common.js';
-Object.assign( window, classes );                                // Store these classes in global scope so we can use them anywhere.
-window.classes = Object.assign( {}, window.classes, classes );   // Also copy them to window.classes so we can list them all out anytime.
+import {tiny, defs} from './common.js';
+const { Vec, Mat, Mat4, Color, Light, Overridable,
+        Shape, Shader, Scene, Texture } = tiny;           // Pull these names into this module's scope for convenience.
 
 export class Basic_Phong extends Shader 
 { material( options )                      // Phong Materials expect you to pass in options like the following:
@@ -377,13 +377,13 @@ export class Phong_Shader_3 extends Basic_Phong_Optimized             { }
 export class Phong_Comparison_Demo extends Scene
 { constructor( webgl_manager )
     { super( webgl_manager );
-      this.shapes = { ball : new Subdivision_Sphere(3) }
+      this.shapes = { ball : new defs.Subdivision_Sphere(3) }
 
       webgl_manager.globals.graphics_state.set_camera( Mat4.translation([ 0,0,-15 ]) );
       webgl_manager.globals.graphics_state.projection_transform = Mat4.perspective( Math.PI/4, webgl_manager.width/webgl_manager.height, 1, 50 );  
 
       this.index = 0;
-      this.shaders = [ new Phong_Shader(), new Basic_Phong(), new Basic_Phong_Optimized(), 
+      this.shaders = [ new defs.Phong_Shader(), new Basic_Phong(), new Basic_Phong_Optimized(), 
                        new Basic_Phong_Compute_H_E_Outside(), new Basic_Phong_Compute_H_E_L_Outside() ];
 
       this.materials = this.shaders.map( s => s.material({ ambient:.2, smoothness:10 }).override( Color.of( 1,1,0,1 ) ) );

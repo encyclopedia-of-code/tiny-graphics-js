@@ -1,6 +1,6 @@
-import * as classes from './common.js';
-Object.assign( window, classes );                                // Store these classes in global scope so we can use them anywhere.
-window.classes = Object.assign( {}, window.classes, classes );   // Also copy them to window.classes so we can list them all out anytime.
+import {tiny, defs} from './common.js';
+const { Vec, Mat, Mat4, Color, Light, 
+        Shape, Shader, Scene, Texture } = tiny;           // Pull these names into this module's scope for convenience.
 
 export class Body          // Store and update the properties of a 3D body that incrementally moves from its previous place due to velocities.
 { constructor(               shape, material, size )
@@ -96,15 +96,15 @@ export class Test_Data
                         stars : new Texture( "assets/stars.png" ),
                         text  : new Texture( "assets/text.png"  )
                       }
-      this.shapes = { donut  : new Torus          ( 15, 15 ),
-                       cone   : new Closed_Cone    ( 4, 10 ),
-                       capped : new Capped_Cylinder( 4, 12 ),
-                       ball   : new Subdivision_Sphere( 3 ),
-                       cube   : new Cube(),
-                       axis   : new Axis_Arrows(),
-                       prism  : new ( Capped_Cylinder   .prototype.make_flat_shaded_version() )( 10, 10 ),
-                       gem    : new ( Subdivision_Sphere.prototype.make_flat_shaded_version() )( 2 ),
-                       donut  : new ( Torus             .prototype.make_flat_shaded_version() )( 20, 20 ) 
+      this.shapes = { donut  : new defs.Torus          ( 15, 15 ),
+                      cone   : new defs.Closed_Cone    ( 4, 10 ),
+                      capped : new defs.Capped_Cylinder( 4, 12 ),
+                      ball   : new defs.Subdivision_Sphere( 3 ),
+                      cube   : new defs.Cube(),
+                      axis   : new defs.Axis_Arrows(),
+                      prism  : new ( defs.Capped_Cylinder   .prototype.make_flat_shaded_version() )( 10, 10 ),
+                      gem    : new ( defs.Subdivision_Sphere.prototype.make_flat_shaded_version() )( 2 ),
+                      donut  : new ( defs.Torus             .prototype.make_flat_shaded_version() )( 20, 20 ) 
                     };
       const lights = webgl_manager.globals.graphics_state.lights;
       if( !lights || !lights.length ) webgl_manager.globals.graphics_state.lights = [ new Light( Vec.of( 7,15,20,0 ), Color.of( 1,1,1,1 ), 100000 ) ];
@@ -121,17 +121,17 @@ export class Inertia_Demo extends Simulation    // Demonstration: Let random ini
 { constructor(  webgl_manager )
     { super(    webgl_manager );
       if( !webgl_manager.globals.has_controls   )
-        this.children.push( new Movement_Controls( webgl_manager ) );
+        this.children.push( new defs.Movement_Controls( webgl_manager ) );
       if( !webgl_manager.globals.has_info_table )
-        this.children.push( new Global_Info_Table( webgl_manager ) );
+        this.children.push( new defs.Global_Info_Table( webgl_manager ) );
       
       webgl_manager.globals.graphics_state.set_camera( Mat4.translation([ 0,0,-50 ]) );
       webgl_manager.globals.graphics_state.projection_transform = Mat4.perspective( Math.PI/4, webgl_manager.width/webgl_manager.height, 1, 500 );
       
       this.data = new Test_Data( webgl_manager );
       this.shapes = Object.assign( {}, this.data.shapes );
-      this.shapes.square = new Square();
-      this.material = new Phong_Shader( webgl_manager ).material({ ambient:.4, texture: this.data.textures.stars })
+      this.shapes.square = new defs.Square();
+      this.material = new defs.Phong_Shader( webgl_manager ).material({ ambient:.4, texture: this.data.textures.stars })
                                                        .override( Color.of( .4,.8,.4,1 ) );
     }
   random_color() { return this.material.override( Color.of( .6,.6*Math.random(),.6*Math.random(),1 ) ); }
@@ -167,18 +167,18 @@ export class Collision_Demo extends Simulation    // Demonstration: Detect when 
 { constructor(  webgl_manager )                   // collide with one another, coloring them red.
     { super(    webgl_manager );
       if( !webgl_manager.globals.has_controls   )
-        this.children.push( new Movement_Controls( webgl_manager ) );
+        this.children.push( new defs.Movement_Controls( webgl_manager ) );
       if( !webgl_manager.globals.has_info_table )
-        this.children.push( new Global_Info_Table( webgl_manager ) );       
+        this.children.push( new defs.Global_Info_Table( webgl_manager ) );       
 
       webgl_manager.globals.graphics_state.set_camera( Mat4.translation([ 0,0,-50 ]) );
       webgl_manager.globals.graphics_state.projection_transform = Mat4.perspective( Math.PI/4, webgl_manager.width/webgl_manager.height, 1, 500 );
 
       this.data = new Test_Data( webgl_manager );
       this.shapes = Object.assign( {}, this.data.shapes );
-      this.collider = new Subdivision_Sphere(1);        // Make a simpler dummy shape for representing all other shapes during collisions.
+      this.collider = new defs.Subdivision_Sphere(1);        // Make a simpler dummy shape for representing all other shapes during collisions.
 
-      this.shader = new Phong_Shader();
+      this.shader = new defs.Phong_Shader();
       this.inactive_color = this.shader.material({ ambient: .2, texture: this.data.textures.rgb })
                                               .override( Color.of( .5,.5,.5,1 ) );
       this.active_color = this.inactive_color.override( { color: Color.of( .5,0,0,1 ), ambient: .5 } );
