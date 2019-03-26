@@ -27,6 +27,8 @@ import { Text_Demo }
   from "./text-demo.js"  
 import { Tutorial_Animation, Transforms_Sandbox }
   from './transforms-sandbox.js';
+import { Nesting_Test }
+  from './nesting-test.js';
 
 Object.assign( defs, 
                      { Phong_Comparison_Demo },
@@ -36,14 +38,15 @@ Object.assign( defs,
                      { Obj_File_Demo },
                      { Scene_To_Texture_Demo },
                      { Text_Demo },
-                     { Tutorial_Animation, Transforms_Sandbox } );
+                     { Tutorial_Animation, Transforms_Sandbox },
+                     { Nesting_Test } );
 
 
     // ******************** End extra step
 
 // (Can define Main_Scene's class here)
 
-const Main_Scene = Phong_Comparison_Demo;
+const Main_Scene = Nesting_Test;
 const Additional_Scenes = [];
 
 export { Main_Scene, Additional_Scenes, Canvas_Widget, Code_Widget, defs }
