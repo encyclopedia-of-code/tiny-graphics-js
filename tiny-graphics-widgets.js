@@ -115,7 +115,7 @@ class Controls_Widget                  // One of these widgets can draw one pane
     }
 }
 
-  
+
 const Code_Manager = widgets.Code_Manager =
 class Code_Manager                     // Break up a string containing code (any es6 JavaScript).  The parser expression
 {                                             // is from https://github.com/lydell/js-tokens which states the following limitation:
@@ -238,5 +238,14 @@ class Code_Widget                      // One of these panels draws a code navig
             span.style.color = color_map[t.type];
             span.textContent = t.value;
           }
+    }
+}
+
+const Text_Widget = widgets.Text_Widget =
+class Text_Widget
+{ constructor( element, selected_class )
+    { element = document.querySelector( "#" + element );
+
+      selected_class.show_explanation( element );
     }
 }

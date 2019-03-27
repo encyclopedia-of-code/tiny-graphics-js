@@ -55,7 +55,7 @@ export class Nesting_Test extends Scene    // This Scene can be added to a displ
       }
     show_explanation( document_element )          // Write the demo's description (a big long string) onto the web document.
       { 
-        new Canvas_Widget( document_element, this.test_scene );
+        new tiny.Canvas_Widget( document_element, this.test_scene );
       }
     draw_arm( context, graphics_state, model_transform )                   // An example of how to break up the work of drawing into other functions.
       { const arm = model_transform.times( Mat4.translation([ 0,0,3+1 ]) );
