@@ -7,20 +7,20 @@ export const widgets = {};
 
 const Canvas_Widget = widgets.Canvas_Widget =
 class Canvas_Widget                    // Canvas_Widget embeds a WebGL demo onto a website, along with various panels of controls.
-{ constructor(     element, main_scene, additional_scenes, show_controls = true )   // One panel exists per each scene that's used in the canvas.  You can use up
-    { this.create( element, main_scene, additional_scenes, show_controls )      // to 16 Canvas_Widgets; browsers support up to 16 WebGL contexts per page.    
-
+{ constructor( element, main_scene, additional_scenes, options )   // One panel exists per each scene that's used in the canvas.  You can use up
+    {                                                              // to 16 Canvas_Widgets; browsers support up to 16 WebGL contexts per page.    
+      this.element = element;
+      Object.assign( this, { show_controls: true, show_explanation: true }, options )
       const rules = [ ".canvas-widget { width: 1080px; background: DimGray }",
                       ".canvas-widget canvas { width: 1080px; height: 600px; margin-bottom:-3px }" ];
                       
       if( document.styleSheets.length == 0 ) document.head.appendChild( document.createElement( "style" ) );
       for( const r of rules ) document.styleSheets[document.styleSheets.length - 1].insertRule( r, 0 )
-    }
-  create( element, main_scene, additional_scenes, show_controls )
-    { this.patch_ios_bug();
-      try  { this.populate_canvas( element, main_scene, additional_scenes, show_controls );
+
+      this.patch_ios_bug();
+      try  { this.populate_canvas( main_scene, additional_scenes );
            } catch( error )
-           { document.querySelector( "#" + element ).innerHTML = "<H1>Error loading the demo.</H1>" + error }
+           { element.innerHTML = "<H1>Error loading the demo.</H1>" + error }
     }
   patch_ios_bug()                               // Correct a flaw in Webkit (iPhone devices; safari mobile) that 
     { try{ Vec.of( 1,2,3 ).times(2) }           // breaks TypedArray.from() and TypedArray.of() in subclasses.
@@ -29,19 +29,24 @@ class Canvas_Widget                    // Canvas_Widget embeds a WebGL demo onto
         Vec.from = function(    arr ) { return new Vec( Array.from(    arr ) ) }
       }
     }
-  populate_canvas( element, main_scene, additional_scenes, show_controls )   // Assign a Webgl_Manager to the WebGL canvas.
-    { const canvas = document.querySelector( "#" + element ).appendChild( document.createElement( "canvas" ) );
+  populate_canvas( main_scene, additional_scenes )   // Assign a Webgl_Manager to the WebGL canvas.
+    { this.embedded_explanation_area = this.element.appendChild( document.createElement( "div" ) );
+      this.embedded_explanation_area.className = "text-widget";
+      
+      const canvas = this.element.appendChild( document.createElement( "canvas" ) );
 
       this.webgl_manager = new tiny.Webgl_Manager( canvas, Color.of( 0,0,0,1 ) );  // Second parameter sets background color.
 
-      for( let scene_class_name of [ main_scene, ...additional_scenes ] )   // Register the initially requested scenes to the render loop. 
-        this.webgl_manager.scenes.push( new scene_class_name( this.webgl_manager ) );
+      this.embedded_controls_area = this.element.appendChild( document.createElement( "div" ) );
+      this.embedded_controls_area.className = "controls-widget";
 
+      if( main_scene )
+        for( let scene_class of [ main_scene, ...additional_scenes ] )   // Register the initially requested scenes to the render loop. 
+          this.webgl_manager.scenes.push( new scene_class( this.webgl_manager ) );
 
-      this.embedded_controls = document.querySelector( "#" + element ).appendChild( document.createElement( "div" ) );
-      this.embedded_controls.className = "controls-widget";
-      if( show_controls ) new Controls_Widget( this.webgl_manager.scenes, this.embedded_controls );
-                           
+      this.embedded_controls = new Controls_Widget( this.embedded_controls_area, this.webgl_manager.scenes );
+      this.embedded_explanation = new Text_Widget( this.embedded_explanation_area, this.webgl_manager.scenes[0] );
+
       this.webgl_manager.render();   // Start WebGL initialization.  Note that render() will re-queue itself for more calls.
     }
 }
@@ -49,10 +54,8 @@ class Canvas_Widget                    // Canvas_Widget embeds a WebGL demo onto
 
 const Controls_Widget = widgets.Controls_Widget =
 class Controls_Widget                  // One of these widgets can draw one panel of controls per scene.
-{ constructor( scenes, element )
-    { if( typeof( element ) === "String" ) element = document.querySelector( "#" + element );
-
-      const rules = [ ".controls-widget * { font-family: monospace }",
+{ constructor( element, scenes )
+    { const rules = [ ".controls-widget * { font-family: monospace }",
                       ".controls-widget div { background: white }",
                       ".controls-widget table { border-collapse: collapse; display:block; overflow-x: auto; }",
                       ".controls-widget table.control-box { width: 1080px; border:0; margin:0; max-height:380px; transition:.5s; overflow-y:scroll; background:DimGray }",
@@ -81,29 +84,34 @@ class Controls_Widget                  // One of these widgets can draw one pane
 
       const table = element.appendChild( document.createElement( "table" ) );
       table.className = "control-box";
-      const row = table.insertRow( 0 );
+      this.row = table.insertRow( 0 );
 
       this.panels = [];
+      this.scenes = scenes;
 
-      const open_list = [ ...scenes ];
-      while( open_list.length )                       // Traverse all scenes and their children, recursively
-      { open_list.push( ...open_list[0].children );
-        const scene = open_list.shift();
-
-        const control_box = row.insertCell();
-        this.panels.push( control_box );
-
-        control_box.appendChild( Object.assign( document.createElement("div"), { 
-                                      textContent: scene.constructor.name, className: "control-title" } ) )   // Draw label bar.
-                                              
-        const control_panel = control_box.appendChild( document.createElement( "div" ) );
-        control_panel.className = "control-div";
-        scene.control_panel = control_panel;
-        scene.make_control_panel();           // Draw each registered animation.
-      }
-
+      this.update();
       this.render();
     }
+  update()
+  { this.row.innerHTML = "";
+    const open_list = [ ...this.scenes ];
+    while( open_list.length )                       // Traverse all scenes and their children, recursively
+    { open_list.push( ...open_list[0].children );
+      const scene = open_list.shift();
+
+      const control_box = this.row.insertCell();
+      this.panels.push( control_box );
+
+      control_box.appendChild( Object.assign( document.createElement("div"), { 
+                                    textContent: scene.constructor.name, className: "control-title" } ) )   // Draw label bar.
+
+      const control_panel = control_box.appendChild( document.createElement( "div" ) );
+      control_panel.className = "control-div";
+      scene.control_panel = control_panel;
+      scene.make_control_panel();           // Draw each registered animation.
+    }
+
+  }
   render( time=0 )
     { for( let panel of this.panels )
         for( let live_string of panel.querySelectorAll(".live_string") ) live_string.onload( live_string );
@@ -160,8 +168,6 @@ class Code_Widget                      // One of these panels draws a code navig
 
       if( document.styleSheets.length == 0 ) document.head.appendChild( document.createElement( "style" ) );
       for( const r of rules ) document.styleSheets[document.styleSheets.length - 1].insertRule( r, 0 )
-      
-      element = document.querySelector( "#" + element );
       
       this.definitions = definitions;
       const code_panel = element.appendChild( document.createElement( "div" ) );
@@ -243,9 +249,5 @@ class Code_Widget                      // One of these panels draws a code navig
 
 const Text_Widget = widgets.Text_Widget =
 class Text_Widget
-{ constructor( element, selected_class )
-    { element = document.querySelector( "#" + element );
-
-      selected_class.show_explanation( element );
-    }
+{ constructor( element, selected_class ) { selected_class.show_explanation( element ) }
 }
