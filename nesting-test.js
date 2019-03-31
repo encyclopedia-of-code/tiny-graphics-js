@@ -12,6 +12,7 @@ export class Nesting_Test extends Scene    // This Scene can be added to a displ
           this.children.push( new defs.Movement_Controls( webgl_manager ) ); 
 
         this.test_scene = new defs.Tutorial_Animation( webgl_manager )
+        this.globals = webgl_manager.globals;
           
                 // Define the global camera and projection matrices, which are stored in a scratchpad for globals.  The projection is special 
                 // because it determines how depth is treated when projecting 3D points onto a plane.  The function perspective() makes one.
@@ -54,7 +55,7 @@ export class Nesting_Test extends Scene    // This Scene can be added to a displ
     show_explanation( document_element )          // Write the demo's description (a big long string) onto the web document.
       { const cw = new tiny.Canvas_Widget( document_element, undefined, [] );
         cw.webgl_manager.scenes.push( this.test_scene );
-        cw.embedded_controls.update();
+        cw.webgl_manager.globals = this.globals;
       }
     draw_arm( context, graphics_state, model_transform )                   // An example of how to break up the work of drawing into other functions.
       { const arm = model_transform.times( Mat4.translation([ 0,0,3+1 ]) );
