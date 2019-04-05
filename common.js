@@ -639,7 +639,6 @@ class Movement_Controls extends Scene    // Movement_Controls is a Scene that ca
       [ this.thrust, this.pos, this.z_axis ] = [ Vec.of( 0,0,0 ), Vec.of( 0,0,0 ), Vec.of( 0,0,0 ) ];
       [ this.radians_per_frame, this.meters_per_frame, this.speed_multiplier ] = [ 1/200, 20, 1 ];                    // Constants.
 
-      webgl_manager.globals.controls = this;
       this.add_mouse_controls();
       this.reset();
     }                                        // The camera matrix is not actually stored here inside Movement_Controls; instead, track an

@@ -297,12 +297,12 @@ class Vertex_Buffer extends Graphics_Card_Object
       }                                                                                 // If no indices were provided, assume the 
       else  gl.drawArrays( gl[type], 0, Object.values( this.arrays )[0].length );       // vertices are arranged as triples.
     }
-  draw( context, graphics_state, model_transform, material, type = "TRIANGLES" )
+  draw( context, program_state, model_transform, material, type = "TRIANGLES" )
                                                           // To appear onscreen, a shape of any variety goes through the draw() function,
     {                                                     // which executes the shader programs.  The shaders draw the right shape due to
                                                           // pre-selecting the correct buffer region in the GPU that holds that shape's data.
       const gpu_instance = this.activate( context );
-      material.shader.activate( context, gpu_instance.webGL_buffer_pointers, graphics_state, model_transform, material );
+      material.shader.activate( context, gpu_instance.webGL_buffer_pointers, program_state, model_transform, material );
       this.execute_shaders( context, type );                                                // Run the shaders to draw every triangle now.
     }
 }
@@ -436,23 +436,6 @@ class Overridable     // Class Overridable allows a short way to create modified
 }
 
 
-
-const Graphics_State = tiny.Graphics_State =
-class Graphics_State extends Overridable                 // Stores things that affect multiple shapes, such as lights and the camera.
-{ constructor( camera_transform = Mat4.identity(), projection_transform = Mat4.identity() ) 
-    { super();
-      this.set_camera( camera_transform );
-      Object.assign( this, { projection_transform, animation_time: 0, animation_delta_time: 0 } );
-    }
-  set_camera( matrix )      // It's often useful to cache both the camera matrix and its inverse.  Both are needed
-    {                       // often and matrix inversion is too slow to recompute needlessly.  
-                            // Note that setting a camera matrix traditionally means storing the inverted version, 
-                            // so that's the one this function expects to receive; it automatically sets the other.
-      Object.assign( this, { camera_transform: Mat4.inverse( matrix ), camera_inverse: matrix } )
-    }
-}
-
-
 const Shader = tiny.Shader =
 class Shader extends Graphics_Card_Object
 {                           // Your subclasses of Shader will manage strings of GLSL code that will be sent to the GPU and will run, to
@@ -484,13 +467,13 @@ class Shader extends Graphics_Card_Object
       return gpu_instance;
     }
   make_gpu_representation() { return { program: undefined, gpu_addresses: undefined } }
-  activate( context, buffer_pointers, graphics_state, model_transform, material )
+  activate( context, buffer_pointers, program_state, model_transform, material )
     { const gpu_instance = super.activate( context );
 
       context.useProgram( gpu_instance.program );
 
           // --- Send over all the values needed by this particular shader to the GPU: ---
-      this.update_GPU( context, gpu_instance.gpu_addresses, graphics_state, model_transform, material );
+      this.update_GPU( context, gpu_instance.gpu_addresses, program_state, model_transform, material );
       
           // --- Turn on all the correct attributes and make sure they're pointing to the correct ranges in GPU memory. ---
       for( let [ attr_name, attribute ] of Object.entries( gpu_instance.gpu_addresses.shader_attributes ) )
@@ -549,13 +532,30 @@ class Texture extends Graphics_Card_Object                     // The Texture cl
 }
 
 
+const Program_State = tiny.Program_State =
+class Program_State extends Overridable                 // Stores things that affect multiple shapes, such as lights and the camera.
+{ constructor( camera_transform = Mat4.identity(), projection_transform = Mat4.identity() ) 
+    { super();
+      this.set_camera( camera_transform );
+      const defaults = { projection_transform, animate: true, animation_time: 0, animation_delta_time: 0 };
+      Object.assign( this, defaults );
+    }
+  set_camera( matrix )      // It's often useful to cache both the camera matrix and its inverse.  Both are needed
+    {                       // often and matrix inversion is too slow to recompute needlessly.  
+                            // Note that setting a camera matrix traditionally means storing the inverted version, 
+                            // so that's the one this function expects to receive; it automatically sets the other.
+      Object.assign( this, { camera_transform: Mat4.inverse( matrix ), camera_inverse: matrix } )
+    }
+}
+
+
 const Webgl_Manager = tiny.Webgl_Manager =
 class Webgl_Manager      // This class manages a whole graphics program for one on-page canvas, including its textures, shapes, shaders,
 {                        // and scenes.  In addition to requesting a WebGL context and storing the aforementioned items, it informs the
                          // canvas of which functions to call during events - such as a key getting pressed or it being time to redraw.
   constructor( canvas, background_color, dimensions )
-    { Object.assign( this, { instances: new Map(), scenes: [], prev_time: 0, canvas,
-                             globals: { animate: true, graphics_state: new Graphics_State() } } );
+    { const members = { instances: new Map(), scenes: [], prev_time: 0, canvas, globals: {}, program_state: new Program_State() };
+      Object.assign( this, members );
       
       for( let name of [ "webgl", "experimental-webgl", "webkit-3d", "moz-webgl" ] )   // Get the GPU ready, creating a new WebGL context
         if(  this.context = this.canvas.getContext( name ) ) break;                    // for this canvas.          
@@ -586,8 +586,8 @@ class Webgl_Manager      // This class manages a whole graphics program for one 
       this.context.viewport( 0, 0, width, height );      // Build the canvas's matrix for converting -1 to 1 ranged coords (NCDS)
     }                                                    // into its own pixel coords.
   render( time=0 )                                                // Animate shapes based upon how much measured real time has transpired.
-    {                            this.globals.graphics_state.animation_delta_time = time - this.prev_time;
-      if( this.globals.animate ) this.globals.graphics_state.animation_time      += this.globals.graphics_state.animation_delta_time;
+    {                            this.program_state.animation_delta_time = time - this.prev_time;
+      if( this.globals.animate ) this.program_state.animation_time      += this.program_state.animation_delta_time;
       this.prev_time = time;
 
       const gl = this.context;
@@ -596,7 +596,7 @@ class Webgl_Manager      // This class manages a whole graphics program for one 
       const open_list = [ ...this.scenes ];
       while( open_list.length )                       // Traverse all scenes and their children, recursively
       { open_list.push( ...open_list[0].children );
-        open_list.shift().display( gl, this.globals.graphics_state );           // Draw each registered animation.
+        open_list.shift().display( gl, this.program_state );           // Draw each registered animation.
       }
       this.event = window.requestAnimFrame( this.render.bind( this ) );   // Now that this frame is drawn, request that render() happen 
     }                                                                     // again as soon as all other web page events are processed.
@@ -607,10 +607,9 @@ const Scene = tiny.Scene =
 class Scene          // The Scene superclass is the base class for any scene part or code snippet that you can add to a
 {                           // canvas.  Make your own subclass(es) of this and override their methods "display()" and "make_control_panel()"
                             // to make them do something.  Finally, push them onto your Webgl_Manager's "scenes" array.
-  constructor( webgl_manager )
+  constructor()
     { this.children = [];
       this.desired_controls_position = 0; // Set as undefined to omit this scene's control panel.  Set to negative/positive to move its panel.
-      this.globals = webgl_manager.globals;      
                                                           // Set up how we'll handle key presses for the scene's control panel:
       const callback_behavior = ( callback, event ) => 
            { callback( event );
@@ -647,5 +646,5 @@ class Scene          // The Scene superclass is the base class for any scene par
       if( !shortcut_combination ) return;
       this.key_controls.add( shortcut_combination, press, release );
     }                                                          // You have to override the following functions to use class Scene.
-  make_control_panel(){}  display( graphics_state ){}  show_explanation( document_section ){}
+  make_control_panel(){}  display( context, program_state ){}  show_explanation( document_section ){}
 }

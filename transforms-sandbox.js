@@ -6,17 +6,9 @@ const { Triangle, Square, Tetrahedron, Windmill, Cube, Subdivision_Sphere } = de
 export class Tutorial_Animation extends Scene    // This Scene can be added to a display canvas.  This particular one
   {                                                 // sets up the machinery to draw a simple scene demonstrating a few concepts.
                                                     // Scroll down to the display() method at the bottom to see where the shapes are drawn.
-    constructor( webgl_manager )             // The scene begins by requesting the camera, shapes, and materials it will need.
-      { super( webgl_manager );              // First, include a couple other helpful components, including one that moves you around:
-        if( !webgl_manager.globals.has_controls   ) 
-          this.children.push( new defs.Movement_Controls( webgl_manager ) ); 
+    constructor()             // The scene begins by requesting the camera, shapes, and materials it will need.
+      { super();              // First, include a couple other helpful components, including one that moves you around:
           
-                // Define the global camera and projection matrices, which are stored in a scratchpad for globals.  The projection is special 
-                // because it determines how depth is treated when projecting 3D points onto a plane.  The function perspective() makes one.
-                // Its input arguments are field of view, aspect ratio, and distances to the near plane and far plane.
-        webgl_manager.globals.graphics_state.set_camera( Mat4.translation([ 0,0,-30 ]) );    // Locate the camera here (inverted matrix).
-        webgl_manager.globals.graphics_state.projection_transform = Mat4.perspective( Math.PI/4, webgl_manager.width/webgl_manager.height, .1, 1000 );
-
         this.shapes = { 'triangle'        : new Triangle(),                // At the beginning of our program, load one of each of these shape 
                         'strip'           : new Square(),                  // definitions onto the GPU.  NOTE:  Only do this ONCE per shape
                         'bad_tetrahedron' : new Tetrahedron( false ),      // design.  Once you've told the GPU what the design of a cube is,
@@ -60,10 +52,20 @@ export class Tutorial_Animation extends Scene    // This Scene can be added to a
       { const arm = model_transform.times( Mat4.translation([ 0,0,3+1 ]) );
         this.shapes.ball.draw( context, graphics_state, arm, this.materials.plastic.override( Color.of( 0,0,1,.7 ) ) );
       }
-    display( context, graphics_state )
+    display( context, globals, graphics_state )
       { let model_transform = Mat4.identity();      // This will be a temporary matrix that helps us draw most shapes.
                                                     // It starts over as the identity every single frame - coordinate axes at the origin.
         graphics_state.lights = this.lights;        // Override graphics_state with the default lights of this class. 
+
+        if( !globals.controls ) 
+        { this.children.push( globals.controls = new defs.Movement_Controls() ); 
+        
+                    // Define the global camera and projection matrices, which are stored in a scratchpad for globals.  The projection is special 
+                    // because it determines how depth is treated when projecting 3D points onto a plane.  The function perspective() makes one.
+                    // Its input arguments are field of view, aspect ratio, and distances to the near plane and far plane.
+          graphics_state.set_camera( Mat4.translation([ 0,0,-30 ]) );    // Locate the camera here (inverted matrix).
+          graphics_state.projection_transform = Mat4.perspective( Math.PI/4, webgl_manager.width/webgl_manager.height, .1, 1000 );
+        }
 
         const yellow = Color.of( 1,1,0,1 ), gray = Color.of( .5,.5,.5,1 ), green = Color.of( 0,.5,0,1 );  
        /**********************************

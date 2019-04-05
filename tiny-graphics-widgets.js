@@ -7,8 +7,8 @@ export const widgets = {};
 
 const Canvas_Widget = widgets.Canvas_Widget =
 class Canvas_Widget                    // Canvas_Widget embeds a WebGL demo onto a website, along with various panels of controls.
-{ constructor( element, main_scene, additional_scenes, options )   // One panel exists per each scene that's used in the canvas.  You can use up
-    {                                                              // to 16 Canvas_Widgets; browsers support up to 16 WebGL contexts per page.    
+{ constructor( element, initial_scenes, options )   // One panel exists per each scene that's used in the canvas.  You can use up
+    {                                               // to 16 Canvas_Widgets; browsers support up to 16 WebGL contexts per page.
       this.element = element;
       Object.assign( this, { show_controls: true, show_explanation: true }, options )
       const rules = [ ".canvas-widget { width: 1080px; background: DimGray }",
@@ -17,10 +17,24 @@ class Canvas_Widget                    // Canvas_Widget embeds a WebGL demo onto
       if( document.styleSheets.length == 0 ) document.head.appendChild( document.createElement( "style" ) );
       for( const r of rules ) document.styleSheets[document.styleSheets.length - 1].insertRule( r, 0 )
 
+      this.embedded_explanation_area = this.element.appendChild( document.createElement( "div" ) );
+      this.embedded_explanation_area.className = "text-widget";
+      
+      const canvas = this.element.appendChild( document.createElement( "canvas" ) );
+
       this.patch_ios_bug();
-      try  { this.populate_canvas( main_scene, additional_scenes );
-           } catch( error )
-           { element.innerHTML = "<H1>Error loading the demo.</H1>" + error }
+      this.webgl_manager = new tiny.Webgl_Manager( canvas, Color.of( 0,0,0,1 ) );  // Second parameter sets background color.
+
+      this.embedded_controls_area = this.element.appendChild( document.createElement( "div" ) );
+      this.embedded_controls_area.className = "controls-widget";
+
+      if( initial_scenes )
+        this.webgl_manager.scenes.push( ...initial_scenes );
+
+      this.embedded_controls = new Controls_Widget( this.embedded_controls_area,    this.webgl_manager.scenes );
+      this.embedded_explanation  = new Text_Widget( this.embedded_explanation_area, this.webgl_manager.scenes );
+
+      this.webgl_manager.render();   // Start WebGL initialization.  Note that render() will re-queue itself for more calls.
     }
   patch_ios_bug()                               // Correct a flaw in Webkit (iPhone devices; safari mobile) that 
     { try{ Vec.of( 1,2,3 ).times(2) }           // breaks TypedArray.from() and TypedArray.of() in subclasses.
@@ -28,26 +42,6 @@ class Canvas_Widget                    // Canvas_Widget embeds a WebGL demo onto
       { Vec.of   = function( ...arr ) { return new Vec( Array.from( ...arr ) ) }
         Vec.from = function(    arr ) { return new Vec( Array.from(    arr ) ) }
       }
-    }
-  populate_canvas( main_scene, additional_scenes )   // Assign a Webgl_Manager to the WebGL canvas.
-    { this.embedded_explanation_area = this.element.appendChild( document.createElement( "div" ) );
-      this.embedded_explanation_area.className = "text-widget";
-      
-      const canvas = this.element.appendChild( document.createElement( "canvas" ) );
-
-      this.webgl_manager = new tiny.Webgl_Manager( canvas, Color.of( 0,0,0,1 ) );  // Second parameter sets background color.
-
-      this.embedded_controls_area = this.element.appendChild( document.createElement( "div" ) );
-      this.embedded_controls_area.className = "controls-widget";
-
-      if( main_scene )
-        for( let scene_class of [ main_scene, ...additional_scenes ] )   // Register the initially requested scenes to the render loop. 
-          this.webgl_manager.scenes.push( new scene_class( this.webgl_manager ) );
-
-      this.embedded_controls = new Controls_Widget( this.embedded_controls_area,    this.webgl_manager.scenes );
-      this.embedded_explanation  = new Text_Widget( this.embedded_explanation_area, this.webgl_manager.scenes );
-
-      this.webgl_manager.render();   // Start WebGL initialization.  Note that render() will re-queue itself for more calls.
     }
 }
 
