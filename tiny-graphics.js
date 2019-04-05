@@ -1,11 +1,7 @@
 // tiny-graphics.js - A file that shows how to organize a complete graphics program.  It wraps common WebGL commands and math.
 // The file tiny-graphics-widgets.js additionally wraps web page interactions.  By Garett.
 
-export const tiny = {};       // We want to access our exports through normal JS objects, not ES Modules, to preserve
-                              // the order of definitions in our files (ES Modules alphabetize them). 
-
-const Vec = tiny.Vec =
-class Vec extends Float32Array       // Vectors of floating point numbers.  This puts vector math into JavaScript.
+export class Vec extends Float32Array       // Vectors of floating point numbers.  This puts vector math into JavaScript.
                                             // See these examples for usage of each function:
   //     equals: "Vec.of( 1,0,0 ).equals( Vec.of( 1,0,0 ) )" returns true.
   //       plus: "Vec.of( 1,0,0 ).plus  ( Vec.of( 1,0,0 ) )" returns the Vec [ 2,0,0 ].
@@ -51,8 +47,8 @@ class Vec extends Float32Array       // Vectors of floating point numbers.  This
   to_string() { return "[vec " + this.join( ", " ) + "]" }
 }
 
-const Mat = tiny.Mat =
-class Mat extends Array                         // M by N matrices of floats.  Enables matrix and vector math.  Usage:
+
+export class Mat extends Array                         // M by N matrices of floats.  Enables matrix and vector math.  Usage:
   //  "Mat( rows )" returns a Mat with those rows, where rows is an array of float arrays.
   //  "M.set_identity( m, n )" assigns the m by n identity matrix to Mat M.
   //  "M.sub_block( start, end )" where start and end are each a [ row, column ] pair returns a sub-rectangle cut out from M.
@@ -104,8 +100,7 @@ class Mat extends Array                         // M by N matrices of floats.  E
 }
 
 
-const Mat4 = tiny.Mat4 =
-class Mat4 extends Mat                               // Generate special 4x4 matrices that are useful for graphics.
+export class Mat4 extends Mat                               // Generate special 4x4 matrices that are useful for graphics.
 { static identity()       { return Mat.of( [ 1,0,0,0 ], [ 0,1,0,0 ], [ 0,0,1,0 ], [ 0,0,0,1 ] ); };
   static rotation( angle, axis )                                             // Requires a scalar (angle) and a 3x1 Vec (axis)
                           { let [ x, y, z ] = Vec.from( axis ).normalized(), 
@@ -175,55 +170,7 @@ class Mat4 extends Mat                               // Generate special 4x4 mat
 }
 
 
-const Keyboard_Manager = tiny.Keyboard_Manager =
-class Keyboard_Manager     // This class maintains a running list of which keys are depressed.  You can map combinations of shortcut
-{                        // keys to trigger callbacks you provide by calling add().  See add()'s arguments.  The shortcut list is 
-                         // indexed by convenient strings showing each bound shortcut combination.  The constructor optionally
-                         // takes "target", which is the desired DOM element for keys to be pressed inside of, and
-                         // "callback_behavior", which will be called for every key action and allows extra behavior on each event
-                         // -- giving an opportunity to customize their bubbling, preventDefault, and more.  It defaults to no
-                         // additional behavior besides the callback itself on each assigned key action.
-  constructor( target = document, callback_behavior = ( callback, event ) => callback( event ) )
-    { this.saved_controls = {};     
-      this.actively_pressed_keys = new Set();
-      this.callback_behavior = callback_behavior;
-      target.addEventListener( "keydown",     this.key_down_handler.bind( this ) );
-      target.addEventListener( "keyup",       this.  key_up_handler.bind( this ) );
-      window.addEventListener( "focus", () => this.actively_pressed_keys.clear() );  // Deal with stuck keys during focus change.
-    }
-  key_down_handler( event )
-    { if( [ "INPUT", "TEXTAREA" ].includes( event.target.tagName ) ) return;    // Don't interfere with typing.
-      this.actively_pressed_keys.add( event.key );                              // Track the pressed key.
-      for( let saved of Object.values( this.saved_controls ) )                  // Re-check all the keydown handlers.
-      { if( saved.shortcut_combination.every( s => this.actively_pressed_keys.has( s ) )
-          && event. ctrlKey   == saved.shortcut_combination.includes( "Control" )
-          && event.shiftKey   == saved.shortcut_combination.includes( "Shift" )
-          && event.  altKey   == saved.shortcut_combination.includes( "Alt" )
-          && event. metaKey   == saved.shortcut_combination.includes( "Meta" ) )  // Modifiers must exactly match.
-            this.callback_behavior( saved.callback, event );                      // The keys match, so fire the callback.
-      }
-    }
-  key_up_handler( event )
-    { const lower_symbols = "qwertyuiopasdfghjklzxcvbnm1234567890-=[]\\;',./",
-            upper_symbols = "QWERTYUIOPASDFGHJKLZXCVBNM!@#$%^&*()_+{}|:\"<>?";
-
-      const lifted_key_symbols = [ event.key, upper_symbols[ lower_symbols.indexOf( event.key ) ],
-                                              lower_symbols[ upper_symbols.indexOf( event.key ) ] ];
-                                                                                        // Call keyup for any shortcuts 
-      for( let saved of Object.values( this.saved_controls ) )                          // that depended on the released
-        if( lifted_key_symbols.some( s => saved.shortcut_combination.includes( s ) ) )  // key or its shift-key counterparts.
-          this.callback_behavior( saved.keyup_callback, event );                  // The keys match, so fire the callback.
-      lifted_key_symbols.forEach( k => this.actively_pressed_keys.delete( k ) );
-    }
-    // Method add() adds a keyboard operation.  The argument shortcut_combination wants an array of strings that follow 
-    // standard KeyboardEvent key names. Both the keyup and keydown callbacks for any key combo are optional.
-  add( shortcut_combination, callback = () => {}, keyup_callback = () => {} )
-    { this.saved_controls[ shortcut_combination.join('+') ] = { shortcut_combination, callback, keyup_callback }; }
-}
-
-
-const Graphics_Card_Object = tiny.Graphics_Card_Object =
-class Graphics_Card_Object       // Extending this class allows an object to, whenever used, copy
+export class Graphics_Card_Object       // Extending this class allows an object to, whenever used, copy
 {                                       // itself onto a GPU context whenever it has not already been.
   constructor() { this.gpu_instances = new Map() }     // Track which GPU contexts this object has copied itself onto.
   copy_onto_graphics_card( context, ...args )
@@ -258,8 +205,7 @@ class Graphics_Card_Object       // Extending this class allows an object to, wh
 }
 
 
-const Vertex_Buffer = tiny.Vertex_Buffer =
-class Vertex_Buffer extends Graphics_Card_Object
+export class Vertex_Buffer extends Graphics_Card_Object
 {                             // To use Vertex_Buffer, make a subclass of it that overrides the constructor and fills in the right fields.  
                               // Vertex_Buffer organizes data related to one 3D shape and copies it into GPU memory.  That data is broken
                               // down per vertex in the shape.  You can make several fields that you can look up in a vertex; for each
@@ -308,91 +254,9 @@ class Vertex_Buffer extends Graphics_Card_Object
 }
 
 
-const Shape = tiny.Shape =
-class Shape extends Vertex_Buffer
-{           // This class is used the same way as Vertex_Buffer, by subclassing it and writing a constructor that fills in certain fields.
-            // Shape extends Vertex_Buffer's functionality for copying shapes into buffers the graphics card's memory.  It also adds the
-            // basic assumption that each vertex will have a 3D position and a 3D normal vector as available fields to look up.  This means
-            // there will be at least two arrays for the user to fill in: "positions" enumerating all the vertices' locations, and "normals"
-            // enumerating all vertices' normal vectors pointing away from the surface.  Both are of type Vec of length 3.  By including 
-            // these, Shape adds to class Vertex_Buffer the ability to compound shapes in together into a single performance-friendly
-            // Vertex_Buffer, placing this shape into a larger one at a custom transforms by adjusting positions and normals with a call to
-            // insert_transformed_copy_into().  Compared to Vertex_Buffer we also gain the ability via flat-shading to compute normals from
-            // scratch for a shape that has none, and the ability to eliminate inter-triangle sharing of vertices for any data we want to
-            // abruptly vary as we cross over a triangle edge (such as texture images).
+export const Color = Vec;    // Just an alias.  Colors are special 4x1 vectors expressed as ( red, green, blue, opacity ) each from 0 to 1.
 
-            // Like in class Vertex_Buffer we have an array "indices" to fill in as well, a list of index triples defining which three 
-            // vertices belong to each triangle.  Call new on a Shape and fill its arrays (probably in an overridden constructor).
-
-            // IMPORTANT: To use this class you must define all fields for every single vertex by filling in the arrays of each field, so 
-            // this includes positions, normals, any more fields a specific Shape subclass decides to include per vertex, such as texture 
-            // coordinates.  Be warned that leaving any empty elements in the lists will result in an out of bounds GPU warning (and nothing
-            // drawn) whenever the "indices" list contains references to that position in the lists.
-  static insert_transformed_copy_into( recipient, args, points_transform = Mat4.identity() )    // For building compound shapes.
-    { const temp_shape = new this( ...args );  // If you try to bypass making a temporary shape and instead directly insert new data into
-                                               // the recipient, you'll run into trouble when the recursion tree stops at different depths.
-      recipient.indices.push( ...temp_shape.indices.map( i => i + recipient.arrays.position.length ) );
-      
-      for( let a in temp_shape.arrays )                // Copy each array from temp_shape into the recipient shape.
-      { if( a == "position" || a == "tangents" )       // Apply points_transform to all points added during this call:
-          recipient.arrays[a].push( ...temp_shape.arrays[a].map( p => points_transform.times( p.to4(1) ).to3() ) );
-        else if( a == "normal" )                       // Do the same for normals, but use the inverse transpose matrix as math requires:
-          recipient.arrays[a].push( ...temp_shape.arrays[a].map( n => Mat4.inverse( points_transform.transposed() ).times( n.to4(1) ).to3() ) );
-        else recipient.arrays[a].push( ...temp_shape.arrays[a] );     // All other arrays get copied in unmodified.
-      }
-    }
-  make_flat_shaded_version()                            // Auto-generate a new class that re-uses any Shape's points, 
-    { return class extends this.constructor             // but with new normals generated from flat shading.
-      { constructor( ...args ) { super( ...args );  this.duplicate_the_shared_vertices();  this.flat_shade(); }
-        duplicate_the_shared_vertices()
-          {   //  Prepare an indexed shape for flat shading if it is not ready -- that is, if there are any edges where 
-              //  the same vertices are indexed by both the adjacent triangles, and those two triangles are not co-planar.
-              //  The two would therefore fight over assigning different normal vectors to the shared vertices.
-            const arrays = {};
-            for( let arr in this.arrays ) arrays[ arr ] = [];
-            for( let index of this.indices )
-              for( let arr in this.arrays )
-                arrays[ arr ].push( this.arrays[ arr ][ index ] );      // Make re-arranged versions of each data field, with
-            Object.assign( this.arrays, arrays );                       // copied values every time an index was formerly re-used.
-            this.indices = this.indices.map( (x,i) => i );    // Without shared vertices, we can use sequential numbering.
-          }
-        flat_shade()                // Automatically assign the correct normals to each triangular element to achieve flat shading.
-          {                         // Affect all recently added triangles (those past "offset" in the list).  Assumes that no
-            this.indices.length = false;   // vertices are shared across seams.   First, iterate through the index or position triples:
-            for( let counter = 0; counter < (this.indices.length ? this.indices.length : this.arrays.position.length); counter += 3 )
-            { const indices = this.indices.length ? [ this.indices[ counter ], this.indices[ counter + 1 ], this.indices[ counter + 2 ] ]
-                                                  : [ counter, counter + 1, counter + 2 ];
-              const [ p1, p2, p3 ] = indices.map( i => this.arrays.position[ i ] );
-              const n1 = p1.minus(p2).cross( p3.minus(p1) ).normalized();          // Cross the two edge vectors of this
-                                                                                   // triangle together to get its normal.
-               if( n1.times(.1).plus(p1).norm() < p1.norm() ) n1.scale(-1);        // Flip the normal if adding it to the 
-                                                                                   // triangle brings it closer to the origin.
-              for( let i of indices ) this.arrays.normal[ i ] = Vec.from( n1 );    // Propagate this normal to the 3 vertices.
-            }
-          }
-      }
-    }
-  normalize_positions( keep_aspect_ratios = true )
-    { let p_arr = this.arrays.position;
-      const average_position = p_arr.reduce( (acc,p) => acc.plus( p.times( 1/p_arr.length ) ), Vec.of( 0,0,0 ) );
-      p_arr = p_arr.map( p => p.minus( average_position ) );           // Center the point cloud on the origin.
-      const average_lengths  = p_arr.reduce( (acc,p) => 
-                                         acc.plus( p.map( x => Math.abs(x) ).times( 1/p_arr.length ) ), Vec.of( 0,0,0 ) );
-      if( keep_aspect_ratios )                            // Divide each axis by its average distance from the origin.
-        this.arrays.position = p_arr.map( p => p.map( (x,i) => x/average_lengths[i] ) );    
-      else
-        this.arrays.position = p_arr.map( p => p.times( 1/average_lengths.norm() ) );
-    }
-}
-
-const Light = tiny.Light =
-class Light                                             // The properties of one light in the scene (Two 4x1 Vecs and a scalar)
-{ constructor( position, color, size ) { Object.assign( this, { position, color, attenuation: 1/size } ); }  }
-
-const Color = tiny.Color = Vec;    // Just an alias.  Colors are special 4x1 vectors expressed as ( red, green, blue, opacity ) each from 0 to 1.
-
-const Graphics_Addresses = tiny.Graphics_Addresses =
-class Graphics_Addresses    // For organizing communication with the GPU for Shaders.  Once we've compiled the Shader, we can query 
+export class Graphics_Addresses    // For organizing communication with the GPU for Shaders.  Once we've compiled the Shader, we can query 
 {                           // some things about the compiled program, such as the memory addresses it will use for uniform variables, 
                             // and the types and indices of its per-vertex attributes.  We'll need those for building vertex buffers.
   constructor( program, gl )
@@ -416,9 +280,8 @@ class Graphics_Addresses    // For organizing communication with the GPU for Sha
 }
 
 
-const Overridable = tiny.Overridable =
-class Overridable     // Class Overridable allows a short way to create modified versions of JavaScript objects.  Some properties are
-{                            // replaced with substitutes that you provide, without having to write out a new object from scratch.
+export class Overridable     // Class Overridable allows a short way to create modified versions of JavaScript objects.  Some properties are
+{                     // replaced with substitutes that you provide, without having to write out a new object from scratch.
        // To override, simply pass in "replacement", a JS Object of keys/values you want to override, to generate a new object.
        // For shorthand you can leave off the key and only provide a value (pass in directly as "replacement") and a guess will
        // be used for which member you want overridden based on type.  
@@ -437,8 +300,7 @@ class Overridable     // Class Overridable allows a short way to create modified
 
 
 
-const Graphics_State = tiny.Graphics_State =
-class Graphics_State extends Overridable                 // Stores things that affect multiple shapes, such as lights and the camera.
+export class Graphics_State extends Overridable                 // Stores things that affect multiple shapes, such as lights and the camera.
 { constructor( camera_transform = Mat4.identity(), projection_transform = Mat4.identity() ) 
     { super();
       this.set_camera( camera_transform );
@@ -453,8 +315,7 @@ class Graphics_State extends Overridable                 // Stores things that a
 }
 
 
-const Shader = tiny.Shader =
-class Shader extends Graphics_Card_Object
+export class Shader extends Graphics_Card_Object
 {                           // Your subclasses of Shader will manage strings of GLSL code that will be sent to the GPU and will run, to
                             // draw every shape.  Extend the class and fill in the abstract functions; the constructor needs them.
   copy_onto_graphics_card( context )
@@ -509,48 +370,7 @@ class Shader extends Graphics_Card_Object
 }
 
 
-const Texture = tiny.Texture =
-class Texture extends Graphics_Card_Object                     // The Texture class wraps a pointer to a new texture
-{ constructor( filename, min_filter = "LINEAR_MIPMAP_LINEAR" )        // buffer along with a new HTML image object. 
-    { super();
-      Object.assign( this, { filename, min_filter } );
-
-      this.image          = new Image();
-      this.image.onload   = () => this.ready = true;
-      this.image.crossOrigin = "Anonymous";           // Avoid a browser warning.
-      this.image.src = filename;                      // Load the image file to this HTML page.
-    }
-  copy_onto_graphics_card( context, need_initial_settings = true )
-    { const gpu_instance = super.copy_onto_graphics_card( context );
-      if( !gpu_instance.texture_buffer_pointer ) gpu_instance.texture_buffer_pointer = context.createTexture();
-
-      const gl = context;
-      gl.bindTexture  ( gl.TEXTURE_2D, gpu_instance.texture_buffer_pointer );
-      
-      if( need_initial_settings )
-      { gl.pixelStorei  ( gl.UNPACK_FLIP_Y_WEBGL, true );
-        gl.texParameteri( gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR );         // Always use bi-linear sampling when zoomed out.
-        gl.texParameteri( gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl[ this.min_filter ]  );  // Let the user to set the sampling method 
-      }                                                                                    // when zoomed in.
-      
-      gl.texImage2D   ( gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this.image );
-      if( this.min_filter = "LINEAR_MIPMAP_LINEAR" )      // If the user picked tri-linear sampling (the default) then generate
-        gl.generateMipmap(gl.TEXTURE_2D);                 // the necessary "mips" of the texture and store them on the GPU with it.
-      return gpu_instance;
-    }
-  make_gpu_representation() { return { texture_buffer_pointer: undefined } }
-  activate( context, texture_unit = 0 )   // Optionally select a texture unit in case you're using a shader with many samplers.
-    { if( !this.ready ) return;     // Terminate draw requests until the image file is actually loaded over the network.
-      
-      const gpu_instance = super.activate( context );
-      context.activeTexture( context[ "TEXTURE" + texture_unit ] );
-      context.bindTexture( context.TEXTURE_2D, gpu_instance.texture_buffer_pointer );
-    }
-}
-
-
-const Webgl_Manager = tiny.Webgl_Manager =
-class Webgl_Manager      // This class manages a whole graphics program for one on-page canvas, including its textures, shapes, shaders,
+export class Webgl_Manager      // This class manages a whole graphics program for one on-page canvas, including its textures, shapes, shaders,
 {                        // and scenes.  In addition to requesting a WebGL context and storing the aforementioned items, it informs the
                          // canvas of which functions to call during events - such as a key getting pressed or it being time to redraw.
   constructor( canvas, background_color, dimensions )
@@ -603,8 +423,7 @@ class Webgl_Manager      // This class manages a whole graphics program for one 
 }
 
 
-const Scene = tiny.Scene =
-class Scene          // The Scene superclass is the base class for any scene part or code snippet that you can add to a
+export class Scene          // The Scene superclass is the base class for any scene part or code snippet that you can add to a
 {                           // canvas.  Make your own subclass(es) of this and override their methods "display()" and "make_control_panel()"
                             // to make them do something.  Finally, push them onto your Webgl_Manager's "scenes" array.
   constructor( webgl_manager )
@@ -617,7 +436,6 @@ class Scene          // The Scene superclass is the base class for any scene par
              event.preventDefault();    // Fire the callback and cancel any default browser shortcut that is an exact match.
              event.stopPropagation();   // Don't bubble the event to parent nodes; let child elements be targetted in isolation.
            }
-      this.key_controls = new Keyboard_Manager( document, callback_behavior);     
     }
   new_line( parent=this.control_panel ) { parent.appendChild( document.createElement( "br" ) ) }    // Format a scene's control panel.
   live_string( callback, parent=this.control_panel )    // Create an element somewhere in the control panel that does reporting of the
@@ -648,4 +466,45 @@ class Scene          // The Scene superclass is the base class for any scene par
       this.key_controls.add( shortcut_combination, press, release );
     }                                                          // You have to override the following functions to use class Scene.
   make_control_panel(){}  display( graphics_state ){}  show_explanation( document_section ){}
+}
+
+
+export class Canvas_Widget                    // Canvas_Widget embeds a WebGL demo onto a website, along with various panels of controls.
+{ constructor(     element, main_scene, additional_scenes, show_controls = true )   // One panel exists per each scene that's used in the canvas.  You can use up
+    { this.create( element, main_scene, additional_scenes, show_controls )      // to 16 Canvas_Widgets; browsers support up to 16 WebGL contexts per page.    
+
+      const rules = [ ".canvas-widget { width: 1080px; background: DimGray }",
+                      ".canvas-widget canvas { width: 1080px; height: 600px; margin-bottom:-3px }" ];
+                      
+      if( document.styleSheets.length == 0 ) document.head.appendChild( document.createElement( "style" ) );
+      for( const r of rules ) document.styleSheets[document.styleSheets.length - 1].insertRule( r, 0 )
+    }
+  create( element, main_scene, additional_scenes, show_controls )
+    { this.patch_ios_bug();
+      try  { this.populate_canvas( element, main_scene, additional_scenes, show_controls );
+           } catch( error )
+           { document.querySelector( "#" + element ).innerHTML = "<H1>Error loading the demo.</H1>" + error }
+    }
+  patch_ios_bug()                               // Correct a flaw in Webkit (iPhone devices; safari mobile) that 
+    { try{ Vec.of( 1,2,3 ).times(2) }           // breaks TypedArray.from() and TypedArray.of() in subclasses.
+      catch 
+      { Vec.of   = function( ...arr ) { return new Vec( Array.from( ...arr ) ) }
+        Vec.from = function(    arr ) { return new Vec( Array.from(    arr ) ) }
+      }
+    }
+  populate_canvas( element, main_scene, additional_scenes, show_controls )   // Assign a Webgl_Manager to the WebGL canvas.
+    { const canvas = document.querySelector( "#" + element ).appendChild( document.createElement( "canvas" ) );
+
+      this.webgl_manager = new Webgl_Manager( canvas, Color.of( 0,0,0,1 ) );  // Second parameter sets background color.
+
+      for( let scene_class_name of [ main_scene, ...additional_scenes ] )   // Register the initially requested scenes to the render loop. 
+        this.webgl_manager.scenes.push( new scene_class_name( this.webgl_manager ) );
+
+
+      this.embedded_controls = document.querySelector( "#" + element ).appendChild( document.createElement( "div" ) );
+      this.embedded_controls.className = "controls-widget";
+      if( show_controls ) new Controls_Widget( this.webgl_manager.scenes, this.embedded_controls );
+                           
+      this.webgl_manager.render();   // Start WebGL initialization.  Note that render() will re-queue itself for more calls.
+    }
 }
