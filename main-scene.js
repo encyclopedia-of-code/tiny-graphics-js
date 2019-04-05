@@ -8,7 +8,7 @@ const defs = {};
     // Now we have loaded everything in the file tiny-graphics.js. This yielded "tiny", an object wrapping its stuff.
 
 class Minimal_Shape extends tiny.Vertex_Buffer    // The simplest possible Shape – one triangle.  It has 3 vertices, each
-{ constructor()                                   // containing two values: a 3D position and a color.
+{ constructor()                                     // containing two values: a 3D position and a color.
     { super( "position", "color" );
       this.arrays.position = [ Vec.of(0,0,0), Vec.of(1,0,0), Vec.of(0,1,0) ];   // Describe the where the points of a triangle are in space.
       this.arrays.color    = [ Color.of(1,0,0,1), Color.of(0,1,0,1), Color.of(0,0,1,1) ];   // Besides a position, vertices also have a color.      
@@ -16,7 +16,7 @@ class Minimal_Shape extends tiny.Vertex_Buffer    // The simplest possible Shape
 }
 
 
-class Basic_Shader extends Shader             // Subclasses of Shader each store and manage a complete GPU program.  This Shader is 
+class Basic_Shader extends Shader      // Subclasses of Shader each store and manage a complete GPU program.  This Shader is 
 {                                             // the simplest example of one.  It samples pixels from colors that are directly assigned 
                                               // to the vertices.
   material() { return new class Material extends Overridable {}().replace({ shader: this }) }      // Materials here are minimal, without any settings.
@@ -50,8 +50,7 @@ class Basic_Shader extends Shader             // Subclasses of Shader each store
 }
 
 class Minimal_Webgl_Demo extends Scene
-{                                                           //  A really basic scene.  It draws a triangle.
-  constructor( webgl_manager, control_panel )
+{ constructor( webgl_manager, control_panel )
     { super( webgl_manager, control_panel );
       this.shapes = { triangle : new Minimal_Shape() };         // Send a Triangle's vertices to the GPU's buffers.
       this.shader = new Basic_Shader();
