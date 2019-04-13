@@ -11,7 +11,7 @@ class Canvas_Widget                    // Canvas_Widget embeds a WebGL demo onto
     {                                               // to 16 Canvas_Widgets; browsers support up to 16 WebGL contexts per page.
       this.element = element;
       Object.assign( this, { show_controls: true, show_explanation: true }, options )
-      const rules = [ ".canvas-widget { width: 1080px; background: DimGray }",
+      const rules = [ ".canvas-widget { width: 1080px; background: DimGray; margin:auto }",
                       ".canvas-widget canvas { width: 1080px; height: 600px; margin-bottom:-3px }" ];
                       
       if( document.styleSheets.length == 0 ) document.head.appendChild( document.createElement( "style" ) );
@@ -32,7 +32,7 @@ class Canvas_Widget                    // Canvas_Widget embeds a WebGL demo onto
         this.webgl_manager.scenes.push( ...initial_scenes );
 
       this.embedded_controls = new Controls_Widget( this.embedded_controls_area,    this.webgl_manager.scenes );
-      this.embedded_explanation  = new Text_Widget( this.embedded_explanation_area, this.webgl_manager.scenes );
+      this.embedded_explanation  = new Text_Widget( this.embedded_explanation_area, this.webgl_manager.scenes, this.webgl_manager );
 
       this.webgl_manager.render();   // Start WebGL initialization.  Note that render() will re-queue itself for more calls.
     }
@@ -116,7 +116,9 @@ class Controls_Widget                  // One of these widgets can draw one pane
         const scene = open_list.shift();
                                                 // Check to see if we need to re-create the panels due to any scene being new.
         if( !scene.timestamp || scene.timestamp > this.timestamp )        
-          return this.make_panels( time );
+        { this.make_panels( time );
+          break;
+        }
 
         // TODO: Check for updates to each scene's desired_controls_position, including if the 
         // scene just appeared in the tree, in which case call make_control_panel().
@@ -165,10 +167,10 @@ class Code_Manager                     // Break up a string containing code (any
 const Code_Widget = widgets.Code_Widget =
 class Code_Widget                      // One of these panels draws a code navigator with inline links to the entire source code.
 { constructor( element, main_scene, additional_scenes, definitions )
-    { const rules = [ ".code-widget .code-panel { background:white; overflow:auto; font-family:monospace; width:1060px; padding:10px; padding-bottom:40px; max-height: 500px; \
+    { const rules = [ ".code-widget .code-panel { margin:auto; background:white; overflow:auto; font-family:monospace; width:1060px; padding:10px; padding-bottom:40px; max-height: 500px; \
                                                       border-radius:12px; box-shadow: 20px 20px 90px 0px powderblue inset, 5px 5px 30px 0px blue inset }",
                     ".code-widget .code-display { min-width:1800px; padding:10px; white-space:pre-wrap; background:transparent }",
-                    ".code-widget table { display:block; overflow-x:auto; width:1080px; border-radius:25px; border-collapse:collapse; border: 2px solid black }",
+                    ".code-widget table { display:block; margin:auto; overflow-x:auto; width:1080px; border-radius:25px; border-collapse:collapse; border: 2px solid black }",
                     ".code-widget table.class-list td { border-width:thin; background: #EEEEEE; padding:12px; font-family:monospace; border: 1px solid black }"
                      ];
 
@@ -255,18 +257,18 @@ class Code_Widget                      // One of these panels draws a code navig
 
 const Text_Widget = widgets.Text_Widget =
 class Text_Widget
-{ constructor( element, scenes ) 
+{ constructor( element, scenes, webgl_manager ) 
     { const rules = [ ".text-widget { background: white; width:1060px;\
                         padding:0 10px; overflow:auto; transition:1s; overflow-y:scroll; box-shadow: 10px 10px 90px 0 inset Gray}" ];
       if( document.styleSheets.length == 0 ) document.head.appendChild( document.createElement( "style" ) );
       for( const r of rules ) document.styleSheets[document.styleSheets.length - 1].insertRule( r, 0 )
 
-      Object.assign( this, { element, scenes } );
+      Object.assign( this, { element, scenes, webgl_manager } );
       this.render();
     }
   render( time = 0 )
     { if( this.scenes[0] )
-        this.scenes[0].show_explanation( this.element )
+        this.scenes[0].show_explanation( this.element, this.webgl_manager )
       else
         this.event = window.requestAnimFrame( this.render.bind( this ) )
     }

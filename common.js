@@ -633,27 +633,26 @@ class Movement_Controls extends Scene    // Movement_Controls is a Scene that ca
                                                 // person style controls into the website.  These can be used to manually move your
                                                 // camera or other objects smoothly through your scene using key, mouse, and HTML
                                                 // button controls to help you explore what's in it.
-  constructor( webgl_manager )
-    { super( webgl_manager );
-      [ this.webgl_manager, this.roll, this.look_around_locked ] = [ webgl_manager, 0, true, true ];                  // Data members.
+  constructor()
+    { super();
+      [ this.roll, this.look_around_locked ] = [ 0, true, true ];                  // Data members.
       [ this.thrust, this.pos, this.z_axis ] = [ Vec.of( 0,0,0 ), Vec.of( 0,0,0 ), Vec.of( 0,0,0 ) ];
       [ this.radians_per_frame, this.meters_per_frame, this.speed_multiplier ] = [ 1/200, 20, 1 ];                    // Constants.
 
-      this.add_mouse_controls();
-      this.reset();
+      this.mouse_enabled_canvases = new Set();
+      this.will_take_over_graphics_state = true;
     }                                        // The camera matrix is not actually stored here inside Movement_Controls; instead, track an
                                              // external target matrix to modify.  Targets must be pointer references made using closures.
   set_recipient( matrix_closure, inverse_closure )
     { this.matrix  =  matrix_closure;
       this.inverse = inverse_closure;
     }                               // Initially, the default target is the camera matrix that Shaders use, stored in the 
-  reset()                           // global graphics_state object.  Targets must be pointer references made using closures.
-    { this.set_recipient( () => this.webgl_manager.globals.graphics_state.camera_transform, 
-                          () => this.webgl_manager.globals.graphics_state.camera_inverse   );
+  reset( graphics_state )           // global graphics_state object.  Targets must be pointer references made using closures.
+    { this.set_recipient( () => graphics_state.camera_transform, 
+                          () => graphics_state.camera_inverse   );
     }
-  add_mouse_controls()
-    { const canvas = this.webgl_manager.canvas;
-      this.mouse = { "from_center": Vec.of( 0,0 ) };                           // Measure mouse steering, for rotating the flyaround camera:
+  add_mouse_controls( canvas )
+    { this.mouse = { "from_center": Vec.of( 0,0 ) };                           // Measure mouse steering, for rotating the flyaround camera:
       const mouse_position = ( e, rect = canvas.getBoundingClientRect() ) => 
                                    Vec.of( e.clientX - (rect.left + rect.right)/2, e.clientY - (rect.bottom + rect.top)/2 );
                                         // Set up mouse response.  The last one stops us from reacting if the mouse leaves the canvas.
@@ -730,6 +729,17 @@ class Movement_Controls extends Scene    // Movement_Controls is a Scene that ca
   display( context, graphics_state, dt = graphics_state.animation_delta_time / 1000 )    // Camera code starts here.
     { const m = this.speed_multiplier * this. meters_per_frame,
             r = this.speed_multiplier * this.radians_per_frame;
+
+      if( this.will_take_over_graphics_state )
+      { this.reset( graphics_state );
+        this.will_take_over_graphics_state = false;
+      }
+
+      if( !this.mouse_enabled_canvases.has( context.canvas ) )
+      { this.add_mouse_controls( context.canvas );
+        this.mouse_enabled_canvases.add( context.canvas )
+      }
+
       this.first_person_flyaround( dt * r, dt * m );     // Do first-person.  Scale the normal camera aiming speed by dt for smoothness.
       if( this.mouse.anchor )                            // Also apply third-person "arcball" camera mode if a mouse drag is occurring.  
         this.third_person_arcball( dt * r );           

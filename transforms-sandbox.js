@@ -48,23 +48,23 @@ export class Tutorial_Animation extends Scene    // This Scene can be added to a
       </p><p>If you have never written a graphics program before, you'll need to know what a transformation matrix is in 3D graphics. Check out <a href=https://piazza.com/class_profile/get_resource/j855t03rsfv1cn/j9k7wl8ijmks0 target='_blank'>this other .pdf document</a> explaining those, including the three special matrices (rotation, translation, and scale) that you'll see over and over in graphics programs like this one. Finally, scroll down to the source code at the bottom to see how these functions are used to generate special matrices that draw the shapes in the right places in the 3D world.    
       </p><p>The scene shown here demonstrates a lot of concepts at once using very little code.  These include drawing your first triangle, storing trivial shapes, storing lights and materials and shader programs, flat vs. smooth shading, and matrix transformations.   You can see all the parts of the scene being drawn by the code written in the "display" function; these parts are all independent from one another, so feel free delete whichever sections you want from there and the other shapes will remain.  Save your changes to produce your own page.  For pretty demonstrations of more advanced topics, such as <a href=/Surfaces_Demo>Surface Patch shapes</a>, <a href=/Inertia_Demo>Inertia</a>, <a href=/Collision_Demo>Collision Detection</a>, and <a href=/Ray_Tracer>Ray Tracing</a>, use the blue bar at the top of this page to visit the next articles.  To see how a minimal but functional game works, check out <a href=/Billiards>Billiards</a>.  To train yourself to get matrix order right when placing shapes, play the <a href=/Bases_Game>Bases Game</a>.</p>
      `}
-    draw_arm( context, graphics_state, model_transform )                   // An example of how to break up the work of drawing into other functions.
+    draw_arm( context, program_state, model_transform )                   // An example of how to break up the work of drawing into other functions.
       { const arm = model_transform.times( Mat4.translation([ 0,0,3+1 ]) );
-        this.shapes.ball.draw( context, graphics_state, arm, this.materials.plastic.override( Color.of( 0,0,1,.7 ) ) );
+        this.shapes.ball.draw( context, program_state, arm, this.materials.plastic.override( Color.of( 0,0,1,.7 ) ) );
       }
-    display( context, globals, graphics_state )
+    display( context, program_state )
       { let model_transform = Mat4.identity();      // This will be a temporary matrix that helps us draw most shapes.
                                                     // It starts over as the identity every single frame - coordinate axes at the origin.
-        graphics_state.lights = this.lights;        // Override graphics_state with the default lights of this class. 
+        program_state.lights = this.lights;        // Override program_state with the default lights of this class. 
 
-        if( !globals.controls ) 
-        { this.children.push( globals.controls = new defs.Movement_Controls() ); 
+        if( !context.scratchpad.controls ) 
+        { this.children.push( context.scratchpad.controls = new defs.Movement_Controls() ); 
         
                     // Define the global camera and projection matrices, which are stored in a scratchpad for globals.  The projection is special 
                     // because it determines how depth is treated when projecting 3D points onto a plane.  The function perspective() makes one.
                     // Its input arguments are field of view, aspect ratio, and distances to the near plane and far plane.
-          graphics_state.set_camera( Mat4.translation([ 0,0,-30 ]) );    // Locate the camera here (inverted matrix).
-          graphics_state.projection_transform = Mat4.perspective( Math.PI/4, webgl_manager.width/webgl_manager.height, .1, 1000 );
+          program_state.set_camera( Mat4.translation([ 0,0,-30 ]) );    // Locate the camera here (inverted matrix).
+          program_state.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, .1, 1000 );
         }
 
         const yellow = Color.of( 1,1,0,1 ), gray = Color.of( .5,.5,.5,1 ), green = Color.of( 0,.5,0,1 );  
@@ -75,67 +75,67 @@ export class Tutorial_Animation extends Scene    // This Scene can be added to a
                                                     // to generate matrices, and the functions times(), which generates products of matrices.
 
         model_transform = model_transform.times( Mat4.translation([ 0, 5, 0 ]) );
-        this.shapes.triangle.draw( context, graphics_state, model_transform, this.materials.stars );   // Draw the top triangle.
+        this.shapes.triangle.draw( context, program_state, model_transform, this.materials.stars );   // Draw the top triangle.
 
         model_transform = model_transform.times( Mat4.translation([ 0, -2, 0 ]) );  // Tweak our coordinate system downward for the next shape.
-        this.shapes.strip.draw( context, graphics_state, model_transform, this.materials.plastic.override( gray )  );      // Draw the square.
+        this.shapes.strip.draw( context, program_state, model_transform, this.materials.plastic.override( gray )  );      // Draw the square.
                                                                 // Find how much time has passed in seconds. Use that as input to build
-        const t = this.t = graphics_state.animation_time/1000;  // and store a couple rotation matrices that vary over time.
+        const t = this.t = program_state.animation_time/1000;  // and store a couple rotation matrices that vary over time.
         const tilt_spin   = Mat4.rotation( 12*t, Vec.of(          .1,          .8,             .1 ) ),
               funny_orbit = Mat4.rotation(  2*t, Vec.of( Math.cos(t), Math.sin(t), .7*Math.cos(t) ) );
 
                 // All the shapes in a scene can share influence of the same pair of lights.  Alternatively, here's what happens when you
                 // use different lights on part of a scene.  All the shapes below this line of code will use these moving lights instead.
-        graphics_state.lights = [ new Light( tilt_spin.times( Vec.of(  30,  30,  34, 1 ) ), Color.of( 0, .4, 0, 1 ), 100000               ),
+        program_state.lights = [ new Light( tilt_spin.times( Vec.of(  30,  30,  34, 1 ) ), Color.of( 0, .4, 0, 1 ), 100000               ),
                                   new Light( tilt_spin.times( Vec.of( -10, -20, -14, 0 ) ), Color.of( 1, 1, .3, 1 ), 100*Math.cos( t/10 ) ) ];
 
                           // The post_multiply() function is like times(), but be careful with it; it modifies the originally stored matrix in
                           // place rather than generating a new matrix, which could throw off your attempts to maintain a history of matrices. 
         model_transform.post_multiply( Mat4.translation([ 0, -2, 0 ]) );
                                         // In the constructor, we requested two tetrahedron shapes, one with flat shading and one with smooth.
-        this.shapes.tetrahedron.draw( context, graphics_state, model_transform.times( funny_orbit ), this.materials.plastic );      // Show the flat tetrahedron.
+        this.shapes.tetrahedron.draw( context, program_state, model_transform.times( funny_orbit ), this.materials.plastic );      // Show the flat tetrahedron.
 
         model_transform.post_multiply( Mat4.translation([ 0, -2, 0 ]) );
-        this.shapes.bad_tetrahedron.draw( context, graphics_state, model_transform.times( funny_orbit ),   // Show the smooth tetrahedron.  It's worse.
+        this.shapes.bad_tetrahedron.draw( context, program_state, model_transform.times( funny_orbit ),   // Show the smooth tetrahedron.  It's worse.
                                             this.materials.plastic.override( Color.of( .5,.5,.5,1 ) ) );
 
                     // Draw three of the "windmill" shape.  The first one spins over time.  The second demonstrates a custom shader, because
                     // the material "fire" above was built from a different shader class than the others.  The third shows off transparency.
         model_transform.post_multiply( Mat4.translation([ 0, -2, 0 ]) );
-        this.shapes.windmill       .draw( context, graphics_state, model_transform.times( tilt_spin ), this.materials.plastic );
+        this.shapes.windmill       .draw( context, program_state, model_transform.times( tilt_spin ), this.materials.plastic );
         model_transform.post_multiply( Mat4.translation([ 0, -2, 0 ]) );
-        this.shapes.windmill       .draw( context, graphics_state, model_transform,                    this.materials.fire    );
+        this.shapes.windmill       .draw( context, program_state, model_transform,                    this.materials.fire    );
         model_transform.post_multiply( Mat4.translation([ 0, -2, 0 ]) );
-        this.shapes.windmill       .draw( context, graphics_state, model_transform,                    this.materials.glass   );
+        this.shapes.windmill       .draw( context, program_state, model_transform,                    this.materials.glass   );
 
                                    // Now to demonstrate some more useful (but harder to build) shapes:  A Cube and a Subdivision_Sphere.
                                    // If you look in those two classes they're a bit less trivial than the previous shapes.
         model_transform.post_multiply( Mat4.translation([ 0, -2, 0 ]) );                                         // Draw the ground plane:
-        this.shapes.box.draw( context, graphics_state, model_transform.times( Mat4.scale([ 15,.1,15 ]) ), this.materials.plastic.override( green ) );
+        this.shapes.box.draw( context, program_state, model_transform.times( Mat4.scale([ 15,.1,15 ]) ), this.materials.plastic.override( green ) );
 
         model_transform = model_transform.times( Mat4.translation( Vec.of( 10,10,0 ) ) );                        // Move up off the ground.
                                                                      // Spin the coordinate system if the hover button hasn't been pressed:
         if( !this.hover ) model_transform = model_transform.times( Mat4.rotation( -this.t, Vec.of( 0,1,0 ) ) );
                                                                                               // Begin drawing a "creature" with two arms.   
-        this.shapes.ball.draw( context, graphics_state, model_transform, this.materials.plastic.override( Color.of( .8,.8,.8,1 ) ) );
+        this.shapes.ball.draw( context, program_state, model_transform, this.materials.plastic.override( Color.of( .8,.8,.8,1 ) ) );
                                         // Placing shapes that barely touch each other requires knowing and adding half the length of each.
         model_transform = model_transform.times( Mat4.translation( Vec.of( 0,-( 1 + .2 ),0 ) ) );   
-        this.shapes.box.draw( context, graphics_state, model_transform.times( Mat4.scale([ 3,.2,3 ]) ), this.materials.plastic.override( yellow ) );
+        this.shapes.box.draw( context, program_state, model_transform.times( Mat4.scale([ 3,.2,3 ]) ), this.materials.plastic.override( yellow ) );
                         // Each loop iteration, the following will draw the same thing on a different side due to a reflection:
         for( let side of [-1,1] )                                                     // For each of the two values -1 and 1, reflect the
         { let flipped = model_transform.times( Mat4.scale([ 1,1,side ]) );            // coordinate system (or not) depending on the value.
-          this.draw_arm( context, graphics_state, flipped );                                   // Example of how to call your own function, passing
+          this.draw_arm( context, program_state, flipped );                                   // Example of how to call your own function, passing
         }                                                                             // in your matrix.
       }
   }
 
 
 export class Transforms_Sandbox extends Tutorial_Animation       // This subclass of some other Scene overrides the display() function.  By only
-  { display( context, graphics_state )                           // exposing that one function, which draws everything, this creates a very small code
+  { display( context, program_state )                           // exposing that one function, which draws everything, this creates a very small code
       {                                                          // sandbox for editing a simple scene, and for experimenting with matrix transforms.
         let model_transform = Mat4.identity();      // Variable model_transform will be a temporary matrix that helps us draw most shapes.
                                                     // It starts over as the identity every single frame - coordinate axes at the origin.
-        graphics_state.lights = this.lights;        // Use the lights stored in this.lights.
+        program_state.lights = this.lights;        // Use the lights stored in this.lights.
         /**********************************
         Start coding down here!!!!
         **********************************/         // From here on down it's just some example shapes drawn for you -- freely replace them
@@ -144,18 +144,18 @@ export class Transforms_Sandbox extends Tutorial_Animation       // This subclas
 
         const blue = Color.of( 0,0,1,1 ), yellow = Color.of( 1,1,0,1 );
         model_transform = model_transform.times( Mat4.translation([ 0, 3, 20 ]) );
-        this.shapes.box.draw( context, graphics_state, model_transform, this.materials.plastic.override( yellow ) );   // Draw the top box.
+        this.shapes.box.draw( context, program_state, model_transform, this.materials.plastic.override( yellow ) );   // Draw the top box.
 
-        const t = this.t = graphics_state.animation_time/1000;     // Find how much time has passed in seconds, and use that to place shapes.
+        const t = this.t = program_state.animation_time/1000;     // Find how much time has passed in seconds, and use that to place shapes.
 
         model_transform = model_transform.times( Mat4.translation([ 0, -2, 0 ]) );  // Tweak our coordinate system downward for the next shape.
-        this.shapes.ball.draw( context, graphics_state, model_transform, this.materials.plastic.override( blue ) );    // Draw the ball.
+        this.shapes.ball.draw( context, program_state, model_transform, this.materials.plastic.override( blue ) );    // Draw the ball.
 
         if( !this.hover )     // The first line below won't execute if the button on the page has been toggled:
           model_transform = model_transform.times( Mat4.rotation( t, Vec.of( 0,1,0 ) ) )  // Spin our coordinate frame as a function of time.
         model_transform   = model_transform.times( Mat4.rotation( 1, Vec.of( 0,0,1 ) ) )  // Rotate another axis by a constant value.
                                            .times( Mat4.scale      ([ 1,   2, 1 ]) )      // Stretch the coordinate frame.
                                            .times( Mat4.translation([ 0,-1.5, 0 ]) );     // Translate down enough for the two volumes to miss.
-        this.shapes.box.draw( context, graphics_state, model_transform, this.materials.plastic.override( yellow ) );   // Draw the bottom box.
+        this.shapes.box.draw( context, program_state, model_transform, this.materials.plastic.override( yellow ) );   // Draw the bottom box.
       }
   }

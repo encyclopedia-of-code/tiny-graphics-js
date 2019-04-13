@@ -297,13 +297,13 @@ class Vertex_Buffer extends Graphics_Card_Object
       }                                                                                 // If no indices were provided, assume the 
       else  gl.drawArrays( gl[type], 0, Object.values( this.arrays )[0].length );       // vertices are arranged as triples.
     }
-  draw( context, program_state, model_transform, material, type = "TRIANGLES" )
+  draw( webgl_manager, program_state, model_transform, material, type = "TRIANGLES" )
                                                           // To appear onscreen, a shape of any variety goes through the draw() function,
     {                                                     // which executes the shader programs.  The shaders draw the right shape due to
                                                           // pre-selecting the correct buffer region in the GPU that holds that shape's data.
-      const gpu_instance = this.activate( context );
-      material.shader.activate( context, gpu_instance.webGL_buffer_pointers, program_state, model_transform, material );
-      this.execute_shaders( context, type );                                                // Run the shaders to draw every triangle now.
+      const gpu_instance = this.activate( webgl_manager.context );
+      material.shader.activate( webgl_manager.context, gpu_instance.webGL_buffer_pointers, program_state, model_transform, material );
+      this.execute_shaders( webgl_manager.context, type );                                                // Run the shaders to draw every triangle now.
     }
 }
 
@@ -554,7 +554,7 @@ class Webgl_Manager      // This class manages a whole graphics program for one 
 {                        // and scenes.  In addition to requesting a WebGL context and storing the aforementioned items, it informs the
                          // canvas of which functions to call during events - such as a key getting pressed or it being time to redraw.
   constructor( canvas, background_color, dimensions )
-    { const members = { instances: new Map(), scenes: [], prev_time: 0, canvas, globals: {}, program_state: new Program_State() };
+    { const members = { instances: new Map(), scenes: [], prev_time: 0, canvas, scratchpad: {}, program_state: new Program_State() };
       Object.assign( this, members );
       
       for( let name of [ "webgl", "experimental-webgl", "webkit-3d", "moz-webgl" ] )   // Get the GPU ready, creating a new WebGL context
@@ -586,8 +586,8 @@ class Webgl_Manager      // This class manages a whole graphics program for one 
       this.context.viewport( 0, 0, width, height );      // Build the canvas's matrix for converting -1 to 1 ranged coords (NCDS)
     }                                                    // into its own pixel coords.
   render( time=0 )                                                // Animate shapes based upon how much measured real time has transpired.
-    {                            this.program_state.animation_delta_time = time - this.prev_time;
-      if( this.globals.animate ) this.program_state.animation_time      += this.program_state.animation_delta_time;
+    {                                  this.program_state.animation_delta_time = time - this.prev_time;
+      if( this.program_state.animate ) this.program_state.animation_time      += this.program_state.animation_delta_time;
       this.prev_time = time;
 
       const gl = this.context;
@@ -596,7 +596,7 @@ class Webgl_Manager      // This class manages a whole graphics program for one 
       const open_list = [ ...this.scenes ];
       while( open_list.length )                       // Traverse all scenes and their children, recursively
       { open_list.push( ...open_list[0].children );
-        open_list.shift().display( gl, this.program_state );           // Draw each registered animation.
+        open_list.shift().display( this, this.program_state );           // Draw each registered animation.
       }
       this.event = window.requestAnimFrame( this.render.bind( this ) );   // Now that this frame is drawn, request that render() happen 
     }                                                                     // again as soon as all other web page events are processed.
