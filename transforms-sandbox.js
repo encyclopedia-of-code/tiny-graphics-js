@@ -136,6 +136,16 @@ export class Transforms_Sandbox extends Tutorial_Animation       // This subclas
         let model_transform = Mat4.identity();      // Variable model_transform will be a temporary matrix that helps us draw most shapes.
                                                     // It starts over as the identity every single frame - coordinate axes at the origin.
         program_state.lights = this.lights;        // Use the lights stored in this.lights.
+
+        if( !context.scratchpad.controls ) 
+        { this.children.push( context.scratchpad.controls = new defs.Movement_Controls() ); 
+
+                    // Define the global camera and projection matrices, which are stored in a scratchpad for globals.  The projection is special 
+                    // because it determines how depth is treated when projecting 3D points onto a plane.  The function perspective() makes one.
+                    // Its input arguments are field of view, aspect ratio, and distances to the near plane and far plane.
+          program_state.set_camera( Mat4.translation([ 0,0,-30 ]) );    // Locate the camera here (inverted matrix).
+          program_state.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, .1, 1000 );
+        }
         /**********************************
         Start coding down here!!!!
         **********************************/         // From here on down it's just some example shapes drawn for you -- freely replace them

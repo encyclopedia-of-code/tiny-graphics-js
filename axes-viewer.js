@@ -3,8 +3,8 @@ const { Vec, Mat, Mat4, Color, Light,
         Shape, Shader, Scene, Texture } = tiny;           // Pull these names into this module's scope for convenience.
 
 export class Axes_Viewer extends Scene     // A helper scene (a secondary Scene Component) for helping you visualize the
-{ constructor( webgl_manager )                       // coordinate bases that are used in your real scene.  Your scene can feed this
-    { super(   webgl_manager );                      // object a list of bases to draw as axis arrows.  Pressing the buttons of this
+{ constructor()                       // coordinate bases that are used in your real scene.  Your scene can feed this
+    { super();                      // object a list of bases to draw as axis arrows.  Pressing the buttons of this
                                               // helper scene cycles through a list of each basis you have added, drawing
                                               // the selected one.  Call insert() and pass it a basis to add one to the list.
                                               // Always reset the data structure by calling reset() before each frame in your scene.
@@ -15,7 +15,6 @@ export class Axes_Viewer extends Scene     // A helper scene (a secondary Scene 
                                               // omitting it inserts your basis in the next empty group.  To re-use IDs easily,
       this.selected_basis_id = 0;             // obtain the next unused ID by calling next_group_id(), so you can re-use it for
       this.reset();                           // all bases that you want to appear at the same level. 
-      webgl_manager.globals.axes_viewer = this;
       this.shapes = { axes: new defs.Axis_Arrows() };
       this.material = new defs.Fake_Bump_Map().material({ ambient: 1,  texture: new Texture( "assets/rgb.jpg" ) })
                                          .override( Color.of( 0,0,0,1 ) );              
@@ -39,41 +38,41 @@ export class Axes_Viewer extends Scene     // A helper scene (a secondary Scene 
     }
   increase() { this.selected_basis_id = Math.min( this.selected_basis_id + 1, this.groups.length-1 ); }
   decrease() { this.selected_basis_id = Math.max( this.selected_basis_id - 1, 0 ); }   // Don't allow selection of negative IDs.
-  display( context, graphics_state )
+  display( context, program_state )
     { if( this.groups[ this.selected_basis_id ] )
         for( let a of this.groups[ this.selected_basis_id ] )         // Draw the selected group of axes arrows.
-          this.shapes.axes.draw( context, graphics_state, a, this.material );
+          this.shapes.axes.draw( context, program_state, a, this.material );
     }
 }
 
 
 
 export class Axes_Viewer_Test_Scene extends Scene
-{ constructor( webgl_manager )                 // An example of how your scene should properly manaage an Axes_Viewer
-    { super(   webgl_manager );                // helper scene, so that it is able to help you draw all the
-                                               // coordinate bases in your scene's hierarchy at the correct levels.
+{ constructor()               // An example of how your scene should properly manaage an Axes_Viewer
+    { super();                // helper scene, so that it is able to help you draw all the
+                              // coordinate bases in your scene's hierarchy at the correct levels.
            
-      if( !webgl_manager.globals.axes_viewer )
-        this.children.push( new Axes_Viewer( webgl_manager ) );
-      this.axes_viewer = webgl_manager.globals.axes_viewer;
-
+      this.children.push( this.axes_viewer = new Axes_Viewer() );
                                                                   // Scene defaults:
       this.shapes = { box: new defs.Cube() };
       this.material = new defs.Phong_Shader().material().override( Color.of( .8,.4,.8,1 ) );
       this.lights = [ new Light( Vec.of( 0,0,1,0 ), Color.of( 0,1,1,1 ), 100000 ) ];
-
-      webgl_manager.globals.graphics_state.set_camera( Mat4.translation([ -1,-1,-20 ]) );
-      webgl_manager.globals.graphics_state.projection_transform = Mat4.perspective( Math.PI/4, webgl_manager.width/webgl_manager.height, 1, 500 );
     }
   make_control_panel()
     { this.control_panel.innerHTML += "(Substitute your own scene here)" }
-  display( context, graphics_state )
-    { graphics_state.lights = this.lights;        // Use the lights stored in this.lights.
-      const t = graphics_state.animation_time / 1000, dt = graphics_state.animation_delta_time / 1000;
+  display( context, program_state )
+    { program_state.lights = this.lights;        // Use the lights stored in this.lights.
 
-      this.shapes.box.draw( context, graphics_state, Mat4.scale([ 10,.1,.1 ]), this.material );    // Mark the global coordinate axes.
-      this.shapes.box.draw( context, graphics_state, Mat4.scale([ .1,10,.1 ]), this.material );
-      this.shapes.box.draw( context, graphics_state, Mat4.scale([ .1,.1,10 ]), this.material );
+      if( !this.has_placed_camera ) 
+        { this.has_placed_camera = true;
+          program_state.set_camera( Mat4.translation([ -1,-1,-20 ]) );    // Locate the camera here (inverted matrix).
+          program_state.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 500 );
+        }
+      const t = program_state.animation_time / 1000, dt = program_state.animation_delta_time / 1000;
+
+      this.shapes.box.draw( context, program_state, Mat4.scale([ 10,.1,.1 ]), this.material );    // Mark the global coordinate axes.
+      this.shapes.box.draw( context, program_state, Mat4.scale([ .1,10,.1 ]), this.material );
+      this.shapes.box.draw( context, program_state, Mat4.scale([ .1,.1,10 ]), this.material );
 
 
                                     // *********** How to use the Axes_Viewer ***********
@@ -94,7 +93,7 @@ export class Axes_Viewer_Test_Scene extends Scene
                                     // Obtain the next group's ID number:
       const id = this.axes_viewer.next_group_id();
                                                         // We'll draw our scene's boxes as an outline so it doesn't block the axes.
-      this.shapes.box.draw( context, graphics_state, model_transform.times( Mat4.scale([ 2,2,2 ]) ), this.material, "LINE_STRIP" );
+      this.shapes.box.draw( context, program_state, model_transform.times( Mat4.scale([ 2,2,2 ]) ), this.material, "LINE_STRIP" );
 
       let center = model_transform.copy();
       for( let side of [ -1, 1 ] )
@@ -109,7 +108,7 @@ export class Axes_Viewer_Test_Scene extends Scene
         model_transform.post_multiply( Mat4.translation([ side*2,2,0 ] ) );
         this.axes_viewer.insert( model_transform.copy() );
                                                        // Again, draw our scene's boxes as an outline so it doesn't block the axes.
-        this.shapes.box.draw( context, graphics_state, model_transform.times( Mat4.scale([ 2,2,2 ]) ), this.material, "LINE_STRIP" );
+        this.shapes.box.draw( context, program_state, model_transform.times( Mat4.scale([ 2,2,2 ]) ), this.material, "LINE_STRIP" );
       }
     }
 }

@@ -663,8 +663,7 @@ class Movement_Controls extends Scene    // Movement_Controls is a Scene that ca
     }
   show_explanation( document_element ) { }
   make_control_panel()                                                        // This function of a scene sets up its keyboard shortcuts.
-    { const globals = this.globals;
-      this.control_panel.innerHTML += "Click and drag the scene to <br> spin your viewpoint around it.<br>";
+    { this.control_panel.innerHTML += "Click and drag the scene to <br> spin your viewpoint around it.<br>";
       this.key_triggered_button( "Up",     [ " " ], () => this.thrust[1] = -1, undefined, () => this.thrust[1] = 0 );
       this.key_triggered_button( "Forward",[ "w" ], () => this.thrust[2] =  1, undefined, () => this.thrust[2] = 0 );  this.new_line();
       this.key_triggered_button( "Left",   [ "a" ], () => this.thrust[0] =  1, undefined, () => this.thrust[0] = 0 );
@@ -750,29 +749,24 @@ class Movement_Controls extends Scene    // Movement_Controls is a Scene that ca
 }
 
 
-const Global_Info_Table = defs.Global_Info_Table =
-class Global_Info_Table extends Scene          // A class that just toggles, monitors, and reports some 
+const Program_State_Viewer = defs.Program_State_Viewer =
+class Program_State_Viewer extends Scene          // A class that just toggles, monitors, and reports some 
 { make_control_panel()                                // global values via its control panel.
-    { const globals = this.globals;
-      globals.has_info_table = true;
-      this.key_triggered_button( "(Un)pause animation", ["Alt", "a"], function() { globals.animate ^= 1; } ); this.new_line();
-      this.live_string( box => { box.textContent = "Animation Time: " + ( globals.graphics_state.animation_time/1000 ).toFixed(3) + "s" } );
-      this.live_string( box => { box.textContent = globals.animate ? " " : " (paused)" } );  this.new_line();
-      this.key_triggered_button( "Gouraud shading",     ["Alt", "g"], function() { globals.graphics_state.gouraud       ^= 1;         } ); 
+    { this.program_state = {};    // display() will replace this
+      this.key_triggered_button( "(Un)pause animation", ["Alt", "a"], function() { this.program_state.animate ^= 1; } ); this.new_line();
+      this.live_string( box => { box.textContent = "Animation Time: " + ( this.program_state.animation_time/1000 ).toFixed(3) + "s" } );
+      this.live_string( box => { box.textContent = this.program_state.animate ? " " : " (paused)" } );  this.new_line();
+      this.key_triggered_button( "Gouraud shading",     ["Alt", "g"], function() { this.program_state.gouraud       ^= 1;         } ); 
       this.new_line();
-      this.key_triggered_button( "Normals shading",     ["Alt", "n"], function() { globals.graphics_state.color_normals ^= 1;         } ); 
+      this.key_triggered_button( "Normals shading",     ["Alt", "n"], function() { this.program_state.color_normals ^= 1;         } ); 
       this.new_line();
       
-      const label = this.control_panel.appendChild( document.createElement( "p" ) );
-      label.style = "align:center";
-      label.innerHTML = "A shared scratchpad is <br> accessible to all Scenes. <br> Navigate its values here:";
-
-      const show_object = ( element, obj = globals ) => 
+      const show_object = ( element, obj = this.program_state ) => 
       { if( this.box ) this.box.innerHTML = "";
         else this.box = element.appendChild( Object.assign( document.createElement( "div" ), { style: "overflow:auto; width: 200px" } ) );
-        if( obj !== globals )
-          this.box.appendChild( Object.assign( document.createElement( "div" ), { className:"link", innerText: "(back to globals)", 
-                                               onmousedown: () => this.current_object = globals } ) )
+        if( obj !== this.program_state )
+          this.box.appendChild( Object.assign( document.createElement( "div" ), { className:"link", innerText: "(back to program_state)", 
+                                               onmousedown: () => this.current_object = this.program_state } ) )
         if( obj.to_string ) return this.box.appendChild( Object.assign( document.createElement( "div" ), { innerText: obj.to_string() } ) );
         for( let [key,val] of Object.entries( obj ) )
         { if( typeof( val ) == "object" ) 
@@ -785,4 +779,5 @@ class Global_Info_Table extends Scene          // A class that just toggles, mon
       }
       this.live_string( box => show_object( box, this.current_object ) );      
     }
+  display( context, program_state ) { this.program_state = program_state }
 }

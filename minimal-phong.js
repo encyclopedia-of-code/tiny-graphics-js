@@ -375,12 +375,9 @@ export class Phong_Shader_3 extends Basic_Phong_Optimized             { }
 
 
 export class Phong_Comparison_Demo extends Scene
-{ constructor( webgl_manager )
-    { super( webgl_manager );
+{ constructor()
+    { super();
       this.shapes = { ball : new defs.Subdivision_Sphere(3) }
-
-      webgl_manager.globals.graphics_state.set_camera( Mat4.translation([ 0,0,-15 ]) );
-      webgl_manager.globals.graphics_state.projection_transform = Mat4.perspective( Math.PI/4, webgl_manager.width/webgl_manager.height, 1, 50 );  
 
       this.index = 0;
       this.shaders = [ new defs.Phong_Shader(), new Basic_Phong(), new Basic_Phong_Optimized(), 
@@ -388,15 +385,20 @@ export class Phong_Comparison_Demo extends Scene
 
       this.materials = this.shaders.map( s => s.material({ ambient:.2, smoothness:10 }).override( Color.of( 1,1,0,1 ) ) );
     }
-  display( context, graphics_state )                                                      // Do this every frame.
-    { const light_pos = Mat4.rotation( graphics_state.animation_time/1340, Vec.of( 0,1,0 ) ).times( Vec.of( 0,4,15,1 ) );
+  display( context, program_state )                                                      // Do this every frame.
+    { if( !this.has_placed_camera ) 
+        { this.has_placed_camera = true;
+          program_state.set_camera( Mat4.translation([ 0,0,-15 ]) );    // Locate the camera here (inverted matrix).
+          program_state.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 50 );
+        }
+      const light_pos = Mat4.rotation( program_state.animation_time/1340, Vec.of( 0,1,0 ) ).times( Vec.of( 0,4,15,1 ) );
 
-      graphics_state.lights = [ new Light( light_pos, Color.of( 0,1,1,1 ), 10000 ) ];
+      program_state.lights = [ new Light( light_pos, Color.of( 0,1,1,1 ), 10000 ) ];
 
       const material = this.materials[ this.index ];
 
-      const model_transform = Mat4.scale( Vec.of( 10 + 10*Math.sin( graphics_state.animation_time/2000 ),2,2 ) );
-      this.shapes.ball.draw( context, graphics_state, model_transform, material.override({ specularity:1 }) );
+      const model_transform = Mat4.scale( Vec.of( 10 + 10*Math.sin( program_state.animation_time/2000 ),2,2 ) );
+      this.shapes.ball.draw( context, program_state, model_transform, material.override({ specularity:1 }) );
     }
  make_control_panel()                 // Draw buttons, setup their actions and keyboard shortcuts, and monitor live variables.
     { this.key_triggered_button( "Next",   [ "n" ], () => this.index = Math.min( this.index+1, this.shaders.length-1 ) ); 

@@ -76,8 +76,8 @@ export class Shape_From_File extends Shape   // A versatile standalone Shape tha
       this.normalize_positions( false );
       this.ready = true;
     }
-  draw( context, graphics_state, model_transform, material )       // Cancel all attempts to draw the shape before it loads.
-    { if( this.ready ) super.draw( context, graphics_state, model_transform, material );   }
+  draw( context, program_state, model_transform, material )       // Cancel all attempts to draw the shape before it loads.
+    { if( this.ready ) super.draw( context, program_state, model_transform, material );   }
 }
 
 export class Obj_File_Demo extends Scene     
@@ -85,11 +85,8 @@ export class Obj_File_Demo extends Scene
                                                 // used in place of simpler primitive-based shapes to add complexity to a scene.  Simpler
                                                 // primitives in your scene can just be thought of as placeholders until you find a model
                                                 // file that fits well.  This demo shows the teapot model twice, with one teapot showing
-    constructor( webgl_manager )                // off the Fake_Bump_Map effect while the other has a regular texture and Phong lighting.             
-      { super(   webgl_manager );
-        webgl_manager.globals.graphics_state.set_camera( Mat4.translation([ 0,0,-5 ]) );
-        webgl_manager.globals.graphics_state.projection_transform = Mat4.perspective( Math.PI/4, webgl_manager.width/webgl_manager.height, .1, 1000 ); 
-
+    constructor()                               // off the Fake_Bump_Map effect while the other has a regular texture and Phong lighting.             
+      { super();      
         this.shapes = { "teapot": new Shape_From_File( "assets/teapot.obj" ) };             // Load the model file.
         
         this.stars = new defs.Phong_Shader().material({ ambient: .3, diffusivity: .5, specularity: .5, texture: new Texture( "assets/stars.png" ) })
@@ -97,9 +94,15 @@ export class Obj_File_Demo extends Scene
         this.bumps = new defs.Fake_Bump_Map().material({ ambient: .3, diffusivity: .5, specularity: .5, texture: new Texture( "assets/stars.png" ) })
                                         .override( Color.of( .5,.5,.5,1 ) );        // Bump mapped.
       }
-    display( context, graphics_state )
-      { const t = graphics_state.animation_time;
-        graphics_state.lights = [ new Light( Mat4.rotation( t/300, Vec.of(1, 0, 0) ).times( Vec.of( 3,  2,  10, 1 ) ), 
+    display( context, program_state )
+      { const t = program_state.animation_time;
+
+        if( !this.has_placed_camera ) 
+        { this.has_placed_camera = true;
+          program_state.set_camera( Mat4.translation([ 0,0,-5 ]) );
+          program_state.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 500 );
+        }
+        program_state.lights = [ new Light( Mat4.rotation( t/300, Vec.of(1, 0, 0) ).times( Vec.of( 3,  2,  10, 1 ) ), 
                                              Color.of( 1, .7, .7, 1 ), 100000 ) ];        // A spinning light to show off the bump map.
         
         for( let i of [ -1, 1 ] )
@@ -107,7 +110,7 @@ export class Obj_File_Demo extends Scene
                           .times( Mat4.translation([ 2*i, 0, 0 ]) )
                           .times( Mat4.rotation( t/1500, Vec.of( -1, 2, 0 ) ) )
                           .times( Mat4.rotation( -Math.PI/2, Vec.of( 1, 0, 0 ) ) );
-          this.shapes.teapot.draw( context, graphics_state, model_transform, i == 1 ? this.stars : this.bumps );   // Draw the shapes.
+          this.shapes.teapot.draw( context, program_state, model_transform, i == 1 ? this.stars : this.bumps );   // Draw the shapes.
         }
       }
   show_explanation( document_element )
