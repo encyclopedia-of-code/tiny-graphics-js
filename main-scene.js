@@ -11,42 +11,17 @@ const { Vec, Mat, Mat4, Color, Shape, Shader,
     //                      as common.js into one file for you, such as "dependencies.js")
 
 const Minimal_Webgl_Demo = defs.Minimal_Webgl_Demo;
-import { Phong_Comparison_Demo }
-  from "./minimal-phong.js"
-import { Axes_Viewer, Axes_Viewer_Test_Scene } 
-  from "./axes-viewer.js"
-import { Inertia_Demo, Collision_Demo }
-  from "./collisions-demo.js"
-import { Many_Lights_Demo }
-  from "./many-lights-demo.js"
-import { Obj_File_Demo }
-  from "./obj-file-demo.js"
-import { Scene_To_Texture_Demo }
-  from "./scene-to-texture-demo.js"
-import { Text_Demo }
-  from "./text-demo.js"  
 import { Tutorial_Animation, Transforms_Sandbox }
   from './transforms-sandbox.js';
-import { Nesting_Test }
-  from './nesting-test.js';
 
-Object.assign( defs, 
-                     { Phong_Comparison_Demo },
-                     { Axes_Viewer, Axes_Viewer_Test_Scene },
-                     { Inertia_Demo, Collision_Demo },
-                     { Many_Lights_Demo },
-                     { Obj_File_Demo },
-                     { Scene_To_Texture_Demo },
-                     { Text_Demo },
-                     { Tutorial_Animation, Transforms_Sandbox },
-                     { Nesting_Test } );
+Object.assign( defs, { Tutorial_Animation, Transforms_Sandbox } );
 
 
     // ******************** End extra step
 
 // (Can define Main_Scene's class here)
 
-const Main_Scene = Nesting_Test;
+const Main_Scene = Transforms_Sandbox;
 const Additional_Scenes = [];
 
 export { Main_Scene, Additional_Scenes, Canvas_Widget, Code_Widget, Text_Widget, defs }
