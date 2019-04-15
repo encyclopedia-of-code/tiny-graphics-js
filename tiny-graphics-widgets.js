@@ -1,6 +1,6 @@
 // This file defines a lot of panels that can be placed on websites to create interactive graphics programs that use tiny-graphics.js.
 
-import {tiny} from './tiny-graphics.js';
+import * as tiny from './tiny-graphics.js';
 const { Vec, Mat, Mat4, Color, Shape, Shader, Scene } = tiny;           // Pull these names into this module's scope for convenience.
 
 export const widgets = {};

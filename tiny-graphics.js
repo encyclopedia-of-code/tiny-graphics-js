@@ -1,11 +1,10 @@
 // tiny-graphics.js - A file that shows how to organize a complete graphics program.  It wraps common WebGL commands and math.
 // The file tiny-graphics-widgets.js additionally wraps web page interactions.  By Garett.
 
-export const tiny = {};       // We want to access our exports through normal JS objects, not ES Modules, to preserve
-                              // the order of definitions in our files (ES Modules alphabetize them). 
+                                // Keep track of the ordering of this file's source code so we can make a file navigator:
+export const class_list = [];
 
-const Vec = tiny.Vec =
-class Vec extends Float32Array       // Vectors of floating point numbers.  This puts vector math into JavaScript.
+export class Vec extends Float32Array       // Vectors of floating point numbers.  This puts vector math into JavaScript.
                                             // See these examples for usage of each function:
   //     equals: "Vec.of( 1,0,0 ).equals( Vec.of( 1,0,0 ) )" returns true.
   //       plus: "Vec.of( 1,0,0 ).plus  ( Vec.of( 1,0,0 ) )" returns the Vec [ 2,0,0 ].
@@ -50,9 +49,10 @@ class Vec extends Float32Array       // Vectors of floating point numbers.  This
   cross(b) { return Vec.of( this[1]*b[2] - this[2]*b[1], this[2]*b[0] - this[0]*b[2], this[0]*b[1] - this[1]*b[0] ); }
   to_string() { return "[vec " + this.join( ", " ) + "]" }
 }
+class_list.push( Vec );
 
-const Mat = tiny.Mat =
-class Mat extends Array                         // M by N matrices of floats.  Enables matrix and vector math.  Usage:
+
+export class Mat extends Array                         // M by N matrices of floats.  Enables matrix and vector math.  Usage:
   //  "Mat( rows )" returns a Mat with those rows, where rows is an array of float arrays.
   //  "M.set_identity( m, n )" assigns the m by n identity matrix to Mat M.
   //  "M.sub_block( start, end )" where start and end are each a [ row, column ] pair returns a sub-rectangle cut out from M.
@@ -102,10 +102,10 @@ class Mat extends Array                         // M by N matrices of floats.  E
     }
   to_string() { return "[" + this.map( (r,i) => "[" + r.join(", ") + "]" ).join(" ") + "]" }
 }
+class_list.push( Mat );
 
 
-const Mat4 = tiny.Mat4 =
-class Mat4 extends Mat                               // Generate special 4x4 matrices that are useful for graphics.
+export class Mat4 extends Mat                               // Generate special 4x4 matrices that are useful for graphics.
 { static identity()       { return Mat.of( [ 1,0,0,0 ], [ 0,1,0,0 ], [ 0,0,1,0 ], [ 0,0,0,1 ] ); };
   static rotation( angle, axis )                                             // Requires a scalar (angle) and a 3x1 Vec (axis)
                           { let [ x, y, z ] = Vec.from( axis ).normalized(), 
@@ -173,10 +173,10 @@ class Mat4 extends Mat                               // Generate special 4x4 mat
       return result.times( 1/( m00*result[0][0] + m10*result[0][1] + m20*result[0][2] + m30*result[0][3] ) );
     }
 }
+class_list.push( Mat4 );
 
 
-const Keyboard_Manager = tiny.Keyboard_Manager =
-class Keyboard_Manager     // This class maintains a running list of which keys are depressed.  You can map combinations of shortcut
+export class Keyboard_Manager     // This class maintains a running list of which keys are depressed.  You can map combinations of shortcut
 {                        // keys to trigger callbacks you provide by calling add().  See add()'s arguments.  The shortcut list is 
                          // indexed by convenient strings showing each bound shortcut combination.  The constructor optionally
                          // takes "target", which is the desired DOM element for keys to be pressed inside of, and
@@ -220,10 +220,10 @@ class Keyboard_Manager     // This class maintains a running list of which keys 
   add( shortcut_combination, callback = () => {}, keyup_callback = () => {} )
     { this.saved_controls[ shortcut_combination.join('+') ] = { shortcut_combination, callback, keyup_callback }; }
 }
+class_list.push( Keyboard_Manager );
 
 
-const Graphics_Card_Object = tiny.Graphics_Card_Object =
-class Graphics_Card_Object       // Extending this class allows an object to, whenever used, copy
+export class Graphics_Card_Object       // Extending this class allows an object to, whenever used, copy
 {                                       // itself onto a GPU context whenever it has not already been.
   constructor() { this.gpu_instances = new Map() }     // Track which GPU contexts this object has copied itself onto.
   copy_onto_graphics_card( context, ...args )
@@ -256,10 +256,10 @@ class Graphics_Card_Object       // Extending this class allows an object to, wh
     { return this.gpu_instances.get( context ) || this.copy_onto_graphics_card( context, ...args ) }
   make_gpu_representation() {}             // Override this in your subclass, defining a blank container of GPU references for itself.
 }
+class_list.push( Graphics_Card_Object );
 
 
-const Vertex_Buffer = tiny.Vertex_Buffer =
-class Vertex_Buffer extends Graphics_Card_Object
+export class Vertex_Buffer extends Graphics_Card_Object
 {                             // To use Vertex_Buffer, make a subclass of it that overrides the constructor and fills in the right fields.  
                               // Vertex_Buffer organizes data related to one 3D shape and copies it into GPU memory.  That data is broken
                               // down per vertex in the shape.  You can make several fields that you can look up in a vertex; for each
@@ -306,10 +306,10 @@ class Vertex_Buffer extends Graphics_Card_Object
       this.execute_shaders( webgl_manager.context, type );                                                // Run the shaders to draw every triangle now.
     }
 }
+class_list.push( Vertex_Buffer );
 
 
-const Shape = tiny.Shape =
-class Shape extends Vertex_Buffer
+export class Shape extends Vertex_Buffer
 {           // This class is used the same way as Vertex_Buffer, by subclassing it and writing a constructor that fills in certain fields.
             // Shape extends Vertex_Buffer's functionality for copying shapes into buffers the graphics card's memory.  It also adds the
             // basic assumption that each vertex will have a 3D position and a 3D normal vector as available fields to look up.  This means
@@ -384,15 +384,16 @@ class Shape extends Vertex_Buffer
         this.arrays.position = p_arr.map( p => p.times( 1/average_lengths.norm() ) );
     }
 }
+class_list.push( Shape );
 
-const Light = tiny.Light =
-class Light                                             // The properties of one light in the scene (Two 4x1 Vecs and a scalar)
+export class Light                                             // The properties of one light in the scene (Two 4x1 Vecs and a scalar)
 { constructor( position, color, size ) { Object.assign( this, { position, color, attenuation: 1/size } ); }  }
+class_list.push( Light );
 
-const Color = tiny.Color = Vec;    // Just an alias.  Colors are special 4x1 vectors expressed as ( red, green, blue, opacity ) each from 0 to 1.
+export class Color extends Vec {}    // Just an alias.  Colors are special 4x1 vectors expressed as ( red, green, blue, opacity ) each from 0 to 1.
+class_list.push( Color );
 
-const Graphics_Addresses = tiny.Graphics_Addresses =
-class Graphics_Addresses    // For organizing communication with the GPU for Shaders.  Once we've compiled the Shader, we can query 
+export class Graphics_Addresses    // For organizing communication with the GPU for Shaders.  Once we've compiled the Shader, we can query 
 {                           // some things about the compiled program, such as the memory addresses it will use for uniform variables, 
                             // and the types and indices of its per-vertex attributes.  We'll need those for building vertex buffers.
   constructor( program, gl )
@@ -414,10 +415,10 @@ class Graphics_Addresses    // For organizing communication with the GPU for Sha
     } 
   }
 }
+class_list.push( Graphics_Addresses );
 
 
-const Overridable = tiny.Overridable =
-class Overridable     // Class Overridable allows a short way to create modified versions of JavaScript objects.  Some properties are
+export class Overridable     // Class Overridable allows a short way to create modified versions of JavaScript objects.  Some properties are
 {                            // replaced with substitutes that you provide, without having to write out a new object from scratch.
        // To override, simply pass in "replacement", a JS Object of keys/values you want to override, to generate a new object.
        // For shorthand you can leave off the key and only provide a value (pass in directly as "replacement") and a guess will
@@ -434,10 +435,10 @@ class Overridable     // Class Overridable allows a short way to create modified
       return Object.assign( target, { [ matching_keys_by_type[0][0] ]: replacement } );
     }
 }
+class_list.push( Overridable );
 
 
-const Shader = tiny.Shader =
-class Shader extends Graphics_Card_Object
+export class Shader extends Graphics_Card_Object
 {                           // Your subclasses of Shader will manage strings of GLSL code that will be sent to the GPU and will run, to
                             // draw every shape.  Extend the class and fill in the abstract functions; the constructor needs them.
   copy_onto_graphics_card( context )
@@ -490,10 +491,10 @@ class Shader extends Graphics_Card_Object
     material() { return class Material extends Overridable {} }
     update_GPU(){}  shared_glsl_code(){}  vertex_glsl_code(){}  fragment_glsl_code(){}
 }
+class_list.push( Shader );
 
 
-const Texture = tiny.Texture =
-class Texture extends Graphics_Card_Object                     // The Texture class wraps a pointer to a new texture
+export class Texture extends Graphics_Card_Object                     // The Texture class wraps a pointer to a new texture
 { constructor( filename, min_filter = "LINEAR_MIPMAP_LINEAR" )        // buffer along with a new HTML image object. 
     { super();
       Object.assign( this, { filename, min_filter } );
@@ -530,10 +531,10 @@ class Texture extends Graphics_Card_Object                     // The Texture cl
       context.bindTexture( context.TEXTURE_2D, gpu_instance.texture_buffer_pointer );
     }
 }
+class_list.push( Texture );
 
 
-const Program_State = tiny.Program_State =
-class Program_State extends Overridable                 // Stores things that affect multiple shapes, such as lights and the camera.
+export class Program_State extends Overridable                 // Stores things that affect multiple shapes, such as lights and the camera.
 { constructor( camera_transform = Mat4.identity(), projection_transform = Mat4.identity() ) 
     { super();
       this.set_camera( camera_transform );
@@ -547,10 +548,10 @@ class Program_State extends Overridable                 // Stores things that af
       Object.assign( this, { camera_transform: Mat4.inverse( matrix ), camera_inverse: matrix } )
     }
 }
+class_list.push( Program_State );
 
 
-const Webgl_Manager = tiny.Webgl_Manager =
-class Webgl_Manager      // This class manages a whole graphics program for one on-page canvas, including its textures, shapes, shaders,
+export class Webgl_Manager      // This class manages a whole graphics program for one on-page canvas, including its textures, shapes, shaders,
 {                        // and scenes.  In addition to requesting a WebGL context and storing the aforementioned items, it informs the
                          // canvas of which functions to call during events - such as a key getting pressed or it being time to redraw.
   constructor( canvas, background_color, dimensions )
@@ -601,10 +602,10 @@ class Webgl_Manager      // This class manages a whole graphics program for one 
       this.event = window.requestAnimFrame( this.render.bind( this ) );   // Now that this frame is drawn, request that render() happen 
     }                                                                     // again as soon as all other web page events are processed.
 }
+class_list.push( Webgl_Manager );
 
 
-const Scene = tiny.Scene =
-class Scene          // The Scene superclass is the base class for any scene part or code snippet that you can add to a
+export class Scene          // The Scene superclass is the base class for any scene part or code snippet that you can add to a
 {                           // canvas.  Make your own subclass(es) of this and override their methods "display()" and "make_control_panel()"
                             // to make them do something.  Finally, push them onto your Webgl_Manager's "scenes" array.
   constructor()
@@ -648,3 +649,4 @@ class Scene          // The Scene superclass is the base class for any scene par
     }                                                          // You have to override the following functions to use class Scene.
   make_control_panel(){}  display( context, program_state ){}  show_explanation( document_section ){}
 }
+class_list.push( Scene );
