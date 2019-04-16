@@ -140,6 +140,24 @@ class Subdivision_Sphere extends Shape
                                                          // edges in UV space can be mapped.  The only way to avoid artifacts is to smoothly                                                          
           this.arrays.texture_coord.push(                // wrap & unwrap the image in reverse - displaying the texture twice on the sphere.
                                  Vec.of( Math.asin( p[0]/Math.PI ) + .5, Math.asin( p[1]/Math.PI ) + .5 ) ) }
+
+      // Fix the UV seam by duplicating vertices with offset UV
+        let tex = this.texture_coords;
+        for (let i = 0; i < this.indices.length; i += 3) {
+            const a = this.indices[i], b = this.indices[i + 1], c = this.indices[i + 2];
+            if ([[a, b], [a, c], [b, c]].some(x => (Math.abs(tex[x[0]][0] - tex[x[1]][0]) > 0.5))
+                && [a, b, c].some(x => tex[x][0] < 0.5))
+            {
+                for (let q of [[a, i], [b, i + 1], [c, i + 2]]) {
+                    if (tex[q[0]][0] < 0.5) {
+                        this.indices[q[1]] = this.positions.length;
+                        this.positions.push(this.positions[q[0]].copy());
+                        this.normals.push(this.normals[q[0]].copy());
+                        tex.push(tex[q[0]].plus(Vec.of(1, 0)));
+                    }
+                }
+            }
+        }
     }
   subdivideTriangle( a, b, c, count )   // Recurse through each level of detail by splitting triangle (a,b,c) into four smaller ones.
     { 
