@@ -392,18 +392,21 @@ export class Basic_Phong_Complete extends Shader
         varying vec3 N, vertex_worldspace;
                                                                                     
         vec3 phong_model_light( vec3 N )
-          { 
+          { vec3 result = vec3(0.0);          
             vec3 E = normalize( camera_center - vertex_worldspace );
-
+            for(int i = 0; i < N_LIGHTS; i++)
+              {
                                                               // Light positions use homogeneous coords.  Use w = 0 for a
                                                               // directional light source -- a vector instead of a point:
-            vec3 L = normalize( light_position_or_vector[0].xyz - light_position_or_vector[0].w * vertex_worldspace );
-            vec3 H = normalize( L + E );
+                vec3 L = normalize( light_position_or_vector[i].xyz - light_position_or_vector[i].w * vertex_worldspace );
+                vec3 H = normalize( L + E );
 
-            float diffuse  =      max( dot( N, normalize( L ) ), 0.0 );
-            float specular = pow( max( dot( N, normalize( H ) ), 0.0 ), smoothness );
+                float diffuse  =      max( dot( N, L ), 0.0 );
+                float specular = pow( max( dot( N, H ), 0.0 ), smoothness );
 
-            return shape_color.xyz * diffusivity * diffuse + light_color[0].xyz * specularity * specular;
+                result += shape_color.xyz * diffusivity * diffuse + light_color[i].xyz * specularity * specular;
+              }
+            return result;
           } ` ;
     }
   vertex_glsl_code()           // ********* VERTEX SHADER *********
@@ -427,8 +430,7 @@ export class Basic_Phong_Complete extends Shader
                                // Fragments affect the final image or get discarded due to depth.                                 
       return `
         void main()
-          { 
-                                                                      // Compute an initial (ambient) color:
+          {                                                           // Compute an initial (ambient) color:
             gl_FragColor = vec4( shape_color.xyz * ambient, shape_color.w );
                                                                      // Compute the final color with contributions from lights:
             gl_FragColor.xyz += phong_model_light( normalize( N ) );
@@ -471,10 +473,14 @@ export class Basic_Phong_Complete extends Shader
                                              // Omitting lights will show only the material color, scaled by the ambient term:
       if( !g_state.lights.length )
         return;
-      gl.uniform4fv( gpu.light_color, g_state.lights[0].color );
-                                                                  // Light position uses homogeneous coords:
-      const light_position_or_vector = g_state.lights[0].position;
-      gl.uniform4fv( gpu.light_position_or_vector, light_position_or_vector );
+
+      const light_positions_flattened = [], light_colors_flattened = [];
+      for( var i = 0; i < 4 * g_state.lights.length; i++ )
+        { light_positions_flattened                  .push( g_state.lights[ Math.floor(i/4) ].position[i%4] );
+          light_colors_flattened                     .push( g_state.lights[ Math.floor(i/4) ].color[i%4] );
+        }
+      gl.uniform4fv( gpu.light_position_or_vector,       light_positions_flattened );
+      gl.uniform4fv( gpu.light_color,                    light_colors_flattened );
     }
 }
 
@@ -505,7 +511,8 @@ export class Phong_Comparison_Demo extends Scene
         }
       const light_pos = Mat4.rotation( program_state.animation_time/1340, Vec.of( 0,1,0 ) ).times( Vec.of( 0,4,15,1 ) );
 
-      program_state.lights = [ new Light( light_pos, Color.of( 0,1,1,1 ), 10000 ) ];
+      program_state.lights = [ new Light( light_pos, Color.of( 0,1,1,1 ), 10000 ),
+                               new Light( Vec.of( 0, Math.random(), 2, 1 ), Color.of( 1,1,1,1), 100000 ) ];
 
       const material = this.materials[ this.index ];
 
