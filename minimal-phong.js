@@ -263,14 +263,23 @@ export class Basic_Phong_Compute_H_E_Outside extends Shader      // Simplified; 
 
 
 export class Basic_Phong_Optimized extends Shader
-{ shared_glsl_code()            // ********* SHARED CODE, INCLUDED IN BOTH SHADERS *********
+{                                  // **Phong_Shader** is a subclass of Shader, which stores and maanges a GPU program.  
+                                   // Graphic cards prior to year 2000 had shaders like this one hard-coded into them
+                                   // instead of customizable shaders.  "Phong" Shading is a process of determining 
+                                   // brightness of pixels via vector math.  It compares the normal vector at that 
+                                   // pixel to the vectors toward the camera and light sources.
+
+  shared_glsl_code()           // ********* SHARED CODE, INCLUDED IN BOTH SHADERS *********
     { return ` precision mediump float;
         uniform float ambient, diffusivity, specularity, smoothness;
         uniform vec4 lightColor, shapeColor, light_position_or_vector;
         uniform vec3 squared_scale, camera_center;
-        varying vec3 N, L, H;           // Specifier "varying" means a variable's final value will be passed from the vertex shader 
-                                        // on to the next phase (fragment shader), then interpolated per-fragment, weighted by the 
-                                        // pixel fragment's proximity to each of the 3 vertices (barycentric interpolation).                                            
+
+                              // Specifier "varying" means a variable's final value will be passed from the vertex shader
+                              // on to the next phase (fragment shader), then interpolated per-fragment, weighted by the
+                              // pixel fragment's proximity to each of the 3 vertices (barycentric interpolation).
+        varying vec3 N, L, H;
+                                                                                    
         vec3 phong_model_light( vec3 N )
           { float diffuse  =      max( dot( N, normalize( L ) ), 0.0 );
             float specular = pow( max( dot( N, normalize( H ) ), 0.0 ), smoothness );
@@ -286,61 +295,71 @@ export class Basic_Phong_Optimized extends Shader
         uniform mat4 projection_camera_model_transform;
 
         void main()
-          { gl_Position = projection_camera_model_transform * vec4( position, 1.0 );           // The vertex's final resting place (in NDCS).
-            N = normalize( mat3( model_transform ) * normal / squared_scale);                         // The final normal vector in screen space.
+          {                                                                   // The vertex's final resting place (in NDCS):
+            gl_Position = projection_camera_model_transform * vec4( position, 1.0 );
+                                                                              // The final normal vector in screen space.
+            N = normalize( mat3( model_transform ) * normal / squared_scale);
             
             vec3 vertex_worldspace = ( model_transform * vec4( position, 1.0 ) ).xyz;
             vec3 E = normalize( camera_center - vertex_worldspace );
 
-            // Light positions use homogeneous coords.  Use w = 0 for a directional light source -- a vector instead of a point.
+                                                              // Light positions use homogeneous coords.  Use w = 0 for a
+                                                              // directional light source -- a vector instead of a point:
             L = normalize( light_position_or_vector.xyz - light_position_or_vector.w * vertex_worldspace );
             H = normalize( L + E );
           } ` ;
     }
-  fragment_glsl_code()        // ********* FRAGMENT SHADER ********* 
-    {   // A fragment is a pixel that's overlapped by the current triangle.  Fragments affect the final image or get discarded due to depth.                                 
+  fragment_glsl_code()         // ********* FRAGMENT SHADER ********* 
+    {                          // A fragment is a pixel that's overlapped by the current triangle.
+                               // Fragments affect the final image or get discarded due to depth.                                 
       return `
         void main()
-          { gl_FragColor = vec4( shapeColor.xyz * ambient, shapeColor.w );   // Compute an initial (ambient) color:
-            gl_FragColor.xyz += phong_model_light( normalize( N ) );         // Compute the final color with contributions from lights.
+          {                                                          // Compute an initial (ambient) color:
+            gl_FragColor = vec4( shapeColor.xyz * ambient, shapeColor.w );
+                                                                     // Compute the final color with contributions from lights:
+            gl_FragColor.xyz += phong_model_light( normalize( N ) );
           } ` ;
     }
-
-    // Define how to synchronize our JavaScript's variables to the GPU's.  This is where the shader recieves ALL of its inputs.  Every
-    // value the GPU wants is divided into two categories:  Values that belong to individual object being drawn (which we call "Material")
-    // and values belonging to the whole scene or program (which we call the "Graphics State").  Send both a material and a graphics state
-    // to the shaders to fully initialize them.
   update_GPU( context, gpu_addresses, g_state, model_transform, material )
-    { const gpu = gpu_addresses, gl = context;
+    {             // update_GPU(): Define how to synchronize our JavaScript's variables to the GPU's.  This is where the shader 
+                  // recieves ALL of its inputs.  Every value the GPU wants is divided into two categories:  Values that belong
+                  // to individual objects being drawn (which we call "Material") and values belonging to the whole scene or 
+                  // program (which we call the "Program_State").  Send both a material and a program state to the shaders 
+                  // within this function, one data field at a time, to fully initialize the shader for a draw.                  
+      const gpu = gpu_addresses, gl = context;
 
       const defaults = { color: Color.of( 0,0,0,1 ), ambient: 0, diffusivity: 1, specularity: 1, smoothness: 40 };
       material = Object.assign( {}, defaults, material );
-                                                                  // Send the current matrices to the shader.  Go ahead and pre-compute
-                                                                  // the products we'll need of the of the three special matrices and just
-                                                                  // cache and send those.  They will be the same throughout this draw
-                                                                  // call, and thus across each instance of the vertex shader.
-                                                                  // Transpose them since the GPU expects matrices as column-major arrays.
+                                                      // Send the current matrices to the shader.  Go ahead and pre-compute
+                                                      // the products we'll need of the of the three special matrices and just
+                                                      // cache and send those.  They will be the same throughout this draw
+                                                      // call, and thus across each instance of the vertex shader.
+                                                      // Transpose them since the GPU expects matrices as column-major arrays.
       const PCM = g_state.projection_transform.times( g_state.camera_inverse ).times( model_transform );
       gl.uniformMatrix4fv( gpu.                  model_transform, false, Mat.flatten_2D_to_1D( model_transform.transposed() ) );
       gl.uniformMatrix4fv( gpu.projection_camera_model_transform, false, Mat.flatten_2D_to_1D(             PCM.transposed() ) );
 
-      const squared_scale = model_transform.reduce( (acc,r) => { return acc.plus( Vec.from(r).mult_pairs(r) ) }, Vec.of( 0,0,0,0 ) ).to3();
-      gl.uniform3fv( gpu.squared_scale, squared_scale );          // Use the squared scale trick from Eric's blog instead of inverse transpose.
+                                         // Use the squared scale trick from "Eric's blog" instead of inverse transpose matrix:
+      const squared_scale = model_transform.reduce( 
+                                         (acc,r) => { return acc.plus( Vec.from(r).mult_pairs(r) ) }, Vec.of( 0,0,0,0 ) ).to3();                                            
+      gl.uniform3fv( gpu.squared_scale, squared_scale );
 
-
-      gl.uniform4fv( gpu.shapeColor,     material.color       );    // Send the desired shape-wide material qualities 
-      gl.uniform1f ( gpu.ambient,        material.ambient     );    // to the graphics card, where they will tweak the
-      gl.uniform1f ( gpu.diffusivity,    material.diffusivity );    // Phong lighting formula.
+                                                              // Send the desired shape-wide material qualities to the graphics
+                                                              // card, where they will tweak the Phong lighting formula.
+      gl.uniform4fv( gpu.shapeColor,     material.color       );
+      gl.uniform1f ( gpu.ambient,        material.ambient     );
+      gl.uniform1f ( gpu.diffusivity,    material.diffusivity );
       gl.uniform1f ( gpu.specularity,    material.specularity );
       gl.uniform1f ( gpu.smoothness,     material.smoothness  );
 
       const O = Vec.of( 0,0,0,1 ), camera_center = g_state.camera_transform.times( O ).to3();
       gl.uniform3fv( gpu.camera_center, camera_center );
-
-      if( !g_state.lights.length ) return;      // Omitting lights will show only the material color, scaled by the ambient term.
-      gl.uniform4fv( gpu.lightColor,          g_state.lights[0].color );
-      
-      const light_position_or_vector = g_state.lights[0].position;  // Light position uses homogeneous coords.
+                                             // Omitting lights will show only the material color, scaled by the ambient term:
+      if( !g_state.lights.length )
+        return;
+      gl.uniform4fv( gpu.lightColor, g_state.lights[0].color );
+                                                                  // Light position uses homogeneous coords:
+      const light_position_or_vector = g_state.lights[0].position;
       gl.uniform4fv( gpu.light_position_or_vector, light_position_or_vector );
     }
 }
