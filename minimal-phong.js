@@ -1,18 +1,9 @@
 import {tiny, defs} from './common.js';
-const { Vec, Mat, Mat4, Color, Light, Overridable,
+const { Vec, Mat, Mat4, Color, Light, Material,
         Shape, Shader, Scene, Texture } = tiny;           // Pull these names into this module's scope for convenience.
 
 export class Basic_Phong extends Shader 
-{ material( options )                      // Phong Materials expect you to pass in options like the following:
-    { const defaults = { color: Color.of( 0,0,0,1 ), ambient: 0, diffusivity: 1, specularity: 1, smoothness: 40 };
-      return new class Material extends Overridable
-        { constructor()                         
-            { super();
-              Object.assign( this, defaults, options );
-            }
-        }().replace({ shader: this })
-    }
-  shared_glsl_code()            // ********* SHARED CODE, INCLUDED IN BOTH SHADERS *********
+{ shared_glsl_code()            // ********* SHARED CODE, INCLUDED IN BOTH SHADERS *********
     { return ` precision mediump float;
         uniform float ambient, diffusivity, specularity, smoothness;
         uniform vec4 lightPosition, lightColor, shapeColor;
@@ -57,6 +48,10 @@ export class Basic_Phong extends Shader
     // Define how to synchronize our JavaScript's variables to the GPU's:
   update_GPU( context, gpu_addresses, g_state, model_transform, material )
     { const gpu = gpu_addresses, gl = context;
+
+      const defaults = { color: Color.of( 0,0,0,1 ), ambient: 0, diffusivity: 1, specularity: 1, smoothness: 40 };
+      material = Object.assign( {}, defaults, material );
+
       this.update_matrices( gl, gpu, g_state, model_transform );  // First, send the matrices to the GPU.
 
       gl.uniform4fv( gpu.shapeColor,     material.color       );    // Send the desired shape-wide material qualities 
@@ -92,16 +87,7 @@ export class Basic_Phong extends Shader
 
 
 export class Basic_Phong_Compute_H_E_L_Outside extends Shader      // Simplified; light and eye vectors as emerge from the center of the object.
-{ material( options )                      // Phong Materials expect you to pass in options like the following:
-    { const defaults = { color: Color.of( 0,0,0,1 ), ambient: 0, diffusivity: 1, specularity: 1, smoothness: 40 };
-      return new class Material extends Overridable
-        { constructor()                         
-            { super();
-              Object.assign( this, defaults, options );
-            }
-        }().replace({ shader: this })
-    }
-  shared_glsl_code()            // ********* SHARED CODE, INCLUDED IN BOTH SHADERS *********
+{ shared_glsl_code()            // ********* SHARED CODE, INCLUDED IN BOTH SHADERS *********
     { return ` precision mediump float;
         uniform float ambient, diffusivity, specularity, smoothness;
         uniform vec4 lightColor, shapeColor;
@@ -143,6 +129,9 @@ export class Basic_Phong_Compute_H_E_L_Outside extends Shader      // Simplified
     // to the shaders to fully initialize them.
   update_GPU( context, gpu_addresses, g_state, model_transform, material )
     { const gpu = gpu_addresses, gl = context;
+
+      const defaults = { color: Color.of( 0,0,0,1 ), ambient: 0, diffusivity: 1, specularity: 1, smoothness: 40 };
+      material = Object.assign( {}, defaults, material );
                                                                   // Send the current matrices to the shader.  Go ahead and pre-compute
                                                                   // the products we'll need of the of the three special matrices and just
                                                                   // cache and send those.  They will be the same throughout this draw
@@ -183,16 +172,7 @@ export class Basic_Phong_Compute_H_E_L_Outside extends Shader      // Simplified
 
 
 export class Basic_Phong_Compute_H_E_Outside extends Shader      // Simplified; light and eye vectors as emerge from the center of the object.
-{ material( options )                      // Phong Materials expect you to pass in options like the following:
-    { const defaults = { color: Color.of( 0,0,0,1 ), ambient: 0, diffusivity: 1, specularity: 1, smoothness: 40 };
-      return new class Material extends Overridable
-        { constructor()                         
-            { super();
-              Object.assign( this, defaults, options );
-            }
-        }().replace({ shader: this })
-    }
-  shared_glsl_code()            // ********* SHARED CODE, INCLUDED IN BOTH SHADERS *********
+{ shared_glsl_code()            // ********* SHARED CODE, INCLUDED IN BOTH SHADERS *********
     { return ` precision mediump float;
         uniform float ambient, diffusivity, specularity, smoothness;
         uniform vec4 lightColor, shapeColor, light_position_or_vector;
@@ -237,6 +217,9 @@ export class Basic_Phong_Compute_H_E_Outside extends Shader      // Simplified; 
     // to the shaders to fully initialize them.
   update_GPU( context, gpu_addresses, g_state, model_transform, material )
     { const gpu = gpu_addresses, gl = context;
+
+      const defaults = { color: Color.of( 0,0,0,1 ), ambient: 0, diffusivity: 1, specularity: 1, smoothness: 40 };
+      material = Object.assign( {}, defaults, material );
                                                                   // Send the current matrices to the shader.  Go ahead and pre-compute
                                                                   // the products we'll need of the of the three special matrices and just
                                                                   // cache and send those.  They will be the same throughout this draw
@@ -280,16 +263,7 @@ export class Basic_Phong_Compute_H_E_Outside extends Shader      // Simplified; 
 
 
 export class Basic_Phong_Optimized extends Shader
-{ material( options )                                  // Phong Materials expect you to pass in options like the following:
-    { const defaults = { color: Color.of( 0,0,0,1 ), ambient: 0, diffusivity: 1, specularity: 1, smoothness: 40 };
-      return new class Material extends Overridable
-        { constructor()                         
-            { super();
-              Object.assign( this, defaults, options );
-            }
-        }().replace({ shader: this })
-    }
-  shared_glsl_code()            // ********* SHARED CODE, INCLUDED IN BOTH SHADERS *********
+{ shared_glsl_code()            // ********* SHARED CODE, INCLUDED IN BOTH SHADERS *********
     { return ` precision mediump float;
         uniform float ambient, diffusivity, specularity, smoothness;
         uniform vec4 lightColor, shapeColor, light_position_or_vector;
@@ -338,6 +312,9 @@ export class Basic_Phong_Optimized extends Shader
     // to the shaders to fully initialize them.
   update_GPU( context, gpu_addresses, g_state, model_transform, material )
     { const gpu = gpu_addresses, gl = context;
+
+      const defaults = { color: Color.of( 0,0,0,1 ), ambient: 0, diffusivity: 1, specularity: 1, smoothness: 40 };
+      material = Object.assign( {}, defaults, material );
                                                                   // Send the current matrices to the shader.  Go ahead and pre-compute
                                                                   // the products we'll need of the of the three special matrices and just
                                                                   // cache and send those.  They will be the same throughout this draw
@@ -383,7 +360,7 @@ export class Phong_Comparison_Demo extends Scene
       this.shaders = [ new defs.Phong_Shader(), new Basic_Phong(), new Basic_Phong_Optimized(), 
                        new Basic_Phong_Compute_H_E_Outside(), new Basic_Phong_Compute_H_E_L_Outside() ];
 
-      this.materials = this.shaders.map( s => s.material({ ambient:.2, smoothness:10 }).override( Color.of( 1,1,0,1 ) ) );
+      this.materials = this.shaders.map( s => new Material( s, { ambient:.2, smoothness:10, color: Color.of( 1,1,0,1 ) } ) );
     }
   display( context, program_state )                                                      // Do this every frame.
     { if( !this.has_placed_camera ) 
