@@ -368,9 +368,9 @@ export class Basic_Phong_Optimized extends Shader
 export class Basic_Phong_Complete extends Shader
 {                                  // **Phong_Shader** is a subclass of Shader, which stores and maanges a GPU program.  
                                    // Graphic cards prior to year 2000 had shaders like this one hard-coded into them
-                                   // instead of customizable shaders.  "Phong" Shading is a process of determining 
-                                   // brightness of pixels via vector math.  It compares the normal vector at that 
-                                   // pixel to the vectors toward the camera and light sources.
+                                   // instead of customizable shaders.  "Phong-Blinn" Shading is a process of 
+                                   // determining brightness of pixels via vector math.  It compares the normal vector
+                                   // at that pixel with the vectors toward the camera and light sources.
 
   
   constructor( num_lights )
@@ -382,7 +382,8 @@ export class Basic_Phong_Complete extends Shader
     { return ` precision mediump float;
         const int N_LIGHTS = ` + this.num_lights + `;
         uniform float ambient, diffusivity, specularity, smoothness;
-        uniform vec4 light_position_or_vector[N_LIGHTS], light_color[N_LIGHTS];
+        uniform vec4 light_positions_or_vectors[N_LIGHTS], light_colors[N_LIGHTS];
+        uniform float light_attenuation_factors[N_LIGHTS];
         uniform vec4 shape_color;
         uniform vec3 squared_scale, camera_center;
 
@@ -391,20 +392,35 @@ export class Basic_Phong_Complete extends Shader
                               // pixel fragment's proximity to each of the 3 vertices (barycentric interpolation).
         varying vec3 N, vertex_worldspace;
                                                                                     
-        vec3 phong_model_light( vec3 N )
-          { vec3 result = vec3(0.0);          
+        vec3 phong_model_lights( vec3 N )
+          {                                        // phong_model_lights():  Add up the lights' contributions.
             vec3 E = normalize( camera_center - vertex_worldspace );
+            vec3 result = vec3( 0.0 );
             for(int i = 0; i < N_LIGHTS; i++)
               {
-                                                              // Light positions use homogeneous coords.  Use w = 0 for a
-                                                              // directional light source -- a vector instead of a point:
-                vec3 L = normalize( light_position_or_vector[i].xyz - light_position_or_vector[i].w * vertex_worldspace );
-                vec3 H = normalize( L + E );
+                            // Lights store homogeneous coords - either a position or vector.  If w is 0, the 
+                            // light will appear directional (uniform direction from all points), and we 
+                            // simply obtain a vector towards the light by directly using the stored value.
+                            // Otherwise if w is 1 it will appear as a point light -- compute the vector to 
+                            // the point light's location from the current surface point.  In either case, 
+                            // fade (attenuate) the light as the vector needed to reach it gets longer.  
+                vec3 surface_to_light_vector = light_positions_or_vectors[i].xyz - 
+                                               light_positions_or_vectors[i].w * vertex_worldspace;                                             
+                float distance_to_light = length( surface_to_light_vector );
 
+                vec3 L = normalize( surface_to_light_vector );
+                vec3 H = normalize( L + E );
+                                                  // Compute the diffuse and specular components from the Phong
+                                                  // Reflection Model, using Blinn's "halfway vector" method:
                 float diffuse  =      max( dot( N, L ), 0.0 );
                 float specular = pow( max( dot( N, H ), 0.0 ), smoothness );
+                float attenuation = 1.0 / (1.0 + light_attenuation_factors[i] * distance_to_light * distance_to_light );
+                
+                
+                vec3 light_contribution = shape_color.xyz * diffusivity * diffuse +
+                                      light_colors[i].xyz * specularity * specular;
 
-                result += shape_color.xyz * diffusivity * diffuse + light_color[i].xyz * specularity * specular;
+                result += attenuation * light_contribution;
               }
             return result;
           } ` ;
@@ -433,7 +449,7 @@ export class Basic_Phong_Complete extends Shader
           {                                                           // Compute an initial (ambient) color:
             gl_FragColor = vec4( shape_color.xyz * ambient, shape_color.w );
                                                                      // Compute the final color with contributions from lights:
-            gl_FragColor.xyz += phong_model_light( normalize( N ) );
+            gl_FragColor.xyz += phong_model_lights( normalize( N ) );
           } ` ;
     }
   update_GPU( context, gpu_addresses, g_state, model_transform, material )
@@ -478,9 +494,10 @@ export class Basic_Phong_Complete extends Shader
       for( var i = 0; i < 4 * g_state.lights.length; i++ )
         { light_positions_flattened                  .push( g_state.lights[ Math.floor(i/4) ].position[i%4] );
           light_colors_flattened                     .push( g_state.lights[ Math.floor(i/4) ].color[i%4] );
-        }
-      gl.uniform4fv( gpu.light_position_or_vector,       light_positions_flattened );
-      gl.uniform4fv( gpu.light_color,                    light_colors_flattened );
+        }      
+      gl.uniform4fv( gpu.light_positions_or_vectors, light_positions_flattened );
+      gl.uniform4fv( gpu.light_colors,               light_colors_flattened );
+      gl.uniform1fv( gpu.light_attenuation_factors, g_state.lights.map( l => l.attenuation ) );
     }
 }
 
@@ -512,9 +529,9 @@ export class Phong_Comparison_Demo extends Scene
       const light_pos = Mat4.rotation( program_state.animation_time/1340, Vec.of( 0,1,0 ) ).times( Vec.of( 0,4,15,1 ) );
 
       program_state.lights = [ new Light( light_pos, Color.of( 0,1,1,1 ), 10000 ),
-//                                new Light( Vec.of( 3,-4,5,1 ), Color.of( 1,1,1,1 ), 10000 ),
-//                                new Light( Vec.of( -3,4,5,1 ), Color.of( 1,0,1,1 ), 10000 ),
-//                                new Light( Vec.of( 3,4,-5,1 ), Color.of( 1,1,0,1 ), 10000 ),
+                               new Light( Vec.of( 3,-4,5,1 ), Color.of( 1,1,1,1 ), 10000 ),
+                               new Light( Vec.of( -3,4,5,1 ), Color.of( 1,0,1,1 ), 10000 ),
+                               new Light( Vec.of( 3,4,-5,1 ), Color.of( 1,1,0,1 ), 10000 ),
                                new Light( Vec.of( 0, Math.random(), 2, 1 ), Color.of( 1,1,1,1), 100000 ) ];
 
       const material = this.materials[ this.index ];
