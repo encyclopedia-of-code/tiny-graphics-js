@@ -272,11 +272,14 @@ class Graphics_Card_Object
   constructor() 
     { this.gpu_instances = new Map() }     // Track which GPU contexts this object has copied itself onto.
   copy_onto_graphics_card( context, intial_gpu_representation )
-    {                           // copy_onto_graphics_card():  GPU-bound objects use this function by populating 
-                                // the "gpu instance" object returned here with whatever GPU pointers they need
-                                // to store (after they obtain them by performing WebGL calls).
-
-                                // Check if a copy of this object already exists on the GPU:
+    {                           // copy_onto_graphics_card():  Our object might need to register to multiple 
+                                // GPU contexts in the case of multiple drawing areas.  If this is a new GPU
+                                // context for this object, copy the object to the GPU.  Otherwise, this 
+                                // object already has been copied over, so get a pointer to the existing 
+                                // instance.  The instance consists of whatever GPU pointers are associated
+                                // with this object, as returned by the WebGL calls that copied it to the 
+                                // GPU.  GPU-bound objects should override this function, which builds an 
+                                // initial instance, so as to populate it with finished pointers. 
       const existing_instance = this.gpu_instances.get( context );
 
                                 // Warn the user if they are avoidably making too many GPU objects.  Beginner
@@ -330,8 +333,12 @@ class Vertex_Buffer extends Graphics_Card_Object
                 // allow calling this again to overwrite the GPU buffers related to this shape's arrays, or 
                 // subsets of them as needed (if only some fields of your shape have changed).
 
-                // Tell the base Graphics_Card_Object what to store for each WebGL Context:
+                // Define what this object should store in each new WebGL Context:
       const initial_gpu_representation = { webGL_buffer_pointers: {} };
+                                // Our object might need to register to multiple GPU contexts in the case of 
+                                // multiple drawing areas.  If this is a new GPU context for this object, 
+                                // copy the object to the GPU.  Otherwise, this object already has been 
+                                // copied over, so get a pointer to the existing instance.
       const gpu_instance = super.copy_onto_graphics_card( context, initial_gpu_representation );
 
       const gl = context;
@@ -569,8 +576,12 @@ class Shader extends Graphics_Card_Object
     {                                     // copy_onto_graphics_card():  Called automatically as needed to load the 
                                           // shader program onto one of your GPU contexts for its first time.
 
-                // Tell the base Graphics_Card_Object what to store for each WebGL Context:
+                // Define what this object should store in each new WebGL Context:
       const initial_gpu_representation = { program: undefined, gpu_addresses: undefined };
+                                // Our object might need to register to multiple GPU contexts in the case of 
+                                // multiple drawing areas.  If this is a new GPU context for this object, 
+                                // copy the object to the GPU.  Otherwise, this object already has been 
+                                // copied over, so get a pointer to the existing instance.
       const gpu_instance = super.copy_onto_graphics_card( context, initial_gpu_representation );
 
       const program = gpu_instance.program || context.createProgram();
@@ -688,8 +699,12 @@ class Texture extends Graphics_Card_Object
     {                                     // copy_onto_graphics_card():  Called automatically as needed to load the 
                                           // texture image onto one of your GPU contexts for its first time.
       
-                // Tell the base Graphics_Card_Object what to store for each WebGL Context:
+                // Define what this object should store in each new WebGL Context:
       const initial_gpu_representation = { texture_buffer_pointer: undefined };
+                                // Our object might need to register to multiple GPU contexts in the case of 
+                                // multiple drawing areas.  If this is a new GPU context for this object, 
+                                // copy the object to the GPU.  Otherwise, this object already has been 
+                                // copied over, so get a pointer to the existing instance.
       const gpu_instance = super.copy_onto_graphics_card( context, initial_gpu_representation );
 
       if( !gpu_instance.texture_buffer_pointer ) gpu_instance.texture_buffer_pointer = context.createTexture();
