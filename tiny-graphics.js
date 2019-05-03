@@ -271,32 +271,32 @@ class Graphics_Card_Object
                                         // a GPU draw command on a context it hasn't seen before.
   constructor() 
     { this.gpu_instances = new Map() }     // Track which GPU contexts this object has copied itself onto.
-  copy_onto_graphics_card( context, ...args )
+  copy_onto_graphics_card( context, intial_gpu_representation )
     {                           // copy_onto_graphics_card():  GPU-bound objects use this function by populating 
                                 // the "gpu instance" object returned here with whatever GPU pointers they need
                                 // to store (after they obtain them by performing WebGL calls).
-    
-                                // Don't let beginners call the expensive copy_onto_graphics_card function
-                                // too many times; beginner WebGL programs typically only need to call it 
-                                // a few times.  Use an "idiot alarm" to warn the user of this.
+
+                                // Check if a copy of this object already exists on the GPU:
       const existing_instance = this.gpu_instances.get( context );
-                                // Don't trigger the idiot alarm if the user is correctly re-using
+
+                                // Warn the user if they are avoidably making too many GPU objects.  Beginner
+                                // WebGL programs typically only need to call copy_onto_graphics_card once 
+                                // per object; doing it more is expensive, so warn them with an "idiot 
+                                // alarm". Don't trigger the idiot alarm if the user is correctly re-using
                                 // an existing GPU context and merely overwriting parts of itself.
       if( !existing_instance )
-        this.check_idiot_alarm( ...args );
-                                              // Check if this object already exists on that GPU context.
+        { Graphics_Card_Object.idiot_alarm |= 0;     // Start a program-wide counter.
+          if( Graphics_Card_Object.idiot_alarm++ > 200 )
+            throw `Error: You are sending a lot of object definitions to the GPU, probably by mistake!  Many of them are likely duplicates, which you
+                   don't want since sending each one is very slow.  To avoid this, from your display() function avoid ever declaring a Shape Shader
+                   or Texture (or subclass of these) with "new", thus causing the definition to be re-created and re-transmitted every frame.  
+                   Instead, call these in your scene's constructor and keep the result as a class member, or otherwise make sure it only happens 
+                   once.  In the off chance that you have a somehow deformable shape that MUST change every frame, then at least use the special
+                   arguments of copy_onto_graphics_card to limit which buffers get overwritten every frame to only the necessary ones.`;
+        }
+                                                // Check if this object already exists on that GPU context.
       return existing_instance ||             // If necessary, start a new object associated with the context.
-             this.gpu_instances.set( context, this.make_gpu_representation() ).get( context );
-    }
-  check_idiot_alarm( args )                      // Warn the user if they are avoidably making too many GPU objects.
-    { Graphics_Card_Object.idiot_alarm |= 0;     // Start a program-wide counter.
-      if( Graphics_Card_Object.idiot_alarm++ > 200 )
-        throw `Error: You are sending a lot of object definitions to the GPU, probably by mistake!  Many of them are likely duplicates, which you
-               don't want since sending each one is very slow.  To avoid this, from your display() function avoid ever declaring a Shape Shader
-               or Texture (or subclass of these) with "new", thus causing the definition to be re-created and re-transmitted every frame.  
-               Instead, call these in your scene's constructor and keep the result as a class member, or otherwise make sure it only happens 
-               once.  In the off chance that you have a somehow deformable shape that MUST change every frame, then at least use the special
-               arguments of copy_onto_graphics_card to limit which buffers get overwritten every frame to only the necessary ones.`;
+             this.gpu_instances.set( context, intial_gpu_representation ).get( context );
     }
   activate( context, ...args )
     {                            // activate():  To use, super call it to retrieve a container of GPU 
@@ -304,7 +304,6 @@ class Graphics_Card_Object
                                  // Then do any WebGL calls you need that require GPU pointers.
       return this.gpu_instances.get( context ) || this.copy_onto_graphics_card( context, ...args )
     }
-  make_gpu_representation() {}           // Override this in your subclass, defining a blank container of GPU references for itself.
 }
 
 
@@ -330,7 +329,10 @@ class Vertex_Buffer extends Graphics_Card_Object
                 // their own buffers within any of your existing graphics card contexts.  Optional arguments 
                 // allow calling this again to overwrite the GPU buffers related to this shape's arrays, or 
                 // subsets of them as needed (if only some fields of your shape have changed).
-      const gpu_instance = super.copy_onto_graphics_card( context, selection_of_arrays, write_to_indices );
+
+                // Tell the base Graphics_Card_Object what to store for each WebGL Context:
+      const initial_gpu_representation = { webGL_buffer_pointers: {} };
+      const gpu_instance = super.copy_onto_graphics_card( context, initial_gpu_representation );
 
       const gl = context;
       for( let name of selection_of_arrays )
@@ -344,10 +346,6 @@ class Vertex_Buffer extends Graphics_Card_Object
         gl.bufferData( gl.ELEMENT_ARRAY_BUFFER, new Uint32Array( this.indices ), gl.STATIC_DRAW );
       }
       return gpu_instance;
-    }
-  make_gpu_representation()
-    {             // make_gpu_representation: Tell the base Graphics_Card_Object what to store for each WebGL Context.
-      return { webGL_buffer_pointers: {} }
     }
   execute_shaders( gl, type )     // execute_shaders(): Draws this shape's entire vertex buffer.
     {       // Draw shapes using indices if they exist.  Otherwise, assume the vertices are arranged as triples.
@@ -570,8 +568,12 @@ class Shader extends Graphics_Card_Object
   copy_onto_graphics_card( context )
     {                                     // copy_onto_graphics_card():  Called automatically as needed to load the 
                                           // shader program onto one of your GPU contexts for its first time.
-      const gpu_instance = super.copy_onto_graphics_card( context ),
-                 program = gpu_instance.program || context.createProgram();
+
+                // Tell the base Graphics_Card_Object what to store for each WebGL Context:
+      const initial_gpu_representation = { program: undefined, gpu_addresses: undefined };
+      const gpu_instance = super.copy_onto_graphics_card( context, initial_gpu_representation );
+
+      const program = gpu_instance.program || context.createProgram();
 
       const gl     = context;
       const shared = this.shared_glsl_code() || "";
@@ -595,10 +597,6 @@ class Shader extends Graphics_Card_Object
         Object.assign( gpu_instance, { program, gpu_addresses: new Graphics_Addresses( program, gl ) } );
       return gpu_instance;
     }
-  make_gpu_representation() 
-    {             // make_gpu_representation: Tell the base Graphics_Card_Object what to store for each WebGL Context.
-      return { program: undefined, gpu_addresses: undefined }
-    }
   activate( context, buffer_pointers, program_state, model_transform, material )
     {                                     // activate(): Selects this Shader in GPU memory so the next shape draws using it.        
     const gpu_instance = super.activate( context );
@@ -620,10 +618,10 @@ class Shader extends Graphics_Card_Object
                                 attribute.normalized, attribute.stride, attribute.pointer );       // from the active buffer.
       }
     }                           // Your custom Shader has to override the following functions:    
-    vertex_glsl_code(){}
-    fragment_glsl_code(){}
-    shared_glsl_code(){}
-    update_GPU(){}
+  vertex_glsl_code(){}
+  fragment_glsl_code(){}
+  shared_glsl_code(){}
+  update_GPU(){}
 
         // *** How those four functions work (and how GPU shader programs work in general):
           
@@ -689,7 +687,11 @@ class Texture extends Graphics_Card_Object
   copy_onto_graphics_card( context, need_initial_settings = true )
     {                                     // copy_onto_graphics_card():  Called automatically as needed to load the 
                                           // texture image onto one of your GPU contexts for its first time.
-       const gpu_instance = super.copy_onto_graphics_card( context );
+      
+                // Tell the base Graphics_Card_Object what to store for each WebGL Context:
+      const initial_gpu_representation = { texture_buffer_pointer: undefined };
+      const gpu_instance = super.copy_onto_graphics_card( context, initial_gpu_representation );
+
       if( !gpu_instance.texture_buffer_pointer ) gpu_instance.texture_buffer_pointer = context.createTexture();
 
       const gl = context;
@@ -705,10 +707,6 @@ class Texture extends Graphics_Card_Object
       if( this.min_filter = "LINEAR_MIPMAP_LINEAR" )      // If the user picked tri-linear sampling (the default) then generate
         gl.generateMipmap(gl.TEXTURE_2D);                 // the necessary "mips" of the texture and store them on the GPU with it.
       return gpu_instance;
-    }
-  make_gpu_representation()
-    {              // make_gpu_representation: Tell the base Graphics_Card_Object what to store for each WebGL Context.
-       return { texture_buffer_pointer: undefined }
     }
   activate( context, texture_unit = 0 )
     {                                     // activate(): Selects this Texture in GPU memory so the next shape draws using it.
