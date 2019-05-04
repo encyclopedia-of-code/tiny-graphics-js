@@ -978,34 +978,44 @@ class Movement_Controls extends Scene
 
 
 const Program_State_Viewer = defs.Program_State_Viewer =
-class Program_State_Viewer extends Scene          // A class that just toggles, monitors, and reports some 
-{ make_control_panel()                                // global values via its control panel.
-    { this.program_state = {};    // display() will replace this
-      this.key_triggered_button( "(Un)pause animation", ["Alt", "a"], function() { this.program_state.animate ^= 1; } ); this.new_line();
-      this.live_string( box => { box.textContent = "Animation Time: " + ( this.program_state.animation_time/1000 ).toFixed(3) + "s" } );
-      this.live_string( box => { box.textContent = this.program_state.animate ? " " : " (paused)" } );  this.new_line();
-      this.key_triggered_button( "Gouraud shading",     ["Alt", "g"], function() { this.program_state.gouraud       ^= 1;         } ); 
+class Program_State_Viewer extends Scene
+{                                             // **Program_State_Viewer** just toggles, monitors, and reports some
+                                              // global values via its control panel.
+  make_control_panel()
+    {                         // display() of this scene will replace the following object:
+      this.program_state = {};
+      this.key_triggered_button( "(Un)pause animation", ["Alt", "a"], () => this.program_state.animate ^= 1 );
       this.new_line();
-      this.key_triggered_button( "Normals shading",     ["Alt", "n"], function() { this.program_state.color_normals ^= 1;         } ); 
+      this.live_string( box => 
+                { box.textContent = "Animation Time: " + ( this.program_state.animation_time/1000 ).toFixed(3) + "s" } );
+      this.live_string( box => 
+                { box.textContent = this.program_state.animate ? " " : " (paused)" } );
       this.new_line();
       
       const show_object = ( element, obj = this.program_state ) => 
       { if( this.box ) this.box.innerHTML = "";
-        else this.box = element.appendChild( Object.assign( document.createElement( "div" ), { style: "overflow:auto; width: 200px" } ) );
+        else this.box = element.appendChild( 
+          Object.assign( document.createElement( "div" ), { style: "overflow:auto; width: 200px" } ) );
         if( obj !== this.program_state )
-          this.box.appendChild( Object.assign( document.createElement( "div" ), { className:"link", innerText: "(back to program_state)", 
-                                               onmousedown: () => this.current_object = this.program_state } ) )
-        if( obj.to_string ) return this.box.appendChild( Object.assign( document.createElement( "div" ), { innerText: obj.to_string() } ) );
+          this.box.appendChild( Object.assign( 
+               document.createElement( "div" ), { className:"link", innerText: "(back to program_state)",
+                                                  onmousedown: () => this.current_object = this.program_state } ) )
+        if( obj.to_string ) 
+          return this.box.appendChild( Object.assign( document.createElement( "div" ), { innerText: obj.to_string() } ) );
         for( let [key,val] of Object.entries( obj ) )
         { if( typeof( val ) == "object" ) 
             this.box.appendChild( Object.assign( document.createElement( "a" ), { className:"link", innerText: key, 
                                                  onmousedown: () => this.current_object = val } ) )
           else
-            this.box.appendChild( Object.assign( document.createElement( "span" ), { innerText: key + ": " + val.toString() } ) );
+            this.box.appendChild( Object.assign( document.createElement( "span" ), 
+                                                 { innerText: key + ": " + val.toString() } ) );
           this.box.appendChild( document.createElement( "br" ) );
         }
       }
       this.live_string( box => show_object( box, this.current_object ) );      
     }
-  display( context, program_state ) { this.program_state = program_state }
+  display( context, program_state )
+    { this.program_state = program_state;
+      
+    }
 }

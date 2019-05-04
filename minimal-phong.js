@@ -368,7 +368,7 @@ export class Basic_Phong_Optimized extends Shader
 export class Basic_Phong_Complete extends Shader
 {                                  // **Phong_Shader** is a subclass of Shader, which stores and maanges a GPU program.  
                                    // Graphic cards prior to year 2000 had shaders like this one hard-coded into them
-                                   // instead of customizable shaders.  "Phong-Blinn" Shading is a process of 
+                                   // instead of customizable shaders.  "Phong-Blinn" Shading here is a process of 
                                    // determining brightness of pixels via vector math.  It compares the normal vector
                                    // at that pixel with the vectors toward the camera and light sources.
 
@@ -391,7 +391,7 @@ export class Basic_Phong_Complete extends Shader
                               // on to the next phase (fragment shader), then interpolated per-fragment, weighted by the
                               // pixel fragment's proximity to each of the 3 vertices (barycentric interpolation).
         varying vec3 N, vertex_worldspace;
-                                                                                    
+                                             // ***** PHONG SHADING HAPPENS HERE: *****                                       
         vec3 phong_model_lights( vec3 N )
           {                                        // phong_model_lights():  Add up the lights' contributions.
             vec3 E = normalize( camera_center - vertex_worldspace );
@@ -452,58 +452,65 @@ export class Basic_Phong_Complete extends Shader
             gl_FragColor.xyz += phong_model_lights( normalize( N ) );
           } ` ;
     }
-  update_GPU( context, gpu_addresses, g_state, model_transform, material )
-    {             // update_GPU(): Define how to synchronize our JavaScript's variables to the GPU's.  This is where the shader 
-                  // recieves ALL of its inputs.  Every value the GPU wants is divided into two categories:  Values that belong
-                  // to individual objects being drawn (which we call "Material") and values belonging to the whole scene or 
-                  // program (which we call the "Program_State").  Send both a material and a program state to the shaders 
-                  // within this function, one data field at a time, to fully initialize the shader for a draw.                  
-      const gpu = gpu_addresses, gl = context;
-
+  send_material( gl, gpu, material )
+    {                                       // send_material(): Send the desired shape-wide material qualities to the
+                                            // graphics card, where they will tweak the Phong lighting formula.
       const defaults = { color: Color.of( 0,0,0,1 ), ambient: 0, diffusivity: 1, specularity: 1, smoothness: 40 };
       material = Object.assign( {}, defaults, material );
-                                                      // Send the current matrices to the shader.  Go ahead and pre-compute
-                                                      // the products we'll need of the of the three special matrices and just
-                                                      // cache and send those.  They will be the same throughout this draw
-                                                      // call, and thus across each instance of the vertex shader.
-                                                      // Transpose them since the GPU expects matrices as column-major arrays.
-      const PCM = g_state.projection_transform.times( g_state.camera_inverse ).times( model_transform );
-      gl.uniformMatrix4fv( gpu.                  model_transform, false, Mat.flatten_2D_to_1D( model_transform.transposed() ) );
-      gl.uniformMatrix4fv( gpu.projection_camera_model_transform, false, Mat.flatten_2D_to_1D(             PCM.transposed() ) );
-
-                                         // Use the squared scale trick from "Eric's blog" instead of inverse transpose matrix:
-      const squared_scale = model_transform.reduce( 
-                                         (acc,r) => { return acc.plus( Vec.from(r).mult_pairs(r) ) }, Vec.of( 0,0,0,0 ) ).to3();                                            
-      gl.uniform3fv( gpu.squared_scale, squared_scale );
-
-                                                              // Send the desired shape-wide material qualities to the graphics
-                                                              // card, where they will tweak the Phong lighting formula.
+                                      
       gl.uniform4fv( gpu.shape_color,    material.color       );
       gl.uniform1f ( gpu.ambient,        material.ambient     );
       gl.uniform1f ( gpu.diffusivity,    material.diffusivity );
       gl.uniform1f ( gpu.specularity,    material.specularity );
       gl.uniform1f ( gpu.smoothness,     material.smoothness  );
-
-      const O = Vec.of( 0,0,0,1 ), camera_center = g_state.camera_transform.times( O ).to3();
+    }
+  send_gpu_state( gl, gpu, gpu_state, model_transform )
+    {                                       // send_gpu_state():  Send the state of our whole drawing context to the GPU.
+      const O = Vec.of( 0,0,0,1 ), camera_center = gpu_state.camera_transform.times( O ).to3();
       gl.uniform3fv( gpu.camera_center, camera_center );
+                                         // Use the squared scale trick from "Eric's blog" instead of inverse transpose matrix:
+      const squared_scale = model_transform.reduce( 
+                                         (acc,r) => { return acc.plus( Vec.from(r).mult_pairs(r) ) }, Vec.of( 0,0,0,0 ) ).to3();                                            
+      gl.uniform3fv( gpu.squared_scale, squared_scale );     
+                                                      // Send the current matrices to the shader.  Go ahead and pre-compute
+                                                      // the products we'll need of the of the three special matrices and just
+                                                      // cache and send those.  They will be the same throughout this draw
+                                                      // call, and thus across each instance of the vertex shader.
+                                                      // Transpose them since the GPU expects matrices as column-major arrays.
+      const PCM = gpu_state.projection_transform.times( gpu_state.camera_inverse ).times( model_transform );
+      gl.uniformMatrix4fv( gpu.                  model_transform, false, Mat.flatten_2D_to_1D( model_transform.transposed() ) );
+      gl.uniformMatrix4fv( gpu.projection_camera_model_transform, false, Mat.flatten_2D_to_1D(             PCM.transposed() ) );
+
                                              // Omitting lights will show only the material color, scaled by the ambient term:
-      if( !g_state.lights.length )
+      if( !gpu_state.lights.length )
         return;
 
       const light_positions_flattened = [], light_colors_flattened = [];
-      for( var i = 0; i < 4 * g_state.lights.length; i++ )
-        { light_positions_flattened                  .push( g_state.lights[ Math.floor(i/4) ].position[i%4] );
-          light_colors_flattened                     .push( g_state.lights[ Math.floor(i/4) ].color[i%4] );
+      for( var i = 0; i < 4 * gpu_state.lights.length; i++ )
+        { light_positions_flattened                  .push( gpu_state.lights[ Math.floor(i/4) ].position[i%4] );
+          light_colors_flattened                     .push( gpu_state.lights[ Math.floor(i/4) ].color[i%4] );
         }      
       gl.uniform4fv( gpu.light_positions_or_vectors, light_positions_flattened );
       gl.uniform4fv( gpu.light_colors,               light_colors_flattened );
-      gl.uniform1fv( gpu.light_attenuation_factors, g_state.lights.map( l => l.attenuation ) );
+      gl.uniform1fv( gpu.light_attenuation_factors, gpu_state.lights.map( l => l.attenuation ) );
+    }
+  update_GPU( context, gpu_addresses, gpu_state, model_transform, material )
+    {             // update_GPU(): Define how to synchronize our JavaScript's variables to the GPU's.  This is where the shader 
+                  // recieves ALL of its inputs.  Every value the GPU wants is divided into two categories:  Values that belong
+                  // to individual objects being drawn (which we call "Material") and values belonging to the whole scene or 
+                  // program (which we call the "Program_State").  Send both a material and a program state to the shaders 
+                  // within this function, one data field at a time, to fully initialize the shader for a draw.                  
+      
+      this.send_material ( context, gpu_addresses, material        );
+      this.send_gpu_state( context, gpu_addresses, gpu_state, model_transform );
     }
 }
 
 
 export class Textured_Phong extends Basic_Phong_Complete
-{
+{                       // **Textured_Phong** is a Phong Shader extended to addditionally decal a
+                        // texture image over the drawn shape, lined up according to the texture
+                        // coordinates that are stored at each shape vertex.
   vertex_glsl_code()           // ********* VERTEX SHADER *********
     { return this.shared_glsl_code() + `
         varying vec2 f_tex_coord;
@@ -520,13 +527,13 @@ export class Textured_Phong extends Basic_Phong_Complete
             N = normalize( mat3( model_transform ) * normal / squared_scale);
             
             vertex_worldspace = ( model_transform * vec4( position, 1.0 ) ).xyz;
-
+                                              // Turn the per-vertex texture coordinate into an interpolated variable.
             f_tex_coord = texture_coord;
           } ` ;
     }
   fragment_glsl_code()         // ********* FRAGMENT SHADER ********* 
     {                          // A fragment is a pixel that's overlapped by the current triangle.
-                               // Fragments affect the final image or get discarded due to depth.                                 
+                               // Fragments affect the final image or get discarded due to depth.                                
       return this.shared_glsl_code() + `
         varying vec2 f_tex_coord;
         uniform sampler2D texture;
@@ -541,22 +548,16 @@ export class Textured_Phong extends Basic_Phong_Complete
             gl_FragColor.xyz += phong_model_lights( normalize( N ) );
           } ` ;
     }
-  update_GPU( context, gpu_addresses, g_state, model_transform, material )
-    {             // update_GPU(): Define how to synchronize our JavaScript's variables to the GPU's.  This is where the shader 
-                  // recieves ALL of its inputs.  Every value the GPU wants is divided into two categories:  Values that belong
-                  // to individual objects being drawn (which we call "Material") and values belonging to the whole scene or 
-                  // program (which we call the "Program_State").  Send both a material and a program state to the shaders 
-                  // within this function, one data field at a time, to fully initialize the shader for a draw.                  
-      super.update_GPU( context, gpu_addresses, g_state, model_transform, material );
-
-      const gpu = gpu_addresses, gl = context;
-
-      if( material.texture && material.texture.ready )                // NOTE: To signal not to draw a texture, omit the texture parameter from Materials.
-      { gpu.shader_attributes["texture_coord"].enabled = true;
-        gl.uniform1i( gpu.texture, 0);            // Select texture unit 0 for the fragment shader Sampler2D uniform called "texture"
+  update_GPU( context, gpu_addresses, gpu_state, model_transform, material )
+    {             // update_GPU(): Add a little more to the base class's version of this method.                
+      super.update_GPU( context, gpu_addresses, gpu_state, model_transform, material );
+                                               
+      if( material.texture && material.texture.ready )
+      {                         // Select texture unit 0 for the fragment shader Sampler2D uniform called "texture":
+        context.uniform1i( gpu_addresses.texture, 0);
+                                  // For this draw, use the texture image from correct the GPU buffer:
         material.texture.activate( context );
       }
-      else gpu.shader_attributes["texture_coord"].enabled = false;
     }
 }
 
@@ -571,6 +572,8 @@ export class Phong_Comparison_Demo extends Scene
 { constructor()
     { super();
       this.shapes = { ball : new defs.Subdivision_Sphere(3) }
+
+      this.children.push( new defs.Program_State_Viewer() );
 
       this.index = 0;
       this.shaders = [ new Textured_Phong(1), new Basic_Phong_Complete(1), new defs.Phong_Shader(), new Basic_Phong(), 
