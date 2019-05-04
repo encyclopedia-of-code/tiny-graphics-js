@@ -18,7 +18,7 @@ export class Basic_Phong extends Shader
           } ` ;
     }
   vertex_glsl_code()           // ********* VERTEX SHADER *********
-    { return `
+    { return this.shared_glsl_code() + `
         attribute vec3 position, normal;                            // Position is expressed in object coordinates.
         
         uniform mat4 camera_transform, camera_model_transform, projection_camera_model_transform;
@@ -39,7 +39,7 @@ export class Basic_Phong extends Shader
     }
   fragment_glsl_code()        // ********* FRAGMENT SHADER ********* 
     {   // A fragment is a pixel that's overlapped by the current triangle.  Fragments affect the final image or get discarded due to depth.                                 
-      return `
+      return this.shared_glsl_code() + `
         void main()
           { gl_FragColor = vec4( shapeColor.xyz * ambient, shapeColor.w );   // Compute an initial (ambient) color:
             gl_FragColor.xyz += phong_model_light( normalize( N ) );                      // Compute the final color with contributions from lights.
@@ -103,7 +103,7 @@ export class Basic_Phong_Compute_H_E_L_Outside extends Shader      // Simplified
           } ` ;
     }
   vertex_glsl_code()           // ********* VERTEX SHADER *********
-    { return `
+    { return this.shared_glsl_code() + `
         attribute vec3 position, normal;                            // Position is expressed in object coordinates.
         
         uniform mat3 model_transform;
@@ -116,7 +116,7 @@ export class Basic_Phong_Compute_H_E_L_Outside extends Shader      // Simplified
     }
   fragment_glsl_code()        // ********* FRAGMENT SHADER ********* 
     {   // A fragment is a pixel that's overlapped by the current triangle.  Fragments affect the final image or get discarded due to depth.                                 
-      return `
+      return this.shared_glsl_code() + `
         void main()
           { gl_FragColor = vec4( shapeColor.xyz * ambient, shapeColor.w );   // Compute an initial (ambient) color:
             gl_FragColor.xyz += phong_model_light( normalize( N ) );         // Compute the final color with contributions from lights.
@@ -188,7 +188,7 @@ export class Basic_Phong_Compute_H_E_Outside extends Shader      // Simplified; 
           } ` ;
     }
   vertex_glsl_code()           // ********* VERTEX SHADER *********
-    { return `
+    { return this.shared_glsl_code() + `
         attribute vec3 position, normal;                            // Position is expressed in object coordinates.
         
         uniform mat3 model_transform;
@@ -204,7 +204,7 @@ export class Basic_Phong_Compute_H_E_Outside extends Shader      // Simplified; 
     }
   fragment_glsl_code()        // ********* FRAGMENT SHADER ********* 
     {   // A fragment is a pixel that's overlapped by the current triangle.  Fragments affect the final image or get discarded due to depth.                                 
-      return ` 
+      return this.shared_glsl_code() + `
         void main()
           { gl_FragColor = vec4( shapeColor.xyz * ambient, shapeColor.w );   // Compute an initial (ambient) color:
             gl_FragColor.xyz += phong_model_light( normalize( N ) );         // Compute the final color with contributions from lights.
@@ -288,7 +288,7 @@ export class Basic_Phong_Optimized extends Shader
           } ` ;
     }
   vertex_glsl_code()           // ********* VERTEX SHADER *********
-    { return `
+    { return this.shared_glsl_code() + `
         attribute vec3 position, normal;                            // Position is expressed in object coordinates.
         
         uniform mat4 model_transform;
@@ -312,7 +312,7 @@ export class Basic_Phong_Optimized extends Shader
   fragment_glsl_code()         // ********* FRAGMENT SHADER ********* 
     {                          // A fragment is a pixel that's overlapped by the current triangle.
                                // Fragments affect the final image or get discarded due to depth.                                 
-      return `
+      return this.shared_glsl_code() + `
         void main()
           {                                                          // Compute an initial (ambient) color:
             gl_FragColor = vec4( shapeColor.xyz * ambient, shapeColor.w );
@@ -426,7 +426,7 @@ export class Basic_Phong_Complete extends Shader
           } ` ;
     }
   vertex_glsl_code()           // ********* VERTEX SHADER *********
-    { return `
+    { return this.shared_glsl_code() + `
         attribute vec3 position, normal;                            // Position is expressed in object coordinates.
         
         uniform mat4 model_transform;
@@ -444,7 +444,7 @@ export class Basic_Phong_Complete extends Shader
   fragment_glsl_code()         // ********* FRAGMENT SHADER ********* 
     {                          // A fragment is a pixel that's overlapped by the current triangle.
                                // Fragments affect the final image or get discarded due to depth.                                 
-      return `
+      return this.shared_glsl_code() + `
         void main()
           {                                                           // Compute an initial (ambient) color:
             gl_FragColor = vec4( shape_color.xyz * ambient, shape_color.w );

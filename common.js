@@ -667,7 +667,7 @@ class Phong_Shader extends Shader
           } ` ;
     }
   vertex_glsl_code()           // ********* VERTEX SHADER *********
-    { return `
+    { return this.shared_glsl_code() + `
         attribute vec3 position, normal;                            // Position is expressed in object coordinates.
         attribute vec2 texture_coord;
 
@@ -710,7 +710,7 @@ class Phong_Shader extends Shader
   fragment_glsl_code()           // ********* FRAGMENT SHADER ********* 
     {                            // A fragment is a pixel that's overlapped by the current triangle.
                                  // Fragments affect the final image or get discarded due to depth.
-      return `
+      return this.shared_glsl_code() + `
         uniform sampler2D texture;
         void main()
         { if( GOURAUD || COLOR_NORMALS )    // Do smooth "Phong" shading unless options like "Gouraud mode" are wanted instead.

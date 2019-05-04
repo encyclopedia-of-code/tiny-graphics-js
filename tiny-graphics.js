@@ -590,23 +590,24 @@ class Shader extends Graphics_Card_Object
       const vertShdr = gpu_instance.vertShdr || gl.createShader( gl.VERTEX_SHADER );
       const fragShdr = gpu_instance.fragShdr || gl.createShader( gl.FRAGMENT_SHADER );
       
-      const shared = this.shared_glsl_code() || "";
-      
       if( gpu_instance.vertShdr ) gl.detachShader( program, vertShdr );
       if( gpu_instance.fragShdr ) gl.detachShader( program, fragShdr );
-      
-      gl.shaderSource( vertShdr, shared + this.vertex_glsl_code() );
-      gl.compileShader( vertShdr );
-      if( !gl.getShaderParameter(vertShdr, gl.COMPILE_STATUS) ) throw "Vertex shader compile error: "   + gl.getShaderInfoLog( vertShdr );
 
-      gl.shaderSource( fragShdr, shared + this.fragment_glsl_code() );
+      gl.shaderSource( vertShdr, this.vertex_glsl_code() );
+      gl.compileShader( vertShdr );
+      if( !gl.getShaderParameter(vertShdr, gl.COMPILE_STATUS) )
+        throw "Vertex shader compile error: "   + gl.getShaderInfoLog( vertShdr );
+
+      gl.shaderSource( fragShdr, this.fragment_glsl_code() );
       gl.compileShader( fragShdr );
-      if( !gl.getShaderParameter(fragShdr, gl.COMPILE_STATUS) ) throw "Fragment shader compile error: " + gl.getShaderInfoLog( fragShdr );
+      if( !gl.getShaderParameter(fragShdr, gl.COMPILE_STATUS) )
+        throw "Fragment shader compile error: " + gl.getShaderInfoLog( fragShdr );
 
       gl.attachShader( program, vertShdr );
       gl.attachShader( program, fragShdr );
       gl.linkProgram(  program );
-      if( !gl.getProgramParameter( program, gl.LINK_STATUS) ) throw "Shader linker error: "           + gl.getProgramInfoLog( this.program );
+      if( !gl.getProgramParameter( program, gl.LINK_STATUS) )
+        throw "Shader linker error: "           + gl.getProgramInfoLog( this.program );
 
       Object.assign( gpu_instance, { program, vertShdr, fragShdr, gpu_addresses: new Graphics_Addresses( program, gl ) } );
       return gpu_instance;
@@ -634,7 +635,6 @@ class Shader extends Graphics_Card_Object
     }                           // Your custom Shader has to override the following functions:    
   vertex_glsl_code(){}
   fragment_glsl_code(){}
-  shared_glsl_code(){}
   update_GPU(){}
 
         // *** How those four functions work (and how GPU shader programs work in general):
@@ -675,8 +675,6 @@ class Shader extends Graphics_Card_Object
                              // triangles' fragments occupying the same pixels.  The Z-Buffer test is applied to see if the 
                              // new triangle is closer to the camera, and even if so, blending settings may interpolate some 
                              // of the old color into the result.  Finally, an image is displayed onscreen.
-
-                             // The "shared_glsl_code" string defined above is appended to the beginning of both shaders.
 
                              // You must define an update_GPU() function that includes the extra custom JavaScript code 
                              // needed to populate your particular shader program with all the data values it is expecting.
