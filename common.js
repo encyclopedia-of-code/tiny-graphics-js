@@ -993,9 +993,16 @@ class Program_State_Viewer extends Scene
       this.new_line();
       
       const show_object = ( element, obj = this.program_state ) => 
-      { if( this.box ) this.box.innerHTML = "";
-        else this.box = element.appendChild( 
-          Object.assign( document.createElement( "div" ), { style: "overflow:auto; width: 200px" } ) );
+      { 
+       if( this.box ) this.box.textContent = "adsfadhf khfakdad fhadsf adf d hfa kdhfkdsa hfakds hfakd hf";
+         else 
+        this.box = element.appendChild(  document.createTextNode( "div did di fis dfids fids fids fisf dsf sdifds" ) );
+       //   Object.assign( document.createTextNode( "div" ), { style: "overflow:auto; width: 200px" } ) );
+        return;
+                      // TODO: Diagnose why this.box disappears unless we re-create it every frame
+                      // and stick all successive new ones onto element
+
+
         if( obj !== this.program_state )
           this.box.appendChild( Object.assign( 
                document.createElement( "div" ), { className:"link", innerText: "(back to program_state)",
