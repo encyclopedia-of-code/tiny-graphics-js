@@ -502,6 +502,65 @@ export class Basic_Phong_Complete extends Shader
 }
 
 
+export class Textured_Phong extends Basic_Phong_Complete
+{
+  vertex_glsl_code()           // ********* VERTEX SHADER *********
+    { return this.shared_glsl_code() + `
+        varying vec2 f_tex_coord;
+        attribute vec3 position, normal;                            // Position is expressed in object coordinates.
+        attribute vec2 texture_coord;
+        
+        uniform mat4 model_transform;
+        uniform mat4 projection_camera_model_transform;
+
+        void main()
+          {                                                                   // The vertex's final resting place (in NDCS):
+            gl_Position = projection_camera_model_transform * vec4( position, 1.0 );
+                                                                              // The final normal vector in screen space.
+            N = normalize( mat3( model_transform ) * normal / squared_scale);
+            
+            vertex_worldspace = ( model_transform * vec4( position, 1.0 ) ).xyz;
+
+            f_tex_coord = texture_coord;
+          } ` ;
+    }
+  fragment_glsl_code()         // ********* FRAGMENT SHADER ********* 
+    {                          // A fragment is a pixel that's overlapped by the current triangle.
+                               // Fragments affect the final image or get discarded due to depth.                                 
+      return this.shared_glsl_code() + `
+        varying vec2 f_tex_coord;
+        uniform sampler2D texture;
+
+        void main()
+          {                                                          // Sample the texture image in the correct place:
+            vec4 tex_color = texture2D( texture, f_tex_coord );
+            if( tex_color.w < .01 ) discard;
+                                                                     // Compute an initial (ambient) color:
+            gl_FragColor = vec4( ( tex_color.xyz + shape_color.xyz ) * ambient, shape_color.w * tex_color.w ); 
+                                                                     // Compute the final color with contributions from lights:
+            gl_FragColor.xyz += phong_model_lights( normalize( N ) );
+          } ` ;
+    }
+  update_GPU( context, gpu_addresses, g_state, model_transform, material )
+    {             // update_GPU(): Define how to synchronize our JavaScript's variables to the GPU's.  This is where the shader 
+                  // recieves ALL of its inputs.  Every value the GPU wants is divided into two categories:  Values that belong
+                  // to individual objects being drawn (which we call "Material") and values belonging to the whole scene or 
+                  // program (which we call the "Program_State").  Send both a material and a program state to the shaders 
+                  // within this function, one data field at a time, to fully initialize the shader for a draw.                  
+      super.update_GPU( context, gpu_addresses, g_state, model_transform, material );
+
+      const gpu = gpu_addresses, gl = context;
+
+      if( material.texture && material.texture.ready )                // NOTE: To signal not to draw a texture, omit the texture parameter from Materials.
+      { gpu.shader_attributes["texture_coord"].enabled = true;
+        gl.uniform1i( gpu.texture, 0);            // Select texture unit 0 for the fragment shader Sampler2D uniform called "texture"
+        material.texture.activate( context );
+      }
+      else gpu.shader_attributes["texture_coord"].enabled = false;
+    }
+}
+
+
 export class Phong_Shader_1 extends Basic_Phong_Compute_H_E_L_Outside { }
 export class Phong_Shader_2 extends Basic_Phong_Compute_H_E_Outside   { }
 export class Phong_Shader_3 extends Basic_Phong_Optimized             { }
@@ -514,11 +573,11 @@ export class Phong_Comparison_Demo extends Scene
       this.shapes = { ball : new defs.Subdivision_Sphere(3) }
 
       this.index = 0;
-      this.shaders = [ new Basic_Phong_Complete(1), new defs.Phong_Shader(), new Basic_Phong(), 
+      this.shaders = [ new Textured_Phong(1), new Basic_Phong_Complete(1), new defs.Phong_Shader(), new Basic_Phong(), 
                        new Basic_Phong_Optimized(), 
                        new Basic_Phong_Compute_H_E_Outside(), new Basic_Phong_Compute_H_E_L_Outside() ];
 
-      this.materials = this.shaders.map( s => new Material( s, { ambient:.2, smoothness:10, color: Color.of( 1,1,0,1 ) } ) );
+      this.materials = this.shaders.map( s => new Material( s, { ambient:.2, smoothness:10, color: Color.of( 1,1,0,1 ), texture: new Texture( "assets/rgb.jpg" ) } ) );
     }
   display( context, program_state )                                                      // Do this every frame.
     { if( !this.has_placed_camera ) 
