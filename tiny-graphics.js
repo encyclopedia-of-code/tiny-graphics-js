@@ -577,24 +577,25 @@ class Shader extends Graphics_Card_Object
                                           // shader program onto one of your GPU contexts for its first time.
 
                 // Define what this object should store in each new WebGL Context:
-      const initial_gpu_representation = { program: undefined, gpu_addresses: undefined };
+      const initial_gpu_representation = { program: undefined, gpu_addresses: undefined,
+                                          vertShdr: undefined,      fragShdr: undefined };
                                 // Our object might need to register to multiple GPU contexts in the case of 
                                 // multiple drawing areas.  If this is a new GPU context for this object, 
                                 // copy the object to the GPU.  Otherwise, this object already has been 
                                 // copied over, so get a pointer to the existing instance.
       const gpu_instance = super.copy_onto_graphics_card( context, initial_gpu_representation );
-
-      const program = gpu_instance.program || context.createProgram();
-
-      const gl     = context;
+      
+      const gl = context;
+      const program  = gpu_instance.program  || context.createProgram();
+      const vertShdr = gpu_instance.vertShdr || gl.createShader( gl.VERTEX_SHADER );
+      const fragShdr = gpu_instance.fragShdr || gl.createShader( gl.FRAGMENT_SHADER );
+      
       const shared = this.shared_glsl_code() || "";
       
-      const vertShdr = gl.createShader( gl.VERTEX_SHADER );
       gl.shaderSource( vertShdr, shared + this.vertex_glsl_code() );
       gl.compileShader( vertShdr );
       if( !gl.getShaderParameter(vertShdr, gl.COMPILE_STATUS) ) throw "Vertex shader compile error: "   + gl.getShaderInfoLog( vertShdr );
 
-      const fragShdr = gl.createShader( gl.FRAGMENT_SHADER );
       gl.shaderSource( fragShdr, shared + this.fragment_glsl_code() );
       gl.compileShader( fragShdr );
       if( !gl.getShaderParameter(fragShdr, gl.COMPILE_STATUS) ) throw "Fragment shader compile error: " + gl.getShaderInfoLog( fragShdr );
@@ -604,8 +605,7 @@ class Shader extends Graphics_Card_Object
       gl.linkProgram(  program );
       if( !gl.getProgramParameter( program, gl.LINK_STATUS) ) throw "Shader linker error: "           + gl.getProgramInfoLog( this.program );
 
-      if( !gpu_instance.program )
-        Object.assign( gpu_instance, { program, gpu_addresses: new Graphics_Addresses( program, gl ) } );
+      Object.assign( gpu_instance, { program, vertShdr, fragShdr, gpu_addresses: new Graphics_Addresses( program, gl ) } );
       return gpu_instance;
     }
   activate( context, buffer_pointers, program_state, model_transform, material )
