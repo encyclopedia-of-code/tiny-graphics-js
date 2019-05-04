@@ -592,6 +592,9 @@ class Shader extends Graphics_Card_Object
       
       const shared = this.shared_glsl_code() || "";
       
+      if( gpu_instance.vertShdr ) gl.detachShader( program, vertShdr );
+      if( gpu_instance.fragShdr ) gl.detachShader( program, fragShdr );
+      
       gl.shaderSource( vertShdr, shared + this.vertex_glsl_code() );
       gl.compileShader( vertShdr );
       if( !gl.getShaderParameter(vertShdr, gl.COMPILE_STATUS) ) throw "Vertex shader compile error: "   + gl.getShaderInfoLog( vertShdr );

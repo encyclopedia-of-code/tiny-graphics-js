@@ -514,7 +514,7 @@ export class Phong_Comparison_Demo extends Scene
       this.shapes = { ball : new defs.Subdivision_Sphere(3) }
 
       this.index = 0;
-      this.shaders = [ new Basic_Phong_Complete(5), new defs.Phong_Shader(), new Basic_Phong(), 
+      this.shaders = [ new Basic_Phong_Complete(1), new defs.Phong_Shader(), new Basic_Phong(), 
                        new Basic_Phong_Optimized(), 
                        new Basic_Phong_Compute_H_E_Outside(), new Basic_Phong_Compute_H_E_L_Outside() ];
 
@@ -527,6 +527,11 @@ export class Phong_Comparison_Demo extends Scene
           program_state.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 50 );
         }
       const light_pos = Mat4.rotation( program_state.animation_time/1340, Vec.of( 0,1,0 ) ).times( Vec.of( 0,4,15,1 ) );
+
+      if( program_state.animation_time > 3000 )
+      { this.shaders[0].num_lights = 5;        
+        this.shaders[0].copy_onto_graphics_card(context.context);
+      }
 
       program_state.lights = [ new Light( light_pos, Color.of( 0,1,1,1 ), 10000 ),
                                new Light( Vec.of( 3,-4,5,1 ), Color.of( 1,1,1,1 ), 10000 ),
