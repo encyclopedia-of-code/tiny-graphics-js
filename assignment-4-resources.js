@@ -655,7 +655,8 @@ class Phong_Shader extends Shader
 }
 
 
-export class Textured_Phong extends Phong_Shader
+const Textured_Phong = defs.Textured_Phong =
+class Textured_Phong extends Phong_Shader
 {                       // **Textured_Phong** is a Phong Shader extended to addditionally decal a
                         // texture image over the drawn shape, lined up according to the texture
                         // coordinates that are stored at each shape vertex.
@@ -900,85 +901,5 @@ class Movement_Controls extends Scene
                                      // Log some values:
       this.pos    = this.inverse().times( Vec.of( 0,0,0,1 ) );
       this.z_axis = this.inverse().times( Vec.of( 0,0,1,0 ) );
-    }
-}
-
-
-const Transforms_Sandbox_Base = defs.Transforms_Sandbox_Base =
-class Transforms_Sandbox_Base extends Scene
-{                                          // **Transforms_Sandbox_Base** is a Scene that can be added to any display canvas.
-                                           // This particular scene is broken up into two pieces for easier understanding.
-                                           // The piece here is the base class, which sets up the machinery to draw a simple 
-                                           // scene demonstrating a few concepts.  A subclass of it, Transforms_Sandbox,
-                                           // exposes only the display() method, which actually places and draws the shapes,
-                                           // isolating that code so it can be experimented with on its own.
-  constructor()
-    {                  // constructor(): Scenes begin by populating initial values like the Shapes and Materials they'll need.
-      super();
-      this.hover = this.swarm = false;
-                                                        // At the beginning of our program, load one of each of these shape 
-                                                        // definitions onto the GPU.  NOTE:  Only do this ONCE per shape it
-                                                        // would be redundant to tell it again.  You should just re-use the
-                                                        // one called "box" more than once in display() to draw multiple cubes.
-                                                        // Don't define more than one blueprint for the same thing here.
-      this.shapes = { 'box'  : new Cube(),
-                      'ball' : new Subdivision_Sphere( 4 ) };
-      
-                                                  // *** Materials: *** Define a shader, and then define materials that use
-                                                  // that shader.  Materials wrap a dictionary of "options" for the shader.
-                                                  // Here we use a Phong shader and the Material stores the scalar 
-                                                  // coefficients that appear in the Phong lighting formulas so that the
-                                                  // appearance of particular materials can be tweaked via these numbers.
-      this.phong_shader   = new   Phong_Shader(2);
-      this.texture_shader = new Textured_Phong(2);
-      this.materials = { plastic: new Material( this.phong_shader, 
-                                    { ambient: .2, diffusivity: 1, specularity: .5, color: Color.of( .9,.5,.9,1 ) } ),
-                   plastic_stars: new Material( this.texture_shader,    
-                                    { texture: new Texture( "assets/stars.png" ),
-                                      ambient: .7, diffusivity: 1, specularity: .5, color: Color.of( .9,.5,.9,1 ) } ),
-                           metal: new Material( this.phong_shader,
-                                    { ambient: .2, diffusivity: 1, specularity:  1, color: Color.of( .9,.5,.9,1 ) } ),
-                     metal_earth: new Material( this.texture_shader,    
-                                    { texture: new Texture( "assets/earth.gif" ),
-                                      ambient: .7, diffusivity: 1, specularity:  1, color: Color.of( .9,.5,.9,1 ) } ) };
-    }
-  make_control_panel()
-    {                                 // make_control_panel(): Sets up a panel of interactive HTML elements, including
-                                      // buttons with key bindings for affecting this scene, and live info readouts.
-      this.control_panel.innerHTML += "Dragonfly rotation angle: <br>";
-                                                // The next line adds a live text readout of a data member of our Scene.
-      this.live_string( box => { box.textContent = ( this.hover ? 0 : ( this.t % (2*Math.PI)).toFixed(2) ) + " radians" } ); 
-      this.new_line();
-                                                // Add buttons so the user can actively toggle data members of our Scene:
-      this.key_triggered_button( "Hover dragonfly in place", [ "h" ], function() { this.hover ^= 1; } );
-      this.new_line();
-      this.key_triggered_button( "Swarm mode", [ "m" ], function() { this.swarm ^= 1; } );
-    }
-  display( context, program_state )
-    {                                                // display():  Called once per frame of animation.  We'll isolate out
-                                                     // the code that actually draws things into Transforms_Sandbox, a
-                                                     // subclass of this Scene.  Here, the base class's display only does
-                                                     // some initial setup.
-     
-                           // Setup -- This part sets up the scene's overall camera matrix, projection matrix, and lights:
-      if( !context.scratchpad.controls ) 
-        { this.children.push( context.scratchpad.controls = new defs.Movement_Controls() ); 
-
-                    // Define the global camera and projection matrices, which are stored in program_state.  The camera
-                    // matrix follows the usual format for transforms, but with opposite values (cameras exist as 
-                    // inverted matrices).  The projection matrix follows an unusual format and determines how depth is 
-                    // treated when projecting 3D points onto a plane.  The Mat4 functions perspective() and
-                    // orthographic() automatically generate valid matrices for one.  The input arguments of
-                    // perspective() are field of view, aspect ratio, and distances to the near plane and far plane.
-          program_state.set_camera( Mat4.translation([ 0,3,-10 ]) );
-          program_state.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 100 );
-        }
-
-                                                // *** Lights: *** Values of vector or point lights.  They'll be consulted by 
-                                                // the shader when coloring shapes.  See Light's class definition for inputs.
-      const t = this.t = program_state.animation_time/1000;
-      const angle = Math.sin( t );
-      const light_position = Mat4.rotation( angle, [ 1,0,0 ] ).times( Vec.of( 0,-1,1,0 ) );
-      program_state.lights = [ new Light( light_position, Color.of( 1,1,1,1 ), 1000000 ) ];
     }
 }

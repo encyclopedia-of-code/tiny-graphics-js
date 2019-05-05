@@ -1,6 +1,6 @@
 import {tiny, defs} from './assignment-4-resources.js';
                                                                 // Pull these names into this module's scope for convenience:
-const { Vec, Mat, Mat4, Color, Shape, Shader,
+const { Vec, Mat, Mat4, Color, Light, Shape, Shader, Material, Texture,
          Scene, Canvas_Widget, Code_Widget, Text_Widget } = tiny;
 const { Cube, Subdivision_Sphere, Transforms_Sandbox_Base } = defs;
 
@@ -9,19 +9,70 @@ const { Cube, Subdivision_Sphere, Transforms_Sandbox_Base } = defs;
 
 // (Can define Main_Scene's class here)
 
-const Main_Scene = defs.Transforms_Sandbox =
-class Transforms_Sandbox extends Transforms_Sandbox_Base
-{                                                    // **Transforms_Sandbox** is a Scene object that can be added to any display canvas.
-                                                     // This particular scene is broken up into two pieces for easier understanding.
-                                                     // See the other piece, Transforms_Sandbox_Base, if you need to see the setup code.
-                                                     // The piece here exposes only the display() method, which actually places and draws 
-                                                     // the shapes.  We isolate that code so it can be experimented with on its own.
-                                                     // This gives you a very small code sandbox for editing a simple scene, and for
-                                                     // experimenting with matrix transformations.
+const Main_Scene = defs.Solar_System =
+class Solar_System extends Scene
+{        
+  constructor()
+    {                  // constructor(): Scenes begin by populating initial values like the Shapes and Materials they'll need.
+      super();
+                                                        // At the beginning of our program, load one of each of these shape 
+                                                        // definitions onto the GPU.  NOTE:  Only do this ONCE per shape it
+                                                        // would be redundant to tell it again.  You should just re-use the
+                                                        // one called "box" more than once in display() to draw multiple cubes.
+                                                        // Don't define more than one blueprint for the same thing here.
+      this.shapes = { 'box'  : new Cube(),
+                      'ball' : new Subdivision_Sphere( 4 ) };
+      
+                                                  // *** Materials: *** Define a shader, and then define materials that use
+                                                  // that shader.  Materials wrap a dictionary of "options" for the shader.
+                                                  // Here we use a Phong shader and the Material stores the scalar 
+                                                  // coefficients that appear in the Phong lighting formulas so that the
+                                                  // appearance of particular materials can be tweaked via these numbers.
+      const phong_shader   = new defs.Phong_Shader  (2);
+      const texture_shader = new defs.Fake_Bump_Map(2);
+      this.materials = { plastic: new Material( phong_shader, 
+                                    { ambient: .2, diffusivity: 1, specularity: .5, color: Color.of( .9,.5,.9,1 ) } ),
+                   plastic_stars: new Material( texture_shader,    
+                                    { texture: new Texture( "assets/stars.png" ),
+                                      ambient: .7, diffusivity: 1, specularity: .5, color: Color.of( .9,.5,.9,1 ) } ),
+                           metal: new Material( phong_shader,
+                                    { ambient: .2, diffusivity: 1, specularity:  1, color: Color.of( .9,.5,.9,1 ) } ),
+                     metal_earth: new Material( texture_shader,    
+                                    { texture: new Texture( "assets/earth.gif" ),
+                                      ambient: .7, diffusivity: 1, specularity:  1, color: Color.of( .9,.5,.9,1 ) } ) };
+    }
+  make_control_panel()
+    {                                 // make_control_panel(): Sets up a panel of interactive HTML elements, including
+                                      // buttons with key bindings for affecting this scene, and live info readouts.
+    }
   display( context, program_state )
     {                                                // display():  Called once per frame of animation.  For each shape that you want to
                                                      // appear onscreen, place a .draw() call for it inside.  Each time, pass in a
                                                      // different matrix value to control where the shape appears.
+     
+                           // Setup -- This part sets up the scene's overall camera matrix, projection matrix, and lights:
+      if( !context.scratchpad.controls ) 
+        { this.children.push( context.scratchpad.controls = new defs.Movement_Controls() ); 
+
+                    // Define the global camera and projection matrices, which are stored in program_state.  The camera
+                    // matrix follows the usual format for transforms, but with opposite values (cameras exist as 
+                    // inverted matrices).  The projection matrix follows an unusual format and determines how depth is 
+                    // treated when projecting 3D points onto a plane.  The Mat4 functions perspective() and
+                    // orthographic() automatically generate valid matrices for one.  The input arguments of
+                    // perspective() are field of view, aspect ratio, and distances to the near plane and far plane.
+          program_state.set_camera( Mat4.translation([ 0,3,-10 ]) );
+          program_state.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 100 );
+        }
+
+                                                                      // Find how much time has passed in seconds; we can use
+                                                                      // time as an input when calculating new transforms:
+      const t = this.t = program_state.animation_time/1000;
+
+                                                // *** Lights: *** Values of vector or point lights.  They'll be consulted by 
+                                                // the shader when coloring shapes.  See Light's class definition for inputs.
+      const angle = Math.sin( t );
+      const light_position = Mat4.rotation( angle, [ 1,0,0 ] ).times( Vec.of( 0,-1,1,0 ) );
+      program_state.lights = [ new Light( light_position, Color.of( 1,1,1,1 ), 1000000 ) ];
 
                                                      // Variables that are in scope for you to use:
                                                      // this.shapes.box:   A vertex array object defining a 2x2x2 cube.
@@ -33,8 +84,6 @@ class Transforms_Sandbox extends Transforms_Sandbox_Base
                                                      // program_state:  Information the shader needs for drawing.  Pass to draw().
                                                      // context:  Wraps the WebGL rendering context shown onscreen.  Pass to draw().                                                       
 
-                                                // Call the setup code that we left inside the base class:
-      super.display( context, program_state );
 
       /**********************************
       Start coding down here!!!!
@@ -72,9 +121,6 @@ class Transforms_Sandbox extends Transforms_Sandbox_Base
                                                                       
                                                                       // Prepare to draw another box object 2 levels deep 
                                                                       // within our hierarchy.
-                                                                      // Find how much time has passed in seconds; we can use
-                                                                      // time as an input when calculating new transforms:
-      const t = this.t = program_state.animation_time/1000;
 
                                                       // Spin our current coordinate frame as a function of time.  Only do
                                                       // this movement if the button on the page has not been toggled off.
