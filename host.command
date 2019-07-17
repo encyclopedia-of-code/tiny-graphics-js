@@ -1,3 +1,4 @@
 #!/bin/bash
 cd "$(dirname "$0")"
-python server.py
+python -m http.server
+python -m SimpleHTTPServer

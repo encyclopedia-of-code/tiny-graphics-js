@@ -1,25 +1,27 @@
-<!-- Graphics Example Code.  
-     index.html - The web page document containing the canvas (drawing surface).  It launches your JavaScript files. //-->
+<!-- Graphics Example Code.  index.html - The web page document containing the canvas (drawing surface), that launches your javascript files. //-->
 <!DOCTYPE html> <html> <head> <meta charset="UTF-8"/> <link rel="icon" href="assets/fav.ico"> </head>
 <body style="background: DarkGray">       <!-- Begin typing your web page here. //-->
 
-      <!-- The following code embeds a WebGL canvas panel, loads certain scene(s), and displays panel(s) of their controls. //-->
+
+
+              <!-- The following code embeds a WebGL canvas widget panel, with certain scenes and their panels of controls. //-->
 <div id="main-canvas" class="canvas-widget"></div>
 <script type=module >      // ********************* THE ENTRY POINT OF YOUR WHOLE PROGRAM STARTS HERE ********************* 
-                           // Indicate which element on the page you want the Canvas_Widget to replace with a 3D WebGL area:
-  const element_to_replace = document.querySelector( "#main-canvas" );
-  import { Main_Scene, Additional_Scenes, Canvas_Widget } from './main-scene.js';  // Import the file that defines a scene.
-  const scenes = [ Main_Scene, ...Additional_Scenes ].map( scene => new scene() );    // This line creates your scene.
-  new Canvas_Widget( element_to_replace, scenes );
+  const element_to_replace = "main-canvas";       // Indicate which element on the page you want the Canvas_Widget to replace with a 3D WebGL area.
+  const scenes = [ "Transforms_Sandbox" ];    // Indicate the scenes you wish to load and display.
+  import * as module from './transforms-sandbox.js';     // Inicate the file that defines that scene.
+  Object.assign( window, module );                               // Store these classes in global scope so we can use them anywhere.
+  window.classes = Object.assign( {}, window.classes, module );  // Also copy them to window.classes so we can list them all out anytime.
+  new Canvas_Widget( element_to_replace, scenes );         // The Canvas_Widget class displays a WebGL demo containing the scene(s) you list.
 </script>
 
                              <!-- The following code embeds a code navigator widget with links to classes. //-->
 <div id="main-code" class="code-widget"></div>
 <script type=module >
-                    // Indicate which element on the page you want the Code_Widget to replace with a code readout:
-  const element_to_replace = document.querySelector( "#main-code" );
-  import { Main_Scene, Additional_Scenes, Code_Widget, defs } from './main-scene.js';  // Import the file that defines a scene.
-  new Code_Widget( element_to_replace, Main_Scene, Additional_Scenes, defs );
+    const element_to_replace = "main-code";   // Indicate which element on the page you want the Code_Widget to replace with a code readout.
+    import * as module from './transforms-sandbox.js';
+    Object.assign( window, module );                               // Store these classes in global scope so we can use them anywhere.
+    window.classes = Object.assign( {}, window.classes, module );  // Also copy them to window.classes so we can list them all out anytime.
+    new Code_Widget( element_to_replace, "Transforms_Sandbox" );      // The Code_Widget displays a code navigator relative to the passed-in class.
 </script>
-
 </body></html>

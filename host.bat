@@ -1,1 +1,2 @@
-python server.py
+python -m http.server
+python -m SimpleHTTPServer
