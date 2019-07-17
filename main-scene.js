@@ -1,4 +1,4 @@
-import {tiny, defs} from './common.js';
+import {tiny, defs} from './examples/common.js';
 const { Vec, Mat, Mat4, Color, Shape, Shader, 
          Scene, Canvas_Widget, Code_Widget, Text_Widget } = tiny;           // Pull these names into this module's scope for convenience.
 
@@ -11,42 +11,38 @@ const { Vec, Mat, Mat4, Color, Shape, Shader,
     //                      as common.js into one file for you, such as "dependencies.js")
 
 const Minimal_Webgl_Demo = defs.Minimal_Webgl_Demo;
-import { Phong_Comparison_Demo }
-  from "./minimal-phong.js"
 import { Axes_Viewer, Axes_Viewer_Test_Scene } 
-  from "./axes-viewer.js"
+  from "./examples/axes-viewer.js"
 import { Inertia_Demo, Collision_Demo }
-  from "./collisions-demo.js"
+  from "./examples/collisions-demo.js"
 import { Many_Lights_Demo }
-  from "./many-lights-demo.js"
+  from "./examples/many-lights-demo.js"
 import { Obj_File_Demo }
-  from "./obj-file-demo.js"
+  from "./examples/obj-file-demo.js"
 import { Scene_To_Texture_Demo }
-  from "./scene-to-texture-demo.js"
+  from "./examples/scene-to-texture-demo.js"
+import { Surfaces_Demo }
+  from "./examples/surfaces-demo.js"
 import { Text_Demo }
-  from "./text-demo.js"  
-import { Tutorial_Animation, Transforms_Sandbox }
-  from './transforms-sandbox.js';
-import { Nesting_Test }
-  from './nesting-test.js';
+  from "./examples/text-demo.js"
+import { Transforms_Sandbox }
+  from "./examples/transforms-sandbox.js"
 
-Object.assign( defs, 
-                     { Phong_Comparison_Demo },
+Object.assign( defs,
                      { Axes_Viewer, Axes_Viewer_Test_Scene },
                      { Inertia_Demo, Collision_Demo },
                      { Many_Lights_Demo },
                      { Obj_File_Demo },
                      { Scene_To_Texture_Demo },
+                     { Surfaces_Demo },
                      { Text_Demo },
-                     { Tutorial_Animation, Transforms_Sandbox },
-                     { Nesting_Test } );
-
+                     { Transforms_Sandbox } );
 
     // ******************** End extra step
 
 // (Can define Main_Scene's class here)
 
-const Main_Scene = Phong_Comparison_Demo;
+const Main_Scene = Transforms_Sandbox;
 const Additional_Scenes = [];
 
 export { Main_Scene, Additional_Scenes, Canvas_Widget, Code_Widget, Text_Widget, defs }

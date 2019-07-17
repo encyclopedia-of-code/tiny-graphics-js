@@ -1,7 +1,7 @@
 // This file defines a lot of panels that can be placed on websites to create interactive graphics programs that use tiny-graphics.js.
 
 import {tiny} from './tiny-graphics.js';
-const { Vec, Mat, Mat4, Color, Shape, Shader, Scene } = tiny;           // Pull these names into this module's scope for convenience.
+const { color, Scene } = tiny;           // Pull these names into this module's scope for convenience.
 
 export const widgets = {};
 
@@ -14,7 +14,7 @@ class Canvas_Widget
                             // 16 Canvas_Widgets; browsers support up to 16 WebGL contexts per page.
   constructor( element, initial_scenes, options )   
     { this.element = element;
-      Object.assign( this, { show_controls: true, show_explanation: true }, options )
+      Object.assign( this, { show_canvas: true, make_controls: true, show_explanation: true }, options )
       const rules = [ ".canvas-widget { width: 1080px; background: DimGray; margin:auto }",
                       ".canvas-widget canvas { width: 1080px; height: 600px; margin-bottom:-3px }" ];
                       
@@ -25,9 +25,10 @@ class Canvas_Widget
       this.embedded_explanation_area.className = "text-widget";
       
       const canvas = this.element.appendChild( document.createElement( "canvas" ) );
+      if( !this.show_canvas )
+        canvas.style.display = "none";
 
-      this.patch_ios_bug();
-      this.webgl_manager = new tiny.Webgl_Manager( canvas, Color.of( 0,0,0,1 ) );  // Second parameter sets background color.
+      this.webgl_manager = new tiny.Webgl_Manager( canvas, color( 0,0,0,1 ) );  // Second parameter sets background color.
 
       this.embedded_controls_area = this.element.appendChild( document.createElement( "div" ) );
       this.embedded_controls_area.className = "controls-widget";
@@ -35,21 +36,13 @@ class Canvas_Widget
       if( initial_scenes )
         this.webgl_manager.scenes.push( ...initial_scenes );
 
-      this.embedded_controls = new Controls_Widget( this.embedded_controls_area,    this.webgl_manager.scenes );
-      this.embedded_explanation  = new Text_Widget( this.embedded_explanation_area, this.webgl_manager.scenes, this.webgl_manager );
+      if( this.make_controls )
+        this.embedded_controls = new Controls_Widget( this.embedded_controls_area,    this.webgl_manager.scenes );
+      if( this.show_explanation )
+        this.embedded_explanation  = new Text_Widget( this.embedded_explanation_area, this.webgl_manager.scenes, this.webgl_manager );
 
                                        // Start WebGL initialization.  Note that render() will re-queue itself for continuous calls.
       this.webgl_manager.render();
-    }
-  patch_ios_bug()
-    {                                           // patch_ios_bug():  Correct a flaw in Webkit (iPhone devices; safari mobile) that
-                                                // breaks TypedArray.from() and TypedArray.of() in subclasses.  Bug report:
-                                                // https://bugs.webkit.org/show_bug.cgi?id=181011
-      try{ Vec.of( 1,2,3 ).times(2) }
-      catch 
-      { Vec.of   = function( ...arr ) { return new Vec( Array.from( ...arr ) ) }
-        Vec.from = function(    arr ) { return new Vec( Array.from(    arr ) ) }
-      }
     }
 }
 
@@ -181,25 +174,36 @@ class Code_Manager
 const Code_Widget = widgets.Code_Widget =
 class Code_Widget
 {                                         // **Code_Widget** draws a code navigator panel with inline links to the entire program source code.
-  constructor( element, main_scene, additional_scenes, definitions )
+  constructor( element, main_scene, additional_scenes, definitions, options = {} )
     { const rules = [ ".code-widget .code-panel { margin:auto; background:white; overflow:auto; font-family:monospace; width:1060px; padding:10px; padding-bottom:40px; max-height: 500px; \
                                                       border-radius:12px; box-shadow: 20px 20px 90px 0px powderblue inset, 5px 5px 30px 0px blue inset }",
-                    ".code-widget .code-display { min-width:1800px; padding:10px; white-space:pre-wrap; background:transparent }",
+                    ".code-widget .code-display { min-width:1200px; padding:10px; white-space:pre-wrap; background:transparent }",
                     ".code-widget table { display:block; margin:auto; overflow-x:auto; width:1080px; border-radius:25px; border-collapse:collapse; border: 2px solid black }",
                     ".code-widget table.class-list td { border-width:thin; background: #EEEEEE; padding:12px; font-family:monospace; border: 1px solid black }"
                      ];
 
       if( document.styleSheets.length == 0 ) document.head.appendChild( document.createElement( "style" ) );
       for( const r of rules ) document.styleSheets[document.styleSheets.length - 1].insertRule( r, 0 )
-      
+
+
+      this.build_reader(      element, main_scene, additional_scenes, definitions);
+      if( !options.hide_navigator )
+        this.build_navigator( element, main_scene, additional_scenes, definitions);
+    }
+  build_reader( element, main_scene, additional_scenes, definitions )
+    {                                           // (Internal helper function)      
       this.definitions = definitions;
       const code_panel = element.appendChild( document.createElement( "div" ) );
       code_panel.className = "code-panel";
-      const text        = code_panel.appendChild( document.createElement( "p" ) );
-      text.textContent  = "Below is the code for the demo that's running.  Click links to see definitions!";
+//       const text        = code_panel.appendChild( document.createElement( "p" ) );
+//       text.textContent  = "Code for the above scene:";
       this.code_display = code_panel.appendChild( document.createElement( "div" ) );
       this.code_display.className = "code-display";
-
+                                                                            // Default textbox contents:
+      this.display_code( main_scene );
+    }
+  build_navigator( element, main_scene, additional_scenes, definitions )
+    {                                           // (Internal helper function)
       const class_list = element.appendChild( document.createElement( "table" ) );
       class_list.className = "class-list";   
       const top_cell = class_list.insertRow( -1 ).insertCell( -1 );
@@ -225,8 +229,7 @@ class Code_Widget
       third_row.style = "text-align:center";
       third_row.innerHTML = "<td><b>tiny-graphics.js</b><br>(Always the same)</td> \
                              <td><b>All other class definitions from dependencies:</td>";
-                                                                            // Default textbox contents:
-      this.display_code( main_scene );
+
       const fourth_row = class_list.insertRow( -1 );
                                                                             // Generate the navigator table of links:
       for( let list of [ tiny, definitions ] )
@@ -280,7 +283,7 @@ class Text_Widget
                                                  // documentation is extracted from whichever Scene object gets loaded first.
   constructor( element, scenes, webgl_manager ) 
     { const rules = [ ".text-widget { background: white; width:1060px;\
-                        padding:0 10px; overflow:auto; transition:1s; overflow-y:scroll; box-shadow: 10px 10px 90px 0 inset Gray}" ];
+                        padding:0 10px; overflow:auto; transition:1s; overflow-y:scroll; box-shadow: 10px 10px 90px 0 inset LightGray}" ];
       if( document.styleSheets.length == 0 ) document.head.appendChild( document.createElement( "style" ) );
       for( const r of rules ) document.styleSheets[document.styleSheets.length - 1].insertRule( r, 0 )
 

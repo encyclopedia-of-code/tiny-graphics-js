@@ -1,7 +1,8 @@
-# tiny-graphics-js
+# surfaces-demo
 
-This is a small, single file JavaScript utility for organizing WebGL programs to be object-oriented and minimally cluttered.  This tiny library gives your WebGL program access to linear algebra routines, useful UI controls and readouts, and the drawing utilities needed by modern shader-based graphics.  It factors away the repetitive logic of GPU communication into re-usable objects.
+To run this, visit its GitHub Pages link: https://intro-graphics-master.github.io/surfaces-demo/
 
-The tiny-graphics.js software library has accompanied UCLA Computer Science's 174a course (Intro to Computer Graphics) since 2016, replacing Edward Angel's supplemental code from his textbook "Interactive Computer Graphics: A Top-Down Approach with WebGL".  Compared to Angel's library, tiny-graphics.js offers improved educational utility, organization, functionality, and performance.
+This repo stores a demo about parametric surfaces, surfaces of revolution, and (soon) spline curves.  It also demonstrates how to combine shapes in tiny-graphics.js, and how to animate them with moving points.
 
-This code library accompanies and supports a web project by the same author called "The Encyclopedia of Code", a crowd-sourced repository of WebGL demos and educational tutorials that uses an online editor.  It consists of one unified codebase, serving as both a game engine and an encyclopedia.
+The relevant code is all in surfaces-demo.js.  The other example files are included here for completeness sake only.
+
