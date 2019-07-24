@@ -15,9 +15,11 @@ class Canvas_Widget
   constructor( element, initial_scenes, options = {} )   
     { this.element = element;
 
+      const defaults = { show_canvas: true, make_controls: true, show_explanation: true, 
+                         make_editor: true, make_code_nav: true, show_editor: true };
       if( initial_scenes && initial_scenes[0] )
         Object.assign( options, initial_scenes[0].widget_options );
-      Object.assign( this, { show_canvas: true, make_controls: true, show_explanation: true }, options )
+      Object.assign( this, defaults, options )
       
       const rules = [ ".canvas-widget { width: 1080px; background: DimGray; margin:auto }",
                       ".canvas-widget canvas { width: 1080px; height: 600px; margin-bottom:-3px }" ];
@@ -25,25 +27,44 @@ class Canvas_Widget
       if( document.styleSheets.length == 0 ) document.head.appendChild( document.createElement( "style" ) );
       for( const r of rules ) document.styleSheets[document.styleSheets.length - 1].insertRule( r, 0 )
 
+                              // Fill in the document elements:
+
       this.embedded_explanation_area = this.element.appendChild( document.createElement( "div" ) );
       this.embedded_explanation_area.className = "text-widget";
       
       const canvas = this.element.appendChild( document.createElement( "canvas" ) );
+
+      this.embedded_controls_area    = this.element.appendChild( document.createElement( "div" ) );
+      this.embedded_controls_area.className = "controls-widget";
+
+      this.embedded_code_nav_area    = this.element.appendChild( document.createElement( "div" ) );
+      this.embedded_code_nav_area.className = "code-widget";
+
+      this.embedded_editor_area      = this.element.appendChild( document.createElement( "div" ) );
+      this.embedded_editor_area.className = "editor-widget";
+      
       if( !this.show_canvas )
         canvas.style.display = "none";
 
       this.webgl_manager = new tiny.Webgl_Manager( canvas, color( 0,0,0,1 ) );  // Second parameter sets background color.
 
-      this.embedded_controls_area = this.element.appendChild( document.createElement( "div" ) );
-      this.embedded_controls_area.className = "controls-widget";
 
+                           // Add scenes and child widgets
       if( initial_scenes )
         this.webgl_manager.scenes.push( ...initial_scenes );
 
-      if( this.make_controls )
-        this.embedded_controls = new Controls_Widget( this.embedded_controls_area,    this.webgl_manager.scenes );
+      const primary_scene = initial_scenes ? initial_scenes[0] : undefined;
+      const additional_scenes = initial_scenes ? initial_scenes.slice(1) : [];
+
       if( this.show_explanation )
         this.embedded_explanation  = new Text_Widget( this.embedded_explanation_area, this.webgl_manager.scenes, this.webgl_manager );
+      if( this.make_controls )
+        this.embedded_controls     = new Controls_Widget( this.embedded_controls_area, this.webgl_manager.scenes );
+      if( this.make_editor )
+        this.embedded_editor       = new Editor_Widget( this.embedded_editor_area, primary_scene, this );
+      if( this.make_code_nav )
+        this.embedded_code_nav     = new Code_Widget( this.embedded_code_nav_area, primary_scene, 
+                                     additional_scenes, { associated_editor: this.embedded_editor } );
 
                                        // Start WebGL initialization.  Note that render() will re-queue itself for continuous calls.
       this.webgl_manager.render();
@@ -178,7 +199,7 @@ class Code_Manager
 const Code_Widget = widgets.Code_Widget =
 class Code_Widget
 {                                         // **Code_Widget** draws a code navigator panel with inline links to the entire program source code.
-  constructor( element, main_scene, additional_scenes, definitions, options = {} )
+  constructor( element, main_scene, additional_scenes, options = {} )
     { const rules = [ ".code-widget .code-panel { margin:auto; background:white; overflow:auto; font-family:monospace; width:1060px; padding:10px; padding-bottom:40px; max-height: 500px; \
                                                       border-radius:12px; box-shadow: 20px 20px 90px 0px powderblue inset, 5px 5px 30px 0px blue inset }",
                     ".code-widget .code-display { min-width:1200px; padding:10px; white-space:pre-wrap; background:transparent }",
@@ -189,10 +210,15 @@ class Code_Widget
       if( document.styleSheets.length == 0 ) document.head.appendChild( document.createElement( "style" ) );
       for( const r of rules ) document.styleSheets[document.styleSheets.length - 1].insertRule( r, 0 )
 
+      this.associated_editor_widget = options.associated_editor;
 
-      this.build_reader(      element, main_scene, additional_scenes, definitions);
-      if( !options.hide_navigator )
-        this.build_navigator( element, main_scene, additional_scenes, definitions);
+      import( './main-scene.js' )
+        .then( module => { 
+        
+          this.build_reader(      element, main_scene, additional_scenes, module.defs );
+          if( !options.hide_navigator )
+            this.build_navigator( element, main_scene, additional_scenes, module.defs );
+        } )
     }
   build_reader( element, main_scene, additional_scenes, definitions )
     {                                           // (Internal helper function)      
@@ -280,6 +306,59 @@ class Code_Widget
           }
     }
 }
+
+
+const Editor_Widget = widgets.Editor_Widget =
+class Editor_Widget
+{ constructor( element, initially_selected_class, canvas_widget )
+    { let rules = [ ".editor-widget { margin:auto; background:white; overflow:auto; font-family:monospace; width:1060px; padding:10px; \
+                                      border-radius:12px; box-shadow: 20px 20px 90px 0px powderblue inset, 5px 5px 30px 0px blue inset }",
+                    ".editor-widget button { background: #4C9F50; color: white; padding: 6px; border-radius:9px; margin-right:5px; \
+                                             box-shadow: 4px 6px 16px 0px rgba(0,0,0,0.3); transition: background .3s, transform .3s }",
+                    ".editor-widget input { margin-right:5px }",
+                    ".editor-widget textarea { white-space:pre; width:1040px; margin-bottom:30px }",
+                    ".editor-widget button:hover, button:focus { transform: scale(1.3); color:gold }"
+                  ];
+
+      for( const r of rules ) document.styleSheets[0].insertRule( r, 1 );
+
+      this.selected_class = initially_selected_class;
+      this.associated_canvas = canvas_widget;
+
+      const form = element.appendChild( document.createElement( "form" ) );
+      const explanation = form.appendChild( document.createElement( "p" ) );
+      explanation.innerHTML = `<i><b>What can I put here?</b></i>  A JavaScript class, with any valid JavaScript inside.  Your code can use classes from this demo,
+                               <br>or from ANY demo on Demopedia --  the dependencies will automatically be pulled in to run your demo!<br>`;
+      const run_button            = form.appendChild( document.createElement( "button" ) );
+      run_button.type             = "button";
+      run_button.style            = "background:maroon";
+      run_button.textContent      = "Run with Changes";
+      const submit                = form.appendChild( document.createElement( "button" ) );
+      submit.type                 = "submit";
+      submit.textContent          = "Save as New Webpage";
+      const author_box            = form.appendChild( document.createElement( "input" ) );
+      author_box.name             = "author";
+      author_box.type             = "text";
+      author_box.placeholder      = "Author name";
+//    const password_box          = form.appendChild( document.createElement( "input" ) );
+//    password_box.name           = "password";
+//    password_box.type           = "text";
+//    password_box.placeholder    = "Password";
+//    password_box.style          = "display:none";
+
+      const overwrite_panel       = form.appendChild( document.createElement( "span" ) );
+      overwrite_panel.style       = "display:none";
+      overwrite_panel.innerHTML   = "<label>Overwrite?<input type='checkbox' name='overwrite' autocomplete='off'></label>";
+
+      const submit_result         = form.appendChild( document.createElement( "div" ) );
+      submit_result.style         = "margin: 10px 0";
+      const new_demo_code         = form.appendChild( document.createElement( "textarea" ) );
+      new_demo_code.name          = new_demo_code;
+      new_demo_code.rows          = 25;
+      new_demo_code.cols          = 140;
+    }
+}
+
 
 const Text_Widget = widgets.Text_Widget =
 class Text_Widget
