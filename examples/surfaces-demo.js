@@ -7,6 +7,8 @@ export class Surfaces_Demo extends Scene
 { constructor( scene_id, material )
     { super();
 
+      this.widget_options = { show_canvas: false, make_controls: false, show_explanation: true };
+
       if( typeof( scene_id ) === "undefined" )
         { this.is_master = true;
           this.sections = [];
@@ -264,8 +266,7 @@ export class Surfaces_Demo extends Scene
       this.r = Mat4.rotation( -.5*Math.sin( program_state.animation_time/5000 ),   1,1,1 );
 
       if( this.is_master )
-        { context.canvas.style.display = "none";          
-                                                    // *** Lights: *** Values of vector or point lights.  They'll be consulted by 
+        {                                           // *** Lights: *** Values of vector or point lights.  They'll be consulted by 
                                                     // the shader when coloring shapes.  See Light's class definition for inputs.
           const t = this.t = program_state.animation_time/1000;
           const angle = Math.sin( t );

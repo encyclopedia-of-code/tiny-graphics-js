@@ -12,9 +12,13 @@ class Canvas_Widget
                             // arguments.  Optionally spawns a Text_Widget and Controls_Widget for showing more information
                             // or interactive UI buttons, divided into one panel per each loaded Scene.  You can use up to
                             // 16 Canvas_Widgets; browsers support up to 16 WebGL contexts per page.
-  constructor( element, initial_scenes, options )   
+  constructor( element, initial_scenes, options = {} )   
     { this.element = element;
+
+      if( initial_scenes && initial_scenes[0] )
+        Object.assign( options, initial_scenes[0].widget_options );
       Object.assign( this, { show_canvas: true, make_controls: true, show_explanation: true }, options )
+      
       const rules = [ ".canvas-widget { width: 1080px; background: DimGray; margin:auto }",
                       ".canvas-widget canvas { width: 1080px; height: 600px; margin-bottom:-3px }" ];
                       
