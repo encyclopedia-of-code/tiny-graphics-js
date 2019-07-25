@@ -32,7 +32,7 @@ class Canvas_Widget
       { this.embedded_explanation_area = this.element.appendChild( document.createElement( "div" ) );
         this.embedded_explanation_area.className = "text-widget";
       }
-      
+
       const canvas = this.element.appendChild( document.createElement( "canvas" ) );
 
       if( this.make_controls )
@@ -290,7 +290,8 @@ class Code_Widget
   display_code( class_to_display )
     {                                           // display_code():  Populate the code textbox.
                                                 // Pass undefined to choose index.html source.
-      this.selected_class = class_to_display;
+      if( this.associated_editor_widget ) 
+        this.associated_editor_widget.select_class( class_to_display );
       if( class_to_display ) this.format_code( class_to_display.toString() );
       else fetch( document.location.href )
                 .then(   response => response.text() )
@@ -332,40 +333,74 @@ class Editor_Widget
 
       for( const r of rules ) document.styleSheets[0].insertRule( r, 1 );
 
-      this.selected_class = initially_selected_class;
       this.associated_canvas = canvas_widget;
 
-      const form = element.appendChild( document.createElement( "form" ) );
+      const form = this.form = element.appendChild( document.createElement( "form" ) );
+                                                          // Don't refresh the page on submit:
+      form.addEventListener( 'submit', event => 
+        { event.preventDefault(); this.submit_demo() }, false );    
+
       const explanation = form.appendChild( document.createElement( "p" ) );
       explanation.innerHTML = `<i><b>What can I put here?</b></i>  A JavaScript class, with any valid JavaScript inside.  Your code can use classes from this demo,
                                <br>or from ANY demo on Demopedia --  the dependencies will automatically be pulled in to run your demo!<br>`;
-      const run_button            = form.appendChild( document.createElement( "button" ) );
+      
+      const run_button = this.run_button = form.appendChild( document.createElement( "button" ) );
       run_button.type             = "button";
       run_button.style            = "background:maroon";
       run_button.textContent      = "Run with Changes";
-      const submit                = form.appendChild( document.createElement( "button" ) );
+
+      const submit = this.submit = form.appendChild( document.createElement( "button" ) );
       submit.type                 = "submit";
       submit.textContent          = "Save as New Webpage";
-      const author_box            = form.appendChild( document.createElement( "input" ) );
+
+      const author_box = this.author_box = form.appendChild( document.createElement( "input" ) );
       author_box.name             = "author";
       author_box.type             = "text";
       author_box.placeholder      = "Author name";
-//    const password_box          = form.appendChild( document.createElement( "input" ) );
-//    password_box.name           = "password";
-//    password_box.type           = "text";
-//    password_box.placeholder    = "Password";
-//    password_box.style          = "display:none";
+      
+      const password_box = this.password_box = form.appendChild( document.createElement( "input" ) );
+      password_box.name           = "password";
+      password_box.type           = "text";
+      password_box.placeholder    = "Password";
+      password_box.style          = "display:none";
 
-      const overwrite_panel       = form.appendChild( document.createElement( "span" ) );
+      const overwrite_panel = this.overwrite_panel = form.appendChild( document.createElement( "span" ) );
       overwrite_panel.style       = "display:none";
       overwrite_panel.innerHTML   = "<label>Overwrite?<input type='checkbox' name='overwrite' autocomplete='off'></label>";
 
-      const submit_result         = form.appendChild( document.createElement( "div" ) );
+      const submit_result = this.submit_result = form.appendChild( document.createElement( "div" ) );
       submit_result.style         = "margin: 10px 0";
-      const new_demo_code         = form.appendChild( document.createElement( "textarea" ) );
-      new_demo_code.name          = new_demo_code;
-      new_demo_code.rows          = 25;
-      new_demo_code.cols          = 140;
+
+      const new_demo_code = this.new_demo_code = form.appendChild( document.createElement( "textarea" ) );
+      new_demo_code.name    = "new_demo_code";
+      new_demo_code.rows    = 25;
+      new_demo_code.cols    = 140;
+      this.select_class( initially_selected_class );
+    }
+  select_class( class_definition )
+    { this.new_demo_code.value = class_definition.toString(); }
+  fetch_handler( url, body )          // A general utility function for sending / receiving JSON, with error handling.
+    { return fetch( url,
+      { body: body, method: body === undefined ? 'GET' : 'POST', 
+        headers: { 'content-type': 'application/json'  } 
+      }).then( response =>
+      { if ( response.ok )  return Promise.resolve( response.json() )
+        else                return Promise.reject ( response.status )
+      })
+    }
+  submit_demo()
+    { const form_fields = Array.from( this.form.elements ).reduce( ( accum, elem ) => 
+        { if( elem.value && !( ['checkbox', 'radio'].includes( elem.type ) && !elem.checked ) )
+            accum[ elem.name ] = elem.value; 
+          return accum;
+        }, {} );
+        
+      this.submit_result.innerHTML = "";
+      return this.fetch_handler( "/submit-demo?Unapproved", JSON.stringify( form_fields ) )
+        .then ( response => { if( response.show_password  ) this.password_box.style.display = "inline";
+                              if( response.show_overwrite ) this.overwrite_panel.style.display = "inline";
+                              this.submit_result.innerHTML += response.message + "<br>"; } )
+        .catch(    error => { this.submit_result.innerHTML += "Error " + error + " when trying to upload.<br>" } )
     }
 }
 
