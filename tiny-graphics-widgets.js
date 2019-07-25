@@ -16,7 +16,7 @@ class Canvas_Widget
     { this.element = element;
 
       const defaults = { show_canvas: true, make_controls: true, show_explanation: true, 
-                         make_editor: true, make_code_nav: true, show_editor: true };
+                         make_editor: true, make_code_nav: true };
       if( initial_scenes && initial_scenes[0] )
         Object.assign( options, initial_scenes[0].widget_options );
       Object.assign( this, defaults, options )
@@ -28,21 +28,28 @@ class Canvas_Widget
       for( const r of rules ) document.styleSheets[document.styleSheets.length - 1].insertRule( r, 0 )
 
                               // Fill in the document elements:
-
-      this.embedded_explanation_area = this.element.appendChild( document.createElement( "div" ) );
-      this.embedded_explanation_area.className = "text-widget";
+      if( this.show_explanation )
+      { this.embedded_explanation_area = this.element.appendChild( document.createElement( "div" ) );
+        this.embedded_explanation_area.className = "text-widget";
+      }
       
       const canvas = this.element.appendChild( document.createElement( "canvas" ) );
 
-      this.embedded_controls_area    = this.element.appendChild( document.createElement( "div" ) );
-      this.embedded_controls_area.className = "controls-widget";
+      if( this.make_controls )
+      { this.embedded_controls_area    = this.element.appendChild( document.createElement( "div" ) );
+        this.embedded_controls_area.className = "controls-widget";
+      }
 
-      this.embedded_code_nav_area    = this.element.appendChild( document.createElement( "div" ) );
-      this.embedded_code_nav_area.className = "code-widget";
+      if( this.make_code_nav )
+      { this.embedded_code_nav_area    = this.element.appendChild( document.createElement( "div" ) );
+        this.embedded_code_nav_area.className = "code-widget";
+      }
 
-      this.embedded_editor_area      = this.element.appendChild( document.createElement( "div" ) );
-      this.embedded_editor_area.className = "editor-widget";
-      
+      if( this.make_editor )
+      { this.embedded_editor_area      = this.element.appendChild( document.createElement( "div" ) );
+        this.embedded_editor_area.className = "editor-widget";
+      }
+
       if( !this.show_canvas )
         canvas.style.display = "none";
 
@@ -61,9 +68,9 @@ class Canvas_Widget
       if( this.make_controls )
         this.embedded_controls     = new Controls_Widget( this.embedded_controls_area, this.webgl_manager.scenes );
       if( this.make_editor )
-        this.embedded_editor       = new Editor_Widget( this.embedded_editor_area, primary_scene, this );
+        this.embedded_editor       = new Editor_Widget( this.embedded_editor_area, primary_scene.constructor, this );
       if( this.make_code_nav )
-        this.embedded_code_nav     = new Code_Widget( this.embedded_code_nav_area, primary_scene, 
+        this.embedded_code_nav     = new Code_Widget( this.embedded_code_nav_area, primary_scene.constructor, 
                                      additional_scenes, { associated_editor: this.embedded_editor } );
 
                                        // Start WebGL initialization.  Note that render() will re-queue itself for continuous calls.
@@ -211,6 +218,9 @@ class Code_Widget
       for( const r of rules ) document.styleSheets[document.styleSheets.length - 1].insertRule( r, 0 )
 
       this.associated_editor_widget = options.associated_editor;
+
+      if( !main_scene )
+        return;
 
       import( './main-scene.js' )
         .then( module => { 

@@ -234,7 +234,8 @@ export class Surfaces_Demo extends Scene
               const element_1 = document_element.appendChild( document.createElement( "div" ) );
               element_1.className = "canvas-widget";
 
-              const cw = new tiny.Canvas_Widget( element_1, undefined, { make_controls: i==0 } );
+              const cw = new tiny.Canvas_Widget( element_1, undefined,
+                { make_controls: i==0, make_editor: false, make_code_nav: false } );
               cw.webgl_manager.scenes.push( this.sections[ i ] );
               cw.webgl_manager.program_state = webgl_manager.program_state;
               cw.webgl_manager.set_size( [ 1080,300 ] )
@@ -244,14 +245,14 @@ export class Surfaces_Demo extends Scene
 
               const code = new tiny.Code_Widget( element_2, 
                                  Surfaces_Demo.prototype[ "construct_scene_"+i ],
-                                 [], defs, { hide_navigator: 1 } );
+                                 [], { hide_navigator: 1 } );
               
               const element_3 = document_element.appendChild( document.createElement( "div" ) );
               element_3.className = "code-widget";
 
               const code_2 = new tiny.Code_Widget( element_3, 
                                  Surfaces_Demo.prototype[ "display_scene_"+i ],
-                                 [], defs, { hide_navigator: 1 } );
+                                 [], { hide_navigator: 1 } );
             }
 
             const final_text = document_element.appendChild( document.createElement( "div" ) );
