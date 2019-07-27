@@ -321,7 +321,7 @@ class Code_Widget
 
 const Editor_Widget = widgets.Editor_Widget =
 class Editor_Widget
-{ constructor( element, initially_selected_class, canvas_widget )
+{ constructor( element, initially_selected_class, canvas_widget, options )
     { let rules = [ ".editor-widget { margin:auto; background:white; overflow:auto; font-family:monospace; width:1060px; padding:10px; \
                                       border-radius:12px; box-shadow: 20px 20px 90px 0px powderblue inset, 5px 5px 30px 0px blue inset }",
                     ".editor-widget button { background: #4C9F50; color: white; padding: 6px; border-radius:9px; margin-right:5px; \
@@ -334,6 +334,7 @@ class Editor_Widget
       for( const r of rules ) document.styleSheets[0].insertRule( r, 1 );
 
       this.associated_canvas = canvas_widget;
+      this.options = options;
 
       const form = this.form = element.appendChild( document.createElement( "form" ) );
                                                           // Don't refresh the page on submit:
@@ -373,7 +374,7 @@ class Editor_Widget
 
       const new_demo_code = this.new_demo_code = form.appendChild( document.createElement( "textarea" ) );
       new_demo_code.name    = "new_demo_code";
-      new_demo_code.rows    = 25;
+      new_demo_code.rows    = this.options.rows || 25;
       new_demo_code.cols    = 140;
       this.select_class( initially_selected_class );
     }
@@ -411,7 +412,9 @@ class Text_Widget
                                                  // documentation is extracted from whichever Scene object gets loaded first.
   constructor( element, scenes, webgl_manager ) 
     { const rules = [ ".text-widget { background: white; width:1060px;\
-                        padding:0 10px; overflow:auto; transition:1s; overflow-y:scroll; box-shadow: 10px 10px 90px 0 inset LightGray}" ];
+                        padding:0 10px; overflow:auto; transition:1s; overflow-y:scroll; box-shadow: 10px 10px 90px 0 inset LightGray}",
+                      ".text-widget div { transition:none } "
+                    ];
       if( document.styleSheets.length == 0 ) document.head.appendChild( document.createElement( "style" ) );
       for( const r of rules ) document.styleSheets[document.styleSheets.length - 1].insertRule( r, 0 )
 

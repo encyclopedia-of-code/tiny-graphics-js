@@ -3,7 +3,7 @@ import {tiny, defs} from './common.js';
 const { Vector3, vec3, vec4, color, Mat4, Light, Shape, Material, Shader, Texture, Scene } = tiny;
 const { Triangle, Square, Tetrahedron, Windmill, Cube, Subdivision_Sphere } = defs;
 
-export class Surfaces_Demo extends Scene
+export class Parametric_Surfaces extends Scene
 { constructor( scene_id, material )
     { super();
 
@@ -20,12 +20,12 @@ export class Surfaces_Demo extends Scene
       this.material = material;
       
       if( this.is_master )
-      {
+      {                                                // Shared resources between all WebGL contexts:
         const textured = new defs.Textured_Phong( 1 );
-        this.material = new Material( textured, { ambient: .5, texture: new Texture( "assets/rgb.jpg" ) } );
+        this.material = new Material( textured, { ambient: .5, texture: new Texture(  "assets/rgb.jpg" ) } );
 
         for( let i = 0; i < this.num_scenes; i++ )
-          this.sections.push( new Surfaces_Demo( i, this.material ) );
+          this.sections.push( new Parametric_Surfaces( i, this.material ) );
       }
       else
         this[ "construct_scene_" + scene_id ] ();
@@ -80,7 +80,7 @@ export class Surfaces_Demo extends Scene
                      };
     }
   construct_scene_5()
-    { this.shapes = { box : new Cube(),
+    { this.shapes = { box : new defs.Cube(),
                      cone : new defs.Closed_Cone            ( 4, 10,  [[0,2],[0,1]] ),
                    capped : new defs.Capped_Cylinder        ( 1, 10,  [[0,2],[0,1]] ),
                     cone2 : new defs.Rounded_Closed_Cone    ( 5, 10,  [[0,2],[0,1]] ),
@@ -231,27 +231,27 @@ export class Surfaces_Demo extends Scene
 
           for( let i = 0; i < this.num_scenes; i++ )
             {
-              const element_1 = document_element.appendChild( document.createElement( "div" ) );
-              element_1.className = "canvas-widget";
+              let element = document_element.appendChild( document.createElement( "div" ) );
+              element.className = "canvas-widget";
 
-              const cw = new tiny.Canvas_Widget( element_1, undefined,
+              const cw = new tiny.Canvas_Widget( element, undefined,
                 { make_controls: i==0, make_editor: false, make_code_nav: false } );
               cw.webgl_manager.scenes.push( this.sections[ i ] );
               cw.webgl_manager.program_state = webgl_manager.program_state;
               cw.webgl_manager.set_size( [ 1080,300 ] )
 
-              const element_2 = document_element.appendChild( document.createElement( "div" ) );
-              element_2.className = "code-widget";
+              element = document_element.appendChild( document.createElement( "div" ) );
+              element.className = "code-widget";
 
-              const code = new tiny.Code_Widget( element_2, 
-                                 Surfaces_Demo.prototype[ "construct_scene_"+i ],
+              const code = new tiny.Code_Widget( element, 
+                                 Parametric_Surfaces.prototype[ "construct_scene_"+i ],
                                  [], { hide_navigator: 1 } );
               
-              const element_3 = document_element.appendChild( document.createElement( "div" ) );
-              element_3.className = "code-widget";
+              element = document_element.appendChild( document.createElement( "div" ) );
+              element.className = "code-widget";
 
-              const code_2 = new tiny.Code_Widget( element_3, 
-                                 Surfaces_Demo.prototype[ "display_scene_"+i ],
+              const code_2 = new tiny.Code_Widget( element, 
+                                 Parametric_Surfaces.prototype[ "display_scene_"+i ],
                                  [], { hide_navigator: 1 } );
             }
 
