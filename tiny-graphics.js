@@ -57,8 +57,7 @@ class Vector extends Float32Array
                                     // Note:  Vectors should be created with of() due to wierdness with the TypedArray spec.
                                     // Tip: Assign Vectors with .copy() to avoid referring two variables to the same Vector object.
   static create( ...arr )
-    { // return new Vector( Array.from( ...arr ) );
-         return new Vector( arr );     // does this work?
+    { return new Vector( arr );
     }
   copy        () { return new Vector( this )                              }
   equals     (b) { return this.every( (x,i) => x == b[i]                ) }
