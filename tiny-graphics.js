@@ -63,14 +63,14 @@ class Vector extends Float32Array
   equals     (b) { return this.every( (x,i) => x == b[i]                ) }
   plus       (b) { return this.map(   (x,i) => x +  b[i]                ) }
   minus      (b) { return this.map(   (x,i) => x -  b[i]                ) }
-  times_pairwise (b) { return this.map(   (x,i) => x *  b[i]                ) }
+  times_pairwise (b) { return this.map(   (x,i) => x *  b[i]            ) }
   scale_by   (s) { this.forEach(  (x, i, a) => a[i] *= s                ) }
   times      (s) { return this.map(       x => s*x                      ) }
   randomized (s) { return this.map(       x => x + s*(Math.random()-.5) ) }
   mix     (b, s) { return this.map(   (x,i) => (1-s)*x + s*b[i]         ) }
   norm        () { return Math.sqrt( this.dot( this )                   ) }
   normalized  () { return this.times( 1/this.norm()                     ) }
-  normalize   () {        this.scale_by( 1/this.norm()                     ) }
+  normalize   () {        this.scale_by( 1/this.norm()                  ) }
   dot(b)
     { if( this.length == 2 )                    // Optimize for Vectors of size 2
         return this[0]*b[0] + this[1]*b[1];  
