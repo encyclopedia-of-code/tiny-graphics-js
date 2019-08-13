@@ -19,7 +19,7 @@ export const tiny = {};
 
     // To get vector algebra that performs well in JavaScript, we based class Vector on consecutive 
     // buffers (using type Float32Array).  Implementations should specialize for common vector 
-    // sizes 3 and 4 since JavaScript engines can better optimize functions when it can predict
+    // sizes 3 and 4 since JavaScript engines can better optimize functions when they can predict
     // argument count.  Implementations should also avoid allocating new array objects since these
     // will all have to be garbage collected.
 
