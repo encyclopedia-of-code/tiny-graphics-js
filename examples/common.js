@@ -18,13 +18,13 @@ class Triangle extends Shape
     {                             // Name the values we'll define per each vertex:
       super( "position", "normal", "texture_coord" );
                                   // First, specify the vertex positions -- the three point locations of an imaginary triangle:
-      this.arrays.position      = [ Vec.of(0,0,0), Vec.of(1,0,0), Vec.of(0,1,0) ];
+      this.arrays.position      = [ vec3(0,0,0), vec3(1,0,0), vec3(0,1,0) ];
                                   // Next, supply vectors that point away from the triangle face.  They should match up with 
                                   // the points in the above list.  Normal vectors are needed so the graphics engine can
                                   // know if the shape is pointed at light or not, and color it accordingly.
-      this.arrays.normal        = [ Vec.of(0,0,1), Vec.of(0,0,1), Vec.of(0,0,1) ];
+      this.arrays.normal        = [ vec3(0,0,1), vec3(0,0,1), vec3(0,0,1) ];
                                   //  lastly, put each point somewhere in texture space too:
-      this.arrays.texture_coord = [ Vec.of(0,0),   Vec.of(1,0),   Vec.of(0,1)   ]; 
+      this.arrays.texture_coord = [ Vector.of(0,0),   Vector.of(1,0),   Vector.of(0,1)   ]; 
                                   // Index into our vertices to connect them into a whole triangle:
       this.indices        = [ 0, 1, 2 ];
                        // A position, normal, and texture coord fully describes one "vertex".  What's the "i"th vertex?  Simply
@@ -113,17 +113,17 @@ class Windmill extends Shape
         {                                      // Rotate around a few degrees in the XZ plane to place each new point:
           const spin = Mat4.rotation( i * 2*Math.PI/num_blades,   0,1,0 );
                                                // Apply that XZ rotation matrix to point (1,0,0) of the base triangle.
-          const newPoint  = spin.times( Vec.of( 1,0,0,1 ) ).to3();
+          const newPoint  = spin.times( vec4( 1,0,0,1 ) ).to3();
           const triangle = [ newPoint,                      // Store that XZ position as point 1.
                              newPoint.plus( [ 0,1,0 ] ),    // Store it again but with higher y coord as point 2.
-                             Vec.of( 0,0,0 )    ];          // All triangles touch this location -- point 3.
+                             vec3( 0,0,0 )    ];          // All triangles touch this location -- point 3.
 
           this.arrays.position.push( ...triangle );
                         // Rotate our base triangle's normal (0,0,1) to get the new one.  Careful!  Normal vectors are not
                         // points; their perpendicularity constraint gives them a mathematical quirk that when applying 
                         // matrices you have to apply the transposed inverse of that matrix instead.  But right now we've
                         // got a pure rotation matrix, where the inverse and transpose operations cancel out, so it's ok.
-          var newNormal = spin.times( Vec.of( 0,0,1 ).to4(0) ).to3();
+          var newNormal = spin.times( vec4( 0,0,1,0 ) ).to3();
                                                                        // Propagate the same normal to all three vertices:
           this.arrays.normal.push( newNormal, newNormal, newNormal );
           this.arrays.texture_coord.push( ...Vec.cast( [ 0,0 ], [ 0,1 ], [ 1,0 ] ) );
@@ -184,8 +184,8 @@ class Subdivision_Sphere extends Shape
                                          // Textures are tricky.  A Subdivision sphere has no straight seams to which image 
                                          // edges in UV space can be mapped.  The only way to avoid artifacts is to smoothly
                                          // wrap & unwrap the image in reverse - displaying the texture twice on the sphere.                                                        
-        //  this.arrays.texture_coord.push( Vec.of( Math.asin( p[0]/Math.PI ) + .5, Math.asin( p[1]/Math.PI ) + .5 ) );
-          this.arrays.texture_coord.push( vec(
+        //  this.arrays.texture_coord.push( Vector.of( Math.asin( p[0]/Math.PI ) + .5, Math.asin( p[1]/Math.PI ) + .5 ) );
+          this.arrays.texture_coord.push( Vector.of(
                 0.5 - Math.atan2(p[2], p[0]) / (2 * Math.PI),
                 0.5 + Math.asin(p[1]) / Math.PI) );
         }
@@ -395,7 +395,7 @@ class Minimal_Shape extends tiny.Vertex_Buffer
   constructor()
     { super( "position", "color" );
               // Describe the where the points of a triangle are in space, and also describe their colors:
-      this.arrays.position = [ Vec.of(0,0,0), Vec.of(1,0,0), Vec.of(0,1,0) ];
+      this.arrays.position = [ vec3(0,0,0), vec3(1,0,0), vec3(0,1,0) ];
       this.arrays.color    = [ color(1,0,0,1), color(0,1,0,1), color(0,0,1,1) ];
     }
 }
