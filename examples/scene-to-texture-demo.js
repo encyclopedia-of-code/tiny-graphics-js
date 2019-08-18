@@ -54,11 +54,9 @@ export class Scene_To_Texture_Demo extends Scene
         program_state.lights = [ new Light( vec4( -5,5,5,1 ), color( 0,1,1,1 ), 100000 ) ];
         const t = program_state.animation_time / 1000, dt = program_state.animation_delta_time / 1000;
 
-        if( !context.scratchpad.controls ) 
-        { program_state.set_camera( Mat4.look_at( vec3( 0,0,5 ), vec3( 0,0,0 ), vec3( 0,1,0 ) ) );
-          program_state.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, .5, 500 );
-        }
-
+        program_state.set_camera( Mat4.look_at( vec3( 0,0,5 ), vec3( 0,0,0 ), vec3( 0,1,0 ) ) );
+        program_state.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, .5, 500 );
+        
             // Update persistent matrix state:
         this.cube_1.post_multiply( Mat4.rotation( this.spin * dt * 30 / 60 * 2*Math.PI,   1,0,0 ) );
         this.cube_2.post_multiply( Mat4.rotation( this.spin * dt * 20 / 60 * 2*Math.PI,   0,1,0 ) );

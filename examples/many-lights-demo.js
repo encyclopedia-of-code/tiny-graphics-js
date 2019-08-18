@@ -19,7 +19,10 @@ export class Many_Lights_Demo extends Scene
       this.brick = new Material( shader, { color: color( 1,1,1,1 ),
                                  ambient: .05, diffusivity: .5, specularity: .5, smoothness: 10, 
                                  texture: new Texture( "assets/rgb.jpg" ) });
-              
+     
+                                      // Don't create any DOM elements to control this scene:
+      this.widget_options = { make_controls: false };
+      
       this.box_positions = [];    this.row_lights = {};    this.column_lights = {};
                               // Make initial grid of boxes at random heights:
       for(   let row = 0;       row < this.rows;       row++ ) 

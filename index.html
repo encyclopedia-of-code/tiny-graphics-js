@@ -13,13 +13,4 @@
   new Canvas_Widget( element_to_replace, scenes );
 </script>
 
-                             <!-- The following code embeds a code navigator widget with links to classes. //-->
-<div id="main-code" class="code-widget"></div>
-<script type=module >
-                    // Indicate which element on the page you want the Code_Widget to replace with a code readout:
-  const element_to_replace = document.querySelector( "#main-code" );
-  import { Main_Scene, Additional_Scenes, Code_Widget, defs } from './main-scene.js';  // Import the file that defines a scene.
-  new Code_Widget( element_to_replace, Main_Scene, Additional_Scenes, defs );
-</script>
-
 </body></html>

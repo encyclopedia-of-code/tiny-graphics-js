@@ -54,7 +54,9 @@ export class Text_Demo extends Scene
   constructor()
     { super()
       this.shapes = { cube: new defs.Cube(), text: new Text_Line( 35 ) };
-      
+                                      // Don't create any DOM elements to control this scene:
+      this.widget_options = { make_controls: false };
+        
       const phong   = new defs.Phong_Shader();
       const texture = new defs.Textured_Phong( 1 );
       this.grey       = new Material( phong, { color: color( .5,.5,.5,1 ), ambient: 0, 
@@ -67,10 +69,9 @@ export class Text_Demo extends Scene
   display( context, program_state )
     { program_state.lights = [ new Light( vec4( 3,2,1,0 ),   color( 1,1,1,1 ),  1000000 ),
                                new Light( vec4( 3,10,10,1 ), color( 1,.7,.7,1 ), 100000 ) ];
-      if( !context.scratchpad.controls ) 
-        { program_state.set_camera( Mat4.look_at( ...Vector.cast( [ 0,0,4 ], [0,0,0], [0,1,0] ) ) );
-          program_state.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 500 );
-        }
+      program_state.set_camera( Mat4.look_at( ...Vector.cast( [ 0,0,4 ], [0,0,0], [0,1,0] ) ) );
+      program_state.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 500 );
+      
       const t = program_state.animation_time/1000;
       const funny_orbit = Mat4.rotation( Math.PI/4*t,   Math.cos(t), Math.sin(t), .7*Math.cos(t) );
       this.shapes.cube.draw( context, program_state, funny_orbit, this.grey );

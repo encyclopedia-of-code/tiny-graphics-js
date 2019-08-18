@@ -82,8 +82,8 @@ export class Axes_Viewer_Test_Scene extends Scene
         { this.children.push( context.scratchpad.controls = new defs.Movement_Controls() ); 
         
           program_state.set_camera( Mat4.translation( -1,-1,-20 ) );    // Locate the camera here (inverted matrix).
-          program_state.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 500 );
         }
+      program_state.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 500 );
       const t = program_state.animation_time / 1000, dt = program_state.animation_delta_time / 1000;
 
       this.shapes.box.draw( context, program_state, Mat4.scale( 10,.1,.1 ), this.material );    // Mark the global coordinate axes.

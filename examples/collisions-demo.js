@@ -201,8 +201,8 @@ export class Inertia_Demo extends Simulation
         { this.children.push( context.scratchpad.controls = new defs.Movement_Controls() );
           this.children.push( new defs.Program_State_Viewer() );
           program_state.set_camera( Mat4.translation( 0,0,-50 ) );    // Locate the camera here (inverted matrix).
-          program_state.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 500 );
         }
+      program_state.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 500 );
       program_state.lights = [ new Light( vec4( 0,-5,-10,1 ), color( 1,1,1,1 ), 100000 ) ];
                                                                                               // Draw the ground:
       this.shapes.square.draw( context, program_state, Mat4.translation( 0,-10,0 )
@@ -292,8 +292,8 @@ export class Collision_Demo extends Simulation
         { this.children.push( context.scratchpad.controls = new defs.Movement_Controls() );
           this.children.push( new defs.Program_State_Viewer() );
           program_state.set_camera( Mat4.translation( 0,0,-50 ) );    // Locate the camera here (inverted matrix).
-          program_state.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 500 );
         }
+      program_state.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 500 );
       program_state.lights = [ new Light( vec4( .7,1.5,2,0 ), color( 1,1,1,1 ), 100000 ) ];
 
                                                                // Draw an extra bounding sphere around each drawn shape to show

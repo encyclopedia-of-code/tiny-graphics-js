@@ -63,9 +63,9 @@ export class Transforms_Sandbox_Base extends Scene
                     // orthographic() automatically generate valid matrices for one.  The input arguments of
                     // perspective() are field of view, aspect ratio, and distances to the near plane and far plane.
           program_state.set_camera( Mat4.translation( 0,3,-10 ) );
-          program_state.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 100 );
         }
-
+      program_state.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 100 );
+      
                                                 // *** Lights: *** Values of vector or point lights.  They'll be consulted by 
                                                 // the shader when coloring shapes.  See Light's class definition for inputs.
       const t = this.t = program_state.animation_time/1000;
