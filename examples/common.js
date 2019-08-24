@@ -499,6 +499,8 @@ class Funny_Shader extends Shader
         }`;
     }
 }
+
+
 const Phong_Shader = defs.Phong_Shader =
 class Phong_Shader extends Shader
 {                                  // **Phong_Shader** is a subclass of Shader, which stores and maanges a GPU program.  
