@@ -88,7 +88,7 @@ class Vector extends Float32Array
     { if( this.length == 2 )                    // Optimize for Vectors of size 2
         return this[0]*b[0] + this[1]*b[1];  
       return this.reduce( ( acc, x, i ) => { return acc + x*b[i]; }, 0 );
-    }              
+    }
   static cast( ...args )
                             // cast(): For compact syntax when declaring lists.      
     { return args.map( x => Vector.from(x) ) }
@@ -988,7 +988,7 @@ class Webgl_Manager
 {                        // **Webgl_Manager** manages a whole graphics program for one on-page canvas, including its 
                          // textures, shapes, shaders, and scenes.  It requests a WebGL context and stores Scenes.
   constructor( canvas, background_color, dimensions )
-    { const members = { instances: new Map(), scenes: [], prev_time: 0, canvas, scratchpad: {}, program_state: new Program_State() };
+    { const members = { scenes: [], prev_time: 0, canvas, scratchpad: {}, program_state: new Program_State() };
       Object.assign( this, members );
                                                  // Get the GPU ready, creating a new WebGL context for this canvas:
       for( let name of [ "webgl", "experimental-webgl", "webkit-3d", "moz-webgl" ] )

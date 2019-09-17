@@ -59,7 +59,7 @@ export class Transforms_Sandbox_Base extends Scene
                     // Define the global camera and projection matrices, which are stored in program_state.  The camera
                     // matrix follows the usual format for transforms, but with opposite values (cameras exist as 
                     // inverted matrices).  The projection matrix follows an unusual format and determines how depth is 
-                    // treated when projecting 3D points onto a plane.  The Mat4 functions perspective() and
+                    // treated when projecting 3D points onto a plane.  The Mat4 functions perspective() or
                     // orthographic() automatically generate valid matrices for one.  The input arguments of
                     // perspective() are field of view, aspect ratio, and distances to the near plane and far plane.
           program_state.set_camera( Mat4.translation( 0,3,-10 ) );

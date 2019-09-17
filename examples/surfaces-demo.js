@@ -263,8 +263,7 @@ export class Surfaces_Demo extends Scene
          this[ "explain_scene_" + this.scene_id ] ( document_element );
     }
   display( context, program_state )
-    { 
-      program_state.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 100 ); 
+    { program_state.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 100 ); 
       this.r = Mat4.rotation( -.5*Math.sin( program_state.animation_time/5000 ),   1,1,1 );
 
       if( this.is_master )

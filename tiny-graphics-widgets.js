@@ -61,16 +61,17 @@ class Canvas_Widget
         this.webgl_manager.scenes.push( ...initial_scenes );
 
       const primary_scene = initial_scenes ? initial_scenes[0] : undefined;
+                                                                            // TODO: Unused additional_scenes
       const additional_scenes = initial_scenes ? initial_scenes.slice(1) : [];
-      const primary_scene_definiton = primary_scene ? primary_scene.constructor : undefined;
+      const primary_scene_constructor = primary_scene ? primary_scene.constructor : undefined;
       if( this.show_explanation )
         this.embedded_explanation  = new Text_Widget( this.embedded_explanation_area, this.webgl_manager.scenes, this.webgl_manager );
       if( this.make_controls )
         this.embedded_controls     = new Controls_Widget( this.embedded_controls_area, this.webgl_manager.scenes );
       if( this.make_editor )
-        this.embedded_editor       = new Editor_Widget( this.embedded_editor_area, primary_scene_definiton, this );
+        this.embedded_editor       = new Editor_Widget( this.embedded_editor_area, primary_scene_constructor, this );
       if( this.make_code_nav )
-        this.embedded_code_nav     = new Code_Widget( this.embedded_code_nav_area, primary_scene_definiton, 
+        this.embedded_code_nav     = new Code_Widget( this.embedded_code_nav_area, primary_scene_constructor, 
                                      additional_scenes, { associated_editor: this.embedded_editor } );
 
                                        // Start WebGL initialization.  Note that render() will re-queue itself for continuous calls.
@@ -396,7 +397,7 @@ class Editor_Widget
             accum[ elem.name ] = elem.value; 
           return accum;
         }, {} );
-        
+      
       this.submit_result.innerHTML = "";
       return this.fetch_handler( "/submit-demo?Unapproved", JSON.stringify( form_fields ) )
         .then ( response => { if( response.show_password  ) this.password_box.style.display = "inline";
