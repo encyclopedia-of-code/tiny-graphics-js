@@ -987,7 +987,7 @@ const Webgl_Manager = tiny.Webgl_Manager =
 class Webgl_Manager
 {                        // **Webgl_Manager** manages a whole graphics program for one on-page canvas, including its 
                          // textures, shapes, shaders, and scenes.  It requests a WebGL context and stores Scenes.
-  constructor( canvas, background_color, dimensions )
+  constructor( canvas, background_color = color( 0,0,0,1 ), dimensions )
     { const members = { scenes: [], prev_time: 0, canvas, scratchpad: {}, program_state: new Program_State() };
       Object.assign( this, members );
                                                  // Get the GPU ready, creating a new WebGL context for this canvas:

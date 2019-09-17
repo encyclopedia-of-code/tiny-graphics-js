@@ -17,16 +17,22 @@ export class Surfaces_Demo extends Scene
       this.scene_id = scene_id;
       this.material = material;
       
-                                      // Don't create any DOM elements to control this scene:
-        this.widget_options = { make_controls: false };
+                                    // Don't create any DOM elements to control this scene:
+      this.widget_options = { make_controls: false };
       
       if( this.is_master )
       {
         const textured = new defs.Textured_Phong( 1 );
         this.material = new Material( textured, { ambient: .5, texture: new Texture( "assets/rgb.jpg" ) } );
 
+        this.movement_controls = new defs.Movement_Controls();
+        this.children.push( this.movement_controls );
+
         for( let i = 0; i < this.num_scenes; i++ )
-          this.sections.push( new Surfaces_Demo( i, this.material ) );
+        { const section = new Surfaces_Demo( i, this.material );
+          section.children.push( this.movement_controls );
+          this.sections.push( section );
+        }
       }
       else
         this[ "construct_scene_" + scene_id ] ();
@@ -119,11 +125,7 @@ export class Surfaces_Demo extends Scene
                     };
     }
   display_scene_0( context, program_state )
-    { 
-      if( !context.scratchpad.controls ) 
-        { this.children.push( context.scratchpad.controls = new defs.Movement_Controls() );
-          program_state.set_camera( Mat4.translation( 0,0,-3 ) );
-        }
+    {
                         // Draw the sheets, flipped 180 degrees so their normals point at us.
       const r = Mat4.rotation( Math.PI,   0,1,0 ).times( this.r );
       this.shapes.sheet .draw( context, program_state, Mat4.translation( -1.5,0,0 ).times(r), this.material );
@@ -230,6 +232,9 @@ export class Surfaces_Demo extends Scene
           document_element.style.width = "1080px";
           document_element.style.overflowY = "hidden";
 
+              
+          webgl_manager.program_state.set_camera( Mat4.translation( 0,0,-3 ) );
+
           for( let i = 0; i < this.num_scenes; i++ )
             {
               const element_1 = document_element.appendChild( document.createElement( "div" ) );
@@ -267,7 +272,10 @@ export class Surfaces_Demo extends Scene
       this.r = Mat4.rotation( -.5*Math.sin( program_state.animation_time/5000 ),   1,1,1 );
 
       if( this.is_master )
-        { context.canvas.style.display = "none";          
+        { context.canvas.style.display = "none";
+
+          context.scratchpad.controls = this.movement_controls;
+
                                                     // *** Lights: *** Values of vector or point lights.  They'll be consulted by 
                                                     // the shader when coloring shapes.  See Light's class definition for inputs.
           const t = this.t = program_state.animation_time/1000;
