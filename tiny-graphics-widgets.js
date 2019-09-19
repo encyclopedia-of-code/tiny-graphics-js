@@ -13,16 +13,10 @@ class Document_Builder
     this.children = [];
     this.div = div;
 
-    const rules = [ ".document-builder canvas { width:1080px; background:DimGray; margin:auto; height:600px; margin-bottom:-3px }",
-                    ".document-builder .canvas_div canvas { width:1080px;  }",
-                    ".document-builder .text_div { background:white; width:1060px; padding:0 10px; overflow:auto; \
-                                                overflow-y:scroll; box-shadow:10px 10px 90px 0 inset LightGray}"
-                  ];
-    if( document.styleSheets.length == 0 ) document.head.appendChild( document.createElement( "style" ) );
-    for( const r of rules ) document.styleSheets[document.styleSheets.length - 1].insertRule( r, 0 )
-
     this.document_stuff = div.appendChild( document.createElement( "div" ) );    
     this.document_stuff.className = "text_div";
+    this.document_stuff.style = `width:1060px; padding:0 10px; overflow:auto; overflow-y:scroll;
+                                 background:white;  box-shadow:10px 10px 90px 0 inset LightGray`;
 
     object_to_be_documented.show_document( this );
   }
@@ -48,6 +42,7 @@ class Default_Layout extends Document_Builder
     Object.assign( this, defaults, options )
 
     const canvas = this.program_stuff.appendChild( document.createElement( "canvas" ) );
+    canvas.style = `width:1080px; background:DimGray; margin:auto; height:600px; margin-bottom:-3px`;
 
     if( !this.show_canvas )
       canvas.style.display = "none";
