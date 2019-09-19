@@ -225,40 +225,41 @@ export class Surfaces_Demo extends Scene
   explain_scene_6( document_element )
     { document_element.innerHTML += `<p>Blending two 1D curves as a "ruled surface" using the "mix" function of vectors.  We are using hand-made lists of points for our curves, but you could have generated the points from spline functions.</p>`;
     }
-  show_explanation( document_element, webgl_manager )
+  show_document( document_builder, document_element = document_builder.document_stuff )
     { if( this.is_master )
         {
+          this.program_state = new tiny.Program_State();
+          this.program_state.set_camera( Mat4.translation( 0,0,-3 ) );
+          
           document_element.style.padding = 0;
           document_element.style.width = "1080px";
           document_element.style.overflowY = "hidden";
-
-              
-          webgl_manager.program_state.set_camera( Mat4.translation( 0,0,-3 ) );
-
+                    
           for( let i = 0; i < this.num_scenes; i++ )
             {
-              const element_1 = document_element.appendChild( document.createElement( "div" ) );
-              element_1.className = "canvas-widget";
+              new tiny.Document_Builder( document_element, this.sections[ i ] );
+              
+              const canvas = document_element.appendChild( document.createElement( "canvas" ) );
+              const child_webgl_manager = new tiny.Webgl_Manager( canvas );
 
-              const cw = new tiny.Canvas_Widget( element_1, undefined, 
-                                           { make_controls: i==0, make_editor: false, make_code_nav: false } );
-              cw.webgl_manager.scenes.push( this.sections[ i ] );
-              cw.webgl_manager.program_state = webgl_manager.program_state;
-              cw.webgl_manager.set_size( [ 1080,300 ] )
+              child_webgl_manager.scenes.push( this.sections[ i ] );
+              child_webgl_manager.program_state = this.program_state;
+              child_webgl_manager.set_size( [ 1080,300 ] )
+              child_webgl_manager.render();
 
               const element_2 = document_element.appendChild( document.createElement( "div" ) );
               element_2.className = "code-widget";
 
               const code = new tiny.Code_Widget( element_2, 
                                  Surfaces_Demo.prototype[ "construct_scene_"+i ],
-                                 [], { hide_navigator: true } );
+                                 [], this, { hide_navigator: true } );
               
               const element_3 = document_element.appendChild( document.createElement( "div" ) );
               element_3.className = "code-widget";
 
               const code_2 = new tiny.Code_Widget( element_3, 
                                  Surfaces_Demo.prototype[ "display_scene_"+i ],
-                                 [], { hide_navigator: true } );
+                                 [], this, { hide_navigator: true } );
             }
 
             const final_text = document_element.appendChild( document.createElement( "div" ) );
@@ -268,8 +269,17 @@ export class Surfaces_Demo extends Scene
          this[ "explain_scene_" + this.scene_id ] ( document_element );
     }
   display( context, program_state )
-    { program_state.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 100 ); 
+    { 
+                                  // Override the caller's program_state with one that we made, had control over,
+                                  // and shared to our child document sections.
+      if( this.is_master )
+      { context.program_state = this.program_state;
+        program_state = this.program_state;
+      }
+    
+      program_state.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 100 ); 
       this.r = Mat4.rotation( -.5*Math.sin( program_state.animation_time/5000 ),   1,1,1 );
+
 
       if( this.is_master )
         { context.canvas.style.display = "none";
@@ -281,7 +291,7 @@ export class Surfaces_Demo extends Scene
           const t = this.t = program_state.animation_time/1000;
           const angle = Math.sin( t );
           const light_position = Mat4.rotation( angle,   1,0,0 ).times( vec4( 0,0,1,0 ) );
-          program_state.lights = [ new Light( light_position, color( 1,1,1,1 ), 1000000 ) ]; 
+          program_state.lights = [ new Light( light_position, color( 1,1,1,1 ), 1000000 ) ];
         }
       else
         this[ "display_scene_" + this.scene_id ] ( context, program_state );

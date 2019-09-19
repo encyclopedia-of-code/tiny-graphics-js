@@ -5,6 +5,81 @@ const { color, Scene } = tiny;           // Pull these names into this module's 
 
 export const widgets = {};
 
+const Document_Builder = widgets.Document_Builder =
+class Document_Builder
+{
+  constructor( div, object_to_be_documented )
+  {
+    this.children = [];
+    this.div = div;
+
+    const rules = [ ".document-builder .canvas { width: 1080px; background: DimGray; margin:auto; height: 600px; margin-bottom:-3px }",
+                    ".document-builder .canvas_div canvas { width: 1080px;  }",
+                    ".document-builder .text_div { background: white; width:1060px; padding:0 10px; overflow:auto; \
+                                                overflow-y:scroll; box-shadow: 10px 10px 90px 0 inset LightGray}"
+                  ];
+    if( document.styleSheets.length == 0 ) document.head.appendChild( document.createElement( "style" ) );
+    for( const r of rules ) document.styleSheets[document.styleSheets.length - 1].insertRule( r, 0 )
+
+    this.document_stuff = div.appendChild( document.createElement( "div" ) );    
+    this.document_stuff.className = "text_div";
+
+    object_to_be_documented.show_document( this );
+  }
+}
+
+
+const Default_Layout = widgets.Default_Layout =
+class Default_Layout extends Document_Builder
+{ 
+  constructor( div, initial_scenes, options = {} )
+  {
+    super( div, initial_scenes && initial_scenes[0] );
+    this.program_stuff = this.div.appendChild( document.createElement( "div" ) );
+
+    const defaults = { show_canvas: true,  make_controls: true,
+                       make_editor: false, make_code_nav: true };
+
+    if( initial_scenes && initial_scenes[0] )
+      Object.assign( options, initial_scenes[0].widget_options );
+    Object.assign( this, defaults, options )
+
+    const canvas = this.program_stuff.appendChild( document.createElement( "canvas" ) );
+
+    if( !this.show_canvas )
+      canvas.style.display = "none";
+
+    this.webgl_manager = new tiny.Webgl_Manager( canvas );
+
+    if( initial_scenes )
+      this.webgl_manager.scenes.push( ...initial_scenes );
+
+    const primary_scene_constructor = initial_scenes ? initial_scenes[0].constructor : undefined;
+                                                                          // TODO: Unused additional_scenes
+    const additional_scenes = initial_scenes ? initial_scenes.slice(1) : [];
+
+    if( this.make_controls )
+    { this.embedded_controls_area = this.program_stuff.appendChild( document.createElement( "div" ) );
+      this.embedded_controls_area.className = "controls-widget";
+      this.embedded_controls = new Controls_Widget( this.embedded_controls_area, this.webgl_manager.scenes );
+    }
+    if( this.make_code_nav )
+    { this.embedded_code_nav_area = this.program_stuff.appendChild( document.createElement( "div" ) );
+      this.embedded_code_nav_area.className = "code-widget";
+      this.embedded_code_nav = new Code_Widget( this.embedded_code_nav_area, primary_scene_constructor, 
+                                   additional_scenes, this, {} );
+    }
+    if( this.make_editor )
+    { this.embedded_editor_area = this.program_stuff.appendChild( document.createElement( "div" ) );
+      this.embedded_editor_area.className = "editor-widget";
+      this.embedded_editor = new Editor_Widget( this.embedded_editor_area, primary_scene_constructor, this );
+    }
+                                     // Start WebGL initialization.  Note that render() will re-queue itself for continuous calls.
+    this.webgl_manager.render();
+  }
+}
+
+
 const Canvas_Widget = widgets.Canvas_Widget =
 class Canvas_Widget
 {                           // **Canvas_Widget** embeds a WebGL demo onto a website in place of the given placeholder document
@@ -207,7 +282,7 @@ class Code_Manager
 const Code_Widget = widgets.Code_Widget =
 class Code_Widget
 {                                         // **Code_Widget** draws a code navigator panel with inline links to the entire program source code.
-  constructor( element, main_scene, additional_scenes, options = {} )
+  constructor( element, main_scene, additional_scenes, caller, options = {} )
     { const rules = [ ".code-widget .code-panel { margin:auto; background:white; overflow:auto; font-family:monospace; width:1060px; padding:10px; padding-bottom:40px; max-height: 500px; \
                                                       border-radius:12px; box-shadow: 20px 20px 90px 0px powderblue inset, 5px 5px 30px 0px blue inset }",
                     ".code-widget .code-display { min-width:1200px; padding:10px; white-space:pre-wrap; background:transparent }",
@@ -218,7 +293,7 @@ class Code_Widget
       if( document.styleSheets.length == 0 ) document.head.appendChild( document.createElement( "style" ) );
       for( const r of rules ) document.styleSheets[document.styleSheets.length - 1].insertRule( r, 0 )
 
-      this.associated_editor_widget = options.associated_editor;
+      this.associated_editor_widget = caller.embedded_editor;
 
       if( !main_scene )
         return;

@@ -615,8 +615,8 @@ class Phong_Shader extends Shader
       gl.uniformMatrix4fv( gpu.                  model_transform, false, Matrix.flatten_2D_to_1D( model_transform.transposed() ) );
       gl.uniformMatrix4fv( gpu.projection_camera_model_transform, false, Matrix.flatten_2D_to_1D(             PCM.transposed() ) );
 
-                                             // Omitting lights will show only the material color, scaled by the ambient term:
-      if( !gpu_state.lights.length )
+                                             // Omitting lights will show only the material color, scaled by the ambient term.
+      if( !gpu_state.lights || !gpu_state.lights.length )
         return;
 
       const light_positions_flattened = [], light_colors_flattened = [];
