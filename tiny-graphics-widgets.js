@@ -13,10 +13,10 @@ class Document_Builder
     this.children = [];
     this.div = div;
 
-    const rules = [ ".document-builder .canvas { width: 1080px; background: DimGray; margin:auto; height: 600px; margin-bottom:-3px }",
-                    ".document-builder .canvas_div canvas { width: 1080px;  }",
-                    ".document-builder .text_div { background: white; width:1060px; padding:0 10px; overflow:auto; \
-                                                overflow-y:scroll; box-shadow: 10px 10px 90px 0 inset LightGray}"
+    const rules = [ ".document-builder canvas { width:1080px; background:DimGray; margin:auto; height:600px; margin-bottom:-3px }",
+                    ".document-builder .canvas_div canvas { width:1080px;  }",
+                    ".document-builder .text_div { background:white; width:1060px; padding:0 10px; overflow:auto; \
+                                                overflow-y:scroll; box-shadow:10px 10px 90px 0 inset LightGray}"
                   ];
     if( document.styleSheets.length == 0 ) document.head.appendChild( document.createElement( "style" ) );
     for( const r of rules ) document.styleSheets[document.styleSheets.length - 1].insertRule( r, 0 )
@@ -35,6 +35,9 @@ class Default_Layout extends Document_Builder
   constructor( div, initial_scenes, options = {} )
   {
     super( div, initial_scenes && initial_scenes[0] );
+    div.style.margin = "auto";
+    div.style.width = "1080px";
+    
     this.program_stuff = this.div.appendChild( document.createElement( "div" ) );
 
     const defaults = { show_canvas: true,  make_controls: true,
