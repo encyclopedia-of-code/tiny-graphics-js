@@ -1107,6 +1107,6 @@ class Scene
     {}                            // display(): Called by Webgl_Manager for drawing.
   make_control_panel()
     {}                            // make_control_panel(): Called by Controls_Widget for generating interactive UI.
-  show_explanation( document_section )
-    {}                            // show_explanation(): Called by Text_Widget for generating documentation.
+  show_document( document_builder, document_element = document_builder.document_region )
+    {}                            // show_document(): Called by Document_Builder for generating documentation.
 }

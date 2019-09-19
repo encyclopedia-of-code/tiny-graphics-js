@@ -13,9 +13,9 @@ class Document_Builder
     this.children = [];
     this.div = div;
 
-    this.document_stuff = div.appendChild( document.createElement( "div" ) );    
-    this.document_stuff.className = "text_div";
-    this.document_stuff.style = `width:1060px; padding:0 10px; overflow:auto; overflow-y:scroll;
+    this.document_region = div.appendChild( document.createElement( "div" ) );    
+    this.document_region.className = "text_div";
+    this.document_region.style = `width:1060px; padding:0 10px; overflow:auto; overflow-y:scroll;
                                  background:white;  box-shadow:10px 10px 90px 0 inset LightGray`;
 
     object_to_be_documented.show_document( this );
@@ -42,7 +42,7 @@ class Default_Layout extends Document_Builder
     Object.assign( this, defaults, options )
 
     const canvas = this.program_stuff.appendChild( document.createElement( "canvas" ) );
-    canvas.style = `width:1080px; background:DimGray; margin:auto; height:600px; margin-bottom:-3px`;
+    canvas.style = `width:1080px; height:600px; background:DimGray; margin:auto; margin-bottom:-13px`;
 
     if( !this.show_canvas )
       canvas.style.display = "none";
@@ -75,81 +75,6 @@ class Default_Layout extends Document_Builder
                                      // Start WebGL initialization.  Note that render() will re-queue itself for continuous calls.
     this.webgl_manager.render();
   }
-}
-
-
-const Canvas_Widget = widgets.Canvas_Widget =
-class Canvas_Widget
-{                           // **Canvas_Widget** embeds a WebGL demo onto a website in place of the given placeholder document
-                            // element.  It creates a WebGL canvas and loads onto it any initial Scene objects in the 
-                            // arguments.  Optionally spawns a Text_Widget and Controls_Widget for showing more information
-                            // or interactive UI buttons, divided into one panel per each loaded Scene.  You can use up to
-                            // 16 Canvas_Widgets; browsers support up to 16 WebGL contexts per page.
-  constructor( element, initial_scenes, options = {} )   
-    { this.element = element;
-
-      const defaults = { show_canvas: true, make_controls: true, show_explanation: true, 
-                         make_editor: false, make_code_nav: true };
-      if( initial_scenes && initial_scenes[0] )
-        Object.assign( options, initial_scenes[0].widget_options );
-      Object.assign( this, defaults, options )
-      
-      const rules = [ ".canvas-widget { width: 1080px; background: DimGray; margin:auto }",
-                      ".canvas-widget canvas { width: 1080px; height: 600px; margin-bottom:-3px }" ];
-                      
-      if( document.styleSheets.length == 0 ) document.head.appendChild( document.createElement( "style" ) );
-      for( const r of rules ) document.styleSheets[document.styleSheets.length - 1].insertRule( r, 0 )
-
-                              // Fill in the document elements:
-      if( this.show_explanation )
-      { this.embedded_explanation_area = this.element.appendChild( document.createElement( "div" ) );
-        this.embedded_explanation_area.className = "text-widget";
-      }
-
-      const canvas = this.element.appendChild( document.createElement( "canvas" ) );
-
-      if( this.make_controls )
-      { this.embedded_controls_area    = this.element.appendChild( document.createElement( "div" ) );
-        this.embedded_controls_area.className = "controls-widget";
-      }
-
-      if( this.make_code_nav )
-      { this.embedded_code_nav_area    = this.element.appendChild( document.createElement( "div" ) );
-        this.embedded_code_nav_area.className = "code-widget";
-      }
-
-      if( this.make_editor )
-      { this.embedded_editor_area      = this.element.appendChild( document.createElement( "div" ) );
-        this.embedded_editor_area.className = "editor-widget";
-      }
-
-      if( !this.show_canvas )
-        canvas.style.display = "none";
-
-      this.webgl_manager = new tiny.Webgl_Manager( canvas, color( 0,0,0,1 ) );  // Second parameter sets background color.
-
-
-                           // Add scenes and child widgets
-      if( initial_scenes )
-        this.webgl_manager.scenes.push( ...initial_scenes );
-
-      const primary_scene = initial_scenes ? initial_scenes[0] : undefined;
-                                                                            // TODO: Unused additional_scenes
-      const additional_scenes = initial_scenes ? initial_scenes.slice(1) : [];
-      const primary_scene_constructor = primary_scene ? primary_scene.constructor : undefined;
-      if( this.show_explanation )
-        this.embedded_explanation  = new Text_Widget( this.embedded_explanation_area, this.webgl_manager.scenes, this.webgl_manager );
-      if( this.make_controls )
-        this.embedded_controls     = new Controls_Widget( this.embedded_controls_area, this.webgl_manager.scenes );
-      if( this.make_editor )
-        this.embedded_editor       = new Editor_Widget( this.embedded_editor_area, primary_scene_constructor, this );
-      if( this.make_code_nav )
-        this.embedded_code_nav     = new Code_Widget( this.embedded_code_nav_area, primary_scene_constructor, 
-                                     additional_scenes, { associated_editor: this.embedded_editor } );
-
-                                       // Start WebGL initialization.  Note that render() will re-queue itself for continuous calls.
-      this.webgl_manager.render();
-    }
 }
 
 
@@ -309,8 +234,6 @@ class Code_Widget
       this.definitions = definitions;
       const code_panel = element.appendChild( document.createElement( "div" ) );
       code_panel.className = "code-panel";
-//       const text        = code_panel.appendChild( document.createElement( "p" ) );
-//       text.textContent  = "Code for the above scene:";
       this.code_display = code_panel.appendChild( document.createElement( "div" ) );
       this.code_display.className = "code-display";
                                                                             // Default textbox contents:
@@ -477,29 +400,5 @@ class Editor_Widget
                               if( response.show_overwrite ) this.overwrite_panel.style.display = "inline";
                               this.submit_result.innerHTML += response.message + "<br>"; } )
         .catch(    error => { this.submit_result.innerHTML += "Error " + error + " when trying to upload.<br>" } )
-    }
-}
-
-
-const Text_Widget = widgets.Text_Widget =
-class Text_Widget
-{                                                // **Text_Widget** generates HTML documentation and fills a panel with it.  This
-                                                 // documentation is extracted from whichever Scene object gets loaded first.
-  constructor( element, scenes, webgl_manager ) 
-    { const rules = [ ".text-widget { background: white; width:1060px;\
-                        padding:0 10px; overflow:auto; transition:1s; overflow-y:scroll; box-shadow: 10px 10px 90px 0 inset LightGray}",
-                      ".text-widget div { transition:none } "
-                    ];
-      if( document.styleSheets.length == 0 ) document.head.appendChild( document.createElement( "style" ) );
-      for( const r of rules ) document.styleSheets[document.styleSheets.length - 1].insertRule( r, 0 )
-
-      Object.assign( this, { element, scenes, webgl_manager } );
-      this.render();
-    }
-  render( time = 0 )
-    { if( this.scenes[0] )
-        this.scenes[0].show_explanation( this.element, this.webgl_manager )
-      else
-        this.event = window.requestAnimFrame( this.render.bind( this ) )
     }
 }

@@ -407,7 +407,7 @@ class Minimal_Webgl_Demo extends Scene
   constructor( webgl_manager, control_panel )
     { super( webgl_manager, control_panel );
                                                 // Don't create any DOM elements to control this scene:
-        this.widget_options = { make_controls: false, show_explanation: false };
+        this.widget_options = { make_controls: false, show_document: false };
                                                 // Send a Triangle's vertices to the GPU's buffers:
       this.shapes = { triangle : new Minimal_Shape() };
       this.shader = new Basic_Shader();
@@ -769,7 +769,7 @@ class Movement_Controls extends Scene
       canvas  .addEventListener( "mousemove", e => { e.preventDefault(); this.mouse.from_center = mouse_position(e); } );
       canvas  .addEventListener( "mouseout",  e => { if( !this.mouse.anchor ) this.mouse.from_center.scale_by(0) } );
     }
-  show_explanation( document_element ) { }
+  show_document( document_builder, document_element = document_builder.document_region ) { }
   make_control_panel()
     {                                 // make_control_panel(): Sets up a panel of interactive HTML elements, including
                                       // buttons with key bindings for affecting this scene, and live info readouts.

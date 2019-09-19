@@ -135,9 +135,11 @@ export class Obj_File_Demo extends Scene
           this.shapes.teapot.draw( context, program_state, model_transform, i == 1 ? this.stars : this.bumps );
         }
       }
-  show_explanation( document_element )
-    { document_element.innerHTML += "<p>This demo loads an external 3D model file of a teapot.  It uses a condensed version of the \"webgl-obj-loader.js\" "
-                                 +  "open source library, though this version is not guaranteed to be complete and may not handle some .OBJ files.  It is contained in the class \"Shape_From_File\". "
-                                 +  "</p><p>One of these teapots is lit with bump mapping.  Can you tell which one?</p>";
+  show_document( document_builder, document_element = document_builder.document_region )
+    { document_element.innerHTML += 
+        `<p>This demo loads an external 3D model file of a teapot.  It uses a condensed version of the "webgl-obj-loader.js"
+         open source library, though this version is not guaranteed to be complete and may not handle some .OBJ files.  It is
+         contained in the class "Shape_From_File".
+         </p><p>One of these teapots is lit with bump mapping.  Can you tell which one?</p>`;
     }
   }

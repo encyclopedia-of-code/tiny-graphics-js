@@ -67,11 +67,17 @@ export class Many_Lights_Demo extends Scene
           if( a[i][2] > 1 ) a[i][2] = -this.columns + .001;
         } );
     }                                                        
-  show_explanation( document_element )
-    { document_element.innerHTML += `<p>This demo shows how to make the illusion that there are many lights, despite the shader only being aware of two. The shader used here (class Phong_Shader) is told to take only two lights into account when coloring in a shape. This has the benefit of fewer lights that have to be looped through in the fragment shader, which has to run hundreds of thousands of times.
-
-    </p><p>You can get away with seemingly having more lights in your overall scene by having the lights only affect certain shapes, such that only two are influencing any given shape at a time.   We re-locate the lights in between individual shape draws. For this to look right, it helps for shapes to be aware of which lights are nearby versus which are too far away or too small for their effects to matter, so the best pair can be chosen.
-
-    </p><p>In this scene, one light exists per row and one per column, and a box simply looks up the lights it is sharing a row or column with.</p>`;
+  show_document( document_builder, document_element = document_builder.document_region )
+    { document_element.innerHTML += 
+        `<p>This demo shows how to make the illusion that there are many lights, despite the shader only being aware of two.
+         The shader used here (class Phong_Shader) is told to take only two lights into account when coloring in a shape. 
+         This has the benefit of fewer lights that have to be looped through in the fragment shader, which has to run 
+         hundreds of thousands of times.
+         </p><p>You can get away with seemingly having more lights in your overall scene by having the lights only affect 
+         certain shapes, such that only two are influencing any given shape at a time.   We re-locate the lights in between
+         individual shape draws. For this to look right, it helps for shapes to be aware of which lights are nearby versus 
+         which are too far away or too small for their effects to matter, so the best pair can be chosen.
+         </p><p>In this scene, one light exists per row and one per column, and a box simply looks up the lights it is 
+         sharing a row or column with.</p>`;
     }
 }
