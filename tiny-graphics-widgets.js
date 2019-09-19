@@ -14,7 +14,7 @@ class Document_Builder
     this.div = div;
 
     this.document_region = div.appendChild( document.createElement( "div" ) );    
-    this.document_region.className = "text_div";
+    this.document_region.className = "documentation_treenode";
     this.document_region.style = `width:1060px; padding:0 10px; overflow:auto; overflow-y:scroll;
                                  background:white;  box-shadow:10px 10px 90px 0 inset LightGray`;
 

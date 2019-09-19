@@ -46,7 +46,7 @@ export class Transforms_Sandbox_Base extends Scene
       this.new_line();
       this.key_triggered_button( "Swarm mode", [ "m" ], function() { this.swarm ^= 1; } );
     }
-  display( context, program_state )
+  display( context, shared_uniforms )
     {                                                // display():  Called once per frame of animation.  We'll isolate out
                                                      // the code that actually draws things into Transforms_Sandbox, a
                                                      // subclass of this Scene.  Here, the base class's display only does
@@ -56,22 +56,22 @@ export class Transforms_Sandbox_Base extends Scene
       if( !context.scratchpad.controls ) 
         { this.children.push( context.scratchpad.controls = new defs.Movement_Controls() ); 
 
-                    // Define the global camera and projection matrices, which are stored in program_state.  The camera
+                    // Define the global camera and projection matrices, which are stored in shared_uniforms.  The camera
                     // matrix follows the usual format for transforms, but with opposite values (cameras exist as 
                     // inverted matrices).  The projection matrix follows an unusual format and determines how depth is 
                     // treated when projecting 3D points onto a plane.  The Mat4 functions perspective() or
                     // orthographic() automatically generate valid matrices for one.  The input arguments of
                     // perspective() are field of view, aspect ratio, and distances to the near plane and far plane.
-          program_state.set_camera( Mat4.translation( 0,3,-10 ) );
+          shared_uniforms.set_camera( Mat4.translation( 0,3,-10 ) );
         }
-      program_state.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 100 );
+      shared_uniforms.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 100 );
       
                                                 // *** Lights: *** Values of vector or point lights.  They'll be consulted by 
                                                 // the shader when coloring shapes.  See Light's class definition for inputs.
-      const t = this.t = program_state.animation_time/1000;
+      const t = this.t = shared_uniforms.animation_time/1000;
       const angle = Math.sin( t );
       const light_position = Mat4.rotation( angle,   1,0,0 ).times( vec4( 0,-1,1,0 ) );
-      program_state.lights = [ new Light( light_position, color( 1,1,1,1 ), 1000000 ) ];
+      shared_uniforms.lights = [ new Light( light_position, color( 1,1,1,1 ), 1000000 ) ];
     }
 }
 
@@ -84,7 +84,7 @@ export class Transforms_Sandbox extends Transforms_Sandbox_Base
                                                      // the shapes.  We isolate that code so it can be experimented with on its own.
                                                      // This gives you a very small code sandbox for editing a simple scene, and for
                                                      // experimenting with matrix transformations.
-  display( context, program_state )
+  display( context, shared_uniforms )
     {                                                // display():  Called once per frame of animation.  For each shape that you want to
                                                      // appear onscreen, place a .draw() call for it inside.  Each time, pass in a
                                                      // different matrix value to control where the shape appears.
@@ -96,11 +96,11 @@ export class Transforms_Sandbox extends Transforms_Sandbox_Base
                                                      // this.materials.plastic:  Selects a shader and draws a more matte surface.
                                                      // this.lights:  A pre-made collection of Light objects.
                                                      // this.hover:  A boolean variable that changes when the user presses a button.
-                                                     // program_state:  Information the shader needs for drawing.  Pass to draw().
+                                                     // shared_uniforms:  Information the shader needs for drawing.  Pass to draw().
                                                      // context:  Wraps the WebGL rendering context shown onscreen.  Pass to draw().                                                       
 
                                                 // Call the setup code that we left inside the base class:
-      super.display( context, program_state );
+      super.display( context, shared_uniforms );
 
       /**********************************
       Start coding down here!!!!
@@ -128,19 +128,19 @@ export class Transforms_Sandbox extends Transforms_Sandbox_Base
                                                      // shape, and place it at the coordinate origin 0,0,0:
       model_transform = model_transform.times( Mat4.translation( 0,0,0 ) );
                                                                                               // Draw the top box:
-      this.shapes.box.draw( context, program_state, model_transform, this.materials.plastic.override( yellow ) );
+      this.shapes.box.draw( context, shared_uniforms, model_transform, this.materials.plastic.override( yellow ) );
       
                                                      // Tweak our coordinate system downward 2 units for the next shape.
       model_transform = model_transform.times( Mat4.translation( 0, -2, 0 ) );
                                                                            // Draw the ball, a child of the hierarchy root.
                                                                            // The ball will have its own children as well.
-      this.shapes.ball.draw( context, program_state, model_transform, this.materials.metal.override( blue ) );
+      this.shapes.ball.draw( context, shared_uniforms, model_transform, this.materials.metal.override( blue ) );
                                                                       
                                                                       // Prepare to draw another box object 2 levels deep 
                                                                       // within our hierarchy.
                                                                       // Find how much time has passed in seconds; we can use
                                                                       // time as an input when calculating new transforms:
-      const t = this.t = program_state.animation_time/1000;
+      const t = this.t = shared_uniforms.animation_time/1000;
 
                                                       // Spin our current coordinate frame as a function of time.  Only do
                                                       // this movement if the button on the page has not been toggled off.
@@ -158,7 +158,7 @@ export class Transforms_Sandbox extends Transforms_Sandbox_Base
                                          .times( Mat4.scale      ( 1,   2, 1 ) )
                                          .times( Mat4.translation( 0,-1.5, 0 ) );
                                                                                     // Draw the bottom (child) box:
-      this.shapes.box.draw( context, program_state, model_transform, this.materials.plastic.override( yellow ) );
+      this.shapes.box.draw( context, shared_uniforms, model_transform, this.materials.plastic.override( yellow ) );
 
                               // Note that our coordinate system stored in model_transform still has non-uniform scaling
                               // due to our scale() call.  This could have undesired effects for subsequent transforms;

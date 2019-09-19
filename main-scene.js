@@ -43,7 +43,7 @@ Object.assign( defs,
 
 // (Can define Main_Scene's class here)
 
-const Main_Scene = Axes_Viewer_Test_Scene;
+const Main_Scene = Transforms_Sandbox;
 const Additional_Scenes = [];
 
 export { Main_Scene, Additional_Scenes, Default_Layout, Code_Widget, Text_Widget, defs }

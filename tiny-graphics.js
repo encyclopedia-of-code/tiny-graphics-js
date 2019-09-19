@@ -587,12 +587,12 @@ class Vertex_Buffer extends Graphics_Card_Object
       }
       else  gl.drawArrays( gl[type], 0, Object.values( this.arrays )[0].length );
     }
-  draw( webgl_manager, program_state, model_transform, material, type = "TRIANGLES" )
+  draw( webgl_manager, shared_uniforms, model_transform, material, type = "TRIANGLES" )
     {                                       // draw():  To appear onscreen, a shape of any variety goes through this function,
                                             // which executes the shader programs.  The shaders draw the right shape due to
                                             // pre-selecting the correct buffer region in the GPU that holds that shape's data.
       const gpu_instance = this.activate( webgl_manager.context );
-      material.shader.activate( webgl_manager.context, gpu_instance.webGL_buffer_pointers, program_state, model_transform, material );
+      material.shader.activate( webgl_manager.context, gpu_instance.webGL_buffer_pointers, shared_uniforms, model_transform, material );
                                                               // Run the shaders to draw every triangle now:
       this.execute_shaders( webgl_manager.context, gpu_instance, type );
     }
@@ -793,7 +793,7 @@ class Shader extends Graphics_Card_Object
                             // (update_GPU) which define the extra custom JavaScript code needed to populate your particular shader
                             // program with all the data values it is expecting, such as matrices.  The shader pulls these values
                             // from two places in your JavaScript:  A Material object, for values pertaining to the current shape
-                            // only, and a Program_State object, for values pertaining to your entire Scene or program.
+                            // only, and a Shared_Uniforms object, for values pertaining to your entire Scene or program.
   copy_onto_graphics_card( context )
     {                                     // copy_onto_graphics_card():  Called automatically as needed to load the 
                                           // shader program onto one of your GPU contexts for its first time.
@@ -834,14 +834,14 @@ class Shader extends Graphics_Card_Object
       Object.assign( gpu_instance, { program, vertShdr, fragShdr, gpu_addresses: new Graphics_Addresses( program, gl ) } );
       return gpu_instance;
     }
-  activate( context, buffer_pointers, program_state, model_transform, material )
+  activate( context, buffer_pointers, shared_uniforms, model_transform, material )
     {                                     // activate(): Selects this Shader in GPU memory so the next shape draws using it.        
     const gpu_instance = super.activate( context );
 
       context.useProgram( gpu_instance.program );
 
           // --- Send over all the values needed by this particular shader to the GPU: ---
-      this.update_GPU( context, gpu_instance.gpu_addresses, program_state, model_transform, material );
+      this.update_GPU( context, gpu_instance.gpu_addresses, shared_uniforms, model_transform, material );
       
           // --- Turn on all the correct attributes and make sure they're pointing to the correct ranges in GPU memory. ---
       for( let [ attr_name, attribute ] of Object.entries( gpu_instance.gpu_addresses.shader_attributes ) )
@@ -959,13 +959,13 @@ class Texture extends Graphics_Card_Object
 }
 
 
-const Program_State = tiny.Program_State =
-class Program_State extends Container
-{                                     // **Program_State** stores any values that affect how your whole scene is drawn, 
+const Shared_Uniforms = tiny.Shared_Uniforms =
+class Shared_Uniforms extends Container
+{                                     // **Shared_Uniforms** stores any values that affect how your whole scene is drawn, 
                                       // such as its current lights and the camera position.  Class Shader uses whatever
                                       // values are wrapped here as inputs to your custom shader program.  Your Shader
                                       // subclass must override its method "update_GPU()" to define how to send your
-                                      // Program_State's particular values over to your custom shader program.
+                                      // Shared_Uniforms' particular values over to your custom shader program.
   constructor( camera_transform = Mat4.identity(), projection_transform = Mat4.identity() ) 
     { super();
       this.set_camera( camera_transform );
@@ -973,7 +973,7 @@ class Program_State extends Container
       Object.assign( this, defaults );
     }
   set_camera( matrix )
-    {                       // set_camera():  Applies a new (inverted) camera matrix to the Program_State.
+    {                       // set_camera():  Applies a new (inverted) camera matrix to the Shared_Uniforms.
                             // It's often useful to cache both the camera matrix and its inverse.  Both are needed
                             // often and matrix inversion is too slow to recompute needlessly.  
                             // Note that setting a camera matrix traditionally means storing the inverted version, 
@@ -988,7 +988,7 @@ class Webgl_Manager
 {                        // **Webgl_Manager** manages a whole graphics program for one on-page canvas, including its 
                          // textures, shapes, shaders, and scenes.  It requests a WebGL context and stores Scenes.
   constructor( canvas, background_color = color( 0,0,0,1 ), dimensions )
-    { const members = { scenes: [], prev_time: 0, canvas, scratchpad: {}, program_state: new Program_State() };
+    { const members = { scenes: [], prev_time: 0, canvas, scratchpad: {}, shared_uniforms: new Shared_Uniforms() };
       Object.assign( this, members );
                                                  // Get the GPU ready, creating a new WebGL context for this canvas:
       for( let name of [ "webgl", "experimental-webgl", "webkit-3d", "moz-webgl" ] )
@@ -1030,8 +1030,8 @@ class Webgl_Manager
   render( time=0 )
     {               // render(): Draw a single frame of animation, using all loaded Scene objects.  Measure
                     // how much real time has transpired in order to animate shapes' movements accordingly.
-      this.program_state.animation_delta_time = time - this.prev_time;
-      if( this.program_state.animate ) this.program_state.animation_time += this.program_state.animation_delta_time;
+      this.shared_uniforms.animation_delta_time = time - this.prev_time;
+      if( this.shared_uniforms.animate ) this.shared_uniforms.animation_time += this.shared_uniforms.animation_delta_time;
       this.prev_time = time;
 
       const gl = this.context;
@@ -1041,7 +1041,7 @@ class Webgl_Manager
       while( open_list.length )                           // Traverse all Scenes and their children, recursively.
       { open_list.push( ...open_list[0].children );
                                                                 // Call display() to draw each registered animation:
-        open_list.shift().display( this, this.program_state );
+        open_list.shift().display( this, this.shared_uniforms );
       }
                                               // Now that this frame is drawn, request that render() happen 
                                               // again as soon as all other web page events are processed:
@@ -1103,7 +1103,7 @@ class Scene
     }                                                          
                                                 // To use class Scene, override at least one of the below functions,
                                                 // which will be automatically called by other classes:
-  display( context, program_state )
+  display( context, shared_uniforms )
     {}                            // display(): Called by Webgl_Manager for drawing.
   make_control_panel()
     {}                            // make_control_panel(): Called by Controls_Widget for generating interactive UI.
