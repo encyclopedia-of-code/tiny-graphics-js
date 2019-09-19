@@ -318,7 +318,7 @@ class Code_Widget
 
 const Editor_Widget = widgets.Editor_Widget =
 class Editor_Widget
-{ constructor( element, initially_selected_class, canvas_widget, options = {} )
+{ constructor( element, initially_selected_class, webgl_manager, options = {} )
     { let rules = [ ".editor-widget { margin:auto; background:white; overflow:auto; font-family:monospace; width:1060px; padding:10px; \
                                       border-radius:12px; box-shadow: 20px 20px 90px 0px powderblue inset, 5px 5px 30px 0px blue inset }",
                     ".editor-widget button { background: #4C9F50; color: white; padding: 6px; border-radius:9px; margin-right:5px; \
@@ -330,7 +330,7 @@ class Editor_Widget
 
       for( const r of rules ) document.styleSheets[0].insertRule( r, 1 );
 
-      this.associated_canvas = canvas_widget;
+      this.associated_webgl_manager = webgl_manager;
       this.options = options;
 
       const form = this.form = element.appendChild( document.createElement( "form" ) );
