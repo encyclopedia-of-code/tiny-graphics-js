@@ -121,13 +121,13 @@ export class Simulation extends Scene
       this.live_string( box => { box.textContent = "Fixed simulation time step size: "  + this.dt     } ); this.new_line();
       this.live_string( box => { box.textContent = this.steps_taken + " timesteps were taken so far." } );
     }
-  display( context, program_state )
+  display( context, shared_uniforms )
     {                                     // display(): advance the time and state of our whole simulation.
-      if( program_state.animate ) 
-        this.simulate( program_state.animation_delta_time );
+      if( shared_uniforms.animate ) 
+        this.simulate( shared_uniforms.animation_delta_time );
                                           // Draw each shape at its current location:
       for( let b of this.bodies ) 
-        b.shape.draw( context, program_state, b.drawn_location, b.material );
+        b.shape.draw( context, shared_uniforms, b.drawn_location, b.material );
     }
   update_state( dt )      // update_state(): Your subclass of Simulation has to override this abstract function.
     { throw "Override this" }
@@ -193,19 +193,19 @@ export class Inertia_Demo extends Simulation
                                                       // Delete bodies that stop or stray too far away:
       this.bodies = this.bodies.filter( b => b.center.norm() < 50 && b.linear_velocity.norm() > 2 );
     }
-  display( context, program_state )
+  display( context, shared_uniforms )
     {                                 // display(): Draw everything else in the scene besides the moving bodies.
-      super.display( context, program_state );
+      super.display( context, shared_uniforms );
 
       if( !context.scratchpad.controls ) 
         { this.children.push( context.scratchpad.controls = new defs.Movement_Controls() );
-          this.children.push( new defs.Program_State_Viewer() );
-          program_state.set_camera( Mat4.translation( 0,0,-50 ) );    // Locate the camera here (inverted matrix).
+          this.children.push( new defs.Shared_Uniforms_Viewer() );
+          shared_uniforms.set_camera( Mat4.translation( 0,0,-50 ) );    // Locate the camera here (inverted matrix).
         }
-      program_state.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 500 );
-      program_state.lights = [ new Light( vec4( 0,-5,-10,1 ), color( 1,1,1,1 ), 100000 ) ];
+      shared_uniforms.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 500 );
+      shared_uniforms.lights = [ new Light( vec4( 0,-5,-10,1 ), color( 1,1,1,1 ), 100000 ) ];
                                                                                               // Draw the ground:
-      this.shapes.square.draw( context, program_state, Mat4.translation( 0,-10,0 )
+      this.shapes.square.draw( context, shared_uniforms, Mat4.translation( 0,-10,0 )
                                        .times( Mat4.rotation( Math.PI/2,   1,0,0 ) ).times( Mat4.scale( 50,50,1 ) ),
                                this.material.override( this.data.textures.earth ) );
     }
@@ -285,23 +285,23 @@ export class Collision_Demo extends Simulation
           }
         }
     }
-  display( context, program_state )           
+  display( context, shared_uniforms )           
     {                                 // display(): Draw everything else in the scene besides the moving bodies.
-      super.display( context, program_state );
+      super.display( context, shared_uniforms );
       if( !context.scratchpad.controls ) 
         { this.children.push( context.scratchpad.controls = new defs.Movement_Controls() );
-          this.children.push( new defs.Program_State_Viewer() );
-          program_state.set_camera( Mat4.translation( 0,0,-50 ) );    // Locate the camera here (inverted matrix).
+          this.children.push( new defs.Shared_Uniforms_Viewer() );
+          shared_uniforms.set_camera( Mat4.translation( 0,0,-50 ) );    // Locate the camera here (inverted matrix).
         }
-      program_state.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 500 );
-      program_state.lights = [ new Light( vec4( .7,1.5,2,0 ), color( 1,1,1,1 ), 100000 ) ];
+      shared_uniforms.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 500 );
+      shared_uniforms.lights = [ new Light( vec4( .7,1.5,2,0 ), color( 1,1,1,1 ), 100000 ) ];
 
                                                                // Draw an extra bounding sphere around each drawn shape to show
                                                                // the physical shape that is really being collided with:
       const { points, leeway } = this.colliders[ this.collider_selection ];
       const size = vec3( 1 + leeway, 1 + leeway, 1 + leeway );
       for( let b of this.bodies )
-        points.draw( context, program_state, b.drawn_location.times( Mat4.scale( ...size ) ), this.bright, "LINE_STRIP" );
+        points.draw( context, shared_uniforms, b.drawn_location.times( Mat4.scale( ...size ) ), this.bright, "LINE_STRIP" );
     }
   show_document( document_builder, document_element = document_builder.document_region )
     { document_element.innerHTML += `<p>This demo detects when some flying objects collide with one another, coloring them red when they do.  For a simpler demo that shows physics-based movement without objects that hit one another, see the demo called Inertia_Demo.

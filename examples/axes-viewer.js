@@ -50,11 +50,11 @@ export class Axes_Viewer extends Scene
     }
   increase() { this.selected_basis_id = Math.min( this.selected_basis_id + 1, this.groups.length-1 ); }
   decrease() { this.selected_basis_id = Math.max( this.selected_basis_id - 1, 0 ); }   // Don't allow selection of negative IDs.
-  display( context, program_state )
+  display( context, shared_uniforms )
     {                                                 // display(): Draw the selected group of axes arrows.
       if( this.groups[ this.selected_basis_id ] )
         for( let a of this.groups[ this.selected_basis_id ] )
-          this.shapes.axes.draw( context, program_state, a, this.material );
+          this.shapes.axes.draw( context, shared_uniforms, a, this.material );
     }
 }
 
@@ -74,21 +74,21 @@ export class Axes_Viewer_Test_Scene extends Scene
     }
   make_control_panel()
     { this.control_panel.innerHTML += "(Substitute your own scene here)" }
-  display( context, program_state )
+  display( context, shared_uniforms )
     {                                   // display():  *********** See instructions below ***********
-      program_state.lights = [ new Light( vec4( 0,0,1,0 ), color( 0,1,1,1 ), 100000 ) ];
+      shared_uniforms.lights = [ new Light( vec4( 0,0,1,0 ), color( 0,1,1,1 ), 100000 ) ];
 
       if( !context.scratchpad.controls ) 
         { this.children.push( context.scratchpad.controls = new defs.Movement_Controls() ); 
         
-          program_state.set_camera( Mat4.translation( -1,-1,-20 ) );    // Locate the camera here (inverted matrix).
+          shared_uniforms.set_camera( Mat4.translation( -1,-1,-20 ) );    // Locate the camera here (inverted matrix).
         }
-      program_state.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 500 );
-      const t = program_state.animation_time / 1000, dt = program_state.animation_delta_time / 1000;
+      shared_uniforms.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 500 );
+      const t = shared_uniforms.animation_time / 1000, dt = shared_uniforms.animation_delta_time / 1000;
 
-      this.shapes.box.draw( context, program_state, Mat4.scale( 10,.1,.1 ), this.material );    // Mark the global coordinate axes.
-      this.shapes.box.draw( context, program_state, Mat4.scale( .1,10,.1 ), this.material );
-      this.shapes.box.draw( context, program_state, Mat4.scale( .1,.1,10 ), this.material );
+      this.shapes.box.draw( context, shared_uniforms, Mat4.scale( 10,.1,.1 ), this.material );    // Mark the global coordinate axes.
+      this.shapes.box.draw( context, shared_uniforms, Mat4.scale( .1,10,.1 ), this.material );
+      this.shapes.box.draw( context, shared_uniforms, Mat4.scale( .1,.1,10 ), this.material );
 
 
                                     // *********** How to use the Axes_Viewer ***********
@@ -109,7 +109,7 @@ export class Axes_Viewer_Test_Scene extends Scene
                                     // Obtain the next group's ID number:
       const id = this.axes_viewer.next_group_id();
                                                         // We'll draw our scene's boxes as an outline so it doesn't block the axes.
-      this.shapes.box.draw( context, program_state, model_transform.times( Mat4.scale( 2,2,2 ) ), this.material, "LINE_STRIP" );
+      this.shapes.box.draw( context, shared_uniforms, model_transform.times( Mat4.scale( 2,2,2 ) ), this.material, "LINE_STRIP" );
 
       let center = model_transform.copy();
       for( let side of [ -1, 1 ] )
@@ -126,7 +126,7 @@ export class Axes_Viewer_Test_Scene extends Scene
         model_transform.post_multiply( Mat4.translation( side*2,2,0 ) );
         this.axes_viewer.insert( model_transform.copy() );
                                                        // Again, draw our scene's boxes as an outline so it doesn't block the axes.
-        this.shapes.box.draw( context, program_state, model_transform.times( Mat4.scale( 2,2,2 ) ), this.material, "LINE_STRIP" );
+        this.shapes.box.draw( context, shared_uniforms, model_transform.times( Mat4.scale( 2,2,2 ) ), this.material, "LINE_STRIP" );
       }
     }
 }

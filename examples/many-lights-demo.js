@@ -36,34 +36,34 @@ export class Many_Lights_Demo extends Scene
       for( let r = 0; r < this.rows;    r++ )
         this.column_lights [ ~~( r) ] = vec3( r, -Math.random(), -2*Math.random()*this.columns  );
     }
-  display( context, program_state )
+  display( context, shared_uniforms )
     {                                         // display():  Draw each frame to animate the scene.
-      program_state.set_camera( Mat4.look_at( vec3( this.rows/2,5,5 ), vec3( this.rows/2,0,-4 ), vec3( 0,1,0 ) ) );
-      program_state.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 500 );
+      shared_uniforms.set_camera( Mat4.look_at( vec3( this.rows/2,5,5 ), vec3( this.rows/2,0,-4 ), vec3( 0,1,0 ) ) );
+      shared_uniforms.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 500 );
       
                                     // To draw each individual box, select the two lights sharing 
                                     // a row and column with it, and draw using those.
       this.box_positions.forEach( (p,i,a) =>
-        { program_state.lights = [ new Light( this.row_lights   [ ~~p[2] ].to4(1), color( p[2]%1,1,1,1 ), 9 ),
+        { shared_uniforms.lights = [ new Light( this.row_lights   [ ~~p[2] ].to4(1), color( p[2]%1,1,1,1 ), 9 ),
                                    new Light( this.column_lights[ ~~p[0] ].to4(1), color( 1,1,p[0]%1,1 ), 9 ) ];
                                             // Draw the box:
-          this.shapes.cube.draw( context, program_state, Mat4.translation( ...p ).times( Mat4.scale( .3,1,.3 ) ), this.brick )
+          this.shapes.cube.draw( context, shared_uniforms, Mat4.translation( ...p ).times( Mat4.scale( .3,1,.3 ) ), this.brick )
         } );
-      if( !program_state.animate || program_state.animation_delta_time > 500 )
+      if( !shared_uniforms.animate || shared_uniforms.animation_delta_time > 500 )
         return;
                               // Move some lights forward along columns, then bound them to a range.
       for( const [key,val] of Object.entries( this.column_lights ) )
-        { this.column_lights[key][2] -= program_state.animation_delta_time/50;
+        { this.column_lights[key][2] -= shared_uniforms.animation_delta_time/50;
           this.column_lights[key][2] %= this.columns*2;
         }
                               // Move other lights forward along rows, then bound them to a range.
       for( const [key,val] of Object.entries( this.row_lights ) ) 
-        { this.   row_lights[key][0] += program_state.animation_delta_time/50;
+        { this.   row_lights[key][0] += shared_uniforms.animation_delta_time/50;
           this.   row_lights[key][0] %= this.rows*2;
         }
                               // Move the boxes backwards, then bound them to a range.
       this.box_positions.forEach( (p,i,a) =>
-        { a[i] = p.plus( vec3( 0,0,program_state.animation_delta_time/1000 ) );
+        { a[i] = p.plus( vec3( 0,0,shared_uniforms.animation_delta_time/1000 ) );
           if( a[i][2] > 1 ) a[i][2] = -this.columns + .001;
         } );
     }                                                        

@@ -124,16 +124,16 @@ export class Surfaces_Demo extends Scene
       this.shapes = { shell : new defs.Grid_Patch( 30, 30, sampler2, sample_two_arrays, [[0,1],[0,1]] )
                     };
     }
-  display_scene_0( context, program_state )
+  display_scene_0( context, shared_uniforms )
     {
                         // Draw the sheets, flipped 180 degrees so their normals point at us.
       const r = Mat4.rotation( Math.PI,   0,1,0 ).times( this.r );
-      this.shapes.sheet .draw( context, program_state, Mat4.translation( -1.5,0,0 ).times(r), this.material );
-      this.shapes.sheet2.draw( context, program_state, Mat4.translation(  1.5,0,0 ).times(r), this.material );
+      this.shapes.sheet .draw( context, shared_uniforms, Mat4.translation( -1.5,0,0 ).times(r), this.material );
+      this.shapes.sheet2.draw( context, shared_uniforms, Mat4.translation(  1.5,0,0 ).times(r), this.material );
     }
-  display_scene_1( context, program_state )
+  display_scene_1( context, shared_uniforms )
     { 
-      const random = ( x ) => Math.sin( 1000*x + program_state.animation_time/1000 );
+      const random = ( x ) => Math.sin( 1000*x + shared_uniforms.animation_time/1000 );
       
                                                       // Update the JavaScript-side shape with new vertices:
       this.shapes.sheet.arrays.position.forEach( (p,i,a) => 
@@ -142,32 +142,32 @@ export class Surfaces_Demo extends Scene
                                                      // This won't be perfect flat shading because vertices are shared.
       this.shapes.sheet.flat_shade();
                                                      // Draw the current sheet shape.
-      this.shapes.sheet.draw( context, program_state, this.r, this.material );
+      this.shapes.sheet.draw( context, shared_uniforms, this.r, this.material );
 
                                                 // Update the gpu-side shape with new vertices.
                                                 // Warning:  You can't call this until you've already drawn the shape once.      
       this.shapes.sheet.copy_onto_graphics_card( context.context, ["position","normal"], false );      
     }
-  display_scene_2( context, program_state )
+  display_scene_2( context, shared_uniforms )
     { const model_transform = Mat4.translation( -5,0,-2 );
                                           // Draw all the shapes stored in this.shapes side by side.
       for( let s of Object.values( this.shapes ) )
-        { s.draw( context, program_state, model_transform.times( this.r ), this.material );
+        { s.draw( context, shared_uniforms, model_transform.times( this.r ), this.material );
           model_transform.post_multiply( Mat4.translation( 2,0,0 ) );
         }
     }
-  display_scene_3( context, program_state )
-    { const model_transform = Mat4.rotation( program_state.animation_time/5000,   0,1,0 );
-      this.shapes.bullet.draw( context, program_state, model_transform.times( this.r ), this.solid );
+  display_scene_3( context, shared_uniforms )
+    { const model_transform = Mat4.rotation( shared_uniforms.animation_time/5000,   0,1,0 );
+      this.shapes.bullet.draw( context, shared_uniforms, model_transform.times( this.r ), this.solid );
     }
-  display_scene_4( context, program_state )
+  display_scene_4( context, shared_uniforms )
     {                                       // First, draw the compound axis shape all at once:
-      this.shapes.axis.draw( context, program_state, Mat4.translation( 2,-1,-2 ), this.material );
+      this.shapes.axis.draw( context, shared_uniforms, Mat4.translation( 2,-1,-2 ), this.material );
       
           // Manually recreate the above compound Shape out of individual components:
       const base = Mat4.translation( -1,-1,-2 );
       const ball_matrix = base.times( Mat4.rotation( Math.PI/2,   0,1,0 ).times( Mat4.scale( .25, .25, .25 ) ) );
-      this.shapes.ball.draw( context, program_state, ball_matrix, this.material );
+      this.shapes.ball.draw( context, shared_uniforms, ball_matrix, this.material );
       const matrices = [ Mat4.identity(), 
                          Mat4.rotation(-Math.PI/2,  1,0,0 ).times( Mat4.scale(  1,-1,1 )),
                          Mat4.rotation( Math.PI/2,  0,1,0 ).times( Mat4.scale( -1, 1,1 )) ];
@@ -178,25 +178,25 @@ export class Surfaces_Demo extends Scene
               box2_matrix = m.times( Mat4.translation( .95,   0, .5 ) ).times( Mat4.scale( .05, .05, .4  ) ),
               box3_matrix = m.times( Mat4.translation(   0, .95, .5 ) ).times( Mat4.scale( .05, .05, .4  ) ),
               tube_matrix = m.times( Mat4.translation(   0,   0,  1 ) ).times( Mat4.scale(  .1,  .1,  2  ) );
-        this.shapes[ "cone_"+i ].draw( context, program_state, cone_matrix, this.material );       
-        this.shapes.box         .draw( context, program_state, box1_matrix, this.material );    
-        this.shapes.box         .draw( context, program_state, box2_matrix, this.material );    
-        this.shapes.box         .draw( context, program_state, box3_matrix, this.material );
-        this.shapes[ "tube_"+i ].draw( context, program_state, tube_matrix, this.material );
+        this.shapes[ "cone_"+i ].draw( context, shared_uniforms, cone_matrix, this.material );       
+        this.shapes.box         .draw( context, shared_uniforms, box1_matrix, this.material );    
+        this.shapes.box         .draw( context, shared_uniforms, box2_matrix, this.material );    
+        this.shapes.box         .draw( context, shared_uniforms, box3_matrix, this.material );
+        this.shapes[ "tube_"+i ].draw( context, shared_uniforms, tube_matrix, this.material );
       }
     }
-  display_scene_5( context, program_state )
+  display_scene_5( context, shared_uniforms )
     { const model_transform = Mat4.translation( -5,0,-2 );
-      const r = Mat4.rotation( program_state.animation_time/3000,   1,1,1 );
+      const r = Mat4.rotation( shared_uniforms.animation_time/3000,   1,1,1 );
                                           // Draw all the shapes stored in this.shapes side by side.
       for( let s of Object.values( this.shapes ) )
-        { s.draw( context, program_state, model_transform.times( r ), this.material );
+        { s.draw( context, shared_uniforms, model_transform.times( r ), this.material );
           model_transform.post_multiply( Mat4.translation( 2.5,0,0 ) );
         }
     }
-  display_scene_6( context, program_state )
-    { const model_transform = Mat4.rotation( program_state.animation_time/5000,   0,1,0 );
-      this.shapes.shell.draw( context, program_state, model_transform.times( this.r ), this.material );
+  display_scene_6( context, shared_uniforms )
+    { const model_transform = Mat4.rotation( shared_uniforms.animation_time/5000,   0,1,0 );
+      this.shapes.shell.draw( context, shared_uniforms, model_transform.times( this.r ), this.material );
     } 
   explain_scene_0( document_element )
     { document_element.innerHTML += `<p>Parametric Surfaces can be generated by parametric functions that are driven by changes to two variables - s and t.  As either s or t increase, we can step along the shape's surface in some direction aligned with the shape, not the usual X,Y,Z axes.</p>
@@ -225,11 +225,11 @@ export class Surfaces_Demo extends Scene
   explain_scene_6( document_element )
     { document_element.innerHTML += `<p>Blending two 1D curves as a "ruled surface" using the "mix" function of vectors.  We are using hand-made lists of points for our curves, but you could have generated the points from spline functions.</p>`;
     }
-  show_document( document_builder, document_element = document_builder.document_stuff )
+  show_document( document_builder, document_element = document_builder.document_region )
     { if( this.is_master )
         {
-          this.program_state = new tiny.Program_State();
-          this.program_state.set_camera( Mat4.translation( 0,0,-3 ) );
+          this.shared_uniforms = new tiny.Shared_Uniforms();
+          this.shared_uniforms.set_camera( Mat4.translation( 0,0,-3 ) );
           
           document_element.style.padding = 0;
           document_element.style.width = "1080px";
@@ -243,7 +243,7 @@ export class Surfaces_Demo extends Scene
               const child_webgl_manager = new tiny.Webgl_Manager( canvas );
 
               child_webgl_manager.scenes.push( this.sections[ i ] );
-              child_webgl_manager.program_state = this.program_state;
+              child_webgl_manager.shared_uniforms = this.shared_uniforms;
               child_webgl_manager.set_size( [ 1080,300 ] )
               child_webgl_manager.render();
 
@@ -268,17 +268,17 @@ export class Surfaces_Demo extends Scene
        else
          this[ "explain_scene_" + this.scene_id ] ( document_element );
     }
-  display( context, program_state )
+  display( context, shared_uniforms )
     { 
-                                  // Override the caller's program_state with one that we made, had control over,
+                                  // Override the caller's shared_uniforms with one that we made, had control over,
                                   // and shared to our child document sections.
       if( this.is_master )
-      { context.program_state = this.program_state;
-        program_state = this.program_state;
+      { context.shared_uniforms = this.shared_uniforms;
+        shared_uniforms = this.shared_uniforms;
       }
     
-      program_state.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 100 ); 
-      this.r = Mat4.rotation( -.5*Math.sin( program_state.animation_time/5000 ),   1,1,1 );
+      shared_uniforms.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 100 ); 
+      this.r = Mat4.rotation( -.5*Math.sin( shared_uniforms.animation_time/5000 ),   1,1,1 );
 
 
       if( this.is_master )
@@ -288,12 +288,12 @@ export class Surfaces_Demo extends Scene
 
                                                     // *** Lights: *** Values of vector or point lights.  They'll be consulted by 
                                                     // the shader when coloring shapes.  See Light's class definition for inputs.
-          const t = this.t = program_state.animation_time/1000;
+          const t = this.t = shared_uniforms.animation_time/1000;
           const angle = Math.sin( t );
           const light_position = Mat4.rotation( angle,   1,0,0 ).times( vec4( 0,0,1,0 ) );
-          program_state.lights = [ new Light( light_position, color( 1,1,1,1 ), 1000000 ) ];
+          shared_uniforms.lights = [ new Light( light_position, color( 1,1,1,1 ), 1000000 ) ];
         }
       else
-        this[ "display_scene_" + this.scene_id ] ( context, program_state );
+        this[ "display_scene_" + this.scene_id ] ( context, shared_uniforms );
     }
 }

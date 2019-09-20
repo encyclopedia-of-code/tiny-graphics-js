@@ -86,11 +86,11 @@ export class Shape_From_File extends Shape
       this.normalize_positions( false );
       this.ready = true;
     }
-  draw( context, program_state, model_transform, material )
+  draw( context, shared_uniforms, model_transform, material )
     {               // draw(): Same as always for shapes, but cancel all 
                     // attempts to draw the shape before it loads:
       if( this.ready )
-        super.draw( context, program_state, model_transform, material );
+        super.draw( context, shared_uniforms, model_transform, material );
     }
 }
 
@@ -116,14 +116,14 @@ export class Obj_File_Demo extends Scene
         this.bumps = new Material( new defs.Fake_Bump_Map( 1 ), { color: color( .5,.5,.5,1 ), 
           ambient: .3, diffusivity: .5, specularity: .5, texture: new Texture( "assets/stars.png" ) });
       }
-    display( context, program_state )
-      { const t = program_state.animation_time;
+    display( context, shared_uniforms )
+      { const t = shared_uniforms.animation_time;
 
-        program_state.set_camera( Mat4.translation( 0,0,-5 ) );    // Locate the camera here (inverted matrix).                  
-        program_state.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 500 );
+        shared_uniforms.set_camera( Mat4.translation( 0,0,-5 ) );    // Locate the camera here (inverted matrix).                  
+        shared_uniforms.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 500 );
                                                 // A spinning light to show off the bump map:
-        program_state.lights = [ new Light( 
-                                 Mat4.rotation( t/300,   1,0,0 ).times( vec4( 3,2,10,1 ) ), 
+        shared_uniforms.lights = [ new Light( 
+                                   Mat4.rotation( t/300,   1,0,0 ).times( vec4( 3,2,10,1 ) ), 
                                              color( 1,.7,.7,1 ), 100000 ) ];
         
         for( let i of [ -1, 1 ] )
@@ -132,7 +132,7 @@ export class Obj_File_Demo extends Scene
                           .times( Mat4.translation( 2*i, 0, 0 ) )
                           .times( Mat4.rotation( t/1500,   -1,2,0 ) )
                           .times( Mat4.rotation( -Math.PI/2,   1,0,0 ) );
-          this.shapes.teapot.draw( context, program_state, model_transform, i == 1 ? this.stars : this.bumps );
+          this.shapes.teapot.draw( context, shared_uniforms, model_transform, i == 1 ? this.stars : this.bumps );
         }
       }
   show_document( document_builder, document_element = document_builder.document_region )

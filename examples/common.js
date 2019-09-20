@@ -412,9 +412,9 @@ class Minimal_Webgl_Demo extends Scene
       this.shapes = { triangle : new Minimal_Shape() };
       this.shader = new Basic_Shader();
     }
-  display( context, graphics_state )
+  display( context, shared_uniforms )
     {                                           // Every frame, simply draw the Triangle at its default location.
-      this.shapes.triangle.draw( context, graphics_state, Mat4.identity(), new Material( this.shader ) );
+      this.shapes.triangle.draw( context, shared_uniforms, Mat4.identity(), new Material( this.shader ) );
     }
 }
 
@@ -424,9 +424,9 @@ class Basic_Shader extends Shader
 {                                  // **Basic_Shader** is nearly the simplest example of a subclass of Shader, which stores and
                                    // maanges a GPU program.  Basic_Shader is a trivial pass-through shader that applies a
                                    // shape's matrices and then simply samples literal colors stored at each vertex.
- update_GPU( context, gpu_addresses, graphics_state, model_transform, material )
+ update_GPU( context, gpu_addresses, shared_uniforms, model_transform, material )
       {       // update_GPU():  Defining how to synchronize our JavaScript's variables to the GPU's:
-        const [ P, C, M ] = [ graphics_state.projection_transform, graphics_state.camera_inverse, model_transform ],
+        const [ P, C, M ] = [ shared_uniforms.projection_transform, shared_uniforms.camera_inverse, model_transform ],
                       PCM = P.times( C ).times( M );
         context.uniformMatrix4fv( gpu_addresses.projection_camera_model_transform, false, 
                                                                           Matrix.flatten_2D_to_1D( PCM.transposed() ) );
@@ -462,12 +462,12 @@ const Funny_Shader = defs.Funny_Shader =
 class Funny_Shader extends Shader
 {                                        // **Funny_Shader**: A simple "procedural" texture shader, with 
                                          // texture coordinates but without an input image.
-  update_GPU( context, gpu_addresses, program_state, model_transform, material )
+  update_GPU( context, gpu_addresses, shared_uniforms, model_transform, material )
       {        // update_GPU():  Define how to synchronize our JavaScript's variables to the GPU's:
-        const [ P, C, M ] = [ program_state.projection_transform, program_state.camera_inverse, model_transform ],
+        const [ P, C, M ] = [ shared_uniforms.projection_transform, shared_uniforms.camera_inverse, model_transform ],
                       PCM = P.times( C ).times( M );
         context.uniformMatrix4fv( gpu_addresses.projection_camera_model_transform, false, Mat.flatten_2D_to_1D( PCM.transposed() ) );
-        context.uniform1f ( gpu_addresses.animation_time, program_state.animation_time / 1000 );
+        context.uniform1f ( gpu_addresses.animation_time, shared_uniforms.animation_time / 1000 );
       }
   shared_glsl_code()            // ********* SHARED CODE, INCLUDED IN BOTH SHADERS *********
     { return `precision mediump float;
@@ -632,7 +632,7 @@ class Phong_Shader extends Shader
     {             // update_GPU(): Define how to synchronize our JavaScript's variables to the GPU's.  This is where the shader 
                   // recieves ALL of its inputs.  Every value the GPU wants is divided into two categories:  Values that belong
                   // to individual objects being drawn (which we call "Material") and values belonging to the whole scene or 
-                  // program (which we call the "Program_State").  Send both a material and a program state to the shaders 
+                  // program (which we call the "Shared_Uniforms").  Send both a material and a program state to the shaders 
                   // within this function, one data field at a time, to fully initialize the shader for a draw.                  
       
                   // Fill in any missing fields in the Material object with custom defaults for this shader:
@@ -742,7 +742,7 @@ class Movement_Controls extends Scene
       Object.assign( this, data_members );
 
       this.mouse_enabled_canvases = new Set();
-      this.will_take_over_graphics_state = true;
+      this.will_take_over_shared_uniforms = true;
     }
   set_recipient( matrix_closure, inverse_closure )
     {                               // set_recipient(): The camera matrix is not actually stored here inside Movement_Controls;
@@ -751,11 +751,11 @@ class Movement_Controls extends Scene
       this.matrix  =  matrix_closure;
       this.inverse = inverse_closure;
     }
-  reset( graphics_state )
+  reset( shared_uniforms )
     {                         // reset(): Initially, the default target is the camera matrix that Shaders use, stored in the
-                              // encountered program_state object.  Targets must be pointer references made using closures.
-      this.set_recipient( () => graphics_state.camera_transform, 
-                          () => graphics_state.camera_inverse   );
+                              // encountered shared_uniforms object.  Targets must be pointer references made using closures.
+      this.set_recipient( () => shared_uniforms.camera_transform, 
+                          () => shared_uniforms.camera_inverse   );
     }
   add_mouse_controls( canvas )
     {                                       // add_mouse_controls():  Attach HTML mouse events to the drawing canvas.
@@ -826,7 +826,7 @@ class Movement_Controls extends Scene
         }, "black" );
       this.new_line();
       this.key_triggered_button( "Attach to global camera", [ "Shift", "R" ],
-                                                 () => { this.will_take_over_graphics_state = true }, "blue" );
+                                                 () => { this.will_take_over_shared_uniforms = true }, "blue" );
       this.new_line();
     }
   first_person_flyaround( radians_per_frame, meters_per_frame, leeway = 70 )
@@ -870,14 +870,14 @@ class Movement_Controls extends Scene
       this. matrix().post_multiply( Mat4.translation( 0,0, +25 ) );
       this.inverse().pre_multiply(  Mat4.translation( 0,0, -25 ) );
     }
-  display( context, graphics_state, dt = graphics_state.animation_delta_time / 1000 )
+  display( context, shared_uniforms, dt = shared_uniforms.animation_delta_time / 1000 )
     {                                                            // The whole process of acting upon controls begins here.
       const m = this.speed_multiplier * this. meters_per_frame,
             r = this.speed_multiplier * this.radians_per_frame;
 
-      if( this.will_take_over_graphics_state )
-      { this.reset( graphics_state );
-        this.will_take_over_graphics_state = false;
+      if( this.will_take_over_shared_uniforms )
+      { this.reset( shared_uniforms );
+        this.will_take_over_shared_uniforms = false;
       }
 
       if( !this.mouse_enabled_canvases.has( context.canvas ) )
@@ -897,16 +897,16 @@ class Movement_Controls extends Scene
 
 
 
-const Program_State_Viewer = defs.Program_State_Viewer =
-class Program_State_Viewer extends Scene
-{                                             // **Program_State_Viewer** just toggles, monitors, and reports some
+const Shared_Uniforms_Viewer = defs.Shared_Uniforms_Viewer =
+class Shared_Uniforms_Viewer extends Scene
+{                                             // **Shared_Uniforms_Viewer** just toggles, monitors, and reports some
                                               // global values via its control panel.
   make_control_panel()
     {                         // display() of this scene will replace the following object:
-      this.program_state = {};
-      this.key_triggered_button( "(Un)pause animation", ["Alt", "a"], () => this.program_state.animate ^= 1 );    
+      this.shared_uniforms = {};
+      this.key_triggered_button( "(Un)pause animation", ["Alt", "a"], () => this.shared_uniforms.animate ^= 1 );    
     }
-  display( context, program_state )
-    { this.program_state = program_state;      
+  display( context, shared_uniforms )
+    { this.shared_uniforms = shared_uniforms;      
     }
 }

@@ -42,7 +42,12 @@ class Default_Layout extends Document_Builder
     Object.assign( this, defaults, options )
 
     const canvas = this.program_stuff.appendChild( document.createElement( "canvas" ) );
-    canvas.style = `width:1080px; height:600px; background:DimGray; margin:auto; margin-bottom:-13px`;
+
+    const rules = [ 
+      `.document-builder canvas { width:1080px; height:600px; background:DimGray; margin:auto; margin-bottom:-4px }`
+      ];
+    if( document.styleSheets.length == 0 ) document.head.appendChild( document.createElement( "style" ) );
+    for( const r of rules ) document.styleSheets[document.styleSheets.length - 1].insertRule( r, 0 )
 
     if( !this.show_canvas )
       canvas.style.display = "none";
