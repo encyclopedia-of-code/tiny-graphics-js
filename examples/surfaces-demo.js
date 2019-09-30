@@ -36,7 +36,7 @@ export class Active_Textbook extends Scene
             instance.document_builder = new tiny.Document_Builder( document_element, instance );
             document_builder.children.push( instance.document_builder );
                                                             // Pass the same shared_uniforms to each section instance.
-            instance.shared_uniforms = this.shared_uniforms_of_children;
+            instance.webgl_manager.shared_uniforms = this.shared_uniforms_of_children;
           }
 
           const final_text = document_element.appendChild( document.createElement( "div" ) );
@@ -291,9 +291,8 @@ export class Surfaces_Demo extends Active_Textbook
         this.webgl_manager = new tiny.Webgl_Manager( canvas );
 
         this.webgl_manager.scenes.push( this );
-        this.webgl_manager.shared_uniforms = this.shared_uniforms;
         this.webgl_manager.set_size( [ 1080,300 ] )
-        this.webgl_manager.render();
+        window.requestAnimFrame( this.webgl_manager.render.bind( this.webgl_manager ) );
                                                       // 3. Printouts of the constructor and the display function
                                                       //    of the scene shown by the canvas:
         const element_2 = document_element.appendChild( document.createElement( "div" ) );
@@ -313,7 +312,6 @@ export class Surfaces_Demo extends Active_Textbook
     }
   display( context, shared_uniforms )
     { 
-      super.display( context );
                                   // Find the correct object that we shared to our child document sections.
       const shared = this.is_master ? this.shared_uniforms_of_children 
                                     : shared_uniforms;
@@ -333,8 +331,8 @@ export class Surfaces_Demo extends Active_Textbook
           const light_position = Mat4.rotation( angle,   1,0,0 ).times( vec4( 0,0,1,0 ) );
           shared.lights = [ new Light( light_position, color( 1,1,1,1 ), 1000000 ) ];
         }
-      else
-        this[ "display_scene_" + this.scene_id ] ( context, shared );
+      
+      super.display( context, shared );
     }
 }
 
