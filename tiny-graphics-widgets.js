@@ -1,7 +1,6 @@
 // This file defines a lot of panels that can be placed on websites to create interactive graphics programs that use tiny-graphics.js.
 
 import {tiny} from './tiny-graphics.js';
-const { color, Scene } = tiny;           // Pull these names into this module's scope for convenience.
 
 export const widgets = {};
 
@@ -15,7 +14,7 @@ class Document_Builder
 
     this.document_region = div.appendChild( document.createElement( "div" ) );    
     this.document_region.className = "documentation_treenode";
-    this.document_region.style = `width:1060px; padding:0 10px; overflow:auto; overflow-y:scroll;
+    this.document_region.style = `width:1060px; padding:0 10px; overflow:auto;
                                  background:white;  box-shadow:10px 10px 90px 0 inset LightGray`;
 
     object_to_be_documented.show_document( this );
@@ -28,15 +27,17 @@ class Default_Layout extends Document_Builder
 { 
   constructor( div, initial_scenes, options = {} )
   {
+                                                      // Populate the usual document region at the top, and fit to a fixed size:
     super( div, initial_scenes && initial_scenes[0] );
     div.style.margin = "auto";
     div.style.width = "1080px";
-    
+                                                      // The next div down will hold a canvas and/or related interactive areas.
     this.program_stuff = this.div.appendChild( document.createElement( "div" ) );
 
     const defaults = { show_canvas: true,  make_controls: true,
                        make_editor: false, make_code_nav: true };
 
+                                     // The primary scene we're documenting can override this document's display options.
     if( initial_scenes && initial_scenes[0] )
       Object.assign( options, initial_scenes[0].widget_options );
     Object.assign( this, defaults, options )
@@ -51,14 +52,14 @@ class Default_Layout extends Document_Builder
 
     if( !this.show_canvas )
       canvas.style.display = "none";
-
+                                      // Use tiny-graphics-js to draw graphics to the canvas, using the given scene objects.
     this.webgl_manager = new tiny.Webgl_Manager( canvas );
-
+    
     if( initial_scenes )
       this.webgl_manager.scenes.push( ...initial_scenes );
 
     const primary_scene_constructor = initial_scenes ? initial_scenes[0].constructor : undefined;
-                                                                          // TODO: Unused additional_scenes
+
     const additional_scenes = initial_scenes ? initial_scenes.slice(1) : [];
 
     if( this.make_controls )
@@ -77,7 +78,7 @@ class Default_Layout extends Document_Builder
       this.embedded_editor_area.className = "editor-widget";
       this.embedded_editor = new Editor_Widget( this.embedded_editor_area, primary_scene_constructor, this );
     }
-                                     // Start WebGL initialization.  Note that render() will re-queue itself for continuous calls.
+                                     // Start WebGL main loop - render() will re-queue itself for continuous calls.
     this.webgl_manager.render();
   }
 }
@@ -213,8 +214,8 @@ class Code_Widget
   constructor( element, main_scene, additional_scenes, caller, options = {} )
     { const rules = [ ".code-widget .code-panel { margin:auto; background:white; overflow:auto; font-family:monospace; width:1060px; padding:10px; padding-bottom:40px; max-height: 500px; \
                                                       border-radius:12px; box-shadow: 20px 20px 90px 0px powderblue inset, 5px 5px 30px 0px blue inset }",
-                    ".code-widget .code-display { min-width:1200px; padding:10px; white-space:pre-wrap; background:transparent }",
-                    ".code-widget table { display:block; margin:auto; overflow-x:auto; width:1080px; border-radius:25px; border-collapse:collapse; border: 2px solid black }",
+                    ".code-widget .code-display { min-width:1000px; padding:10px; white-space:pre-wrap; background:transparent }",
+                    ".code-widget table { display:block; margin:auto; overflow-x:auto; width:1080px; border-radius:25px; border-collapse:collapse; border: 2px solid black; box-sizing: border-box }",
                     ".code-widget table.class-list td { border-width:thin; background: #EEEEEE; padding:12px; font-family:monospace; border: 1px solid black }"
                      ];
 
@@ -229,12 +230,12 @@ class Code_Widget
       import( './main-scene.js' )
         .then( module => { 
         
-          this.build_reader(      element, main_scene, additional_scenes, module.defs );
+          this.build_reader(      element, main_scene, module.defs );
           if( !options.hide_navigator )
             this.build_navigator( element, main_scene, additional_scenes, module.defs );
         } )
     }
-  build_reader( element, main_scene, additional_scenes, definitions )
+  build_reader( element, main_scene, definitions )
     {                                           // (Internal helper function)      
       this.definitions = definitions;
       const code_panel = element.appendChild( document.createElement( "div" ) );
@@ -246,6 +247,8 @@ class Code_Widget
     }
   build_navigator( element, main_scene, additional_scenes, definitions )
     {                                           // (Internal helper function)
+
+                                                // TODO:  List out the additional_scenes somewhere.
       const class_list = element.appendChild( document.createElement( "table" ) );
       class_list.className = "class-list";   
       const top_cell = class_list.insertRow( -1 ).insertCell( -1 );

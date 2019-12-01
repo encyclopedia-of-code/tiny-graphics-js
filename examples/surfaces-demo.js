@@ -4,81 +4,157 @@ const { Vector3, vec3, vec4, color, Mat4, Light, Shape, Material, Shader, Textur
 const { Triangle, Square, Tetrahedron, Windmill, Cube, Subdivision_Sphere } = defs;
 
 export class Active_Textbook extends Scene
-{ constructor( scene_id, num_sections )
+{ constructor( content )
     { super();
 
-      this.num_sections = num_sections;     
-      this.scene_id = scene_id;
+      this.widget_options = { show_canvas: false };
+                
+      this.inner_documentation_sections = [];
+                            
+                            // Instance child objects for each section.       
+      for( let i = 0; i < this.num_sections(); i++ )
+        this.inner_documentation_sections.push( new content( i, this.outer_documentation_data ) );
 
-      // If no scene ID was automatically generated and passed in, then this must be the parent region.
-      if( typeof( scene_id ) === "undefined" )
-        { this.is_master = true;
-          this.instances = [];
-                                        // Create sub-Active_Textbook objects for each child region.        
-          for( let i = 0; i < this.num_sections; i++ )
-            this.instances.push( new this.constructor( i ) );
-        }
-                                                // The child sections each have their own constructor, ordered by number.  Call it.
-      else
-        this[ "construct_scene_" + scene_id ] ();
+                            // Make a new uniforms holder for all child graphics contexts to share.
+      this.shared_uniforms_of_children = new tiny.Shared_Uniforms();
+      this.initialize_shared_values();
     }
-  show_document( document_builder, document_element = document_builder.document_region )
-    { if( this.is_master )
-        {
-          this.shared_uniforms_of_children = new tiny.Shared_Uniforms();
-          
-          document_builder.div.style.padding = 0;
-          document_builder.div.style.width = "1080px";
-          document_builder.div.style.overflowY = "hidden";
+  show_document( document_builder )
+    {
+      this.apply_style_for_outer_shell_region( document_builder.div );
 
-          for( let instance of this.instances )            
-          {                                                 // Create sub-Document_Builder objects for each child region.
-            instance.document_builder = new tiny.Document_Builder( document_builder.div, instance );
-            document_builder.children.push( instance.document_builder );
-                                                            // Pass the same shared_uniforms to each section instance.
-            instance.webgl_manager.shared_uniforms = this.shared_uniforms_of_children;
-          }
+      for( let section of this.inner_documentation_sections )
+      {
+        section.document_builder = this.expand_document_builder_tree( document_builder, section );
 
-          const final_text = document_builder.div.appendChild( document.createElement( "div" ) );
-          final_text.innerHTML = `<p>That's all the examples.  Below is the code that generates this whole multi-part tutorial:</p>`;          
-        }
-      else
-        this[ "explain_scene_" + this.scene_id ] ( document_builder.div );
+                            // Disseminate our one shared_uniforms.
+        section.webgl_manager.shared_uniforms = this.shared_uniforms_of_children;
+      }
+
+      const final_text = document_builder.div.appendChild( document.createElement( "div" ) );
+      final_text.style = `width:1060px; padding:0 10px; overflow:auto;
+                                 background:white;  box-shadow:10px 10px 90px 0 inset LightGray`;
+      final_text.innerHTML = `<p>That's all the examples.  Below are interactive controls, and then the code that generates this whole multi-part tutorial is printed:</p>`;
     }
-  display( context, shared_uniforms )
-    { 
-                                  // Override the caller's shared_uniforms with one that we made, had control over,
-                                  // and shared to our child document sections.
-      if( this.is_master )
-        context.shared_uniforms = this.shared_uniforms_of_children;     
-      else
-        this[ "display_scene_" + this.scene_id ] ( context, shared_uniforms );
+      // Override the following as needed:
+  num_sections() { return 0 }
+  initialize_shared_values() { }  
+
+    // Internal helpers:
+  apply_style_for_outer_shell_region( div )
+    { div.style.padding = 0;
+      div.style.width = "1080px";
+      div.style.overflowY = "hidden";
+    }
+  expand_document_builder_tree( containing_builder, new_section )
+    { const child = new tiny.Document_Builder( containing_builder.div, new_section );
+      containing_builder.children.push( child );
+      return child;
+    }
+  update_shared_values( context )
+    {
+          // Use the given context to tick shared_uniforms_of_children only once per frame.
+      context.shared_uniforms = this.shared_uniforms_of_children;
+      return this.shared_uniforms_of_children;
     }
 }
 
-export class Surfaces_Demo extends Active_Textbook
-{ constructor( scene_id )
-    {                                                 // Define number of document sections here:
-      super( scene_id, 7 );
 
+export class Surfaces_Demo extends Active_Textbook
+{ constructor()
+    { super( Surfaces_Demo_Section ) }
+  initialize_shared_values()
+    { 
+      this.shared_uniforms_of_children.set_camera( Mat4.translation( 0,0,-3 ) );
+
+      const shader = new defs.Textured_Phong( 1 );
+
+      this.material = new Material( shader, { ambient: .5, texture: new Texture( "assets/rgb.jpg" ) } );
+
+      this.movement_controls = new defs.Movement_Controls();
+      this.children.push( this.movement_controls );
+
+      for( let section of this.inner_documentation_sections )
+        {
+          section.material = this.material;
+          section.children.push( this.movement_controls );
+        }
+    }
+  num_sections() { return 7 }
+  display( context, shared_uniforms_unused )
+    { 
+      const shared_uniforms = this.update_shared_values( context );
+
+      context.scratchpad.controls = this.movement_controls;
+
+                             // Tick values that update only once per frame (not per section).
+      const t = this.t = shared_uniforms.animation_time/1000;
+      const angle = Math.sin( t );
+      const light_position = Mat4.rotation( angle,   1,0,0 ).times( vec4( 0,0,1,0 ) );
+      shared_uniforms.lights = [ new Light( light_position, color( 1,1,1,1 ), 1000000 ) ];
+    }
+}
+
+
+export class Surfaces_Demo_Section extends Scene
+{
+  constructor( section_index, outer_documentation_data )
+    {
+      super();
                                     // Don't clutter up all the document sections.  Omit displaying control panels for their scenes.
       this.widget_options = { make_controls: false };
-      
-      if( this.is_master )
-      {                                         // Supply the child sections with the shared material and controls object.
-        const textured = new defs.Textured_Phong( 1 );
-        this.material = new Material( textured, { ambient: .5, texture: new Texture( "assets/rgb.jpg" ) } );
 
-        this.movement_controls = new defs.Movement_Controls();
-        this.children.push( this.movement_controls );
-
-        for( let s of this.instances )
-        { s.material = this.material;
-          s.children.push( this.movement_controls );
-        }
-      }
+                                    // Switch on section_index to decide what to actually construct.
+      this.section_index = section_index;      
+      const handler_at_index = this[ "construct_section_" + section_index ];
+      handler_at_index.call( this );
     }
-  construct_scene_0()
+  show_document( document_builder, document_element = document_builder.document_region )
+    { 
+                                                // This document will repeat the following layout for each section:
+
+                                                      // 1. Text region:
+                                              // Switch on section_index to decide what to actually print.
+        this[ "explain_section_" + this.section_index ] ( document_element );
+
+                                                      // 2. Canvas showing a scene:
+        const canvas = document_builder.div.appendChild( document.createElement( "canvas" ) );
+        this.webgl_manager = new tiny.Webgl_Manager( canvas );
+
+        this.webgl_manager.scenes.push( this );
+        this.webgl_manager.set_size( [ 1080,300 ] )
+        window.requestAnimFrame( this.webgl_manager.render.bind( this.webgl_manager ) );
+                                                      // 3. Printouts of the constructor and the display function
+                                                      //    of the scene shown by the canvas:
+        const element_2 = document_builder.div.appendChild( document.createElement( "div" ) );
+        element_2.className = "code-widget";
+
+        const code = new tiny.Code_Widget( element_2, 
+                           this[ "construct_section_" + this.section_index ],
+                           [], this, { hide_navigator: true } );
+
+        const element_3 = document_builder.div.appendChild( document.createElement( "div" ) );
+        element_3.className = "code-widget";
+
+        const code_2 = new tiny.Code_Widget( element_3, 
+                           this[ "display_section_" + this.section_index ],
+                           [], this, { hide_navigator: true } );
+    }
+  display( context, shared_uniforms )
+    { 
+                        // Part I:  All sections do this every frame:
+      this.r = Mat4.rotation( -.5*Math.sin( shared_uniforms.animation_time/5000 ),   1,1,1 );
+
+      shared_uniforms.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 100 );
+
+                        // Part II:  Switch on section_index to decide what to actually draw.
+      const handler_at_index = this[ "display_section_" + this.section_index ];
+      handler_at_index.call( this, context, shared_uniforms );
+    }
+
+
+
+  construct_section_0()
     { const initial_corner_point = vec3( -1,-1,0 );
                           // These two callbacks will step along s and t of the first sheet:
       const row_operation = (s,p) => p ? Mat4.translation( 0,.2,0 ).times(p.to4(1)).to3() 
@@ -91,14 +167,14 @@ export class Surfaces_Demo extends Active_Textbook
       this.shapes = { sheet : new defs.Grid_Patch( 10, 10, row_operation, column_operation ),
                       sheet2: new defs.Grid_Patch( 10, 10, row_operation_2, column_operation_2 ) };      
     }
-  construct_scene_1()
+  construct_section_1()
     { const initial_corner_point = vec3( -1,-1,0 );
       const row_operation = (s,p) => p ? Mat4.translation( 0,.2,0 ).times(p.to4(1)).to3() 
                                        : initial_corner_point;
       const column_operation = (t,p) =>  Mat4.translation( .2,0,0 ).times(p.to4(1)).to3();
       this.shapes = { sheet : new defs.Grid_Patch( 10, 10, row_operation, column_operation ) };
     }
-  construct_scene_2()
+  construct_section_2()
     { this.shapes = { donut : new defs.Torus             ( 15, 15, [[0,2],[0,1]] ),
                     hexagon : new defs.Regular_2D_Polygon( 1, 5 ),
                        cone : new defs.Cone_Tip          ( 4, 10,  [[0,2],[0,1]] ),
@@ -107,7 +183,7 @@ export class Surfaces_Demo extends Active_Textbook
                      donut2 : new ( defs.Torus.prototype.make_flat_shaded_version() )( 20, 20, [[0,2],[0,1]] ),
                     };
     }
-  construct_scene_3()
+  construct_section_3()
     { const points = Vector3.cast( [0,0,.8], [.5,0,1], [.5,0,.8], [.4,0,.7], [.4,0,.5], [.5,0,.4], [.5,0,-1], [.4,0,-1.5], [.25,0,-1.8], [0,0,-1.7] );
 
       this.shapes = { bullet: new defs.Surface_Of_Revolution( 9, 9, points ) };
@@ -115,7 +191,7 @@ export class Surfaces_Demo extends Active_Textbook
       const phong    = new defs.Phong_Shader( 1 );
       this.solid     = new Material( phong, { diffusivity: .5, smoothness: 800, color: color( .7,.8,.6,1 ) } );
     }
-  construct_scene_4()
+  construct_section_4()
     { this.shapes = { axis : new defs.Axis_Arrows(),
                       ball : new defs.Subdivision_Sphere( 3 ),
                        box : new defs.Cube(),
@@ -127,7 +203,7 @@ export class Surfaces_Demo extends Active_Textbook
                     tube_2 : new defs.Cylindrical_Tube( 7, 7,  [[  0 ,.33 ], [ 0,1 ]] ),
                      };
     }
-  construct_scene_5()
+  construct_section_5()
     { this.shapes = { box : new Cube(),
                      cone : new defs.Closed_Cone            ( 4, 10,  [[0,2],[0,1]] ),
                    capped : new defs.Capped_Cylinder        ( 1, 10,  [[0,2],[0,1]] ),
@@ -135,7 +211,7 @@ export class Surfaces_Demo extends Active_Textbook
                   capped2 : new defs.Rounded_Capped_Cylinder( 5, 10,  [[0,2],[0,1]] )
                     };
     }
-  construct_scene_6()
+  construct_section_6()
     { // Some helper arrays of points located along curves.  We'll extrude these into surfaces:
       let square_array = Vector3.cast( [ 1,0,-1 ], [ 0,1,-1 ], [ -1,0,-1 ], [ 0,-1,-1 ], [ 1,0,-1 ] ),
             star_array = Array(19).fill( vec3( 1,0,-1 ) );
@@ -165,14 +241,14 @@ export class Surfaces_Demo extends Active_Textbook
       this.shapes = { shell : new defs.Grid_Patch( 30, 30, sampler2, sample_two_arrays, [[0,1],[0,1]] )
                     };
     }
-  display_scene_0( context, shared_uniforms )
+  display_section_0( context, shared_uniforms )
     {
                         // Draw the sheets, flipped 180 degrees so their normals point at us.
       const r = Mat4.rotation( Math.PI,   0,1,0 ).times( this.r );
       this.shapes.sheet .draw( context, shared_uniforms, Mat4.translation( -1.5,0,0 ).times(r), this.material );
       this.shapes.sheet2.draw( context, shared_uniforms, Mat4.translation(  1.5,0,0 ).times(r), this.material );
     }
-  display_scene_1( context, shared_uniforms )
+  display_section_1( context, shared_uniforms )
     { 
       const random = ( x ) => Math.sin( 1000*x + shared_uniforms.animation_time/1000 );
       
@@ -189,7 +265,7 @@ export class Surfaces_Demo extends Active_Textbook
                                                 // Warning:  You can't call this until you've already drawn the shape once.      
       this.shapes.sheet.copy_onto_graphics_card( context.context, ["position","normal"], false );      
     }
-  display_scene_2( context, shared_uniforms )
+  display_section_2( context, shared_uniforms )
     { const model_transform = Mat4.translation( -5,0,-2 );
                                           // Draw all the shapes stored in this.shapes side by side.
       for( let s of Object.values( this.shapes ) )
@@ -197,11 +273,11 @@ export class Surfaces_Demo extends Active_Textbook
           model_transform.post_multiply( Mat4.translation( 2,0,0 ) );
         }
     }
-  display_scene_3( context, shared_uniforms )
+  display_section_3( context, shared_uniforms )
     { const model_transform = Mat4.rotation( shared_uniforms.animation_time/5000,   0,1,0 );
       this.shapes.bullet.draw( context, shared_uniforms, model_transform.times( this.r ), this.solid );
     }
-  display_scene_4( context, shared_uniforms )
+  display_section_4( context, shared_uniforms )
     {                                       // First, draw the compound axis shape all at once:
       this.shapes.axis.draw( context, shared_uniforms, Mat4.translation( 2,-1,-2 ), this.material );
       
@@ -226,7 +302,7 @@ export class Surfaces_Demo extends Active_Textbook
         this.shapes[ "tube_"+i ].draw( context, shared_uniforms, tube_matrix, this.material );
       }
     }
-  display_scene_5( context, shared_uniforms )
+  display_section_5( context, shared_uniforms )
     { const model_transform = Mat4.translation( -5,0,-2 );
       const r = Mat4.rotation( shared_uniforms.animation_time/3000,   1,1,1 );
                                           // Draw all the shapes stored in this.shapes side by side.
@@ -235,103 +311,42 @@ export class Surfaces_Demo extends Active_Textbook
           model_transform.post_multiply( Mat4.translation( 2.5,0,0 ) );
         }
     }
-  display_scene_6( context, shared_uniforms )
+  display_section_6( context, shared_uniforms )
     { const model_transform = Mat4.rotation( shared_uniforms.animation_time/5000,   0,1,0 );
       this.shapes.shell.draw( context, shared_uniforms, model_transform.times( this.r ), this.material );
     } 
-  explain_scene_0( document_element )
+  explain_section_0( document_element )
     { const str = `<p>Parametric Surfaces can be generated by parametric functions that are driven by changes to two variables - s and t.  As either s or t increase, we can step along the shape's surface in some direction aligned with the shape, not the usual X,Y,Z axes.</p>
                    <p>Grid_Patch is a generalized parametric surface.  It is always made of a sheet of squares arranged in rows and columns, corresponding to s and t.  The sheets are always guaranteed to have this row/column arrangement, but where it goes as you follow an edge to the next row or column over could vary.  When generating the shape below, we told it to do the most obvious thing whenever s or t increase; just increase X and Y.  A flat rectangle results.</p>
                    <p>The shape on the right is the same except instead of building it incrementally by moving from the previous point, we assigned points manually.  The z values are a random height map.  The light is moving over its static peaks and valleys.  We have full control over where the sheet's points go.</p>
                    <p>To create a new Grid_Patch shape, initialize it with the desired amounts of rows and columns you'd like.  The next two arguments are callback functions that return a new point given an old point (called p) and the current (s,t) coordinates.  The first callback is for rows, and will recieve arguments (s,p) back from Grid_Patch.  The second one is for columns, and will recieve arguments (t,p,s) back from Grid_Patch. </p>
                    <p>Scroll down for more animations!</p>`;
-      document_element.appendChild( document.createTextNode( str ) );
+      document_element.innerHTML = str;
     }
-  explain_scene_1( document_element )
+  explain_section_1( document_element )
     { const str = `<p>Shapes in tiny-graphics.js can also be modified and animated if need be.  The shape drawn below has vertex positions and normals that are recalculated for every frame.</p>
                    <p>Call copy_onto_graphics_card() on the Shape to make this happen.  Pass in the context, then an array of the buffer names you'd like to overwrite, then false to indicate that indices should be left alone.  Overwriting buffers in place saves us from slow reallocations.  Warning:  Do not try calling copy_onto_graphics_card() to update a shape until after the shape's first draw() call has completed.</p>`;
-      document_element.appendChild( document.createTextNode( str ) );
+      document_element.innerHTML = str;
     }
-  explain_scene_2( document_element )
+  explain_section_2( document_element )
     { const str = `<p>Parametric surfaces can be wrapped around themselves in circles, if increasing one of s or t causes a rotation around an axis.  These are called <a href="http://mathworld.wolfram.com/SurfaceofRevolution.html" target="blank">surfaces of revolution.</a></p>
                    <p>To draw these using Grid_Patch, we provide another class called Surface_Of_Revolution that extends Grid_Patch and takes a set of points as input.  Surface_Of_Revolution automatically sweeps the given points around the Z axis to make each column.  Your list of points, which become the rows, could be arranged to make any 1D curve.  The direction of your points matters; be careful not to end up with your normal vectors all pointing inside out after the sweep.</p>`;
-      document_element.appendChild( document.createTextNode( str ) );
+      document_element.innerHTML = str;
     }
-  explain_scene_3( document_element )
+  explain_section_3( document_element )
     { const str = `<p>Here's a surface of revolution drawn using a manually specified point list.  The points spell out a 1D curve of the outline of a bullet's right side.  The Surface_Of_Revolution sweeps this around the Z axis.</p>`;
-      document_element.appendChild( document.createTextNode( str ) );
+      document_element.innerHTML = str;
     }
-  explain_scene_4( document_element )
+  explain_section_4( document_element )
     { const str = `<p>Several Shapes can be compounded together into one, forming a single high-performance array.  Both of the axis arrows shapes below look identical and contain the same shapes, but the one on the right is must faster to draw because the shapes all exist together in one Vertex_Array object.</p>`;
-      document_element.appendChild( document.createTextNode( str ) );
+      document_element.innerHTML = str;
     }
-  explain_scene_5( document_element )
+  explain_section_5( document_element )
     { const str = `<p>Here are some examples of other convenient shapes that are made by compounding other shapes together.  The rightmost two are not compound shapes but rather we tried to make them with just one Surface_Of_Revolution, preventing us from getting good crisp seams at the edges.</p>`;
-      document_element.appendChild( document.createTextNode( str ) );
+      document_element.innerHTML = str;
     }
-  explain_scene_6( document_element )
+  explain_section_6( document_element )
     { const str = `<p>Blending two 1D curves as a "ruled surface" using the "mix" function of vectors.  We are using hand-made lists of points for our curves, but you could have generated the points from spline functions.</p>`;
-      document_element.appendChild( document.createTextNode( str ) );
-    }
-  show_document( document_builder, document_element = document_builder.document_region )
-    { 
-      super.show_document( document_builder, document_element );
-
-      if( this.is_master )
-        this.shared_uniforms_of_children.set_camera( Mat4.translation( 0,0,-3 ) );
-      else
-      {
-                                                // This document will repeat the following layout for each section:
-
-                                                      // 1. Text region:
-        this[ "explain_scene_" + this.scene_id ] ( document_element );
-
-                                                      // 2. Canvas showing a scene:
-        const canvas = document_builder.div.appendChild( document.createElement( "canvas" ) );
-        this.webgl_manager = new tiny.Webgl_Manager( canvas );
-
-        this.webgl_manager.scenes.push( this );
-        this.webgl_manager.set_size( [ 1080,300 ] )
-        window.requestAnimFrame( this.webgl_manager.render.bind( this.webgl_manager ) );
-                                                      // 3. Printouts of the constructor and the display function
-                                                      //    of the scene shown by the canvas:
-        const element_2 = document_builder.div.appendChild( document.createElement( "div" ) );
-        element_2.className = "code-widget";
-
-        const code = new tiny.Code_Widget( element_2, 
-                           Surfaces_Demo.prototype[ "construct_scene_" + this.scene_id ],
-                           [], this, { hide_navigator: true } );
-
-        const element_3 = document_builder.div.appendChild( document.createElement( "div" ) );
-        element_3.className = "code-widget";
-
-        const code_2 = new tiny.Code_Widget( element_3, 
-                           Surfaces_Demo.prototype[ "display_scene_" + this.scene_id ],
-                           [], this, { hide_navigator: true } );      
-      }
-    }
-  display( context, shared_uniforms )
-    { 
-                                  // Find the correct object that we shared to our child document sections.
-      const shared = this.is_master ? this.shared_uniforms_of_children 
-                                    : shared_uniforms;
-
-                                                          // All instances should have these values:
-      shared.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 100 ); 
-      this.r = Mat4.rotation( -.5*Math.sin( shared.animation_time/5000 ),   1,1,1 );
-
-      if( this.is_master )
-        { context.canvas.style.display = "none";
-          context.scratchpad.controls = this.movement_controls;
-
-                                                    // *** Lights: *** Values of vector or point lights.  They'll be consulted by 
-                                                    // the shader when coloring shapes.  See Light's class definition for inputs.
-          const t = this.t = shared.animation_time/1000;
-          const angle = Math.sin( t );
-          const light_position = Mat4.rotation( angle,   1,0,0 ).times( vec4( 0,0,1,0 ) );
-          shared.lights = [ new Light( light_position, color( 1,1,1,1 ), 1000000 ) ];
-        }
-      
-      super.display( context, shared );
+      document_element.innerHTML = str;
     }
 }
