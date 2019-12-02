@@ -31,7 +31,7 @@ class Document_Builder
 
 const Default_Layout = widgets.Default_Layout =
 class Default_Layout extends Document_Builder
-{ 
+{
   constructor( div, initial_scenes, options = {} )
   {
                                                       // Populate the usual document region at the top, and fit to a fixed size:
@@ -421,11 +421,11 @@ class Editor_Widget
 
 const Active_Textbook = widgets.Active_Textbook =
 class Active_Textbook extends tiny.Scene
-{                               // **Active_Textbook** is a special Scene whose documentation, when a Document_Builder widget prints
-                                // it, expands out into several sections -- each potentially drawing their own variation of the
-                                // Scene or of any Scene.  Text and interactive areas can alternate as needed by the author.
-                                // State of the document is managed in a shared object at the top level, which continuously updates
-                                // the sections' contents via their display() functions.
+{                               // **Active_Textbook** is a special Scene whose documentation, when printed out by a Document_Builder,
+                                // expands out into several sections -- each potentially drawing their own variation of the Scene or
+                                // of any Scene.  Text and interactive areas can alternate as needed by the author. State of the 
+                                // document is managed in a shared object at the top level, which continuously updates the sections' 
+                                // contents via their display() functions.
   constructor( content )
     { super();
 

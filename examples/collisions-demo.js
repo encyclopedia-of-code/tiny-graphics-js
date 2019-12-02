@@ -3,7 +3,9 @@ import {tiny, defs} from './common.js';
                                                   // Pull these names into this module's scope for convenience:
 const { vec3, unsafe3, vec4, color, Mat4, Light, Shape, Material, Shader, Texture, Scene } = tiny;
 
-export class Body
+export
+const Body = defs.Body =
+class Body
 {                                   // **Body** can store and update the properties of a 3D body that incrementally
                                     // moves from its previous place due to velocities.  It conforms to the
                                     // approach outlined in the "Fix Your Timestep!" blog post by Glenn Fiedler.
@@ -77,7 +79,9 @@ export class Body
 }
 
 
-export class Simulation extends Scene
+export
+const Simulation = defs.Simulation =
+class Simulation extends Scene
 {                                         // **Simulation** manages the stepping of simulation time.  Subclass it when making
                                           // a Scene that is a physics demo.  This technique is careful to totally decouple
                                           // the simulation from the frame rate (see below).
@@ -134,7 +138,9 @@ export class Simulation extends Scene
 }
 
 
-export class Test_Data
+export
+const Test_Data = defs.Test_Data =
+class Test_Data
 {                             // **Test_Data** pre-loads some Shapes and Textures that other Scenes can borrow.
   constructor()
     { this.textures = { rgb   : new Texture( "assets/rgb.jpg" ),

@@ -2,7 +2,9 @@ import {tiny, defs} from './common.js';
                                                   // Pull these names into this module's scope for convenience:
 const { vec3, vec4, color, Mat4, Light, Shape, Material, Shader, Texture, Scene } = tiny;
 
-export class Axes_Viewer extends Scene
+export
+const Axes_Viewer = defs.Axes_Viewer =
+class Axes_Viewer extends Scene
 {                                      // **Axes_Viewer** is a helper scene (a secondary Scene Component) for helping you 
                                        // visualize the coordinate bases that are used in your real scene.  Your scene 
                                        // can feed this object a list of bases to draw as axis arrows.  Pressing the 
@@ -57,7 +59,6 @@ export class Axes_Viewer extends Scene
           this.shapes.axes.draw( context, shared_uniforms, a, this.material );
     }
 }
-
 
 
 export class Axes_Viewer_Test_Scene extends Scene

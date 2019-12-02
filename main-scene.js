@@ -29,7 +29,7 @@ import { Text_Demo }
 import { Transforms_Sandbox }
   from "./examples/transforms-sandbox.js"
 
-Object.assign( defs,
+Object.assign( defs, { Minimal_Webgl_Demo },
                      { Axes_Viewer, Axes_Viewer_Test_Scene },
                      { Inertia_Demo, Collision_Demo },
                      { Many_Lights_Demo },
@@ -43,7 +43,7 @@ Object.assign( defs,
 
 // (Can define Main_Scene's class here)
 
-const Main_Scene = Surfaces_Demo;
+const Main_Scene = Transforms_Sandbox;
 const Additional_Scenes = [];
 
 export { Main_Scene, Additional_Scenes, Default_Layout, Code_Widget, Text_Widget, defs }

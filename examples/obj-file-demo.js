@@ -2,7 +2,9 @@ import {tiny, defs} from './common.js';
                                                   // Pull these names into this module's scope for convenience:
 const { vec3, vec4, vec, color, Mat4, Light, Shape, Material, Shader, Texture, Scene } = tiny;
 
-export class Shape_From_File extends Shape
+export
+const Shape_From_File = defs.Shape_From_File =
+class Shape_From_File extends Shape
 {                                   // **Shape_From_File** is a versatile standalone Shape that imports
                                     // all its arrays' data from an .obj 3D model file.
   constructor( filename )

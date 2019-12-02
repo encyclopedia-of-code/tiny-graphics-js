@@ -4,7 +4,9 @@ import {tiny, defs} from './common.js';
 const { vec3, vec4, color, Mat4, Light, Shape, Material, Shader, Texture, Scene } = tiny;
 const { Triangle, Square, Tetrahedron, Windmill, Cube, Subdivision_Sphere } = defs;
 
-export class Transforms_Sandbox_Base extends Scene
+export 
+const Transforms_Sandbox_Base = defs.Transforms_Sandbox_Base =
+class Transforms_Sandbox_Base extends Scene
 {                                          // **Transforms_Sandbox_Base** is a Scene that can be added to any display canvas.
                                            // This particular scene is broken up into two pieces for easier understanding.
                                            // The piece here is the base class, which sets up the machinery to draw a simple 
