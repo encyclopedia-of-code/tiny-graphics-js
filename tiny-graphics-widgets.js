@@ -9,13 +9,20 @@ class Document_Builder
 {
   constructor( div, object_to_be_documented )
   {
+    const rules = [ 
+      `.documentation_treenode { }`,
+      `.documentation { width:1060px; padding:0 10px; overflow:auto; background:white;
+                                  box-shadow:10px 10px 90px 0 inset LightGray }`
+      ];
+    if( document.styleSheets.length == 0 ) document.head.appendChild( document.createElement( "style" ) );
+    for( const r of rules ) document.styleSheets[document.styleSheets.length - 1].insertRule( r, 0 )
+
     this.children = [];
     this.div = div;
+    this.div.className = "documentation_treenode";
 
     this.document_region = div.appendChild( document.createElement( "div" ) );    
-    this.document_region.className = "documentation_treenode";
-    this.document_region.style = `width:1060px; padding:0 10px; overflow:auto;
-                                 background:white;  box-shadow:10px 10px 90px 0 inset LightGray`;
+    this.document_region.className = "documentation";
 
     object_to_be_documented.show_document( this );
   }
@@ -408,5 +415,68 @@ class Editor_Widget
                               if( response.show_overwrite ) this.overwrite_panel.style.display = "inline";
                               this.submit_result.innerHTML += response.message + "<br>"; } )
         .catch(    error => { this.submit_result.innerHTML += "Error " + error + " when trying to upload.<br>" } )
+    }
+}
+
+
+const Active_Textbook = widgets.Active_Textbook =
+class Active_Textbook extends tiny.Scene
+{                               // **Active_Textbook** is a special Scene whose documentation, when a Document_Builder widget prints
+                                // it, expands out into several sections -- each potentially drawing their own variation of the
+                                // Scene or of any Scene.  Text and interactive areas can alternate as needed by the author.
+                                // State of the document is managed in a shared object at the top level, which continuously updates
+                                // the sections' contents via their display() functions.
+  constructor( content )
+    { super();
+
+      this.widget_options = { show_canvas: false };
+                
+      this.inner_documentation_sections = [];
+                            
+                            // Instance child objects for each section.       
+      for( let i = 0; i < this.num_sections(); i++ )
+        this.inner_documentation_sections.push( new content( i, this.outer_documentation_data ) );
+
+                            // Make a new uniforms holder for all child graphics contexts to share.
+      this.shared_uniforms_of_children = new tiny.Shared_Uniforms();
+      this.initialize_shared_state();
+    }
+  show_document( document_builder )
+    {
+      this.apply_style_for_outer_shell_region( document_builder.div );
+
+      for( let section of this.inner_documentation_sections )
+      {
+        section.document_builder = this.expand_document_builder_tree( document_builder, section );
+
+                            // Disseminate our one shared_uniforms.
+        section.webgl_manager.shared_uniforms = this.shared_uniforms_of_children;
+      }
+
+      const final_text = document_builder.div.appendChild( document.createElement( "div" ) );
+      final_text.className = "documentation";
+      final_text.innerHTML = `<p>That's all the examples.  Below are interactive controls, and then the code that generates this whole multi-part tutorial is printed:</p>`;
+    }
+
+      // Override the following as needed:
+  num_sections() { return 0 }
+  initialize_shared_state() { }  
+  update_shared_state( context )
+    {
+          // Use the provided context to tick shared_uniforms_of_children.animation_time only once per frame.
+      context.shared_uniforms = this.shared_uniforms_of_children;
+      return this.shared_uniforms_of_children;
+    }
+    
+    // Internal helpers:
+  apply_style_for_outer_shell_region( div )
+    { div.style.padding = 0;
+      div.style.width = "1080px";
+      div.style.overflowY = "hidden";
+    }
+  expand_document_builder_tree( containing_builder, new_section )
+    { const child = new tiny.Document_Builder( containing_builder.div, new_section );
+      containing_builder.children.push( child );
+      return child;
     }
 }

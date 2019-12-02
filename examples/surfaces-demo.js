@@ -3,67 +3,11 @@ import {tiny, defs} from './common.js';
 const { Vector3, vec3, vec4, color, Mat4, Light, Shape, Material, Shader, Texture, Scene } = tiny;
 const { Triangle, Square, Tetrahedron, Windmill, Cube, Subdivision_Sphere } = defs;
 
-export class Active_Textbook extends Scene
-{ constructor( content )
-    { super();
 
-      this.widget_options = { show_canvas: false };
-                
-      this.inner_documentation_sections = [];
-                            
-                            // Instance child objects for each section.       
-      for( let i = 0; i < this.num_sections(); i++ )
-        this.inner_documentation_sections.push( new content( i, this.outer_documentation_data ) );
-
-                            // Make a new uniforms holder for all child graphics contexts to share.
-      this.shared_uniforms_of_children = new tiny.Shared_Uniforms();
-      this.initialize_shared_values();
-    }
-  show_document( document_builder )
-    {
-      this.apply_style_for_outer_shell_region( document_builder.div );
-
-      for( let section of this.inner_documentation_sections )
-      {
-        section.document_builder = this.expand_document_builder_tree( document_builder, section );
-
-                            // Disseminate our one shared_uniforms.
-        section.webgl_manager.shared_uniforms = this.shared_uniforms_of_children;
-      }
-
-      const final_text = document_builder.div.appendChild( document.createElement( "div" ) );
-      final_text.style = `width:1060px; padding:0 10px; overflow:auto;
-                                 background:white;  box-shadow:10px 10px 90px 0 inset LightGray`;
-      final_text.innerHTML = `<p>That's all the examples.  Below are interactive controls, and then the code that generates this whole multi-part tutorial is printed:</p>`;
-    }
-      // Override the following as needed:
-  num_sections() { return 0 }
-  initialize_shared_values() { }  
-
-    // Internal helpers:
-  apply_style_for_outer_shell_region( div )
-    { div.style.padding = 0;
-      div.style.width = "1080px";
-      div.style.overflowY = "hidden";
-    }
-  expand_document_builder_tree( containing_builder, new_section )
-    { const child = new tiny.Document_Builder( containing_builder.div, new_section );
-      containing_builder.children.push( child );
-      return child;
-    }
-  update_shared_values( context )
-    {
-          // Use the given context to tick shared_uniforms_of_children only once per frame.
-      context.shared_uniforms = this.shared_uniforms_of_children;
-      return this.shared_uniforms_of_children;
-    }
-}
-
-
-export class Surfaces_Demo extends Active_Textbook
+export class Surfaces_Demo extends tiny.Active_Textbook
 { constructor()
     { super( Surfaces_Demo_Section ) }
-  initialize_shared_values()
+  initialize_shared_state()
     { 
       this.shared_uniforms_of_children.set_camera( Mat4.translation( 0,0,-3 ) );
 
@@ -83,7 +27,7 @@ export class Surfaces_Demo extends Active_Textbook
   num_sections() { return 7 }
   display( context, shared_uniforms_unused )
     { 
-      const shared_uniforms = this.update_shared_values( context );
+      const shared_uniforms = this.update_shared_state( context );
 
       context.scratchpad.controls = this.movement_controls;
 
@@ -110,7 +54,9 @@ export class Surfaces_Demo_Section extends Scene
       handler_at_index.call( this );
     }
   show_document( document_builder, document_element = document_builder.document_region )
-    { 
+    {
+        document_builder.div.className = "documentation_treenode";
+
                                                 // This document will repeat the following layout for each section:
 
                                                       // 1. Text region:
@@ -320,17 +266,17 @@ export class Surfaces_Demo_Section extends Scene
                    <p>Grid_Patch is a generalized parametric surface.  It is always made of a sheet of squares arranged in rows and columns, corresponding to s and t.  The sheets are always guaranteed to have this row/column arrangement, but where it goes as you follow an edge to the next row or column over could vary.  When generating the shape below, we told it to do the most obvious thing whenever s or t increase; just increase X and Y.  A flat rectangle results.</p>
                    <p>The shape on the right is the same except instead of building it incrementally by moving from the previous point, we assigned points manually.  The z values are a random height map.  The light is moving over its static peaks and valleys.  We have full control over where the sheet's points go.</p>
                    <p>To create a new Grid_Patch shape, initialize it with the desired amounts of rows and columns you'd like.  The next two arguments are callback functions that return a new point given an old point (called p) and the current (s,t) coordinates.  The first callback is for rows, and will recieve arguments (s,p) back from Grid_Patch.  The second one is for columns, and will recieve arguments (t,p,s) back from Grid_Patch. </p>
-                   <p>Scroll down for more animations!</p>`;
+                   <p>Scroll down for more animations!</p>`;      
       document_element.innerHTML = str;
     }
   explain_section_1( document_element )
     { const str = `<p>Shapes in tiny-graphics.js can also be modified and animated if need be.  The shape drawn below has vertex positions and normals that are recalculated for every frame.</p>
-                   <p>Call copy_onto_graphics_card() on the Shape to make this happen.  Pass in the context, then an array of the buffer names you'd like to overwrite, then false to indicate that indices should be left alone.  Overwriting buffers in place saves us from slow reallocations.  Warning:  Do not try calling copy_onto_graphics_card() to update a shape until after the shape's first draw() call has completed.</p>`;
+                   <p>Call copy_onto_graphics_card() on the Shape to make this happen.  Pass in the context, then an array of the buffer names you'd like to overwrite, then false to indicate that indices should be left alone.  Overwriting buffers in place saves us from slow reallocations.  Warning:  Do not try calling copy_onto_graphics_card() to update a shape until after the shape's first draw() call has completed.</p>`;      
       document_element.innerHTML = str;
     }
   explain_section_2( document_element )
     { const str = `<p>Parametric surfaces can be wrapped around themselves in circles, if increasing one of s or t causes a rotation around an axis.  These are called <a href="http://mathworld.wolfram.com/SurfaceofRevolution.html" target="blank">surfaces of revolution.</a></p>
-                   <p>To draw these using Grid_Patch, we provide another class called Surface_Of_Revolution that extends Grid_Patch and takes a set of points as input.  Surface_Of_Revolution automatically sweeps the given points around the Z axis to make each column.  Your list of points, which become the rows, could be arranged to make any 1D curve.  The direction of your points matters; be careful not to end up with your normal vectors all pointing inside out after the sweep.</p>`;
+                   <p>To draw these using Grid_Patch, we provide another class called Surface_Of_Revolution that extends Grid_Patch and takes a set of points as input.  Surface_Of_Revolution automatically sweeps the given points around the Z axis to make each column.  Your list of points, which become the rows, could be arranged to make any 1D curve.  The direction of your points matters; be careful not to end up with your normal vectors all pointing inside out after the sweep.</p>`;      
       document_element.innerHTML = str;
     }
   explain_section_3( document_element )
