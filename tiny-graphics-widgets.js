@@ -425,7 +425,7 @@ class Active_Textbook extends tiny.Scene
                                 // expands out into several sections -- each potentially drawing their own variation of the Scene or
                                 // of any Scene.  Text and interactive areas can alternate as needed by the author. State of the 
                                 // document is managed in a shared object at the top level, which continuously updates the sections' 
-                                // contents via their display() functions.
+                                // contents via their display() functions.  Override the indicated functions with useful behavior.
   constructor( content )
     { super();
 
