@@ -3,9 +3,9 @@ import {tiny, defs} from './common.js';
 const { Vector3, vec3, vec4, color, Mat4, Light, Shape, Material, Shader, Texture, Scene } = tiny;
 const { Triangle, Square, Tetrahedron, Windmill, Cube, Subdivision_Sphere } = defs;
 
-export class Surfaces_Demo extends tiny.Active_Textbook
+export class Parametric_Surfaces extends tiny.Active_Textbook
 { constructor()
-    { super( Surfaces_Demo_Section ) }
+    { super( Parametric_Surfaces_Section ) }
   initialize_shared_state()
     { 
       this.shared_uniforms_of_children.set_camera( Mat4.translation( 0,0,-3 ) );
@@ -40,8 +40,8 @@ export class Surfaces_Demo extends tiny.Active_Textbook
 
 
 export
-const Surfaces_Demo_Section = defs.Surfaces_Demo_Section =
-class Surfaces_Demo_Section extends Scene
+const Parametric_Surfaces_Section = defs.Parametric_Surfaces_Section =
+class Parametric_Surfaces_Section extends Scene
 {
   constructor( section_index, outer_documentation_data )
     {
@@ -151,7 +151,7 @@ class Surfaces_Demo_Section extends Scene
                      };
     }
   construct_section_5()
-    { this.shapes = { box : new Cube(),
+    { this.shapes = { box : new defs.Cube(),
                      cone : new defs.Closed_Cone            ( 4, 10,  [[0,2],[0,1]] ),
                    capped : new defs.Capped_Cylinder        ( 1, 10,  [[0,2],[0,1]] ),
                     cone2 : new defs.Rounded_Closed_Cone    ( 5, 10,  [[0,2],[0,1]] ),

@@ -55,7 +55,7 @@ export const tiny = {};
 const Vector = tiny.Vector =
 class Vector extends Float32Array
 {                                   // **Vector** stores vectors of floating point numbers.  Puts vector math into JavaScript.
-                                    // Note:  Vectors should be created with of() due to wierdness with the TypedArray spec.
+                                    // Note:  Vectors should be created with of() due to weirdness with the TypedArray spec.
                                     // Tip: Assign Vectors with .copy() to avoid referring two variables to the same Vector object.
   static create( ...arr )
     { return new Vector( arr );
