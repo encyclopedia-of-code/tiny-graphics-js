@@ -67,23 +67,23 @@ class Tetrahedron extends Shape
       if( !using_flat_shading )
       {                                         // Method 1:  A tetrahedron with shared vertices.  Compact, performs better,
                                                 // but can't produce flat shading or discontinuous seams in textures.
-          this.arrays.position      = Vec.cast( [ 0, 0, 0], [1,0,0], [0,1,0], [0,0,1] );          
-          this.arrays.normal        = Vec.cast( [-a,-a,-a], [1,0,0], [0,1,0], [0,0,1] );          
-          this.arrays.texture_coord = Vec.cast( [ 0, 0   ], [1,0  ], [0,1, ], [1,1  ] );
+          this.arrays.position      = Vector.cast( [ 0, 0, 0], [1,0,0], [0,1,0], [0,0,1] );          
+          this.arrays.normal        = Vector.cast( [-a,-a,-a], [1,0,0], [0,1,0], [0,0,1] );          
+          this.arrays.texture_coord = Vector.cast( [ 0, 0   ], [1,0  ], [0,1, ], [1,1  ] );
                                                 // Notice the repeats in the index list.  Vertices are shared 
                                                 // and appear in multiple triangles with this method.
           this.indices.push( 0, 1, 2,   0, 1, 3,   0, 2, 3,   1, 2, 3 );
       }
       else
       {                                           // Method 2:  A tetrahedron with four independent triangles.
-        this.arrays.position = Vec.cast( [0,0,0], [1,0,0], [0,1,0],
+        this.arrays.position = Vector.cast( [0,0,0], [1,0,0], [0,1,0],
                                          [0,0,0], [1,0,0], [0,0,1],
                                          [0,0,0], [0,1,0], [0,0,1],
                                          [0,0,1], [1,0,0], [0,1,0] );
 
                                           // The essence of flat shading:  This time, values of normal vectors can
                                           // be constant per whole triangle.  Repeat them for all three vertices.
-        this.arrays.normal   = Vec.cast( [0,0,-1], [0,0,-1], [0,0,-1],
+        this.arrays.normal   = Vector.cast( [0,0,-1], [0,0,-1], [0,0,-1],
                                          [0,-1,0], [0,-1,0], [0,-1,0],
                                          [-1,0,0], [-1,0,0], [-1,0,0],
                                          [ a,a,a], [ a,a,a], [ a,a,a] );
@@ -92,7 +92,7 @@ class Tetrahedron extends Shape
                                           // image is mapped onto each face).  We couldn't do this with shared
                                           // vertices since this features abrupt transitions when approaching the
                                           // same point from different directions.
-        this.arrays.texture_coord = Vec.cast( [0,0], [1,0], [1,1],
+        this.arrays.texture_coord = Vector.cast( [0,0], [1,0], [1,1],
                                               [0,0], [1,0], [1,1],
                                               [0,0], [1,0], [1,1],
                                               [0,0], [1,0], [1,1] );
@@ -126,7 +126,7 @@ class Windmill extends Shape
           var newNormal = spin.times( vec4( 0,0,1,0 ) ).to3();
                                                                        // Propagate the same normal to all three vertices:
           this.arrays.normal.push( newNormal, newNormal, newNormal );
-          this.arrays.texture_coord.push( ...Vec.cast( [ 0,0 ], [ 0,1 ], [ 1,0 ] ) );
+          this.arrays.texture_coord.push( ...Vector.cast( [ 0,0 ], [ 0,1 ], [ 1,0 ] ) );
                                                                 // Procedurally connect the 3 new vertices into triangles:
           this.indices.push( 3*i, 3*i + 1, 3*i + 2 );
         }
@@ -466,7 +466,7 @@ class Funny_Shader extends Shader
       {        // update_GPU():  Define how to synchronize our JavaScript's variables to the GPU's:
         const [ P, C, M ] = [ shared_uniforms.projection_transform, shared_uniforms.camera_inverse, model_transform ],
                       PCM = P.times( C ).times( M );
-        context.uniformMatrix4fv( gpu_addresses.projection_camera_model_transform, false, Mat.flatten_2D_to_1D( PCM.transposed() ) );
+        context.uniformMatrix4fv( gpu_addresses.projection_camera_model_transform, false, Matrix.flatten_2D_to_1D( PCM.transposed() ) );
         context.uniform1f ( gpu_addresses.animation_time, shared_uniforms.animation_time / 1000 );
       }
   shared_glsl_code()            // ********* SHARED CODE, INCLUDED IN BOTH SHADERS *********
