@@ -42,7 +42,7 @@ class Default_Layout extends Document_Builder
     this.program_stuff = this.div.appendChild( document.createElement( "div" ) );
 
     const defaults = { show_canvas: true,  make_controls: true,
-                       make_editor: false, make_code_nav: true };
+                       make_editor: true, make_code_nav: true };
 
                                      // The primary scene we're documenting can override this document's display options.
     if( initial_scenes && initial_scenes[0] )
@@ -229,7 +229,7 @@ class Code_Widget
       if( document.styleSheets.length == 0 ) document.head.appendChild( document.createElement( "style" ) );
       for( const r of rules ) document.styleSheets[document.styleSheets.length - 1].insertRule( r, 0 )
 
-      this.associated_editor_widget = caller.embedded_editor;
+      this.caller = caller;
 
       if( !main_scene )
         return;
@@ -302,8 +302,8 @@ class Code_Widget
   display_code( class_to_display )
     {                                           // display_code():  Populate the code textbox.
                                                 // Pass undefined to choose index.html source.
-      if( this.associated_editor_widget ) 
-        this.associated_editor_widget.select_class( class_to_display );
+      if( this.caller.embedded_editor ) 
+        this.caller.embedded_editor.select_class( class_to_display );
       if( class_to_display ) this.format_code( class_to_display.toString() );
       else fetch( document.location.href )
                 .then(   response => response.text() )

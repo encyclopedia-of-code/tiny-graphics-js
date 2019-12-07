@@ -73,17 +73,17 @@ class Parametric_Surfaces_Section extends Scene
         window.requestAnimFrame( this.webgl_manager.render.bind( this.webgl_manager ) );
                                                       // 3. Printouts of the constructor and the display function
                                                       //    of the scene shown by the canvas:
-        const element_2 = document_builder.div.appendChild( document.createElement( "div" ) );
-        element_2.className = "code-widget";
+        const constructor_box = document_builder.div.appendChild( document.createElement( "div" ) );
+        constructor_box.className = "code-widget";
 
-        const code = new tiny.Code_Widget( element_2, 
+        const code = new tiny.Code_Widget( constructor_box, 
                            this[ "construct_section_" + this.section_index ],
                            [], this, { hide_navigator: true } );
 
-        const element_3 = document_builder.div.appendChild( document.createElement( "div" ) );
-        element_3.className = "code-widget";
+        const display_box = document_builder.div.appendChild( document.createElement( "div" ) );
+        display_box.className = "code-widget";
 
-        const code_2 = new tiny.Code_Widget( element_3, 
+        const code_2 = new tiny.Code_Widget( display_box, 
                            this[ "display_section_" + this.section_index ],
                            [], this, { hide_navigator: true } );
     }
