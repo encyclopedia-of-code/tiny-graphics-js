@@ -443,11 +443,11 @@ class Active_Textbook extends tiny.Scene
     }
   show_document( document_builder )
     {
-      this.apply_style_for_outer_shell_region( document_builder.div );
+      Active_Textbook.apply_style_for_outer_shell_region( document_builder.div );
 
       for( let section of this.inner_documentation_sections )
       {
-        section.document_builder = this.expand_document_builder_tree( document_builder, section );
+        section.document_builder = Active_Textbook.expand_document_builder_tree( document_builder, section );
 
                             // Disseminate our one shared_uniforms.
         section.webgl_manager.shared_uniforms = this.shared_uniforms_of_children;
@@ -469,12 +469,12 @@ class Active_Textbook extends tiny.Scene
     }
     
     // Internal helpers:
-  apply_style_for_outer_shell_region( div )
+  static apply_style_for_outer_shell_region( div )
     { div.style.padding = 0;
       div.style.width = "1080px";
       div.style.overflowY = "hidden";
     }
-  expand_document_builder_tree( containing_builder, new_section )
+  static expand_document_builder_tree( containing_builder, new_section )
     { const child = new tiny.Document_Builder( containing_builder.div, new_section );
       containing_builder.children.push( child );
       return child;

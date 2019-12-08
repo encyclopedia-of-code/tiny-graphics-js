@@ -2,12 +2,74 @@ import {tiny, defs} from './common.js';
                                             // Pull these names into this module's scope for convenience:
 const { vec3, vec4, color, Mat4, Light, Shape, Material, Shader, Texture, Scene } = tiny;
 
+const Demonstration_Layout = defs.Demonstration_Layout =
+class Demonstration_Layout extends tiny.Document_Builder
+{
+  constructor( div, initial_scenes, options = {} )
+  {
+                                                      // Populate the usual document region at the top, and fit to a fixed size:
+    super( div, initial_scenes && initial_scenes[0] );
+    div.style.margin = "auto";
+    div.style.width = "1080px";
+                                                      // The next div down will hold a canvas and/or related interactive areas.
+    this.program_stuff = this.div.appendChild( document.createElement( "div" ) );
+
+    const defaults = { show_canvas: true,  make_controls: true,
+                       make_editor: false, make_code_nav: true };
+
+                                     // The primary scene we're documenting can override this document's display options.
+    if( initial_scenes && initial_scenes[0] )
+      Object.assign( options, initial_scenes[0].widget_options );
+    Object.assign( this, defaults, options )
+
+    const canvas = this.program_stuff.appendChild( document.createElement( "canvas" ) );
+
+    const rules = [ 
+      `.document-builder canvas { width:1080px; height:600px; background:DimGray; margin:auto; margin-bottom:-4px }`
+      ];
+    if( document.styleSheets.length == 0 ) document.head.appendChild( document.createElement( "style" ) );
+    for( const r of rules ) document.styleSheets[document.styleSheets.length - 1].insertRule( r, 0 )
+
+    if( !this.show_canvas )
+      canvas.style.display = "none";
+                                      // Use tiny-graphics-js to draw graphics to the canvas, using the given scene objects.
+    this.webgl_manager = new tiny.Webgl_Manager( canvas );
+    
+    if( initial_scenes )
+      this.webgl_manager.scenes.push( ...initial_scenes );
+
+    const primary_scene_constructor = initial_scenes ? initial_scenes[0].constructor : undefined;
+
+    const additional_scenes = initial_scenes ? initial_scenes.slice(1) : [];
+
+    if( this.make_controls )
+    { this.embedded_controls_area = this.program_stuff.appendChild( document.createElement( "div" ) );
+      this.embedded_controls_area.className = "controls-widget";
+      this.embedded_controls = new Controls_Widget( this.embedded_controls_area, this.webgl_manager.scenes );
+    }
+    if( this.make_code_nav )
+    { this.embedded_code_nav_area = this.program_stuff.appendChild( document.createElement( "div" ) );
+      this.embedded_code_nav_area.className = "code-widget";
+      this.embedded_code_nav = new Code_Widget( this.embedded_code_nav_area, primary_scene_constructor, 
+                                   additional_scenes, this, {} );
+    }
+    if( this.make_editor )
+    { this.embedded_editor_area = this.program_stuff.appendChild( document.createElement( "div" ) );
+      this.embedded_editor_area.className = "editor-widget";
+      this.embedded_editor = new Editor_Widget( this.embedded_editor_area, primary_scene_constructor, this );
+    }
+                                     // Start WebGL main loop - render() will re-queue itself for continuous calls.
+    this.webgl_manager.render();
+  }
+}
+
+
 export class Demonstration extends Scene
 { constructor( scene_id, material )
     { super();
 
       this.widget_options = { show_canvas: false, make_controls: false,
-                              make_editor: false, make_code_nav: false, show_explanation: true };
+                              make_editor: false, make_code_nav: false, show_documentation: true };
 
       if( typeof( scene_id ) === "undefined" )
         { this.is_master = true;
