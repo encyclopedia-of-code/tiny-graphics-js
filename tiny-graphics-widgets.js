@@ -42,7 +42,7 @@ class Default_Layout extends Document_Builder
     this.program_stuff = this.div.appendChild( document.createElement( "div" ) );
 
     const defaults = { show_canvas: true,  make_controls: true,
-                       make_editor: true, make_code_nav: true };
+                       make_editor: false, make_code_nav: true };
 
                                      // The primary scene we're documenting can override this document's display options.
     if( initial_scenes && initial_scenes[0] )
