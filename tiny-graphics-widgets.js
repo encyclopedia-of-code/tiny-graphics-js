@@ -444,8 +444,6 @@ class Multi_Canvas_Scene extends tiny.Scene
     }
   show_document( document_builder )
     {
-      Multi_Canvas_Scene.apply_style_for_outer_shell_region( document_builder.div );
-
       for( let section of this.inner_scenes )
       {
         section.document_builder = document_builder.expand_tree( section );
@@ -467,12 +465,5 @@ class Multi_Canvas_Scene extends tiny.Scene
           // Use the provided context to tick shared_uniforms_of_children.animation_time only once per frame.
       context.shared_uniforms = this.shared_uniforms_of_children;
       return this.shared_uniforms_of_children;
-    }
-    
-    // Internal helpers:
-  static apply_style_for_outer_shell_region( div )
-    { div.style.padding = 0;
-      div.style.width = "1080px";
-      div.style.overflowY = "hidden";
     }
 }
