@@ -4,6 +4,79 @@ const { vec3, vec4, color, Mat4, Light, Shape, Material, Shader, Texture, Scene 
 
 import { Transforms_Sandbox } from "./transforms-sandbox.js"
 
+
+
+
+
+
+export class Demonstration extends Scene
+{ constructor( scene_id, material )
+    { super();
+
+      this.widget_options = { show_canvas: false, make_controls: false,
+                              make_editor: false, make_code_nav: false };
+
+      this.inner_scenes = [];
+      for( let i = 0; i < this.num_sections(); i++ )
+        this.inner_scenes.push( new Demonstration_Section( i ) );
+
+    }
+  num_sections() { return 3 }
+  show_document( document_builder )
+    {
+      for( let section of this.inner_scenes )
+        section.document_builder = document_builder.expand_tree( section );
+    }
+}
+
+
+export
+const Demonstration_Section = defs.Demonstration_Section =
+class Demonstration_Section extends Scene
+{
+  constructor( section_index )
+    {
+      super();
+      this.section_index = section_index; 
+    }
+  show_document( document_builder )
+    {
+        document_builder.div.className = "documentation_treenode";
+
+        this[ "explain_section_" + this.section_index ] ( document_builder );
+    }
+  explain_section_0( document_builder )
+    {
+      const region = document_builder.document_region;
+      Demonstration_Layout.apply_style_for_text_region( region, true );
+
+      region.appendChild( document.createElement("p") ).textContent =
+        `Welcome to Demopedia.  The WebGL demo below can be edited, remixed, and saved at a new  URL.`
+
+      region.appendChild( document.createElement("p") ).textContent =
+        `Below that you'll find the starting code for a graphics assignment. Your goal is to model an insect.`;
+
+      region.appendChild( document.createElement("p") ).textContent =
+        `Try making changes to the code below.  The code comments suggest how to do so.  Once you have 
+         modeled an insect, save your result to a URL you can share!`;
+
+      region.appendChild( document.createElement("p") ).textContent =
+        `First, the demo:`;
+
+        
+    }
+  explain_section_1( document_builder )
+    {
+    }
+  explain_section_2( document_builder )
+    {
+    }
+}
+
+
+
+
+
 const Demonstration_Layout = defs.Demonstration_Layout =
 class Demonstration_Layout extends tiny.Document_Builder
 {
@@ -86,7 +159,7 @@ class Demonstration_Layout extends tiny.Document_Builder
 }
 
 
-export class Demonstration extends Scene
+export class Demonstration_Old extends Scene
 { constructor( scene_id, material )
     { super();
 
