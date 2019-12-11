@@ -39,7 +39,7 @@ class Default_Layout extends Document_Builder
     div.style.margin = "auto";
     div.style.width = "1080px";
                                                       // The next div down will hold a canvas and/or related interactive areas.
-    this.program_stuff = this.div.appendChild( document.createElement( "div" ) );
+    this.program_stuff = div.appendChild( document.createElement( "div" ) );
 
     const defaults = { show_canvas: true,  make_controls: true,
                        make_editor: false, make_code_nav: true };
@@ -48,14 +48,10 @@ class Default_Layout extends Document_Builder
     if( initial_scenes && initial_scenes[0] )
       Object.assign( options, initial_scenes[0].widget_options );
     Object.assign( this, defaults, options )
-
+    
+          // TODO:  One use case may have required canvas to be styled as a rule instead of as an element.  Keep an eye out.
     const canvas = this.program_stuff.appendChild( document.createElement( "canvas" ) );
-
-    const rules = [ 
-      `.document-builder canvas { width:1080px; height:600px; background:DimGray; margin:auto; margin-bottom:-4px }`
-      ];
-    if( document.styleSheets.length == 0 ) document.head.appendChild( document.createElement( "style" ) );
-    for( const r of rules ) document.styleSheets[document.styleSheets.length - 1].insertRule( r, 0 )
+    canvas.style = `width:1080px; height:600px; background:DimGray; margin:auto; margin-bottom:-4px`;
 
     if( !this.show_canvas )
       canvas.style.display = "none";
@@ -78,7 +74,7 @@ class Default_Layout extends Document_Builder
     { this.embedded_code_nav_area = this.program_stuff.appendChild( document.createElement( "div" ) );
       this.embedded_code_nav_area.className = "code-widget";
       this.embedded_code_nav = new Code_Widget( this.embedded_code_nav_area, primary_scene_constructor, 
-                                   additional_scenes, this, {} );
+                                   additional_scenes, this );
     }
     if( this.make_editor )
     { this.embedded_editor_area = this.program_stuff.appendChild( document.createElement( "div" ) );
@@ -435,7 +431,7 @@ class Active_Textbook extends tiny.Scene
                             
                             // Instance child objects for each section.       
       for( let i = 0; i < this.num_sections(); i++ )
-        this.inner_documentation_sections.push( new content( i, this.outer_documentation_data ) );
+        this.inner_documentation_sections.push( new content( i ) );
 
                             // Make a new uniforms holder for all child graphics contexts to share.
       this.shared_uniforms_of_children = new tiny.Shared_Uniforms();

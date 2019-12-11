@@ -43,7 +43,7 @@ export
 const Parametric_Surfaces_Section = defs.Parametric_Surfaces_Section =
 class Parametric_Surfaces_Section extends Scene
 {
-  constructor( section_index, outer_documentation_data )
+  constructor( section_index )
     {
       super();
                                     // Don't clutter up all the document sections.  Omit displaying control panels for their scenes.

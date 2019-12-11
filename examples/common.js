@@ -407,7 +407,7 @@ class Minimal_Webgl_Demo extends Scene
   constructor( webgl_manager, control_panel )
     { super( webgl_manager, control_panel );
                                                 // Don't create any DOM elements to control this scene:
-        this.widget_options = { make_controls: false, show_documentation: false };
+        this.widget_options = { make_controls: false };
                                                 // Send a Triangle's vertices to the GPU's buffers:
       this.shapes = { triangle : new Minimal_Shape() };
       this.shader = new Basic_Shader();
