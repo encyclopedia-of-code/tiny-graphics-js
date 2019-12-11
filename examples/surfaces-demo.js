@@ -3,7 +3,7 @@ import {tiny, defs} from './common.js';
 const { Vector3, vec3, vec4, color, Mat4, Light, Shape, Material, Shader, Texture, Scene } = tiny;
 const { Triangle, Square, Tetrahedron, Windmill, Cube, Subdivision_Sphere } = defs;
 
-export class Parametric_Surfaces extends tiny.Multi_Canvas_Scnene
+export class Parametric_Surfaces extends tiny.Multi_Canvas_Scene
 { constructor()
     { super( Parametric_Surfaces_Section ) 
     }

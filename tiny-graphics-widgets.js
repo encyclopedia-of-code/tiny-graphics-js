@@ -420,9 +420,9 @@ class Editor_Widget
 }
 
 
-const Multi_Canvas_Scnene = widgets.Multi_Canvas_Scnene =
-class Multi_Canvas_Scnene extends tiny.Scene
-{                               // **Multi_Canvas_Scnene** is a special Scene whose documentation, when printed out by a Document_Builder,
+const Multi_Canvas_Scene = widgets.Multi_Canvas_Scene =
+class Multi_Canvas_Scene extends tiny.Scene
+{                               // **Multi_Canvas_Scene** is a special Scene whose documentation, when printed out by a Document_Builder,
                                 // expands out into several sections -- each potentially drawing their own variation of the Scene or
                                 // of any Scene.  Text and interactive areas can alternate as needed by the author. State of the 
                                 // document is managed in a shared object at the top level, which continuously updates the sections' 
@@ -444,7 +444,7 @@ class Multi_Canvas_Scnene extends tiny.Scene
     }
   show_document( document_builder )
     {
-      Multi_Canvas_Scnene.apply_style_for_outer_shell_region( document_builder.div );
+      Multi_Canvas_Scene.apply_style_for_outer_shell_region( document_builder.div );
 
       for( let section of this.inner_scenes )
       {
