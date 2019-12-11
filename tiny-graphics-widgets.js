@@ -420,9 +420,9 @@ class Editor_Widget
 }
 
 
-const Active_Textbook = widgets.Active_Textbook =
-class Active_Textbook extends tiny.Scene
-{                               // **Active_Textbook** is a special Scene whose documentation, when printed out by a Document_Builder,
+const Multi_Canvas_Scnene = widgets.Multi_Canvas_Scnene =
+class Multi_Canvas_Scnene extends tiny.Scene
+{                               // **Multi_Canvas_Scnene** is a special Scene whose documentation, when printed out by a Document_Builder,
                                 // expands out into several sections -- each potentially drawing their own variation of the Scene or
                                 // of any Scene.  Text and interactive areas can alternate as needed by the author. State of the 
                                 // document is managed in a shared object at the top level, which continuously updates the sections' 
@@ -444,7 +444,7 @@ class Active_Textbook extends tiny.Scene
     }
   show_document( document_builder )
     {
-      Active_Textbook.apply_style_for_outer_shell_region( document_builder.div );
+      Multi_Canvas_Scnene.apply_style_for_outer_shell_region( document_builder.div );
 
       for( let section of this.inner_scenes )
       {
@@ -461,7 +461,7 @@ class Active_Textbook extends tiny.Scene
 
       // Override the following as needed:
   num_sections() { return 0 }
-  initialize_shared_state() { }  
+  initialize_shared_state() { }
   update_shared_state( context )
     {
           // Use the provided context to tick shared_uniforms_of_children.animation_time only once per frame.
