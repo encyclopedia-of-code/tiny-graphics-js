@@ -432,11 +432,11 @@ class Active_Textbook extends tiny.Scene
 
       this.widget_options = { show_canvas: false };
                 
-      this.inner_documentation_sections = [];
+      this.inner_scenes = [];
                             
                             // Instance child objects for each section.       
       for( let i = 0; i < this.num_sections(); i++ )
-        this.inner_documentation_sections.push( new content( i ) );
+        this.inner_scenes.push( new content( i ) );
 
                             // Make a new uniforms holder for all child graphics contexts to share.
       this.shared_uniforms_of_children = new tiny.Shared_Uniforms();
@@ -446,7 +446,7 @@ class Active_Textbook extends tiny.Scene
     {
       Active_Textbook.apply_style_for_outer_shell_region( document_builder.div );
 
-      for( let section of this.inner_documentation_sections )
+      for( let section of this.inner_scenes )
       {
         section.document_builder = document_builder.expand_tree( section );
 
