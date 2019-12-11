@@ -16,7 +16,6 @@ export class Parametric_Surfaces extends tiny.Multi_Canvas_Scene
       this.material = new Material( shader, { ambient: .5, texture: new Texture( "assets/rgb.jpg" ) } );
 
       this.movement_controls = new defs.Movement_Controls();
-      this.children.push( this.movement_controls );
 
       for( let section of this.inner_scenes )
         {
