@@ -47,9 +47,6 @@ class Parametric_Surfaces_Section extends Scene
   constructor( section_index )
     {
       super();
-                                    // Don't clutter up all the document sections.  Omit displaying control panels for their scenes.
-      this.widget_options = { make_controls: false };
-
                                     // Switch on section_index to decide what to actually construct.
       this.section_index = section_index;      
       const handler_at_index = this[ "construct_section_" + section_index ];
