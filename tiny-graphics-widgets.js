@@ -451,10 +451,6 @@ class Multi_Canvas_Scene extends tiny.Scene
                             // Disseminate our one shared_uniforms.
         section.webgl_manager.shared_uniforms = this.shared_uniforms_of_children;
       }
-
-      const final_text = document_builder.div.appendChild( document.createElement( "div" ) );
-      final_text.className = "documentation";
-      final_text.innerHTML = `<p>That's all the examples.  Below are interactive controls, and then the code that generates this whole multi-part tutorial is printed:</p>`;
     }
 
       // Override the following as needed:

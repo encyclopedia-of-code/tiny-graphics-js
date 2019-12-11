@@ -87,6 +87,13 @@ class Parametric_Surfaces_Section extends Scene
         const code_2 = new tiny.Code_Widget( display_box, 
                            this[ "display_section_" + this.section_index ],
                            [], this, { hide_navigator: true } );
+
+        if( this.section_index < 6 ) 
+          return;
+          
+        const final_text = document_builder.div.appendChild( document.createElement( "div" ) );
+        final_text.className = "documentation";
+        final_text.innerHTML = `<p>That's all the examples.  Below are interactive controls, and then the code that generates this whole multi-part tutorial is printed:</p>`;
     }
   display( context, shared_uniforms )
     { 
