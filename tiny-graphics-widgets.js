@@ -8,24 +8,24 @@ const Document_Builder = widgets.Document_Builder =
 class Document_Builder
 {
   constructor( div, object_to_be_documented )
-  {
-    const rules = [ 
-      `.documentation_treenode { }`,
-      `.documentation { width:1060px; padding:0 10px; overflow:auto; background:white;
-                                  box-shadow:10px 10px 90px 0 inset LightGray }`
-      ];
-    if( document.styleSheets.length == 0 ) document.head.appendChild( document.createElement( "style" ) );
-    for( const r of rules ) document.styleSheets[document.styleSheets.length - 1].insertRule( r, 0 )
+    {
+      const rules = [ 
+        `.documentation_treenode { }`,
+        `.documentation { width:1060px; padding:0 10px; overflow:auto; background:white;
+                                    box-shadow:10px 10px 90px 0 inset LightGray }`
+        ];
+      if( document.styleSheets.length == 0 ) document.head.appendChild( document.createElement( "style" ) );
+      for( const r of rules ) document.styleSheets[document.styleSheets.length - 1].insertRule( r, 0 )
 
-    this.children = [];
-    this.div = div;
-    this.div.className = "documentation_treenode";
+      this.children = [];
+      this.div = div;
+      this.div.className = "documentation_treenode";
 
-    this.document_region = div.appendChild( document.createElement( "div" ) );    
-    this.document_region.className = "documentation";
+      this.document_region = div.appendChild( document.createElement( "div" ) );    
+      this.document_region.className = "documentation";
 
-    object_to_be_documented.show_document( this );
-  }
+      object_to_be_documented.show_document( this );
+    }
   expand_tree( new_section )
     { const child = new tiny.Document_Builder( this.div, new_section );
       this.children.push( child );
