@@ -17,7 +17,7 @@ export class Parametric_Surfaces extends tiny.Active_Textbook
       this.movement_controls = new defs.Movement_Controls();
       this.children.push( this.movement_controls );
 
-      for( let section of this.inner_documentation_sections )
+      for( let section of this.inner_scenes )
         {
           section.material = this.material;
           section.children.push( this.movement_controls );
