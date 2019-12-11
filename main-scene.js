@@ -48,7 +48,7 @@ Object.assign( defs, { Minimal_Webgl_Demo },
 // (Can define Main_Scene's class here)
 
 
-const Main_Scene = Demonstration;
+const Main_Scene = Parametric_Surfaces;
 const Additional_Scenes = [];
 
 export { Main_Scene, Additional_Scenes, Default_Layout, Code_Widget, Editor_Widget, Text_Widget, defs }
