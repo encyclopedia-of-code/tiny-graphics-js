@@ -1039,9 +1039,9 @@ class Webgl_Manager
 
       const open_list = [ ...this.scenes ];
       while( open_list.length )                           // Traverse all Scenes and their children, recursively.
-      { open_list.push( ...open_list[0].children );
+      { open_list.push( ...open_list[0].animated_children );
                                                                 // Call display() to draw each registered animation:
-        open_list.shift().display( this, this.shared_uniforms );
+        open_list.shift().render_animation( this, this.shared_uniforms );
       }
                                               // Now that this frame is drawn, request that render() happen 
                                               // again as soon as all other web page events are processed:
@@ -1050,23 +1050,49 @@ class Webgl_Manager
 }
 
 
-const Scene = tiny.Scene =
-class Scene
+const Component = tiny.Component =
+class Component
 {                           // **Scene** is the base class for any scene part or code snippet that you can add to a
                             // canvas.  Make your own subclass(es) of this and override their methods "display()" 
                             // and "make_control_panel()" to make them draw to a canvas, or generate custom control
                             // buttons and readouts, respectively.  Scenes exist in a hierarchy; their child Scenes
                             // can either contribute more drawn shapes or provide some additional tool to the end 
                             // user via drawing additional control panel buttons or live text readouts.
-  constructor()
-    { this.children = [];
-                                                          // Set up how we'll handle key presses for the scene's control panel:
+  constructor( div )
+    { 
+      const rules = [ 
+        `.documentation_treenode { }`,
+        `.documentation { width:1060px; padding:0 10px; overflow:auto; background:white;
+                                    box-shadow:10px 10px 90px 0 inset LightGray }`
+        ];
+      if( document.styleSheets.length == 0 ) document.head.appendChild( document.createElement( "style" ) );
+      for( const r of rules ) document.styleSheets[document.styleSheets.length - 1].insertRule( r, 0 )
+
+      this.animated_children = [];
+      this.document_children = [];
+                                                // Set up how we'll handle key presses for the scene's control panel:
       const callback_behavior = ( callback, event ) => 
            { callback( event );
              event.preventDefault();    // Fire the callback and cancel any default browser shortcut that is an exact match.
              event.stopPropagation();   // Don't bubble the event to parent nodes; let child elements be targetted in isolation.
            }
       this.key_controls = new Keyboard_Manager( document, callback_behavior);     
+    
+      if( !div )
+        return;
+        
+      this.div = div;
+      this.div.className = "documentation_treenode";
+                
+      this.document_region = div.appendChild( document.createElement( "div" ) );    
+      this.document_region.className = "documentation";
+
+      this.show_document();
+    }
+  expand_tree( new_section )
+    { const child = new tiny.Document_Builder( this.div, new_section );
+      this.children.push( child );
+      return child;
     }
   new_line( parent=this.control_panel )       // new_line():  Formats a scene's control panel with a new line break.
     { parent.appendChild( document.createElement( "br" ) ) }
@@ -1100,13 +1126,13 @@ class Scene
       button.addEventListener( "touchend", release, { passive: true } );
       if( !shortcut_combination ) return;
       this.key_controls.add( shortcut_combination, press, release );
-    }                                                          
+    }
                                                 // To use class Scene, override at least one of the below functions,
                                                 // which will be automatically called by other classes:
-  display( context, shared_uniforms )
+  render_animation( context, shared_uniforms )
     {}                            // display(): Called by Webgl_Manager for drawing.
   make_control_panel()
     {}                            // make_control_panel(): Called by Controls_Widget for generating interactive UI.
-  show_document( document_builder, document_element = document_builder.document_region )
+  show_document( document_element = this.document_region )
     {}                            // show_document(): Called by Document_Builder for generating documentation.
 }

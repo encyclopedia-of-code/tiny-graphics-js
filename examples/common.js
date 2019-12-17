@@ -1,7 +1,7 @@
 import {tiny} from '../tiny-graphics.js';
                                                   // Pull these names into this module's scope for convenience:
 const { Vector, Vector3, vec, vec3, vec4, color, Matrix, Mat4, 
-         Light, Shape, Material, Shader, Texture, Scene } = tiny;
+         Light, Shape, Material, Shader, Texture, Component } = tiny;
 
 import {widgets} from '../tiny-graphics-widgets.js';
 Object.assign( tiny, widgets );
@@ -402,7 +402,7 @@ class Minimal_Shape extends tiny.Vertex_Buffer
 
 
 const Minimal_Webgl_Demo = defs.Minimal_Webgl_Demo =
-class Minimal_Webgl_Demo extends Scene
+class Minimal_Webgl_Demo extends Component
 {                                       // **Minimal_Webgl_Demo** is an extremely simple example of a Scene class.
   constructor( webgl_manager, control_panel )
     { super( webgl_manager, control_panel );
@@ -412,7 +412,7 @@ class Minimal_Webgl_Demo extends Scene
       this.shapes = { triangle : new Minimal_Shape() };
       this.shader = new Basic_Shader();
     }
-  display( context, shared_uniforms )
+  render_animation( context, shared_uniforms )
     {                                           // Every frame, simply draw the Triangle at its default location.
       this.shapes.triangle.draw( context, shared_uniforms, Mat4.identity(), new Material( this.shader ) );
     }
@@ -727,7 +727,7 @@ class Fake_Bump_Map extends Textured_Phong
 
 
 const Movement_Controls = defs.Movement_Controls =
-class Movement_Controls extends Scene
+class Movement_Controls extends Component
 {                                       // **Movement_Controls** is a Scene that can be attached to a canvas, like any other
                                         // Scene, but it is a Secondary Scene Component -- meant to stack alongside other 
                                         // scenes.  Rather than drawing anything it embeds both first-person and third-
@@ -769,7 +769,7 @@ class Movement_Controls extends Scene
       canvas  .addEventListener( "mousemove", e => { e.preventDefault(); this.mouse.from_center = mouse_position(e); } );
       canvas  .addEventListener( "mouseout",  e => { if( !this.mouse.anchor ) this.mouse.from_center.scale_by(0) } );
     }
-  show_document( document_builder, document_element = document_builder.document_region ) { }
+  render_documentation( document_builder, document_element = document_builder.document_region ) { }
   make_control_panel()
     {                                 // make_control_panel(): Sets up a panel of interactive HTML elements, including
                                       // buttons with key bindings for affecting this scene, and live info readouts.
@@ -870,7 +870,7 @@ class Movement_Controls extends Scene
       this. matrix().post_multiply( Mat4.translation( 0,0, +25 ) );
       this.inverse().pre_multiply(  Mat4.translation( 0,0, -25 ) );
     }
-  display( context, shared_uniforms, dt = shared_uniforms.animation_delta_time / 1000 )
+  render_animation( context, shared_uniforms, dt = shared_uniforms.animation_delta_time / 1000 )
     {                                                            // The whole process of acting upon controls begins here.
       const m = this.speed_multiplier * this. meters_per_frame,
             r = this.speed_multiplier * this.radians_per_frame;
@@ -898,15 +898,15 @@ class Movement_Controls extends Scene
 
 
 const Shared_Uniforms_Viewer = defs.Shared_Uniforms_Viewer =
-class Shared_Uniforms_Viewer extends Scene
+class Shared_Uniforms_Viewer extends Component
 {                                             // **Shared_Uniforms_Viewer** just toggles, monitors, and reports some
                                               // global values via its control panel.
   make_control_panel()
-    {                         // display() of this scene will replace the following object:
+    {                         // render_animation() of this scene will replace the following object:
       this.shared_uniforms = {};
       this.key_triggered_button( "(Un)pause animation", ["Alt", "a"], () => this.shared_uniforms.animate ^= 1 );    
     }
-  display( context, shared_uniforms )
+  render_animation( context, shared_uniforms )
     { this.shared_uniforms = shared_uniforms;      
     }
 }

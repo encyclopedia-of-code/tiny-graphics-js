@@ -12,43 +12,43 @@ const { Vector, Vector3, vec, vec3, vec4, color, Matrix, Mat4, Light, Shape, Mat
     //                      as common.js into one file for you, such as "dependencies.js")
 
 const Minimal_Webgl_Demo = defs.Minimal_Webgl_Demo;
-import { Axes_Viewer, Axes_Viewer_Test_Scene, Matrix_Game } 
-  from "./examples/axes-viewer.js"
-import { Demonstration }
-  from "./examples/demonstration.js"
-import { Inertia_Demo, Collision_Demo }
-  from "./examples/collisions-demo.js"
-import { Many_Lights_Demo }
-  from "./examples/many-lights-demo.js"
-import { Obj_File_Demo }
-  from "./examples/obj-file-demo.js"
-import { Scene_To_Texture_Demo }
-  from "./examples/scene-to-texture-demo.js"
-import { Parametric_Surfaces }
-  from "./examples/surfaces-demo.js"
-import { Text_Demo }
-  from "./examples/text-demo.js"
-import { Transforms_Sandbox_Base, Transforms_Sandbox }
-  from "./examples/transforms-sandbox.js"
+// import { Axes_Viewer, Axes_Viewer_Test_Scene, Matrix_Game } 
+//   from "./examples/axes-viewer.js"
+// import { Demonstration }
+//   from "./examples/demonstration.js"
+// import { Inertia_Demo, Collision_Demo }
+//   from "./examples/collisions-demo.js"
+// import { Many_Lights_Demo }
+//   from "./examples/many-lights-demo.js"
+// import { Obj_File_Demo }
+//   from "./examples/obj-file-demo.js"
+// import { Scene_To_Texture_Demo }
+//   from "./examples/scene-to-texture-demo.js"
+// import { Parametric_Surfaces }
+//   from "./examples/surfaces-demo.js"
+// import { Text_Demo }
+//   from "./examples/text-demo.js"
+// import { Transforms_Sandbox_Base, Transforms_Sandbox }
+//   from "./examples/transforms-sandbox.js"
 
 
-Object.assign( defs, { Minimal_Webgl_Demo },
-                     { Axes_Viewer, Axes_Viewer_Test_Scene, Matrix_Game },
-                     { Demonstration },
-                     { Inertia_Demo, Collision_Demo },
-                     { Many_Lights_Demo },
-                     { Obj_File_Demo },
-                     { Scene_To_Texture_Demo },
-                     { Parametric_Surfaces },
-                     { Text_Demo },
-                     { Transforms_Sandbox_Base, Transforms_Sandbox } );
+// Object.assign( defs, { Minimal_Webgl_Demo },
+//                      { Axes_Viewer, Axes_Viewer_Test_Scene, Matrix_Game },
+//                      { Demonstration },
+//                      { Inertia_Demo, Collision_Demo },
+//                      { Many_Lights_Demo },
+//                      { Obj_File_Demo },
+//                      { Scene_To_Texture_Demo },
+//                      { Parametric_Surfaces },
+//                      { Text_Demo },
+//                      { Transforms_Sandbox_Base, Transforms_Sandbox } );
 
     // ******************** End extra step
 
 // (Can define Main_Scene's class here)
 
 
-const Main_Scene = Parametric_Surfaces;
+const Main_Scene = Minimal_Webgl_Demo;
 const Additional_Scenes = [];
 
 export { Main_Scene, Additional_Scenes, Default_Layout, Code_Widget, Editor_Widget, Text_Widget, defs }

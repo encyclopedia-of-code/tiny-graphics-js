@@ -4,43 +4,14 @@ import {tiny} from './tiny-graphics.js';
 
 export const widgets = {};
 
-const Document_Builder = widgets.Document_Builder =
-class Document_Builder
-{
-  constructor( div, object_to_be_documented )
-    {
-      const rules = [ 
-        `.documentation_treenode { }`,
-        `.documentation { width:1060px; padding:0 10px; overflow:auto; background:white;
-                                    box-shadow:10px 10px 90px 0 inset LightGray }`
-        ];
-      if( document.styleSheets.length == 0 ) document.head.appendChild( document.createElement( "style" ) );
-      for( const r of rules ) document.styleSheets[document.styleSheets.length - 1].insertRule( r, 0 )
-
-      this.children = [];
-      this.div = div;
-      this.div.className = "documentation_treenode";
-
-      this.document_region = div.appendChild( document.createElement( "div" ) );    
-      this.document_region.className = "documentation";
-
-      object_to_be_documented.show_document( this );
-    }
-  expand_tree( new_section )
-    { const child = new tiny.Document_Builder( this.div, new_section );
-      this.children.push( child );
-      return child;
-    }
-}
-
 
 const Default_Layout = widgets.Default_Layout =
-class Default_Layout extends Document_Builder
+class Default_Layout extends tiny.Component
 {
-  constructor( div, initial_scenes, options = {} )
+  constructor( div, initial_animated_children, options = {} )
   {
                                                       // Populate the usual document region at the top, and fit to a fixed size:
-    super( div, initial_scenes && initial_scenes[0] );
+    super( div );
     div.style.margin = "auto";
     div.style.width = "1080px";
                                                       // The next div down will hold a canvas and/or related interactive areas.
@@ -49,9 +20,6 @@ class Default_Layout extends Document_Builder
     const defaults = { show_canvas: true,  make_controls: true,
                        make_editor: false, make_code_nav: true };
 
-                                     // The primary scene we're documenting can override this document's display options.
-    if( initial_scenes && initial_scenes[0] )
-      Object.assign( options, initial_scenes[0].widget_options );
     Object.assign( this, defaults, options )
     
           // TODO:  One use case may have required canvas to be styled as a rule instead of as an element.  Keep an eye out.
@@ -63,12 +31,8 @@ class Default_Layout extends Document_Builder
                                       // Use tiny-graphics-js to draw graphics to the canvas, using the given scene objects.
     this.webgl_manager = new tiny.Webgl_Manager( canvas );
     
-    if( initial_scenes )
-      this.webgl_manager.scenes.push( ...initial_scenes );
-
-    const primary_scene_constructor = initial_scenes ? initial_scenes[0].constructor : undefined;
-
-    const additional_scenes = initial_scenes ? initial_scenes.slice(1) : [];
+    if( initial_animated_children )
+      this.webgl_manager.scenes.push( ...initial_animated_children );
 
     if( this.make_controls )
     { this.embedded_controls_area = this.program_stuff.appendChild( document.createElement( "div" ) );
@@ -78,13 +42,13 @@ class Default_Layout extends Document_Builder
     if( this.make_code_nav )
     { this.embedded_code_nav_area = this.program_stuff.appendChild( document.createElement( "div" ) );
       this.embedded_code_nav_area.className = "code-widget";
-      this.embedded_code_nav = new Code_Widget( this.embedded_code_nav_area, primary_scene_constructor, 
-                                   additional_scenes, this );
+      this.embedded_code_nav = new Code_Widget( this.embedded_code_nav_area, this.constructor, 
+                                   initial_animated_children, this );
     }
     if( this.make_editor )
     { this.embedded_editor_area = this.program_stuff.appendChild( document.createElement( "div" ) );
       this.embedded_editor_area.className = "editor-widget";
-      this.embedded_editor = new Editor_Widget( this.embedded_editor_area, primary_scene_constructor, this );
+      this.embedded_editor = new Editor_Widget( this.embedded_editor_area, this.constructor, this );
     }
                                      // Start WebGL main loop - render() will re-queue itself for continuous calls.
     this.webgl_manager.render();
@@ -140,7 +104,7 @@ class Controls_Widget
                                                         // Traverse all scenes and their children, recursively:
       const open_list = [ ...this.scenes ];
       while( open_list.length )                       
-      { open_list.push( ...open_list[0].children );
+      { open_list.push( ...open_list[0].animated_children );
         const scene = open_list.shift();
 
         const control_box = this.row.insertCell();
@@ -162,7 +126,7 @@ class Controls_Widget
                             // Traverse all scenes and their children, recursively:
       const open_list = [ ...this.scenes ];
       while( open_list.length )                       
-      { open_list.push( ...open_list[0].children );
+      { open_list.push( ...open_list[0].animated_children );
         const scene = open_list.shift();
         if( !scene.timestamp || scene.timestamp > this.timestamp )        
         { this.make_panels( time );
@@ -420,46 +384,46 @@ class Editor_Widget
 }
 
 
-const Multi_Canvas_Scene = widgets.Multi_Canvas_Scene =
-class Multi_Canvas_Scene extends tiny.Scene
-{                               // **Multi_Canvas_Scene** is a special Scene whose documentation, when printed out by a Document_Builder,
-                                // expands out into several sections -- each potentially drawing their own variation of the Scene or
-                                // of any Scene.  Text and interactive areas can alternate as needed by the author. State of the 
-                                // document is managed in a shared object at the top level, which continuously updates the sections' 
-                                // contents via their display() functions.  Override the indicated functions with useful behavior.
-  constructor( content )
-    { super();
+// const Multi_Canvas_Scene = widgets.Multi_Canvas_Scene =
+// class Multi_Canvas_Scene extends tiny.Scene
+// {                               // **Multi_Canvas_Scene** is a special Scene whose documentation, when printed out by a Document_Builder,
+//                                 // expands out into several sections -- each potentially drawing their own variation of the Scene or
+//                                 // of any Scene.  Text and interactive areas can alternate as needed by the author. State of the 
+//                                 // document is managed in a shared object at the top level, which continuously updates the sections' 
+//                                 // contents via their display() functions.  Override the indicated functions with useful behavior.
+//   constructor( content )
+//     { super();
 
-      this.widget_options = { show_canvas: false };
+//       this.widget_options = { show_canvas: false };
                 
-      this.inner_scenes = [];
+//       this.inner_scenes = [];
                             
-                            // Instance child objects for each section.       
-      for( let i = 0; i < this.num_sections(); i++ )
-        this.inner_scenes.push( new content( i ) );
+//                             // Instance child objects for each section.       
+//       for( let i = 0; i < this.num_sections(); i++ )
+//         this.inner_scenes.push( new content( i ) );
 
-                            // Make a new uniforms holder for all child graphics contexts to share.
-      this.shared_uniforms_of_children = new tiny.Shared_Uniforms();
-      this.initialize_shared_state();
-    }
-  show_document( document_builder )
-    {
-      for( let section of this.inner_scenes )
-      {
-        section.document_builder = document_builder.expand_tree( section );
+//                             // Make a new uniforms holder for all child graphics contexts to share.
+//       this.shared_uniforms_of_children = new tiny.Shared_Uniforms();
+//       this.initialize_shared_state();
+//     }
+//   show_document( document_builder )
+//     {
+//       for( let section of this.inner_scenes )
+//       {
+//         section.document_builder = document_builder.expand_tree( section );
 
-                            // Disseminate our one shared_uniforms.
-        section.webgl_manager.shared_uniforms = this.shared_uniforms_of_children;
-      }
-    }
+//                             // Disseminate our one shared_uniforms.
+//         section.webgl_manager.shared_uniforms = this.shared_uniforms_of_children;
+//       }
+//     }
 
-      // Override the following as needed:
-  num_sections() { return 0 }
-  initialize_shared_state() { }
-  update_shared_state( context )
-    {
-          // Use the provided context to tick shared_uniforms_of_children.animation_time only once per frame.
-      context.shared_uniforms = this.shared_uniforms_of_children;
-      return this.shared_uniforms_of_children;
-    }
-}
+//       // Override the following as needed:
+//   num_sections() { return 0 }
+//   initialize_shared_state() { }
+//   update_shared_state( context )
+//     {
+//           // Use the provided context to tick shared_uniforms_of_children.animation_time only once per frame.
+//       context.shared_uniforms = this.shared_uniforms_of_children;
+//       return this.shared_uniforms_of_children;
+//     }
+// }
