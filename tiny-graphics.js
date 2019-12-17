@@ -1037,7 +1037,7 @@ class Webgl_Manager
       const gl = this.context;
       gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);        // Clear the canvas's pixels and z-buffer.
 
-      const open_list = [ ...this.scenes ];
+      const open_list = [ this.component ];
       while( open_list.length )                           // Traverse all Scenes and their children, recursively.
       { open_list.push( ...open_list[0].animated_children );
                                                                 // Call display() to draw each registered animation:

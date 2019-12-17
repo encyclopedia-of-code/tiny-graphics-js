@@ -30,7 +30,7 @@ class Default_Layout
                                       // Use tiny-graphics-js to draw graphics to the canvas, using the given scene objects.
     component.webgl_manager = new tiny.Webgl_Manager( canvas );
     
-    component.webgl_manager.scenes.push( component, ...component.animated_children );
+    component.webgl_manager.component = component;
 
     if( overridden_options.make_controls )
     { component.embedded_controls_area = component.program_stuff.appendChild( document.createElement( "div" ) );
@@ -91,7 +91,7 @@ class Controls_Widget
       this.row = table.insertRow( 0 );
 
       this.panels = [];
-      this.scenes = component.webgl_manager.scenes;
+      this.component = component;
 
       this.render();
     }
@@ -99,7 +99,7 @@ class Controls_Widget
     { this.timestamp = time;
       this.row.innerHTML = "";
                                                         // Traverse all scenes and their children, recursively:
-      const open_list = [ ...this.scenes ];
+      const open_list = [ this.component ];
       while( open_list.length )                       
       { open_list.push( ...open_list[0].animated_children );
         const scene = open_list.shift();
@@ -121,7 +121,7 @@ class Controls_Widget
   render( time = 0 )
     {                       // Check to see if we need to re-create the panels due to any scene being new.                      
                             // Traverse all scenes and their children, recursively:
-      const open_list = [ ...this.scenes ];
+      const open_list = [ this.component ];
       while( open_list.length )                       
       { open_list.push( ...open_list[0].animated_children );
         const scene = open_list.shift();
