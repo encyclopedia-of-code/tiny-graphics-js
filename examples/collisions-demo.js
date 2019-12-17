@@ -1,7 +1,7 @@
 import {tiny, defs} from './common.js';
 
                                                   // Pull these names into this module's scope for convenience:
-const { vec3, unsafe3, vec4, color, Mat4, Light, Shape, Material, Shader, Texture, Scene } = tiny;
+const { vec3, unsafe3, vec4, color, Mat4, Light, Shape, Material, Shader, Texture, Component } = tiny;
 
 export
 const Body = defs.Body =
@@ -81,9 +81,9 @@ class Body
 
 export
 const Simulation = defs.Simulation =
-class Simulation extends Scene
+class Simulation extends Component
 {                                         // **Simulation** manages the stepping of simulation time.  Subclass it when making
-                                          // a Scene that is a physics demo.  This technique is careful to totally decouple
+                                          // a Component that is a physics demo.  This technique is careful to totally decouple
                                           // the simulation from the frame rate (see below).
   constructor()
     { super();
@@ -125,7 +125,7 @@ class Simulation extends Scene
       this.live_string( box => { box.textContent = "Fixed simulation time step size: "  + this.dt     } ); this.new_line();
       this.live_string( box => { box.textContent = this.steps_taken + " timesteps were taken so far." } );
     }
-  display( context, shared_uniforms )
+  render_animation( context, shared_uniforms )
     {                                     // display(): advance the time and state of our whole simulation.
       if( shared_uniforms.animate ) 
         this.simulate( shared_uniforms.animation_delta_time );
@@ -199,13 +199,13 @@ export class Inertia_Demo extends Simulation
                                                       // Delete bodies that stop or stray too far away:
       this.bodies = this.bodies.filter( b => b.center.norm() < 50 && b.linear_velocity.norm() > 2 );
     }
-  display( context, shared_uniforms )
+  render_animation( context, shared_uniforms )
     {                                 // display(): Draw everything else in the scene besides the moving bodies.
-      super.display( context, shared_uniforms );
+      super.render_animation( context, shared_uniforms );
 
       if( !context.scratchpad.controls ) 
-        { this.children.push( context.scratchpad.controls = new defs.Movement_Controls() );
-          this.children.push( new defs.Shared_Uniforms_Viewer() );
+        { this.animated_children.push( context.scratchpad.controls = new defs.Movement_Controls() );
+          this.animated_children.push( new defs.Shared_Uniforms_Viewer() );
           shared_uniforms.set_camera( Mat4.translation( 0,0,-50 ) );    // Locate the camera here (inverted matrix).
         }
       shared_uniforms.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 500 );
@@ -215,7 +215,7 @@ export class Inertia_Demo extends Simulation
                                        .times( Mat4.rotation( Math.PI/2,   1,0,0 ) ).times( Mat4.scale( 50,50,1 ) ),
                                this.material.override( this.data.textures.earth ) );
     }
-  show_document( document_builder, document_element = document_builder.document_region )
+  render_documentation( document_builder, document_element = document_builder.document_region )
     { document_element.innerHTML += `<p>This demo lets random initial momentums carry bodies until they fall and bounce.  It shows a good way to do incremental movements, which are crucial for making objects look like they're moving on their own instead of following a pre-determined path.  Animated objects look more real when they have inertia and obey physical laws, instead of being driven by simple sinusoids or periodic functions.
                                      </p><p>For each moving object, we need to store a model matrix somewhere that is permanent (such as inside of our class) so we can keep consulting it every frame.  As an example, for a bowling simulation, the ball and each pin would go into an array (including 11 total matrices).  We give the model transform matrix a \"velocity\" and track it over time, which is split up into linear and angular components.  Here the angular velocity is expressed as an Euler angle-axis pair so that we can scale the angular speed how we want it.
                                      </p><p>The forward Euler method is used to advance the linear and angular velocities of each shape one time-step.  The velocities are not subject to any forces here, but just a downward acceleration.  Velocities are also constrained to not take any objects under the ground plane.
@@ -291,12 +291,12 @@ export class Collision_Demo extends Simulation
           }
         }
     }
-  display( context, shared_uniforms )           
+  render_animation( context, shared_uniforms )           
     {                                 // display(): Draw everything else in the scene besides the moving bodies.
-      super.display( context, shared_uniforms );
+      super.render_animation( context, shared_uniforms );
       if( !context.scratchpad.controls ) 
-        { this.children.push( context.scratchpad.controls = new defs.Movement_Controls() );
-          this.children.push( new defs.Shared_Uniforms_Viewer() );
+        { this.animated_children.push( context.scratchpad.controls = new defs.Movement_Controls() );
+          this.animated_children.push( new defs.Shared_Uniforms_Viewer() );
           shared_uniforms.set_camera( Mat4.translation( 0,0,-50 ) );    // Locate the camera here (inverted matrix).
         }
       shared_uniforms.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 500 );
@@ -309,7 +309,7 @@ export class Collision_Demo extends Simulation
       for( let b of this.bodies )
         points.draw( context, shared_uniforms, b.drawn_location.times( Mat4.scale( ...size ) ), this.bright, "LINE_STRIP" );
     }
-  show_document( document_builder, document_element = document_builder.document_region )
+  render_documentation( document_builder, document_element = document_builder.document_region )
     { document_element.innerHTML += `<p>This demo detects when some flying objects collide with one another, coloring them red when they do.  For a simpler demo that shows physics-based movement without objects that hit one another, see the demo called Inertia_Demo.
                                      </p><p>Detecting intersections between pairs of stretched out, rotated volumes can be difficult, but is made easier by being in the right coordinate space.  The collision algorithm treats every shape like an ellipsoid roughly conforming to the drawn shape, and with the same transformation matrix applied.  Here these collision volumes are drawn in translucent purple alongside the real shape so that you can see them.
                                      </p><p>This particular collision method is extremely short to code, as you can observe in the method \"check_if_colliding\" in the class called Body below.  It has problems, though.  Making every collision body a stretched sphere is a hack and doesn't handle the nuances of the actual shape being drawn, such as a cube's corners that stick out.  Looping through a list of discrete sphere points to see if the volumes intersect is *really* a hack (there are perfectly good analytic expressions that can test if two ellipsoids intersect without discretizing them into points, although they involve solving a high order polynomial).   On the other hand, for non-convex shapes a real collision method cannot be exact either, and is usually going to have to loop through a list of discrete tetrahedrons defining the shape anyway.
