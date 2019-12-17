@@ -1,10 +1,10 @@
 import {tiny, defs} from './common.js';
                                                   // Pull these names into this module's scope for convenience:
-const { vec3, vec4, color, Mat4, Light, Shape, Material, Shader, Texture, Scene } = tiny;
+const { vec3, vec4, color, Mat4, Light, Shape, Material, Shader, Texture, Component } = tiny;
 
 export
 const Axes_Viewer = defs.Axes_Viewer =
-class Axes_Viewer extends Scene
+class Axes_Viewer extends Component
 {                                      // **Axes_Viewer** is a helper scene (a secondary Scene Component) for helping you 
                                        // visualize the coordinate bases that are used in your real scene.  Your scene 
                                        // can feed this object a list of bases to draw as axis arrows.  Pressing the 
@@ -52,7 +52,7 @@ class Axes_Viewer extends Scene
     }
   increase() { this.selected_basis_id = Math.min( this.selected_basis_id + 1, this.groups.length-1 ); }
   decrease() { this.selected_basis_id = Math.max( this.selected_basis_id - 1, 0 ); }   // Don't allow selection of negative IDs.
-  display( context, shared_uniforms )
+  render_animation( context, shared_uniforms )
     {                                                 // display(): Draw the selected group of axes arrows.
       if( this.groups[ this.selected_basis_id ] )
         for( let a of this.groups[ this.selected_basis_id ] )
@@ -61,13 +61,13 @@ class Axes_Viewer extends Scene
 }
 
 
-export class Axes_Viewer_Test_Scene extends Scene
+export class Axes_Viewer_Test_Scene extends Component
 {                             // **Axes_Viewer_Test_Scene** is an example of how your scene should properly manaage 
                               // an Axes_Viewer child scene, so that it is able to help you draw all the coordinate
                               // bases in your scene's hierarchy at the correct levels.
   constructor()
     { super();
-      this.children.push( this.axes_viewer = new Axes_Viewer() );
+      this.animated_children.push( this.axes_viewer = new Axes_Viewer() );
                                                                   // Scene defaults:
       this.shapes = { box: new defs.Cube() };
       const phong = new defs.Phong_Shader();
@@ -75,12 +75,12 @@ export class Axes_Viewer_Test_Scene extends Scene
     }
   make_control_panel()
     { this.control_panel.innerHTML += "(Substitute your own scene here)" }
-  display( context, shared_uniforms )
+  render_animation( context, shared_uniforms )
     {                                   // display():  *********** See instructions below ***********
       shared_uniforms.lights = [ new Light( vec4( 0,0,1,0 ), color( 0,1,1,1 ), 100000 ) ];
 
       if( !context.scratchpad.controls ) 
-        { this.children.push( context.scratchpad.controls = new defs.Movement_Controls() ); 
+        { this.animated_children.push( context.scratchpad.controls = new defs.Movement_Controls() ); 
         
           shared_uniforms.set_camera( Mat4.translation( -1,-1,-20 ) );    // Locate the camera here (inverted matrix).
         }
@@ -134,7 +134,7 @@ export class Axes_Viewer_Test_Scene extends Scene
 
 
 
-export class Matrix_Game_1 extends Scene
+export class Matrix_Game_1 extends Component
 { constructor()
     { super();
       this.shapes = { arrows : new Axis_Arrows() };
@@ -321,7 +321,7 @@ export class Matrix_Game_1 extends Scene
 
 
 
-export class Matrix_Game extends Scene
+export class Matrix_Game extends Component
 { constructor( scene_id, material )
     { super();
 

@@ -12,8 +12,8 @@ const { Vector, Vector3, vec, vec3, vec4, color, Matrix, Mat4, Light, Shape, Mat
     //                      as common.js into one file for you, such as "dependencies.js")
 
 const Minimal_Webgl_Demo = defs.Minimal_Webgl_Demo;
-// import { Axes_Viewer, Axes_Viewer_Test_Scene, Matrix_Game } 
-//   from "./examples/axes-viewer.js"
+import { Axes_Viewer, Axes_Viewer_Test_Scene, Matrix_Game } 
+  from "./examples/axes-viewer.js"
 // import { Demonstration }
 //   from "./examples/demonstration.js"
 // import { Inertia_Demo, Collision_Demo }
@@ -32,8 +32,8 @@ const Minimal_Webgl_Demo = defs.Minimal_Webgl_Demo;
 //   from "./examples/transforms-sandbox.js"
 
 
-// Object.assign( defs, { Minimal_Webgl_Demo },
-//                      { Axes_Viewer, Axes_Viewer_Test_Scene, Matrix_Game },
+Object.assign( defs, { Minimal_Webgl_Demo },
+                     { Axes_Viewer, Axes_Viewer_Test_Scene, Matrix_Game },
 //                      { Demonstration },
 //                      { Inertia_Demo, Collision_Demo },
 //                      { Many_Lights_Demo },
@@ -41,14 +41,15 @@ const Minimal_Webgl_Demo = defs.Minimal_Webgl_Demo;
 //                      { Scene_To_Texture_Demo },
 //                      { Parametric_Surfaces },
 //                      { Text_Demo },
-//                      { Transforms_Sandbox_Base, Transforms_Sandbox } );
+//                      { Transforms_Sandbox_Base, Transforms_Sandbox }
+             );
 
     // ******************** End extra step
 
-// (Can define Main_Scene's class here)
+// (Can define main_scene's class here)
 
 
-const Main_Scene = Minimal_Webgl_Demo;
+const main_scene = Axes_Viewer_Test_Scene;
 const additional_scenes = [];
 
-export { Main_Scene, additional_scenes, Default_Layout, Code_Widget, Editor_Widget, Text_Widget, defs }
+export { main_scene, additional_scenes, Default_Layout, Code_Widget, Editor_Widget, Text_Widget, defs }

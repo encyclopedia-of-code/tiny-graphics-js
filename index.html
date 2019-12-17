@@ -8,9 +8,9 @@
 <script type=module >      // ********************* THE ENTRY POINT OF YOUR WHOLE PROGRAM STARTS HERE ********************* 
                            // Indicate which element on the page you want the Canvas_Widget to replace with a 3D WebGL area:
   const element_to_replace = document.querySelector( "#main-section" );
-  import { Main_Scene, additional_scenes, Default_Layout } from './main-scene.js';  // Import the file that defines a scene.
-  const root = new Main_Scene();
-  root.animated_children = additional_scenes.map( scene => new scene() );    // This line creates your scene.
+  import { main_scene, additional_scenes, Default_Layout } from './main-scene.js';  // Import the file that defines a scene.
+  const root = new main_scene();
+  root.animated_children.push( ...additional_scenes.map( scene => new scene() ) );    // This line creates your scene.
   new Default_Layout( root, element_to_replace );
 </script>
 
