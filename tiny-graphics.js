@@ -1070,6 +1070,7 @@ class Component
 
       this.animated_children = [];
       this.document_children = [];
+      this.state = {};
                                                 // Set up how we'll handle key presses for the scene's control panel:
       const callback_behavior = ( callback, event ) => 
            { callback( event );
@@ -1080,14 +1081,14 @@ class Component
     
       if( !div )
         return;
-        
+
       this.div = div;
       this.div.className = "documentation_treenode";
                 
       this.document_region = div.appendChild( document.createElement( "div" ) );    
       this.document_region.className = "documentation";
 
-      this.show_document();
+      this.render_documentation();
     }
   expand_tree( new_section )
     { const child = new tiny.Document_Builder( this.div, new_section );
@@ -1133,6 +1134,6 @@ class Component
     {}                            // display(): Called by Webgl_Manager for drawing.
   make_control_panel()
     {}                            // make_control_panel(): Called by Controls_Widget for generating interactive UI.
-  show_document( document_element = this.document_region )
+  render_documentation( document_element = this.document_region )
     {}                            // show_document(): Called by Document_Builder for generating documentation.
 }

@@ -49,6 +49,6 @@ const Minimal_Webgl_Demo = defs.Minimal_Webgl_Demo;
 
 
 const Main_Scene = Minimal_Webgl_Demo;
-const Additional_Scenes = [];
+const additional_scenes = [];
 
-export { Main_Scene, Additional_Scenes, Default_Layout, Code_Widget, Editor_Widget, Text_Widget, defs }
+export { Main_Scene, additional_scenes, Default_Layout, Code_Widget, Editor_Widget, Text_Widget, defs }
