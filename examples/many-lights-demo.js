@@ -1,16 +1,16 @@
 import {tiny, defs} from './common.js';
                                             // Pull these names into this module's scope for convenience:
-const { vec3, vec4, color, Mat4, Light, Shape, Material, Shader, Texture, Scene } = tiny;
+const { vec3, vec4, color, Mat4, Light, Shape, Material, Shader, Texture, Component } = tiny;
 
-export class Many_Lights_Demo extends Scene
+export class Many_Lights_Demo extends Component
 {                             // **Many_Lights_Demo** demonstrates how to make the illusion that 
                               // there are many lights, despite only passing two to the shader.  
                               // We re-locate the lights in between individual shape draws.
                               // Doing this trick performs much faster than looping through a
                               // long list of lights within the fragment shader, none of which
                               // need to affect every single shape in the scene.
-  constructor()
-    { super();
+  constructor( div )
+    { super( div );
                               // Define how many boxes (buildings) to draw:
       Object.assign( this, { rows: 20, columns: 35 } );
 
@@ -36,7 +36,7 @@ export class Many_Lights_Demo extends Scene
       for( let r = 0; r < this.rows;    r++ )
         this.column_lights [ ~~( r) ] = vec3( r, -Math.random(), -2*Math.random()*this.columns  );
     }
-  display( context, shared_uniforms )
+  render_animation( context, shared_uniforms )
     {                                         // display():  Draw each frame to animate the scene.
       shared_uniforms.set_camera( Mat4.look_at( vec3( this.rows/2,5,5 ), vec3( this.rows/2,0,-4 ), vec3( 0,1,0 ) ) );
       shared_uniforms.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 500 );
@@ -67,8 +67,8 @@ export class Many_Lights_Demo extends Scene
           if( a[i][2] > 1 ) a[i][2] = -this.columns + .001;
         } );
     }                                                        
-  show_document( document_builder, document_element = document_builder.document_region )
-    { document_element.innerHTML += 
+  render_documentation()
+    { this.document_region.innerHTML += 
         `<p>This demo shows how to make the illusion that there are many lights, despite the shader only being aware of two.
          The shader used here (class Phong_Shader) is told to take only two lights into account when coloring in a shape. 
          This has the benefit of fewer lights that have to be looped through in the fragment shader, which has to run 

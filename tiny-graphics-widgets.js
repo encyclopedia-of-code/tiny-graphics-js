@@ -19,7 +19,7 @@ class Default_Layout
     const defaults = { show_canvas: true,  make_controls: true,
                        make_editor: false, make_code_nav: true };
 
-    const overridden_options = Object.assign( defaults, component.options, options );
+    const overridden_options = Object.assign( defaults, component.widget_options, options );
     
           // TODO:  One use case may have required canvas to be styled as a rule instead of as an element.  Keep an eye out.
     const canvas = component.program_stuff.appendChild( document.createElement( "canvas" ) );

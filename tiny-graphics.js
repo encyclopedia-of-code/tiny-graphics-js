@@ -1134,6 +1134,6 @@ class Component
     {}                            // display(): Called by Webgl_Manager for drawing.
   make_control_panel()
     {}                            // make_control_panel(): Called by Controls_Widget for generating interactive UI.
-  render_documentation( document_element = this.document_region )
+  render_documentation()
     {}                            // show_document(): Called by Document_Builder for generating documentation.
 }

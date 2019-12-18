@@ -1,6 +1,6 @@
 import {tiny, defs} from './common.js';
                                                   // Pull these names into this module's scope for convenience:
-const { vec3, vec4, vec, color, Mat4, Light, Shape, Material, Shader, Texture, Scene } = tiny;
+const { vec3, vec4, vec, color, Mat4, Light, Shape, Material, Shader, Texture, Component } = tiny;
 
 export
 const Shape_From_File = defs.Shape_From_File =
@@ -96,7 +96,7 @@ class Shape_From_File extends Shape
     }
 }
 
-export class Obj_File_Demo extends Scene     
+export class Obj_File_Demo extends Component     
   {                           // **Obj_File_Demo** show how to load a single 3D model from an OBJ file.
                               // Detailed model files can be used in place of simpler primitive-based
                               // shapes to add complexity to a scene.  Simpler primitives in your scene
@@ -104,8 +104,8 @@ export class Obj_File_Demo extends Scene
                               // that fits well.  This demo shows the teapot model twice, with one 
                               // teapot showing off the Fake_Bump_Map effect while the other has a 
                               // regular texture and Phong lighting.             
-    constructor()                               
-      { super();
+    constructor( div )                               
+      { super( div );
                                       // Load the model file:
         this.shapes = { "teapot": new Shape_From_File( "assets/teapot.obj" ) };
 
@@ -118,7 +118,7 @@ export class Obj_File_Demo extends Scene
         this.bumps = new Material( new defs.Fake_Bump_Map( 1 ), { color: color( .5,.5,.5,1 ), 
           ambient: .3, diffusivity: .5, specularity: .5, texture: new Texture( "assets/stars.png" ) });
       }
-    display( context, shared_uniforms )
+    render_animation( context, shared_uniforms )
       { const t = shared_uniforms.animation_time;
 
         shared_uniforms.set_camera( Mat4.translation( 0,0,-5 ) );    // Locate the camera here (inverted matrix).                  
@@ -137,8 +137,8 @@ export class Obj_File_Demo extends Scene
           this.shapes.teapot.draw( context, shared_uniforms, model_transform, i == 1 ? this.stars : this.bumps );
         }
       }
-  show_document( document_builder, document_element = document_builder.document_region )
-    { document_element.innerHTML += 
+  render_documentation()
+    { this.document_region.innerHTML += 
         `<p>This demo loads an external 3D model file of a teapot.  It uses a condensed version of the "webgl-obj-loader.js"
          open source library, though this version is not guaranteed to be complete and may not handle some .OBJ files.  It is
          contained in the class "Shape_From_File".

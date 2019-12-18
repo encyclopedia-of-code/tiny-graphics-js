@@ -9,7 +9,7 @@
                            // Indicate which element on the page you want the Canvas_Widget to replace with a 3D WebGL area:
   const element_to_replace = document.querySelector( "#main-section" );
   import { main_scene, additional_scenes, Default_Layout } from './main-scene.js';  // Import the file that defines a scene.
-  const root = new main_scene();
+  const root = new main_scene( element_to_replace );
   root.animated_children.push( ...additional_scenes.map( scene => new scene() ) );    // This line creates your scene.
   new Default_Layout( root, element_to_replace );
 </script>
