@@ -1059,8 +1059,8 @@ class Component
                             // can either contribute more drawn shapes or provide some additional tool to the end 
                             // user via drawing additional control panel buttons or live text readouts.
   constructor( div )
-    { 
-      const rules = [ 
+    {
+      const rules = [
         `.documentation_treenode { }`,
         `.documentation { width:1060px; padding:0 10px; overflow:auto; background:white;
                                     box-shadow:10px 10px 90px 0 inset LightGray }`
@@ -1068,8 +1068,8 @@ class Component
       if( document.styleSheets.length == 0 ) document.head.appendChild( document.createElement( "style" ) );
       for( const r of rules ) document.styleSheets[document.styleSheets.length - 1].insertRule( r, 0 )
 
-      this.state = { 
-                      animated_children: [], 
+      this.state = {
+                      animated_children: [],
                       document_children: [] 
                    };
                                                 // Set up how we'll handle key presses for the scene's control panel:
@@ -1090,11 +1090,6 @@ class Component
       this.document_region.className = "documentation";
 
       this.render_documentation();
-    }
-  expand_tree( new_section )
-    { const child = new tiny.Document_Builder( this.div, new_section );
-      this.children.push( child );
-      return child;
     }
   new_line( parent=this.control_panel )       // new_line():  Formats a scene's control panel with a new line break.
     { parent.appendChild( document.createElement( "br" ) ) }
@@ -1133,8 +1128,8 @@ class Component
                                                 // which will be automatically called by other classes:
   render_animation( context, shared_uniforms )
     {}                            // display(): Called by Webgl_Manager for drawing.
-  make_control_panel()
-    {}                            // make_control_panel(): Called by Controls_Widget for generating interactive UI.
   render_documentation()
     {}                            // show_document(): Called by Document_Builder for generating documentation.
+  make_control_panel()
+    {}                            // make_control_panel(): Called by Controls_Widget for generating interactive UI.
 }

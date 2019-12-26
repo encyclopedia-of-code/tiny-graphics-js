@@ -14,7 +14,7 @@ const { Triangle, Square, Tetrahedron, Windmill, Cube, Subdivision_Sphere } = de
 //   constructor( content )
 //     { super();
 
-//       this.widget_options = { show_canvas: false };
+//*//       this.widget_options = { show_canvas: false };
                 
 //       this.inner_scenes = [];
                             
@@ -23,7 +23,7 @@ const { Triangle, Square, Tetrahedron, Windmill, Cube, Subdivision_Sphere } = de
 //         this.inner_scenes.push( new content( i ) );
 
 //                             // Make a new uniforms holder for all child graphics contexts to share.
-//       this.shared_uniforms_of_children = new tiny.Shared_Uniforms();
+//*//       this.shared_uniforms_of_children = new tiny.Shared_Uniforms();
 //       this.initialize_shared_state();
 //     }
 //   show_document( document_builder )
@@ -33,7 +33,7 @@ const { Triangle, Square, Tetrahedron, Windmill, Cube, Subdivision_Sphere } = de
 //         section.document_builder = document_builder.expand_tree( section );
 
 //                             // Disseminate our one shared_uniforms.
-//         section.webgl_manager.shared_uniforms = this.shared_uniforms_of_children;
+//*//         section.webgl_manager.shared_uniforms = this.shared_uniforms_of_children;
 //       }
 //     }
 
@@ -43,14 +43,19 @@ const { Triangle, Square, Tetrahedron, Windmill, Cube, Subdivision_Sphere } = de
 //   update_shared_state( context )
 //     {
 //           // Use the provided context to tick shared_uniforms_of_children.animation_time only once per frame.
-//       context.shared_uniforms = this.shared_uniforms_of_children;
+//*//       context.shared_uniforms = this.shared_uniforms_of_children;
 //       return this.shared_uniforms_of_children;
+//     }
+//   expand_tree( new_section )
+//     { const child = new tiny.Document_Builder( this.div, new_section );
+//       this.children.push( child );
+//       return child;
 //     }
 // }
 
 export class Parametric_Surfaces extends tiny.Multi_Canvas_Scene
 { constructor()
-    { super( Parametric_Surfaces_Section ) 
+    { super( Parametric_Surfaces_Section )
     }
   initialize_shared_state()
     {
