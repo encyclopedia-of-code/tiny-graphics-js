@@ -202,10 +202,11 @@ export class Inertia_Demo extends Simulation
   render_animation( context, shared_uniforms )
     {                                 // display(): Draw everything else in the scene besides the moving bodies.
       super.render_animation( context, shared_uniforms );
-
+      
       if( !context.scratchpad.controls ) 
-        { this.animated_children.push( context.scratchpad.controls = new defs.Movement_Controls() );
-          this.animated_children.push( new defs.Shared_Uniforms_Viewer() );
+        { const { animated_children } = this.state;
+          animated_children.push( context.scratchpad.controls = new defs.Movement_Controls() );
+          animated_children.push( new defs.Shared_Uniforms_Viewer() );
           shared_uniforms.set_camera( Mat4.translation( 0,0,-50 ) );    // Locate the camera here (inverted matrix).
         }
       shared_uniforms.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 500 );
@@ -295,8 +296,9 @@ export class Collision_Demo extends Simulation
     {                                 // display(): Draw everything else in the scene besides the moving bodies.
       super.render_animation( context, shared_uniforms );
       if( !context.scratchpad.controls ) 
-        { this.animated_children.push( context.scratchpad.controls = new defs.Movement_Controls() );
-          this.animated_children.push( new defs.Shared_Uniforms_Viewer() );
+        { const { animated_children } = this.state;
+          animated_children.push( context.scratchpad.controls = new defs.Movement_Controls() );
+          animated_children.push( new defs.Shared_Uniforms_Viewer() );
           shared_uniforms.set_camera( Mat4.translation( 0,0,-50 ) );    // Locate the camera here (inverted matrix).
         }
       shared_uniforms.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 500 );

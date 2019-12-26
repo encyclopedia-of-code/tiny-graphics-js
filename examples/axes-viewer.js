@@ -67,7 +67,7 @@ export class Axes_Viewer_Test_Scene extends Component
                               // bases in your scene's hierarchy at the correct levels.
   constructor( div )
     { super( div );
-      this.animated_children.push( this.axes_viewer = new Axes_Viewer() );
+      this.state.animated_children.push( this.axes_viewer = new Axes_Viewer() );
                                                                   // Scene defaults:
       this.shapes = { box: new defs.Cube() };
       const phong = new defs.Phong_Shader();
@@ -80,7 +80,7 @@ export class Axes_Viewer_Test_Scene extends Component
       shared_uniforms.lights = [ new Light( vec4( 0,0,1,0 ), color( 0,1,1,1 ), 100000 ) ];
 
       if( !context.scratchpad.controls ) 
-        { this.animated_children.push( context.scratchpad.controls = new defs.Movement_Controls() ); 
+        { this.state.animated_children.push( context.scratchpad.controls = new defs.Movement_Controls() ); 
         
           shared_uniforms.set_camera( Mat4.translation( -1,-1,-20 ) );    // Locate the camera here (inverted matrix).
         }

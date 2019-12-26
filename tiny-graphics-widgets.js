@@ -101,7 +101,7 @@ class Controls_Widget
                                                         // Traverse all scenes and their children, recursively:
       const open_list = [ this.component ];
       while( open_list.length )                       
-      { open_list.push( ...open_list[0].animated_children );
+      { open_list.push( ...open_list[0].state.animated_children );
         const scene = open_list.shift();
 
         const control_box = this.row.insertCell();
@@ -123,7 +123,7 @@ class Controls_Widget
                             // Traverse all scenes and their children, recursively:
       const open_list = [ this.component ];
       while( open_list.length )                       
-      { open_list.push( ...open_list[0].animated_children );
+      { open_list.push( ...open_list[0].state.animated_children );
         const scene = open_list.shift();
         if( !scene.timestamp || scene.timestamp > this.timestamp )        
         { this.make_panels( time );
