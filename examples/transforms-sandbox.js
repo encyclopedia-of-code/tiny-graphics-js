@@ -1,11 +1,11 @@
 import {tiny, defs} from './common.js';
 
                                                   // Pull these names into this module's scope for convenience:
-const { vec3, vec4, color, Mat4, Light, Shape, Material, Shader, Texture, Scene } = tiny;
+const { vec3, vec4, color, Mat4, Light, Shape, Material, Shader, Texture, Component } = tiny;
 
 export 
 const Transforms_Sandbox_Base = defs.Transforms_Sandbox_Base =
-class Transforms_Sandbox_Base extends Scene
+class Transforms_Sandbox_Base extends Component
 {                                          // **Transforms_Sandbox_Base** is a Scene that can be added to any display canvas.
                                            // This particular scene is broken up into two pieces for easier understanding.
                                            // The piece here is the base class, which sets up the machinery to draw a simple 
@@ -47,7 +47,7 @@ class Transforms_Sandbox_Base extends Scene
       this.new_line();
       this.key_triggered_button( "Swarm mode", [ "m" ], function() { this.swarm ^= 1; } );
     }
-  display( context, shared_uniforms )
+  render_animation( context, shared_uniforms )
     {                                                // display():  Called once per frame of animation.  We'll isolate out
                                                      // the code that actually draws things into Transforms_Sandbox, a
                                                      // subclass of this Scene.  Here, the base class's display only does
@@ -55,7 +55,7 @@ class Transforms_Sandbox_Base extends Scene
      
                            // Setup -- This part sets up the scene's overall camera matrix, projection matrix, and lights:
       if( !context.scratchpad.controls )
-        { this.children.push( context.scratchpad.controls = new defs.Movement_Controls() ); 
+        { this.state.animated_children.push( context.scratchpad.controls = new defs.Movement_Controls() ); 
 
                     // Define the global camera and projection matrices, which are stored in shared_uniforms.  The camera
                     // matrix follows the usual format for transforms, but with opposite values (cameras exist as 
@@ -86,7 +86,7 @@ export class Transforms_Sandbox extends Transforms_Sandbox_Base
                                                      // the shapes.  We isolate that code so it can be experimented with on its own.
                                                      // This gives you a very small code sandbox for editing a simple scene, and for
                                                      // experimenting with matrix transformations.
-  display( context, shared_uniforms )
+  render_animation( context, shared_uniforms )
     {                                                // display():  Called once per frame of animation.  For each shape that you want to
                                                      // appear onscreen, place a .draw() call for it inside.  Each time, pass in a
                                                      // different matrix value to control where the shape appears.
@@ -102,7 +102,7 @@ export class Transforms_Sandbox extends Transforms_Sandbox_Base
                                                      // context:  Wraps the WebGL rendering context shown onscreen.  Pass to draw().                                                       
 
                                                 // Call the setup code that we left inside the base class:
-      super.display( context, shared_uniforms );
+      super.render_animation( context, shared_uniforms );
 
       /**********************************
       Start coding down here!!!!

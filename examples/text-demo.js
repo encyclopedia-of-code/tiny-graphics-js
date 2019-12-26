@@ -1,6 +1,6 @@
 import {tiny, defs} from './common.js';
                                                   // Pull these names into this module's scope for convenience:
-const { Vector, vec3, vec4, color, Mat4, Light, Shape, Material, Shader, Texture, Scene } = tiny;
+const { Vector, vec3, vec4, color, Mat4, Light, Shape, Material, Shader, Texture, Component } = tiny;
 
 export
 const Text_Line = defs.Text_Line =
@@ -51,7 +51,7 @@ class Text_Line extends Shape
 }
 
 
-export class Text_Demo extends Scene
+export class Text_Demo extends Component
 {             // **Text_Demo** is a scene with a cube, for demonstrating the Text_Line utility Shape.
   constructor()
     { super()
@@ -68,9 +68,9 @@ export class Text_Demo extends Scene
       this.text_image = new Material( texture, { ambient: 1, diffusivity: 0, specularity: 0,
                                                  texture: new Texture( "assets/text.png" ) });
     }
-  display( context, shared_uniforms )
+  render_animation( context, shared_uniforms )
     { shared_uniforms.lights = [ new Light( vec4( 3,2,1,0 ),   color( 1,1,1,1 ),  1000000 ),
-                               new Light( vec4( 3,10,10,1 ), color( 1,.7,.7,1 ), 100000 ) ];
+                                 new Light( vec4( 3,10,10,1 ), color( 1,.7,.7,1 ), 100000 ) ];
       shared_uniforms.set_camera( Mat4.look_at( ...Vector.cast( [ 0,0,4 ], [0,0,0], [0,1,0] ) ) );
       shared_uniforms.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 500 );
       

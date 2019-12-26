@@ -22,26 +22,27 @@ import { Many_Lights_Demo }
   from "./examples/many-lights-demo.js"
 import { Obj_File_Demo }
   from "./examples/obj-file-demo.js"
-// import { Scene_To_Texture_Demo }
-//   from "./examples/scene-to-texture-demo.js"
+import { Scene_To_Texture_Demo }
+  from "./examples/scene-to-texture-demo.js"
 // import { Parametric_Surfaces }
 //   from "./examples/surfaces-demo.js"
-// import { Text_Demo }
-//   from "./examples/text-demo.js"
-// import { Transforms_Sandbox_Base, Transforms_Sandbox }
-//   from "./examples/transforms-sandbox.js"
+import { Text_Demo }
+  from "./examples/text-demo.js"
+import { Transforms_Sandbox_Base, Transforms_Sandbox }
+  from "./examples/transforms-sandbox.js"
 
 
-Object.assign( defs, { Minimal_Webgl_Demo },
+Object.assign( defs,
+                     { Minimal_Webgl_Demo },
                      { Axes_Viewer, Axes_Viewer_Test_Scene, Matrix_Game },
 //                      { Demonstration },
                      { Inertia_Demo, Collision_Demo },
                      { Many_Lights_Demo },
                      { Obj_File_Demo },
-//                      { Scene_To_Texture_Demo },
+                     { Scene_To_Texture_Demo },
 //                      { Parametric_Surfaces },
-//                      { Text_Demo },
-//                      { Transforms_Sandbox_Base, Transforms_Sandbox }
+                     { Text_Demo },
+                     { Transforms_Sandbox_Base, Transforms_Sandbox }
              );
 
     // ******************** End extra step
@@ -49,7 +50,7 @@ Object.assign( defs, { Minimal_Webgl_Demo },
 // (Can define main_scene's class here)
 
 
-const main_scene = Obj_File_Demo;
+const main_scene = Transforms_Sandbox;
 const additional_scenes = [];
 
 export { main_scene, additional_scenes, Default_Layout, Code_Widget, Editor_Widget, Text_Widget, defs }

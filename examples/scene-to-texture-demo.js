@@ -1,8 +1,8 @@
 import {tiny, defs} from './common.js';
                                                   // Pull these names into this module's scope for convenience:
-const { vec3, vec4, color, Mat4, Light, Shape, Material, Shader, Texture, Scene } = tiny;
+const { vec3, vec4, color, Mat4, Light, Shape, Material, Shader, Texture, Component } = tiny;
 
-export class Scene_To_Texture_Demo extends Scene
+export class Scene_To_Texture_Demo extends Component
   {                   // **Scene_To_Texture_Demo** is a crude way of doing multi-pass rendering.
                       // We will draw a scene (containing just the left box with the striped
                       // texture) to a hidden canvas.  The hidden canvas's colors are copied
@@ -49,8 +49,8 @@ export class Scene_To_Texture_Demo extends Scene
         this.result_img = this.control_panel.appendChild( Object.assign( document.createElement( "img" ), 
                 { style:"width:200px; height:" + 200 * this.aspect_ratio + "px" } ) );
       }
-    display( context, shared_uniforms )
-      {                                 // display():  Draw both scenes, clearing the buffer in between.
+    render_animation( context, shared_uniforms )
+      {                                 // render_animation():  Draw both scenes, clearing the buffer in between.
         shared_uniforms.lights = [ new Light( vec4( -5,5,5,1 ), color( 0,1,1,1 ), 100000 ) ];
         const t = shared_uniforms.animation_time / 1000, dt = shared_uniforms.animation_delta_time / 1000;
 
