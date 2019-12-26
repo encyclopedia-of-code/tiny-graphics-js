@@ -1065,9 +1065,8 @@ class Component
         `.documentation { width:1060px; padding:0 10px; overflow:auto; background:white;
                                     box-shadow:10px 10px 90px 0 inset LightGray }`
         ];
-      if( document.styleSheets.length == 0 ) document.head.appendChild( document.createElement( "style" ) );
-      for( const r of rules ) document.styleSheets[document.styleSheets.length - 1].insertRule( r, 0 )
-
+      Component.initialize_CSS( this.constructor, rules );
+      
       this.state = {
                       animated_children: [],
                       document_children: [] 
@@ -1090,6 +1089,20 @@ class Component
       this.document_region.className = "documentation";
 
       this.render_documentation();
+    }
+  static initialize_CSS( classType, rules )
+    {
+      const types_used_before = new Set();
+      Component.intialize_CSS = ( classType, rules ) =>
+        { 
+          if( types_used_before.has( classType ) )
+            return;
+          
+          if( document.styleSheets.length == 0 ) document.head.appendChild( document.createElement( "style" ) );
+          for( const r of rules ) document.styleSheets[document.styleSheets.length - 1].insertRule( r, 0 )
+          types_used_before.add( classType )
+        }
+      return Component.intialize_CSS( classType, rules );
     }
   new_line( parent=this.control_panel )       // new_line():  Formats a scene's control panel with a new line break.
     { parent.appendChild( document.createElement( "br" ) ) }
