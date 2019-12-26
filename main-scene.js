@@ -24,8 +24,8 @@ import { Obj_File_Demo }
   from "./examples/obj-file-demo.js"
 import { Scene_To_Texture_Demo }
   from "./examples/scene-to-texture-demo.js"
-// import { Parametric_Surfaces }
-//   from "./examples/surfaces-demo.js"
+import { Parametric_Surfaces }
+  from "./examples/parametric-surfaces.js"
 import { Text_Demo }
   from "./examples/text-demo.js"
 import { Transforms_Sandbox_Base, Transforms_Sandbox }

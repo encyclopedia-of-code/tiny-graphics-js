@@ -3,12 +3,57 @@ import {tiny, defs} from './common.js';
 const { Vector3, vec3, vec4, color, Mat4, Light, Shape, Material, Shader, Texture, Scene } = tiny;
 const { Triangle, Square, Tetrahedron, Windmill, Cube, Subdivision_Sphere } = defs;
 
+
+// const Multi_Canvas_Scene = widgets.Multi_Canvas_Scene =
+// class Multi_Canvas_Scene extends tiny.Scene
+// {                               // **Multi_Canvas_Scene** is a special Scene whose documentation, when printed out by a Document_Builder,
+//                                 // expands out into several sections -- each potentially drawing their own variation of the Scene or
+//                                 // of any Scene.  Text and interactive areas can alternate as needed by the author. State of the 
+//                                 // document is managed in a shared object at the top level, which continuously updates the sections' 
+//                                 // contents via their display() functions.  Override the indicated functions with useful behavior.
+//   constructor( content )
+//     { super();
+
+//       this.widget_options = { show_canvas: false };
+                
+//       this.inner_scenes = [];
+                            
+//                             // Instance child objects for each section.       
+//       for( let i = 0; i < this.num_sections(); i++ )
+//         this.inner_scenes.push( new content( i ) );
+
+//                             // Make a new uniforms holder for all child graphics contexts to share.
+//       this.shared_uniforms_of_children = new tiny.Shared_Uniforms();
+//       this.initialize_shared_state();
+//     }
+//   show_document( document_builder )
+//     {
+//       for( let section of this.inner_scenes )
+//       {
+//         section.document_builder = document_builder.expand_tree( section );
+
+//                             // Disseminate our one shared_uniforms.
+//         section.webgl_manager.shared_uniforms = this.shared_uniforms_of_children;
+//       }
+//     }
+
+//       // Override the following as needed:
+//   num_sections() { return 0 }
+//   initialize_shared_state() { }
+//   update_shared_state( context )
+//     {
+//           // Use the provided context to tick shared_uniforms_of_children.animation_time only once per frame.
+//       context.shared_uniforms = this.shared_uniforms_of_children;
+//       return this.shared_uniforms_of_children;
+//     }
+// }
+
 export class Parametric_Surfaces extends tiny.Multi_Canvas_Scene
 { constructor()
     { super( Parametric_Surfaces_Section ) 
     }
   initialize_shared_state()
-    { 
+    {
       this.shared_uniforms_of_children.set_camera( Mat4.translation( 0,0,-3 ) );
 
       const shader = new defs.Textured_Phong( 1 );
