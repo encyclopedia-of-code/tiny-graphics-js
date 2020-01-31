@@ -14,7 +14,7 @@ const { Triangle, Square, Tetrahedron, Windmill, Cube, Subdivision_Sphere } = de
 //   constructor( content )
 //     { super();
 
-//*//       this.widget_options = { show_canvas: false };
+//       this.widget_options = { show_canvas: false };
                 
 //       this.inner_scenes = [];
                             
