@@ -1039,7 +1039,7 @@ class Webgl_Manager
 
       const open_list = [ this.component ];
       while( open_list.length )                           // Traverse all Scenes and their children, recursively.
-      { open_list.push( ...open_list[0].state.animated_children );
+      { open_list.push( ...open_list[0].animated_children );
                                                                 // Call display() to draw each registered animation:
         open_list.shift().render_animation( this, this.shared_uniforms );
       }
@@ -1070,10 +1070,8 @@ class Component
       this.props = props;
       this.shared_uniforms_of_children = this.props.shared_uniforms_of_children || new Shared_Uniforms();
 
-      this.state = {
-                      animated_children: [],
-                      document_children: [] 
-                   };
+      this.animated_children =  [];
+      this.document_children =  [];
                                                 // Set up how we'll handle key presses for the scene's control panel:
       const callback_behavior = ( callback, event ) => 
            { callback( event );
