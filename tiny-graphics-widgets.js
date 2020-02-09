@@ -5,54 +5,6 @@ import {tiny} from './tiny-graphics.js';
 export const widgets = {};
 
 
-const Default_Layout = widgets.Default_Layout =
-class Default_Layout
-{
-  constructor( component, div, options = {} )
-  {
-                                                      // Fit the existing document content to a fixed size:    
-    div.style.margin = "auto";
-    div.style.width = "1080px";
-                                                      // The next div down will hold a canvas and/or related interactive areas.
-    component.program_stuff = div.appendChild( document.createElement( "div" ) );
-
-    const defaults = { show_canvas: true,  make_controls: true,
-                       make_editor: false, make_code_nav: true };
-
-    const overridden_options = Object.assign( defaults, component.widget_options, options );
-    
-          // TODO:  One use case may have required canvas to be styled as a rule instead of as an element.  Keep an eye out.
-    const canvas = component.program_stuff.appendChild( document.createElement( "canvas" ) );
-    canvas.style = `width:1080px; height:600px; background:DimGray; margin:auto; margin-bottom:-4px`;
-
-    if( !overridden_options.show_canvas )
-      canvas.style.display = "none";
-                                      // Use tiny-graphics-js to draw graphics to the canvas, using the given scene objects.
-    component.webgl_manager = new tiny.Webgl_Manager( canvas );
-    
-    component.webgl_manager.component = component;
-
-    if( overridden_options.make_controls )
-    { component.embedded_controls_area = component.program_stuff.appendChild( document.createElement( "div" ) );
-      component.embedded_controls_area.className = "controls-widget";
-      component.embedded_controls = new Controls_Widget( component );
-    }
-    if( overridden_options.make_code_nav )
-    { component.embedded_code_nav_area = component.program_stuff.appendChild( document.createElement( "div" ) );
-      component.embedded_code_nav_area.className = "code-widget";
-      component.embedded_code_nav = new Code_Widget( component );
-    }
-    if( overridden_options.make_editor )
-    { component.embedded_editor_area = component.program_stuff.appendChild( document.createElement( "div" ) );
-      component.embedded_editor_area.className = "editor-widget";
-      component.embedded_editor = new Editor_Widget( component );
-    }
-                                     // Start WebGL main loop - render() will re-queue itself for continuous calls.
-    component.webgl_manager.render();
-  }
-}
-
-
 const Controls_Widget = widgets.Controls_Widget =
 class Controls_Widget
 {                                               // **Controls_Widget** adds an array of panels to the document, one per loaded

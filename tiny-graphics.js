@@ -6,6 +6,10 @@
                            // local scope (const) as well as store them in this JS object:
 export const tiny = {};
 
+
+import {widgets} from '../tiny-graphics-widgets.js';
+Object.assign( tiny, widgets );
+
     // Organization of this file:  Math definitions, then graphics definitions.
 
     // Vector and Matrix algebra are not built into JavaScript at first.  We will add it now.
@@ -1058,7 +1062,7 @@ class Component
                             // buttons and readouts, respectively.  Scenes exist in a hierarchy; their child Scenes
                             // can either contribute more drawn shapes or provide some additional tool to the end 
                             // user via drawing additional control panel buttons or live text readouts.
-  constructor( div, props )
+  constructor( div, props = {} )
     {
       const rules = [
         `.documentation_treenode { }`,
@@ -1080,16 +1084,8 @@ class Component
            }
       this.key_controls = new Keyboard_Manager( document, callback_behavior);     
     
-      if( !div )
-        return;
-
-      this.div = div;
-      this.div.className = "documentation_treenode";
-                
-      this.document_region = div.appendChild( document.createElement( "div" ) );    
-      this.document_region.className = "documentation";
-
-      this.render_documentation();
+      if( div )
+        this.render_layout( div )
     }
   static initialize_CSS( classType, rules )
     {
@@ -1143,6 +1139,55 @@ class Component
       button.addEventListener( "touchend", release, { passive: true } );
       if( !shortcut_combination ) return;
       this.key_controls.add( shortcut_combination, press, release );
+    }
+  render_layout( div, options = {} )
+    {
+
+      this.div = div;
+      div.className = "documentation_treenode";
+                                                        // Fit the existing document content to a fixed size:    
+      div.style.margin = "auto";
+      div.style.width = "1080px";
+                
+      this.document_region = div.appendChild( document.createElement( "div" ) );    
+      this.document_region.className = "documentation";
+      this.render_documentation();
+                                                        // The next div down will hold a canvas and/or related interactive areas.
+      this.program_stuff = div.appendChild( document.createElement( "div" ) );
+
+      const defaults = { show_canvas: true,  make_controls: true,
+                         make_editor: false, make_code_nav: true };
+
+      const overridden_options = Object.assign( defaults, this.widget_options, options );
+
+            // TODO:  One use case may have required canvas to be styled as a rule instead of as an element.  Keep an eye out.
+      const canvas = this.program_stuff.appendChild( document.createElement( "canvas" ) );
+      canvas.style = `width:1080px; height:600px; background:DimGray; margin:auto; margin-bottom:-4px`;
+
+      if( !overridden_options.show_canvas )
+        canvas.style.display = "none";
+                                        // Use tiny-graphics-js to draw graphics to the canvas, using the given scene objects.
+      this.webgl_manager = new tiny.Webgl_Manager( canvas );
+
+      this.webgl_manager.component = this;
+
+      if( overridden_options.make_controls )
+      { this.embedded_controls_area = this.program_stuff.appendChild( document.createElement( "div" ) );
+        this.embedded_controls_area.className = "controls-widget";
+        this.embedded_controls = new tiny.Controls_Widget( this );
+      }
+      if( overridden_options.make_code_nav )
+      { this.embedded_code_nav_area = this.program_stuff.appendChild( document.createElement( "div" ) );
+        this.embedded_code_nav_area.className = "code-widget";
+        this.embedded_code_nav = new tiny.Code_Widget( this );
+      }
+      if( overridden_options.make_editor )
+      { this.embedded_editor_area = this.program_stuff.appendChild( document.createElement( "div" ) );
+        this.embedded_editor_area.className = "editor-widget";
+        this.embedded_editor = new tiny.Editor_Widget( this );
+      }
+                                       // Start WebGL main loop - render() will re-queue itself for continuous calls.
+      this.webgl_manager.event = window.requestAnimFrame( this.webgl_manager.render.bind( this.webgl_manager ) );
     }
                                                 // To use class Scene, override at least one of the below functions,
                                                 // which will be automatically called by other classes:

@@ -12,9 +12,9 @@ class Transforms_Sandbox_Base extends Component
                                            // scene demonstrating a few concepts.  A subclass of it, Transforms_Sandbox,
                                            // exposes only the display() method, which actually places and draws the shapes,
                                            // isolating that code so it can be experimented with on its own.
-  constructor()
+  constructor( div )
     {                  // constructor(): Scenes begin by populating initial values like the Shapes and Materials they'll need.
-      super();
+      super( div );
       this.hover = this.swarm = false;
                                                         // At the beginning of our program, load one of each of these shape 
                                                         // definitions onto the GPU.  NOTE:  Only do this ONCE per shape it
@@ -55,7 +55,7 @@ class Transforms_Sandbox_Base extends Component
      
                            // Setup -- This part sets up the scene's overall camera matrix, projection matrix, and lights:
       if( !context.scratchpad.controls )
-        { this.state.animated_children.push( context.scratchpad.controls = new defs.Movement_Controls() ); 
+        { this.animated_children.push( context.scratchpad.controls = new defs.Movement_Controls() ); 
 
                     // Define the global camera and projection matrices, which are stored in shared_uniforms.  The camera
                     // matrix follows the usual format for transforms, but with opposite values (cameras exist as 
