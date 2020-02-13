@@ -1139,7 +1139,6 @@ class Component
     }
   render_layout( div, options = {} )
     {
-
       this.div = div;
       div.className = "documentation_treenode";
                                                         // Fit the existing document content to a fixed size:    
@@ -1165,8 +1164,10 @@ class Component
         canvas.style.display = "none";
                                         // Use tiny-graphics-js to draw graphics to the canvas, using the given scene objects.
       this.webgl_manager = new tiny.Webgl_Manager( canvas );
-
       this.webgl_manager.component = this;
+      
+                                       // Start WebGL main loop - render() will re-queue itself for continuous calls.
+      this.webgl_manager.event = window.requestAnimFrame( this.webgl_manager.render.bind( this.webgl_manager ) );
 
       if( overridden_options.make_controls )
       { this.embedded_controls_area = this.program_stuff.appendChild( document.createElement( "div" ) );
@@ -1183,8 +1184,6 @@ class Component
         this.embedded_editor_area.className = "editor-widget";
         this.embedded_editor = new tiny.Editor_Widget( this );
       }
-                                       // Start WebGL main loop - render() will re-queue itself for continuous calls.
-      this.webgl_manager.event = window.requestAnimFrame( this.webgl_manager.render.bind( this.webgl_manager ) );
     }
                                                 // To use class Scene, override at least one of the below functions,
                                                 // which will be automatically called by other classes:
