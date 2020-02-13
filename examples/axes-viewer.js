@@ -67,7 +67,7 @@ export class Axes_Viewer_Test_Scene extends Component
                               // bases in your scene's hierarchy at the correct levels.
   constructor( div )
     { super( div );
-      this.state.animated_children.push( this.axes_viewer = new Axes_Viewer() );
+      this.animated_children.push( this.axes_viewer = new Axes_Viewer() );
                                                                   // Scene defaults:
       this.shapes = { box: new defs.Cube() };
       const phong = new defs.Phong_Shader();
@@ -80,7 +80,7 @@ export class Axes_Viewer_Test_Scene extends Component
       shared_uniforms.lights = [ new Light( vec4( 0,0,1,0 ), color( 0,1,1,1 ), 100000 ) ];
 
       if( !context.scratchpad.controls ) 
-        { this.state.animated_children.push( context.scratchpad.controls = new defs.Movement_Controls() ); 
+        { this.animated_children.push( context.scratchpad.controls = new defs.Movement_Controls() ); 
         
           shared_uniforms.set_camera( Mat4.translation( -1,-1,-20 ) );    // Locate the camera here (inverted matrix).
         }
@@ -238,9 +238,9 @@ export class Matrix_Game_1 extends Component
       //this.goals.push( Mat.of( [ r[0][0], r[1][0], 0, r2() ], [ r[0][1], r[1][1], 0, r2() ], [ 0, 0, 1, 0 ], [ 0,0,0,1 ] ) ) }
     }
   trim_string( s ) { const trimmed = s.slice( 0, this.trim_factor ); return trimmed.length == 0 ? s[0] : trimmed }
-  display( graphics_state )
+  display( shared_uniforms )
     {            
-      context.globals.graphics_state.lights = [ new Light( Vec.of( 1,1,0,0 ).normalized(), Color.of(  1, .5, .5, 1 ), 100000 ),
+      context.globals.shared_uniforms.lights = [ new Light( Vec.of( 1,1,0,0 ).normalized(), Color.of(  1, .5, .5, 1 ), 100000 ),
                                                 new Light( Vec.of( 0,1,0,0 ).normalized(), Color.of( .5,  1, .5, 1 ), 100000 ) ];
 
 
@@ -248,7 +248,7 @@ export class Matrix_Game_1 extends Component
       let model_transform = Mat4.identity();
       this.combine();    // iterate through current product and combine neighbors of the same matrix type.
       
-      const color = graphics_state.animation_time/1000 % 1 < .5 ? "unset" : "black",
+      const color = shared_uniforms.animation_time/1000 % 1 < .5 ? "unset" : "black",
            cursor = Object.assign( document.createElement( "span" ), { textContent: "_", style: "font-size:30px; background-color:" + color } );
       
       this.current_product_div.innerHTML = "Current Matrix: ";
@@ -296,12 +296,12 @@ export class Matrix_Game_1 extends Component
       this.lag_matrix = model_transform.map( (x,i) => Vec.from( this.lag_matrix[i] ).mix( x, .2 ) );  // Move the current basis with lag
       
       const camera_base = this.lock_camera ? Mat4.inverse( this.lag_matrix ) : Mat4.identity();
-      Object.assign( graphics_state, { camera_transform:  camera_base.times( Mat4.translation([ 0,-4,-20 ]) ) } ); 
+      Object.assign( shared_uniforms, { camera_transform:  camera_base.times( Mat4.translation([ 0,-4,-20 ]) ) } ); 
       
-      this.shapes.arrows.draw( graphics_state, this.lag_matrix, this.rgb );                           // Draw the current basis.
+      this.shapes.arrows.draw( shared_uniforms, this.lag_matrix, this.rgb );                           // Draw the current basis.
                                                                                                       // Draw the goal bases:
-      this.goals    .forEach( (x,i) => { this.shapes.arrows.draw( graphics_state, x, this.material.override( { color: Color.of( 1,+(i==0),0,1/i**1.3 ) } ) ); } )
-      this.old_goals.forEach( (x,i) => { this.shapes.arrows.draw( graphics_state, x, this.material.override( { color: Color.of( 1,      0,1,1/i**1.3 ) } ) ); } )
+      this.goals    .forEach( (x,i) => { this.shapes.arrows.draw( shared_uniforms, x, this.material.override( { color: Color.of( 1,+(i==0),0,1/i**1.3 ) } ) ); } )
+      this.old_goals.forEach( (x,i) => { this.shapes.arrows.draw( shared_uniforms, x, this.material.override( { color: Color.of( 1,      0,1,1/i**1.3 ) } ) ); } )
       
       this.compare_to_goals( model_transform );
     }
@@ -379,7 +379,7 @@ export class Matrix_Game extends Component
               const cw = new tiny.Canvas_Widget( element, undefined,
                 { make_controls: i==0, show_explanation: false, make_editor: false, make_code_nav: false } );
               cw.webgl_manager.scenes.push( this.sections[ i ] );
-              cw.webgl_manager.program_state = webgl_manager.program_state;
+              cw.webgl_manager.shared_uniforms = webgl_manager.shared_uniforms;
               cw.webgl_manager.set_size( [ 1080,400 ] )
 
 
@@ -406,20 +406,20 @@ export class Matrix_Game extends Component
        else
          this[ "explain_scene_" + this.scene_id ] ( document_element );
     }
-  display( context, program_state )
+  display( context, shared_uniforms )
     { 
-      program_state.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 100 ); 
-      this.r = Mat4.rotation( -.5*Math.sin( program_state.animation_time/5000 ),   1,1,1 );
+      shared_uniforms.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 100 ); 
+      this.r = Mat4.rotation( -.5*Math.sin( shared_uniforms.animation_time/5000 ),   1,1,1 );
 
       if( this.is_master )
         {                                           // *** Lights: *** Values of vector or point lights.  They'll be consulted by 
                                                     // the shader when coloring shapes.  See Light's class definition for inputs.
-          const t = this.t = program_state.animation_time/1000;
+          const t = this.t = shared_uniforms.animation_time/1000;
           const angle = Math.sin( t );
           const light_position = Mat4.rotation( angle,   1,0,0 ).times( vec4( 0,0,1,0 ) );
-          program_state.lights = [ new Light( light_position, color( 1,1,1,1 ), 1000000 ) ]; 
+          shared_uniforms.lights = [ new Light( light_position, color( 1,1,1,1 ), 1000000 ) ]; 
         }
       else
-        this[ "display_scene_" + this.scene_id ] ( context, program_state );
+        this[ "display_scene_" + this.scene_id ] ( context, shared_uniforms );
     }
 }

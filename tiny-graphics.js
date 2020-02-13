@@ -1062,7 +1062,7 @@ class Component
                             // buttons and readouts, respectively.  Scenes exist in a hierarchy; their child Scenes
                             // can either contribute more drawn shapes or provide some additional tool to the end 
                             // user via drawing additional control panel buttons or live text readouts.
-  constructor( div, props = {} )
+  constructor( props = {} )
     {
       const rules = [
         `.documentation_treenode { }`,
@@ -1082,10 +1082,7 @@ class Component
              event.preventDefault();    // Fire the callback and cancel any default browser shortcut that is an exact match.
              event.stopPropagation();   // Don't bubble the event to parent nodes; let child elements be targetted in isolation.
            }
-      this.key_controls = new Keyboard_Manager( document, callback_behavior);     
-    
-      if( div )
-        this.render_layout( div )
+      this.key_controls = new Keyboard_Manager( document, callback_behavior);
     }
   static initialize_CSS( classType, rules )
     {
