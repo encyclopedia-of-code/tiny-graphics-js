@@ -50,7 +50,7 @@ Object.assign( defs,
 // (Can define main_scene's class here)
 
 
-const main_scene = Axes_Viewer_Test_Scene;
+const main_scene = Text_Demo;
 const additional_scenes = [];
 
 export { main_scene, additional_scenes, Default_Layout, Code_Widget, Editor_Widget, Text_Widget, defs }
