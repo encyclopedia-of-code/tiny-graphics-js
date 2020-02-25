@@ -1,7 +1,163 @@
 import {tiny, defs} from './common.js';
                                                   // Pull these names into this module's scope for convenience:
-const { Vector3, vec3, vec4, color, Mat4, Light, Shape, Material, Shader, Texture, Scene } = tiny;
+const { Vector3, vec3, vec4, color, Mat4, Light, Shape, Material, Shader, Texture, Component } = tiny;
 const { Triangle, Square, Tetrahedron, Windmill, Cube, Subdivision_Sphere } = defs;
+
+
+export class Parametric_Surfaces extends Component
+{
+  render_layout( div, options = {} )
+    {
+      this.div = div;
+      div.className = "documentation_treenode";
+                                                        // Fit the existing document content to a fixed size:    
+      div.style.margin = "auto";
+      div.style.width = "1080px";
+
+      this.initialize_shared_state();
+
+      this.inner_scenes = [];
+      for( let i = 0; i < this.num_sections(); i++ )
+      {
+        const inner_scene = new Parametric_Surfaces_Section( this, i );
+        const inner_div = div.appendChild( document.createElement( "div" ) );
+        this[ "region_" + i ] = inner_div
+        this.inner_scenes.push( inner_scene );
+
+        inner_scene.render_layout( inner_div );        
+      }
+    }
+  initialize_shared_state()
+  {
+                             // Make a new uniforms holder for all child graphics contexts to share.
+      this.shared_uniforms = new tiny.Shared_Uniforms();
+      this.shared_uniforms.set_camera( Mat4.translation( 0,0,-3 ) );
+
+      const shader = new defs.Textured_Phong( 1 );
+
+      this.material = new Material( shader, { ambient: .5, texture: new Texture( "assets/rgb.jpg" ) } );
+
+      this.movement_controls = new defs.Movement_Controls();
+  }
+  render_animation( context, shared_uniforms_unused )
+    {
+      const shared_uniforms = this.update_shared_state( context );
+
+      context.scratchpad.controls = this.movement_controls;
+
+                             // Tick values that update only once per frame (not per section).
+      const t = this.t = shared_uniforms.animation_time/1000;
+      const angle = Math.sin( t );
+      const light_position = Mat4.rotation( angle,   1,0,0 ).times( vec4( 0,0,1,0 ) );
+      shared_uniforms.lights = [ new Light( light_position, color( 1,1,1,1 ), 1000000 ) ];
+    }
+  num_sections() { return 1 }
+}
+
+export class Parametric_Surfaces_Section extends Component
+{ constructor( parent, section_index )
+    { super();
+      
+      this.parent = parent;
+      this.section_index = section_index;
+
+      this.animated_children.push( parent.movement_controls );
+      
+                                  // Switch on section_index to decide what to actually construct.
+      const handler_at_index = this[ "construct_section_" + section_index ];
+      handler_at_index.call( this );
+    }
+  render_animation( context, shared_uniforms )
+    {
+                        // Part I:  All sections do this every frame:
+      this.r = Mat4.rotation( -.5*Math.sin( shared_uniforms.animation_time/5000 ),   1,1,1 );
+
+      shared_uniforms.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 100 );
+
+                        // Part II:  Switch on section_index to decide what to actually draw.
+      const handler_at_index = this[ "display_section_" + this.section_index ];
+      handler_at_index.call( this, context, shared_uniforms );
+    }
+  render_layout( div, options = {} )
+    {
+      this.div = div;
+      div.className = "documentation_treenode";
+                                                        // Fit the existing document content to a fixed size:    
+      div.style.margin = "auto";
+      div.style.width = "1080px";
+                
+      this.document_region = div.appendChild( document.createElement( "div" ) );    
+      this.document_region.className = "documentation";
+      this.render_documentation();
+                                                        // The next div down will hold a canvas and/or related interactive areas.
+      this.program_stuff = div.appendChild( document.createElement( "div" ) );
+
+      const defaults = { show_canvas: true,  make_controls: true,
+                         make_editor: false, make_code_nav: true };
+
+      const overridden_options = Object.assign( defaults, this.widget_options, options );
+
+            // TODO:  One use case may have required canvas to be styled as a rule instead of as an element.  Keep an eye out.
+      const canvas = this.program_stuff.appendChild( document.createElement( "canvas" ) );
+      canvas.style = `width:1080px; height:600px; background:DimGray; margin:auto; margin-bottom:-4px`;
+
+      if( !overridden_options.show_canvas )
+        canvas.style.display = "none";
+                                        // Use tiny-graphics-js to draw graphics to the canvas, using the given scene objects.
+      this.webgl_manager = new tiny.Webgl_Manager( canvas );
+      this.webgl_manager.component = this;
+
+                                  // Load our common state.
+      this.webgl_manager.shared_uniforms = this.parent.shared_uniforms;
+
+                                       // Start WebGL main loop - render() will re-queue itself for continuous calls.
+      this.webgl_manager.event = window.requestAnimFrame( this.webgl_manager.render.bind( this.webgl_manager ) );
+
+      if( overridden_options.make_controls )
+      { this.embedded_controls_area = this.program_stuff.appendChild( document.createElement( "div" ) );
+        this.embedded_controls_area.className = "controls-widget";
+        this.embedded_controls = new tiny.Controls_Widget( this );
+      }
+      if( overridden_options.make_code_nav )
+      { this.embedded_code_nav_area = this.program_stuff.appendChild( document.createElement( "div" ) );
+        this.embedded_code_nav_area.className = "code-widget";
+        this.embedded_code_nav = new tiny.Code_Widget( this );
+      }
+      if( overridden_options.make_editor )
+      { this.embedded_editor_area = this.program_stuff.appendChild( document.createElement( "div" ) );
+        this.embedded_editor_area.className = "editor-widget";
+        this.embedded_editor = new tiny.Editor_Widget( this );
+      }
+    }
+  construct_section_0()
+    { const initial_corner_point = vec3( -1,-1,0 );
+                          // These two callbacks will step along s and t of the first sheet:
+      const row_operation = (s,p) => p ? Mat4.translation( 0,.2,0 ).times(p.to4(1)).to3() 
+                                       : initial_corner_point;
+      const column_operation = (t,p) =>  Mat4.translation( .2,0,0 ).times(p.to4(1)).to3();
+                          // These two callbacks will step along s and t of the second sheet:
+      const row_operation_2    = (s,p)   => vec3(    -1,2*s-1,Math.random()/2 );
+      const column_operation_2 = (t,p,s) => vec3( 2*t-1,2*s-1,Math.random()/2 );
+
+      this.shapes = { sheet : new defs.Grid_Patch( 10, 10, row_operation, column_operation ),
+                      sheet2: new defs.Grid_Patch( 10, 10, row_operation_2, column_operation_2 ) };      
+    }
+  display_section_0( context, shared_uniforms )
+    {
+                        // Draw the sheets, flipped 180 degrees so their normals point at us.
+      const r = Mat4.rotation( Math.PI,   0,1,0 ).times( this.r );
+      this.shapes.sheet .draw( context, shared_uniforms, Mat4.translation( -1.5,0,0 ).times(r), this.parent.material );
+      this.shapes.sheet2.draw( context, shared_uniforms, Mat4.translation(  1.5,0,0 ).times(r), this.parent.material );
+    }
+  explain_section_0()
+    { this.document_region.innerHTML =
+          `<p>Parametric Surfaces can be generated by parametric functions that are driven by changes to two variables - s and t.  As either s or t increase, we can step along the shape's surface in some direction aligned with the shape, not the usual X,Y,Z axes.</p>
+           <p>Grid_Patch is a generalized parametric surface.  It is always made of a sheet of squares arranged in rows and columns, corresponding to s and t.  The sheets are always guaranteed to have this row/column arrangement, but where it goes as you follow an edge to the next row or column over could vary.  When generating the shape below, we told it to do the most obvious thing whenever s or t increase; just increase X and Y.  A flat rectangle results.</p>
+           <p>The shape on the right is the same except instead of building it incrementally by moving from the previous point, we assigned points manually.  The z values are a random height map.  The light is moving over its static peaks and valleys.  We have full control over where the sheet's points go.</p>
+           <p>To create a new Grid_Patch shape, initialize it with the desired amounts of rows and columns you'd like.  The next two arguments are callback functions that return a new point given an old point (called p) and the current (s,t) coordinates.  The first callback is for rows, and will recieve arguments (s,p) back from Grid_Patch.  The second one is for columns, and will recieve arguments (t,p,s) back from Grid_Patch. </p>
+           <p>Scroll down for more animations!</p>`;      
+    }
+}
 
 
 // const Multi_Canvas_Scene = widgets.Multi_Canvas_Scene =
@@ -53,6 +209,9 @@ const { Triangle, Square, Tetrahedron, Windmill, Cube, Subdivision_Sphere } = de
 //     }
 // }
 
+
+
+/*
 export class Parametric_Surfaces extends tiny.Multi_Canvas_Scene
 { constructor()
     { super( Parametric_Surfaces_Section )
@@ -351,3 +510,4 @@ class Parametric_Surfaces_Section extends Scene
        `<p>Blending two 1D curves as a "ruled surface" using the "mix" function of vectors.  We are using hand-made lists of points for our curves, but you could have generated the points from spline functions.</p>`;
     }
 }
+*/

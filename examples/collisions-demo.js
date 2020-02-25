@@ -85,8 +85,8 @@ class Simulation extends Component
 {                                         // **Simulation** manages the stepping of simulation time.  Subclass it when making
                                           // a Component that is a physics demo.  This technique is careful to totally decouple
                                           // the simulation from the frame rate (see below).
-  constructor( div )
-    { super( div );
+  constructor()
+    { super();
       Object.assign( this, { time_accumulator: 0, time_scale: 1, t: 0, dt: 1/20, bodies: [], steps_taken: 0 } );            
     }
   simulate( frame_time )
@@ -170,8 +170,8 @@ class Test_Data
 export class Inertia_Demo extends Simulation
 {                                           // ** Inertia_Demo** demonstration: This scene lets random initial momentums
                                             // carry several bodies until they fall due to gravity and bounce.
-  constructor( div )
-    { super( div );
+  constructor()
+    { super();
       this.data = new Test_Data();
       this.shapes = Object.assign( {}, this.data.shapes );
       this.shapes.square = new defs.Square();
@@ -227,8 +227,8 @@ export class Inertia_Demo extends Simulation
 export class Collision_Demo extends Simulation
 {                                               // **Collision_Demo** demonstration: Detect when some flying objects
                                                 // collide with one another, coloring them red.
-  constructor( div )
-    { super( div );
+  constructor()
+    { super();
       this.data = new Test_Data();
       this.shapes = Object.assign( {}, this.data.shapes );
                                   // Make simpler dummy shapes for representing all other shapes during collisions:

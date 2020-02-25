@@ -24,8 +24,8 @@ import { Obj_File_Demo }
   from "./examples/obj-file-demo.js"
 import { Scene_To_Texture_Demo }
   from "./examples/scene-to-texture-demo.js"
-// import { Parametric_Surfaces }
-//  from "./examples/parametric-surfaces.js"
+import { Parametric_Surfaces }
+ from "./examples/parametric-surfaces.js"
 import { Text_Demo }
   from "./examples/text-demo.js"
 import { Transforms_Sandbox_Base, Transforms_Sandbox }
@@ -40,7 +40,7 @@ Object.assign( defs,
                      { Many_Lights_Demo },
                      { Obj_File_Demo },
                      { Scene_To_Texture_Demo },
-//                      { Parametric_Surfaces },
+                     { Parametric_Surfaces },
                      { Text_Demo },
                      { Transforms_Sandbox_Base, Transforms_Sandbox }
              );
@@ -50,7 +50,7 @@ Object.assign( defs,
 // (Can define main_scene's class here)
 
 
-const main_scene = Demonstration;
+const main_scene = Collision_Demo;
 const additional_scenes = [];
 
 export { main_scene, additional_scenes, Default_Layout, Code_Widget, Editor_Widget, Text_Widget, defs }

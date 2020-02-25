@@ -1062,7 +1062,7 @@ class Component
                             // buttons and readouts, respectively.  Scenes exist in a hierarchy; their child Scenes
                             // can either contribute more drawn shapes or provide some additional tool to the end 
                             // user via drawing additional control panel buttons or live text readouts.
-  constructor( props = {} )
+  constructor()
     {
       const rules = [
         `.documentation_treenode { }`,
@@ -1071,9 +1071,6 @@ class Component
         ];
       Component.initialize_CSS( this.constructor, rules );
       
-      this.props = props;
-      this.shared_uniforms_of_children = this.props.shared_uniforms_of_children || new Shared_Uniforms();
-
       this.animated_children =  [];
       this.document_children =  [];
                                                 // Set up how we'll handle key presses for the scene's control panel:
@@ -1100,9 +1097,9 @@ class Component
     }
     update_shared_state( context )
     {
-          // Use the provided context to tick shared_uniforms_of_children.animation_time only once per frame.
-      context.shared_uniforms = this.shared_uniforms_of_children;
-      return this.shared_uniforms_of_children;
+          // Use the provided context to tick shared_uniforms.animation_time only once per frame.
+      context.shared_uniforms = this.shared_uniforms;
+      return this.shared_uniforms;
     }
   new_line( parent=this.control_panel )       // new_line():  Formats a scene's control panel with a new line break.
     { parent.appendChild( document.createElement( "br" ) ) }

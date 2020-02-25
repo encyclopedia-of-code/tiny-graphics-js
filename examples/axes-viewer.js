@@ -19,8 +19,8 @@ class Axes_Viewer extends Component
                                           // omitting it inserts your basis in the next empty group.  To re-use IDs easily,
                                           // obtain the next unused ID by calling next_group_id(), so you can re-use it for
                                           // all bases that you want to appear at the same level.
-  constructor( div )
-    { super( div );
+  constructor()
+    { super();
                                               
       this.selected_basis_id = 0;             
       this.reset();
@@ -65,8 +65,8 @@ export class Axes_Viewer_Test_Scene extends Component
 {                             // **Axes_Viewer_Test_Scene** is an example of how your scene should properly manaage 
                               // an Axes_Viewer child scene, so that it is able to help you draw all the coordinate
                               // bases in your scene's hierarchy at the correct levels.
-  constructor( div )
-    { super( div );
+  constructor()
+    { super();
       this.animated_children.push( this.axes_viewer = new Axes_Viewer() );
                                                                   // Scene defaults:
       this.shapes = { box: new defs.Cube() };

@@ -104,8 +104,8 @@ export class Obj_File_Demo extends Component
                               // that fits well.  This demo shows the teapot model twice, with one 
                               // teapot showing off the Fake_Bump_Map effect while the other has a 
                               // regular texture and Phong lighting.             
-    constructor( div )                               
-      { super( div );
+    constructor()                               
+      { super();
                                       // Load the model file:
         this.shapes = { "teapot": new Shape_From_File( "assets/teapot.obj" ) };
 

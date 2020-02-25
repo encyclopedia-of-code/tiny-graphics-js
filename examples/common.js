@@ -404,10 +404,10 @@ class Minimal_Shape extends tiny.Vertex_Buffer
 const Minimal_Webgl_Demo = defs.Minimal_Webgl_Demo =
 class Minimal_Webgl_Demo extends Component
 {                                       // **Minimal_Webgl_Demo** is an extremely simple example of a Scene class.
-  constructor( div )
-    { super( div );
+  constructor()
+    { super();
                                                 // Don't create any DOM elements to control this scene:
-        this.widget_options = { make_controls: false };
+      this.widget_options = { make_controls: false };
                                                 // Send a Triangle's vertices to the GPU's buffers:
       this.shapes = { triangle : new Minimal_Shape() };
       this.shader = new Basic_Shader();
