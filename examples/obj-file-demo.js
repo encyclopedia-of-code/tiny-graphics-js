@@ -1,8 +1,10 @@
 import {tiny, defs} from './common.js';
                                                   // Pull these names into this module's scope for convenience:
-const { vec3, vec4, vec, color, Mat4, Light, Shape, Material, Shader, Texture, Scene } = tiny;
+const { vec3, vec4, vec, color, Mat4, Light, Shape, Material, Shader, Texture, Component } = tiny;
 
-export class Shape_From_File extends Shape
+export
+const Shape_From_File = defs.Shape_From_File =
+class Shape_From_File extends Shape
 {                                   // **Shape_From_File** is a versatile standalone Shape that imports
                                     // all its arrays' data from an .obj 3D model file.
   constructor( filename )
@@ -86,15 +88,15 @@ export class Shape_From_File extends Shape
       this.normalize_positions( false );
       this.ready = true;
     }
-  draw( context, program_state, model_transform, material )
+  draw( context, shared_uniforms, model_transform, material )
     {               // draw(): Same as always for shapes, but cancel all 
                     // attempts to draw the shape before it loads:
       if( this.ready )
-        super.draw( context, program_state, model_transform, material );
+        super.draw( context, shared_uniforms, model_transform, material );
     }
 }
 
-export class Obj_File_Demo extends Scene     
+export class Obj_File_Demo extends Component     
   {                           // **Obj_File_Demo** show how to load a single 3D model from an OBJ file.
                               // Detailed model files can be used in place of simpler primitive-based
                               // shapes to add complexity to a scene.  Simpler primitives in your scene
@@ -116,14 +118,14 @@ export class Obj_File_Demo extends Scene
         this.bumps = new Material( new defs.Fake_Bump_Map( 1 ), { color: color( .5,.5,.5,1 ), 
           ambient: .3, diffusivity: .5, specularity: .5, texture: new Texture( "assets/stars.png" ) });
       }
-    display( context, program_state )
-      { const t = program_state.animation_time;
+    render_animation( context, shared_uniforms )
+      { const t = shared_uniforms.animation_time;
 
-        program_state.set_camera( Mat4.translation( 0,0,-5 ) );    // Locate the camera here (inverted matrix).                  
-        program_state.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 500 );
+        shared_uniforms.set_camera( Mat4.translation( 0,0,-5 ) );    // Locate the camera here (inverted matrix).                  
+        shared_uniforms.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 500 );
                                                 // A spinning light to show off the bump map:
-        program_state.lights = [ new Light( 
-                                 Mat4.rotation( t/300,   1,0,0 ).times( vec4( 3,2,10,1 ) ), 
+        shared_uniforms.lights = [ new Light( 
+                                   Mat4.rotation( t/300,   1,0,0 ).times( vec4( 3,2,10,1 ) ), 
                                              color( 1,.7,.7,1 ), 100000 ) ];
         
         for( let i of [ -1, 1 ] )
@@ -132,12 +134,14 @@ export class Obj_File_Demo extends Scene
                           .times( Mat4.translation( 2*i, 0, 0 ) )
                           .times( Mat4.rotation( t/1500,   -1,2,0 ) )
                           .times( Mat4.rotation( -Math.PI/2,   1,0,0 ) );
-          this.shapes.teapot.draw( context, program_state, model_transform, i == 1 ? this.stars : this.bumps );
+          this.shapes.teapot.draw( context, shared_uniforms, model_transform, i == 1 ? this.stars : this.bumps );
         }
       }
-  show_explanation( document_element )
-    { document_element.innerHTML += "<p>This demo loads an external 3D model file of a teapot.  It uses a condensed version of the \"webgl-obj-loader.js\" "
-                                 +  "open source library, though this version is not guaranteed to be complete and may not handle some .OBJ files.  It is contained in the class \"Shape_From_File\". "
-                                 +  "</p><p>One of these teapots is lit with bump mapping.  Can you tell which one?</p>";
+  render_documentation()
+    { this.document_region.innerHTML += 
+        `<p>This demo loads an external 3D model file of a teapot.  It uses a condensed version of the "webgl-obj-loader.js"
+         open source library, though this version is not guaranteed to be complete and may not handle some .OBJ files.  It is
+         contained in the class "Shape_From_File".
+         </p><p>One of these teapots is lit with bump mapping.  Can you tell which one?</p>`;
     }
   }

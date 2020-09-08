@@ -4,13 +4,14 @@
 <body style="background: DarkGray">       <!-- Begin typing your web page here. //-->
 
       <!-- The following code embeds a WebGL canvas panel, loads certain scene(s), and displays panel(s) of their controls. //-->
-<div id="main-canvas" class="canvas-widget"></div>
+<div id="main-section" class="document-builder"></div>
 <script type=module >      // ********************* THE ENTRY POINT OF YOUR WHOLE PROGRAM STARTS HERE ********************* 
                            // Indicate which element on the page you want the Canvas_Widget to replace with a 3D WebGL area:
-  const element_to_replace = document.querySelector( "#main-canvas" );
-  import { Main_Scene, Additional_Scenes, Canvas_Widget } from './main-scene.js';  // Import the file that defines a scene.
-  const scenes = [ Main_Scene, ...Additional_Scenes ].map( scene => new scene() );    // This line creates your scene.
-  new Canvas_Widget( element_to_replace, scenes );
+  const element_to_replace = document.querySelector( "#main-section" );
+  import { main_scene, additional_scenes, Default_Layout } from './main-scene.js';  // Import the file that defines a scene.
+  const root = new main_scene( element_to_replace );
+  root.animated_children.push( ...additional_scenes.map( scene => new scene() ) );    // This line creates your scene.
+  root.render_layout( element_to_replace );
 </script>
 
 </body></html>

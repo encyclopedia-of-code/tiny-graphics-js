@@ -6,6 +6,10 @@
                            // local scope (const) as well as store them in this JS object:
 export const tiny = {};
 
+
+import {widgets} from '../tiny-graphics-widgets.js';
+Object.assign( tiny, widgets );
+
     // Organization of this file:  Math definitions, then graphics definitions.
 
     // Vector and Matrix algebra are not built into JavaScript at first.  We will add it now.
@@ -55,7 +59,7 @@ export const tiny = {};
 const Vector = tiny.Vector =
 class Vector extends Float32Array
 {                                   // **Vector** stores vectors of floating point numbers.  Puts vector math into JavaScript.
-                                    // Note:  Vectors should be created with of() due to wierdness with the TypedArray spec.
+                                    // Note:  Vectors should be created with of() due to weirdness with the TypedArray spec.
                                     // Tip: Assign Vectors with .copy() to avoid referring two variables to the same Vector object.
   static create( ...arr )
     { return new Vector( arr );
@@ -88,7 +92,7 @@ class Vector extends Float32Array
     { if( this.length == 2 )                    // Optimize for Vectors of size 2
         return this[0]*b[0] + this[1]*b[1];  
       return this.reduce( ( acc, x, i ) => { return acc + x*b[i]; }, 0 );
-    }              
+    }
   static cast( ...args )
                             // cast(): For compact syntax when declaring lists.      
     { return args.map( x => Vector.from(x) ) }
@@ -587,12 +591,12 @@ class Vertex_Buffer extends Graphics_Card_Object
       }
       else  gl.drawArrays( gl[type], 0, Object.values( this.arrays )[0].length );
     }
-  draw( webgl_manager, program_state, model_transform, material, type = "TRIANGLES" )
+  draw( webgl_manager, shared_uniforms, model_transform, material, type = "TRIANGLES" )
     {                                       // draw():  To appear onscreen, a shape of any variety goes through this function,
                                             // which executes the shader programs.  The shaders draw the right shape due to
                                             // pre-selecting the correct buffer region in the GPU that holds that shape's data.
       const gpu_instance = this.activate( webgl_manager.context );
-      material.shader.activate( webgl_manager.context, gpu_instance.webGL_buffer_pointers, program_state, model_transform, material );
+      material.shader.activate( webgl_manager.context, gpu_instance.webGL_buffer_pointers, shared_uniforms, model_transform, material );
                                                               // Run the shaders to draw every triangle now:
       this.execute_shaders( webgl_manager.context, gpu_instance, type );
     }
@@ -793,7 +797,7 @@ class Shader extends Graphics_Card_Object
                             // (update_GPU) which define the extra custom JavaScript code needed to populate your particular shader
                             // program with all the data values it is expecting, such as matrices.  The shader pulls these values
                             // from two places in your JavaScript:  A Material object, for values pertaining to the current shape
-                            // only, and a Program_State object, for values pertaining to your entire Scene or program.
+                            // only, and a Shared_Uniforms object, for values pertaining to your entire Scene or program.
   copy_onto_graphics_card( context )
     {                                     // copy_onto_graphics_card():  Called automatically as needed to load the 
                                           // shader program onto one of your GPU contexts for its first time.
@@ -834,14 +838,14 @@ class Shader extends Graphics_Card_Object
       Object.assign( gpu_instance, { program, vertShdr, fragShdr, gpu_addresses: new Graphics_Addresses( program, gl ) } );
       return gpu_instance;
     }
-  activate( context, buffer_pointers, program_state, model_transform, material )
+  activate( context, buffer_pointers, shared_uniforms, model_transform, material )
     {                                     // activate(): Selects this Shader in GPU memory so the next shape draws using it.        
     const gpu_instance = super.activate( context );
 
       context.useProgram( gpu_instance.program );
 
           // --- Send over all the values needed by this particular shader to the GPU: ---
-      this.update_GPU( context, gpu_instance.gpu_addresses, program_state, model_transform, material );
+      this.update_GPU( context, gpu_instance.gpu_addresses, shared_uniforms, model_transform, material );
       
           // --- Turn on all the correct attributes and make sure they're pointing to the correct ranges in GPU memory. ---
       for( let [ attr_name, attribute ] of Object.entries( gpu_instance.gpu_addresses.shader_attributes ) )
@@ -959,13 +963,13 @@ class Texture extends Graphics_Card_Object
 }
 
 
-const Program_State = tiny.Program_State =
-class Program_State extends Container
-{                                     // **Program_State** stores any values that affect how your whole scene is drawn, 
+const Shared_Uniforms = tiny.Shared_Uniforms =
+class Shared_Uniforms extends Container
+{                                     // **Shared_Uniforms** stores any values that affect how your whole scene is drawn, 
                                       // such as its current lights and the camera position.  Class Shader uses whatever
                                       // values are wrapped here as inputs to your custom shader program.  Your Shader
                                       // subclass must override its method "update_GPU()" to define how to send your
-                                      // Program_State's particular values over to your custom shader program.
+                                      // Shared_Uniforms' particular values over to your custom shader program.
   constructor( camera_transform = Mat4.identity(), projection_transform = Mat4.identity() ) 
     { super();
       this.set_camera( camera_transform );
@@ -973,7 +977,7 @@ class Program_State extends Container
       Object.assign( this, defaults );
     }
   set_camera( matrix )
-    {                       // set_camera():  Applies a new (inverted) camera matrix to the Program_State.
+    {                       // set_camera():  Applies a new (inverted) camera matrix to the Shared_Uniforms.
                             // It's often useful to cache both the camera matrix and its inverse.  Both are needed
                             // often and matrix inversion is too slow to recompute needlessly.  
                             // Note that setting a camera matrix traditionally means storing the inverted version, 
@@ -987,8 +991,8 @@ const Webgl_Manager = tiny.Webgl_Manager =
 class Webgl_Manager
 {                        // **Webgl_Manager** manages a whole graphics program for one on-page canvas, including its 
                          // textures, shapes, shaders, and scenes.  It requests a WebGL context and stores Scenes.
-  constructor( canvas, background_color, dimensions )
-    { const members = { instances: new Map(), scenes: [], prev_time: 0, canvas, scratchpad: {}, program_state: new Program_State() };
+  constructor( canvas, background_color = color( 0,0,0,1 ), dimensions )
+    { const members = { scenes: [], prev_time: 0, canvas, scratchpad: {}, shared_uniforms: new Shared_Uniforms() };
       Object.assign( this, members );
                                                  // Get the GPU ready, creating a new WebGL context for this canvas:
       for( let name of [ "webgl", "experimental-webgl", "webkit-3d", "moz-webgl" ] )
@@ -1030,18 +1034,18 @@ class Webgl_Manager
   render( time=0 )
     {               // render(): Draw a single frame of animation, using all loaded Scene objects.  Measure
                     // how much real time has transpired in order to animate shapes' movements accordingly.
-      this.program_state.animation_delta_time = time - this.prev_time;
-      if( this.program_state.animate ) this.program_state.animation_time += this.program_state.animation_delta_time;
+      this.shared_uniforms.animation_delta_time = time - this.prev_time;
+      if( this.shared_uniforms.animate ) this.shared_uniforms.animation_time += this.shared_uniforms.animation_delta_time;
       this.prev_time = time;
 
       const gl = this.context;
       gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);        // Clear the canvas's pixels and z-buffer.
 
-      const open_list = [ ...this.scenes ];
+      const open_list = [ this.component ];
       while( open_list.length )                           // Traverse all Scenes and their children, recursively.
-      { open_list.push( ...open_list[0].children );
+      { open_list.push( ...open_list[0].animated_children );
                                                                 // Call display() to draw each registered animation:
-        open_list.shift().display( this, this.program_state );
+        open_list.shift().render_animation( this, this.shared_uniforms );
       }
                                               // Now that this frame is drawn, request that render() happen 
                                               // again as soon as all other web page events are processed:
@@ -1050,8 +1054,8 @@ class Webgl_Manager
 }
 
 
-const Scene = tiny.Scene =
-class Scene
+const Component = tiny.Component =
+class Component
 {                           // **Scene** is the base class for any scene part or code snippet that you can add to a
                             // canvas.  Make your own subclass(es) of this and override their methods "display()" 
                             // and "make_control_panel()" to make them draw to a canvas, or generate custom control
@@ -1059,14 +1063,43 @@ class Scene
                             // can either contribute more drawn shapes or provide some additional tool to the end 
                             // user via drawing additional control panel buttons or live text readouts.
   constructor()
-    { this.children = [];
-                                                          // Set up how we'll handle key presses for the scene's control panel:
+    {
+      const rules = [
+        `.documentation_treenode { }`,
+        `.documentation { width:1060px; padding:0 10px; overflow:auto; background:white;
+                                    box-shadow:10px 10px 90px 0 inset LightGray }`
+        ];
+      Component.initialize_CSS( this.constructor, rules );
+      
+      this.animated_children =  [];
+      this.document_children =  [];
+                                                // Set up how we'll handle key presses for the scene's control panel:
       const callback_behavior = ( callback, event ) => 
            { callback( event );
              event.preventDefault();    // Fire the callback and cancel any default browser shortcut that is an exact match.
              event.stopPropagation();   // Don't bubble the event to parent nodes; let child elements be targetted in isolation.
            }
-      this.key_controls = new Keyboard_Manager( document, callback_behavior);     
+      this.key_controls = new Keyboard_Manager( document, callback_behavior);
+    }
+  static initialize_CSS( classType, rules )
+    {
+      const types_used_before = new Set();
+      Component.intialize_CSS = ( classType, rules ) =>
+        { 
+          if( types_used_before.has( classType ) )
+            return;
+          
+          if( document.styleSheets.length == 0 ) document.head.appendChild( document.createElement( "style" ) );
+          for( const r of rules ) document.styleSheets[document.styleSheets.length - 1].insertRule( r, 0 )
+          types_used_before.add( classType )
+        }
+      return Component.intialize_CSS( classType, rules );
+    }
+    update_shared_state( context )
+    {
+          // Use the provided context to tick shared_uniforms.animation_time only once per frame.
+      context.shared_uniforms = this.shared_uniforms;
+      return this.shared_uniforms;
     }
   new_line( parent=this.control_panel )       // new_line():  Formats a scene's control panel with a new line break.
     { parent.appendChild( document.createElement( "br" ) ) }
@@ -1100,13 +1133,61 @@ class Scene
       button.addEventListener( "touchend", release, { passive: true } );
       if( !shortcut_combination ) return;
       this.key_controls.add( shortcut_combination, press, release );
-    }                                                          
+    }
+  render_layout( div, options = {} )
+    {
+      this.div = div;
+      div.className = "documentation_treenode";
+                                                        // Fit the existing document content to a fixed size:    
+      div.style.margin = "auto";
+      div.style.width = "1080px";
+                
+      this.document_region = div.appendChild( document.createElement( "div" ) );    
+      this.document_region.className = "documentation";
+      this.render_documentation();
+                                                        // The next div down will hold a canvas and/or related interactive areas.
+      this.program_stuff = div.appendChild( document.createElement( "div" ) );
+
+      const defaults = { show_canvas: true,  make_controls: true,
+                         make_editor: false, make_code_nav: true };
+
+      const overridden_options = Object.assign( defaults, this.widget_options, options );
+
+            // TODO:  One use case may have required canvas to be styled as a rule instead of as an element.  Keep an eye out.
+      const canvas = this.program_stuff.appendChild( document.createElement( "canvas" ) );
+      canvas.style = `width:1080px; height:600px; background:DimGray; margin:auto; margin-bottom:-4px`;
+
+      if( !overridden_options.show_canvas )
+        canvas.style.display = "none";
+                                        // Use tiny-graphics-js to draw graphics to the canvas, using the given scene objects.
+      this.webgl_manager = new tiny.Webgl_Manager( canvas );
+      this.webgl_manager.component = this;
+      
+                                       // Start WebGL main loop - render() will re-queue itself for continuous calls.
+      this.webgl_manager.event = window.requestAnimFrame( this.webgl_manager.render.bind( this.webgl_manager ) );
+
+      if( overridden_options.make_controls )
+      { this.embedded_controls_area = this.program_stuff.appendChild( document.createElement( "div" ) );
+        this.embedded_controls_area.className = "controls-widget";
+        this.embedded_controls = new tiny.Controls_Widget( this );
+      }
+      if( overridden_options.make_code_nav )
+      { this.embedded_code_nav_area = this.program_stuff.appendChild( document.createElement( "div" ) );
+        this.embedded_code_nav_area.className = "code-widget";
+        this.embedded_code_nav = new tiny.Code_Widget( this );
+      }
+      if( overridden_options.make_editor )
+      { this.embedded_editor_area = this.program_stuff.appendChild( document.createElement( "div" ) );
+        this.embedded_editor_area.className = "editor-widget";
+        this.embedded_editor = new tiny.Editor_Widget( this );
+      }
+    }
                                                 // To use class Scene, override at least one of the below functions,
                                                 // which will be automatically called by other classes:
-  display( context, program_state )
+  render_animation( context, shared_uniforms )
     {}                            // display(): Called by Webgl_Manager for drawing.
+  render_documentation()
+    {}                            // show_document(): Called by Document_Builder for generating documentation.
   make_control_panel()
     {}                            // make_control_panel(): Called by Controls_Widget for generating interactive UI.
-  show_explanation( document_section )
-    {}                            // show_explanation(): Called by Text_Widget for generating documentation.
 }
