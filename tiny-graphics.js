@@ -1046,7 +1046,7 @@ class Component
         `.documentation { width:1060px; padding:0 10px; overflow:auto; background:white;
                                     box-shadow:10px 10px 90px 0 inset LightGray }`
         ];
-      Component.initialize_CSS( this.constructor, rules );
+      Component.initialize_CSS( Component, rules );
       
       this.animated_children =  [];
       this.document_children =  [];
@@ -1062,12 +1062,11 @@ class Component
   static initialize_CSS( classType, rules )
     {
       if( Component.types_used_before.has( classType ) )
-            return;
-          
+        return;
+      
       if( document.styleSheets.length == 0 ) document.head.appendChild( document.createElement( "style" ) );
       for( const r of rules ) document.styleSheets[document.styleSheets.length - 1].insertRule( r, 0 )
       Component.types_used_before.add( classType )
-
     }
   update_shared_state( context )
     {

@@ -19,7 +19,7 @@ export class Demonstration extends Component
         `.documentation-big { width:1030px; padding:0 25px; font-size: 29px; font-family: Arial`,
         `.documentation-big-top { padding: 30px 25px }`
         ];
-      Component.initialize_CSS( this.constructor, rules );
+      Component.initialize_CSS( Demonstration, rules );
 
       const region_1 = div.appendChild( document.createElement( "div" ) );
       region_1.classList.add( "documentation", "documentation-big", "documentation-big-top" );

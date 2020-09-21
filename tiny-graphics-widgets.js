@@ -35,7 +35,7 @@ class Controls_Widget
                       ".show { transform: scaleY(1); height:200px; overflow:auto }",
                       ".hide { transform: scaleY(0); height:0px; overflow:hidden  }" ];
                       
-      tiny.Component.initialize_CSS( this.constructor, rules );
+      tiny.Component.initialize_CSS( Controls_Widget, rules );
 
       const table = component.embedded_controls_area.appendChild( document.createElement( "table" ) );
       table.className = "control-box";
@@ -139,7 +139,7 @@ class Code_Widget
                       ".code-widget table.class-list td { border-width:thin; background: #EEEEEE; padding:12px; font-family:monospace; border: 1px solid black }"
                      ];
 
-      tiny.Component.initialize_CSS( this.constructor, rules );
+      tiny.Component.initialize_CSS( Code_Widget, rules );
 
       this.component = component;
 
@@ -253,7 +253,7 @@ class Editor_Widget
                     ".editor-widget button:hover, button:focus { transform: scale(1.3); color:gold }"
                   ];
 
-      tiny.Component.initialize_CSS( this.constructor, rules );
+      tiny.Component.initialize_CSS( Editor_Widget, rules );
 
       this.associated_webgl_manager = component.webgl_manager;
       this.options = options;
