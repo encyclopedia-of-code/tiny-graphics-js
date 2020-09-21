@@ -1058,19 +1058,16 @@ class Component
            }
       this.key_controls = new Keyboard_Manager( document, callback_behavior);
     }
+  static types_used_before = new Set()
   static initialize_CSS( classType, rules )
     {
-      const types_used_before = new Set();
-      Component.intialize_CSS = ( classType, rules ) =>
-        { 
-          if( types_used_before.has( classType ) )
+      if( Component.types_used_before.has( classType ) )
             return;
           
-          if( document.styleSheets.length == 0 ) document.head.appendChild( document.createElement( "style" ) );
-          for( const r of rules ) document.styleSheets[document.styleSheets.length - 1].insertRule( r, 0 )
-          types_used_before.add( classType )
-        }
-      return Component.intialize_CSS( classType, rules );
+      if( document.styleSheets.length == 0 ) document.head.appendChild( document.createElement( "style" ) );
+      for( const r of rules ) document.styleSheets[document.styleSheets.length - 1].insertRule( r, 0 )
+      Component.types_used_before.add( classType )
+
     }
   update_shared_state( context )
     {
