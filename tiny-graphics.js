@@ -268,7 +268,7 @@ const unsafe4 = tiny.unsafe4 = Vector4.unsafe;
 const color = tiny.color = Vector4.create;
 
 const Matrix = tiny.Matrix =
-class Matrix extends Array                         
+class Matrix extends Array
 {                                   // **Matrix** holds M by N matrices of floats.  Enables matrix and vector math.
   // Example usage:
   //  "Matrix( rows )" returns a Matrix with those rows, where rows is an array of float arrays.
@@ -440,13 +440,13 @@ const Keyboard_Manager = tiny.Keyboard_Manager =
 class Keyboard_Manager     
 {                        // **Keyboard_Manager** maintains a running list of which keys are depressed.  You can map combinations of
                          // shortcut keys to trigger callbacks you provide by calling add().  See add()'s arguments.  The shortcut 
-                         // list is indexed by convenient strings showing each bound shortcut combination.  The constructor 
-                         // optionally takes "target", which is the desired DOM element for keys to be pressed inside of, and
-                         // "callback_behavior", which will be called for every key action and allows extra behavior on each event
-                         // -- giving an opportunity to customize their bubbling, preventDefault, and more.  It defaults to no
-                         // additional behavior besides the callback itself on each assigned key action.
+                         // list is indexed by strings, conveniently showing each bound shortcut combination.
   constructor( target = document, callback_behavior = ( callback, event ) => callback( event ) )
-    { this.saved_controls = {};     
+    {                    // The constructor  optionally takes "target", which is the desired DOM element for keys to be pressed 
+                         // inside of, and "callback_behavior", which will be called for every key action to allow extra behavior
+                         // on each event -- giving an opportunity to customize their bubbling, preventDefault, and more.  It 
+                         // defaults to no additional behavior besides the callback itself on each assigned key action.
+      this.saved_controls = {};
       this.actively_pressed_keys = new Set();
       this.callback_behavior = callback_behavior;
       target.addEventListener( "keydown",     this.key_down_handler.bind( this ) );

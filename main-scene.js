@@ -35,7 +35,7 @@ import { Transforms_Sandbox_Base, Transforms_Sandbox }
 Object.assign( defs,
                      { Minimal_Webgl_Demo },
                      { Axes_Viewer, Axes_Viewer_Test_Scene, Matrix_Game },
-                      { Demonstration },
+                     { Demonstration },
                      { Inertia_Demo, Collision_Demo },
                      { Many_Lights_Demo },
                      { Obj_File_Demo },
