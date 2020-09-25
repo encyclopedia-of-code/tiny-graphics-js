@@ -503,11 +503,11 @@ class Funny_Shader extends Shader
 
 const Phong_Shader = defs.Phong_Shader =
 class Phong_Shader extends Shader
-{                                  // **Phong_Shader** is a subclass of Shader, which stores and maanges a GPU program.  
+{                                  // **Phong_Shader** is a subclass of Shader, which stores and manages a GPU program.  
                                    // Graphic cards prior to year 2000 had shaders like this one hard-coded into them
-                                   // instead of customizable shaders.  "Phong-Blinn" Shading here is a process of 
-                                   // determining brightness of pixels via vector math.  It compares the normal vector
-                                   // at that pixel with the vectors toward the camera and light sources.
+                                   // instead of customizable shaders.  "Phong-Blinn" Shading that we use is a process of 
+                                   // determining brightness of pixels via vector math.  We compare the normal vector
+                                   // at one point with the vectors toward the camera and light sources.
 
   
   constructor( num_lights = 2 )
@@ -630,7 +630,7 @@ class Phong_Shader extends Shader
     }
   update_GPU( context, gpu_addresses, gpu_state, model_transform, material )
     {             // update_GPU(): Define how to synchronize our JavaScript's variables to the GPU's.  This is where the shader 
-                  // recieves ALL of its inputs.  Every value the GPU wants is divided into two categories:  Values that belong
+                  // receives ALL of its inputs.  Every value the GPU wants is divided into two categories:  Values that belong
                   // to individual objects being drawn (which we call "Material") and values belonging to the whole scene or 
                   // program (which we call the "Shared_Uniforms").  Send both a material and a program state to the shaders 
                   // within this function, one data field at a time, to fully initialize the shader for a draw.                  
