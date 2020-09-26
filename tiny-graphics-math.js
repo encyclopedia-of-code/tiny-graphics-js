@@ -8,7 +8,7 @@ export const math = {};
 // Vector and Matrix algebra are not built into JavaScript at first.  We will add it now.
 // Part I of this file:  Vectors,  Part II of this file:  Matrices
 
-// Part I: Vectors:   **************
+// Part I: Vectors:      *************************************************************************************
 
     // You will be able to declare a 3D vector [x,y,z] supporting various common vector operations 
     // with syntax:  vec(x,y), vec3( x,y,z ) or vec4( x,y,z, zero or one ).  For general sized vectors, use 
@@ -165,15 +165,12 @@ class Vector3 extends Float32Array
     {                             // cast(): Converts a bunch of arrays into a bunch of vec3's.
       return args.map( x => Vector3.from( x ) );
     }
+  static shared_memory = Vector3.create( 0,0,0 )
   static unsafe( x,y,z )
     {                // unsafe(): returns vec3s only meant to be consumed immediately. Aliases into 
                      // shared memory, to be overwritten upon next unsafe3 call.  Faster.
-      const shared_memory = vec3( 0,0,0 );
-      Vector3.unsafe = ( x,y,z ) =>
-        { shared_memory[0] = x;  shared_memory[1] = y;  shared_memory[2] = z;
-          return shared_memory;
-        }
-      return Vector3.unsafe( x,y,z );
+      Vector3.shared_memory[0] = x;  Vector3.shared_memory[1] = y;  Vector3.shared_memory[2] = z;
+      return Vector3.shared_memory;
     }
   to4( is_a_point )
                     // to4():  Convert to a homogeneous vector of 4 values.
@@ -239,13 +236,13 @@ class Vector4 extends Float32Array
     }
   dot( b )
     { return this[0]*b[0] + this[1]*b[1] + this[2]*b[2] + this[3]*b[3] }
-  static unsafe( x, y, z, w )
-    {                // **unsafe** Returns vec3s to be used immediately only. Aliases into 
-                     // shared memory to be overwritten on next unsafe3 call.  Faster.
-      const shared_memory = vec4( 0,0,0,0 );
-      Vec4.unsafe = ( x,y,z,w ) =>
-        { shared_memory[0] = x;  shared_memory[1] = y;
-          shared_memory[2] = z;  shared_memory[3] = w; }
+  static shared_memory = Vector4.create( 0,0,0,0 )
+  static unsafe( x,y,z, w )
+    {                // unsafe(): returns vec4s only meant to be consumed immediately. Aliases into 
+                     // shared memory, to be overwritten upon next unsafe4 call.  Faster.
+      Vector4.shared_memory[0] = x;  Vector4.shared_memory[1] = y;  
+      Vector4.shared_memory[2] = z;  Vector4.shared_memory[3] = w;
+      return Vector4.shared_memory;
     }
   to3()
     { return vec3( this[0], this[1], this[2] ) }
@@ -264,7 +261,8 @@ const unsafe4 = math.unsafe4 = Vector4.unsafe;
 const color = math.color = Vector4.create;
 
 
-// Part II: Matrices:   **************
+
+// Part II: Matrices:   *************************************************************************************
 
 const Matrix = math.Matrix =
 class Matrix extends Array
