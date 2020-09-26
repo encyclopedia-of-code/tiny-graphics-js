@@ -110,7 +110,7 @@ class Shape
     // Warning:  Your arrays must be full!  The below functions will FAIL if you leave so much as a single element
     // of your arrays empty.  Likewise, if your "indices" references any elements that aren't filled in, your shape 
     // won't draw on the GPU.
-    
+
   static insert_transformed_copy_into( recipient, args, points_transform = Mat4.identity() )
     {               // insert_transformed_copy_into():  For building compound shapes.  A copy of this shape is made
                     // and inserted into any recipient shape you pass in.  Compound shapes help reduce draw calls
@@ -200,38 +200,6 @@ class Light
 }
 
 
-const Graphics_Addresses = tiny.Graphics_Addresses =
-class Graphics_Addresses
-{                           // **Graphics_Addresses** is used internally in Shaders for organizing communication with the GPU.
-                            // Once we've compiled the Shader, we can query some things about the compiled program, such as 
-                            // the memory addresses it will use for uniform variables, and the types and indices of its per-
-                            // vertex attributes.  We'll need those for building vertex buffers.
-  constructor( program, gl )
-  { const num_uniforms = gl.getProgramParameter(program, gl.ACTIVE_UNIFORMS);
-    for (let i = 0; i < num_uniforms; ++i)
-      {                 // Retrieve the GPU addresses of each uniform variable in the shader
-                        // based on their names, and store these pointers for later.
-        let u = gl.getActiveUniform(program, i).name.split('[')[0];
-        this[ u ] = gl.getUniformLocation( program, u ); 
-      }
-    
-    this.shader_attributes = {};
-                                                      // Assume per-vertex attributes will each be a set of 1 to 4 floats:
-    const type_to_size_mapping = { 0x1406: 1, 0x8B50: 2, 0x8B51: 3, 0x8B52: 4 };
-    const numAttribs = gl.getProgramParameter( program, gl.ACTIVE_ATTRIBUTES ); 
-    for ( let i = 0; i < numAttribs; i++ )
-    {                              // https://github.com/greggman/twgl.js/blob/master/dist/twgl-full.js for another example:
-      const attribInfo = gl.getActiveAttrib( program, i );
-                                                      // Pointers to all shader attribute variables:
-      this.shader_attributes[ attribInfo.name ] = { index: gl.getAttribLocation( program, attribInfo.name ),
-                                                    size: type_to_size_mapping[ attribInfo.type ],
-                                                    enabled: true, type: gl.FLOAT,
-                                                    normalized: false, stride: 0, pointer: 0 };
-    }
-  }
-}
-
-
 const Container = tiny.Container =
 class Container
 {                   // **Container** allows a way to create patch JavaScript objects within a single line.  Some properties get
@@ -294,6 +262,36 @@ class Shader
           // If this has never used on this GPU context before, then prepare new buffer indices for this context.
       const gpu_instance = existing_instance || this.gpu_instances.set( context, defaults ).get( context );
       
+      class Graphics_Addresses
+      {                           // **Graphics_Addresses** is used internally in Shaders for organizing communication with the GPU.
+                                  // Once we've compiled the Shader, we can query some things about the compiled program, such as 
+                                  // the memory addresses it will use for uniform variables, and the types and indices of its per-
+                                  // vertex attributes.  We'll need those for building vertex buffers.
+        constructor( program, gl )
+        { const num_uniforms = gl.getProgramParameter(program, gl.ACTIVE_UNIFORMS);
+          for (let i = 0; i < num_uniforms; ++i)
+            {                 // Retrieve the GPU addresses of each uniform variable in the shader
+                              // based on their names, and store these pointers for later.
+              let u = gl.getActiveUniform(program, i).name.split('[')[0];
+              this[ u ] = gl.getUniformLocation( program, u ); 
+            }
+
+          this.shader_attributes = {};
+                                                            // Assume per-vertex attributes will each be a set of 1 to 4 floats:
+          const type_to_size_mapping = { 0x1406: 1, 0x8B50: 2, 0x8B51: 3, 0x8B52: 4 };
+          const numAttribs = gl.getProgramParameter( program, gl.ACTIVE_ATTRIBUTES ); 
+          for ( let i = 0; i < numAttribs; i++ )
+          {                              // https://github.com/greggman/twgl.js/blob/master/dist/twgl-full.js for another example:
+            const attribInfo = gl.getActiveAttrib( program, i );
+                                                            // Pointers to all shader attribute variables:
+            this.shader_attributes[ attribInfo.name ] = { index: gl.getAttribLocation( program, attribInfo.name ),
+                                                          size: type_to_size_mapping[ attribInfo.type ],
+                                                          enabled: true, type: gl.FLOAT,
+                                                          normalized: false, stride: 0, pointer: 0 };
+          }
+        }
+      }
+
       const gl = context;
       const program  = gpu_instance.program  || context.createProgram();
       const vertShdr = gpu_instance.vertShdr || gl.createShader( gl.VERTEX_SHADER );
