@@ -3,9 +3,6 @@ import {tiny} from '../tiny-graphics.js';
 const { Vector, Vector3, vec, vec3, vec4, color, Matrix, Mat4, 
          Light, Shape, Material, Shader, Texture, Component } = tiny;
 
-import {widgets} from '../tiny-graphics-widgets.js';
-Object.assign( tiny, widgets );
-
 const defs = {};
 
 export { tiny, defs };
