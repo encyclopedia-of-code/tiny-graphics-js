@@ -386,7 +386,7 @@ class Axis_Arrows extends Shape                               // An axis set wit
 
 
 const Minimal_Shape = defs.Minimal_Shape =
-class Minimal_Shape extends tiny.Vertex_Buffer
+class Minimal_Shape extends tiny.Shape
 {                                     // **Minimal_Shape** an even more minimal triangle, with three
                                       // vertices each holding a 3D position and a color.
   constructor()

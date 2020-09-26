@@ -22,16 +22,16 @@ const test_rookie_mistake = function()
   test_rookie_mistake.counter |= 0;
   if( test_rookie_mistake.counter++ > 200  )
     throw `Error: You are sending a lot of object definitions to the GPU, probably by mistake!  Many of them are likely duplicates, which you
-           don't want since sending each one is very slow.  To avoid this, avoid ever declaring a Shape Shader or Texture (or subclass of 
+           don't want since sending each one is very slow.  To avoid this, avoid ever declaring a Shape, Shader, or Texture (or subclass of 
            these) with "new" from within your render_animation() function, thus causing the definition to be re-created and re-transmitted every frame.  
            Instead, call these from within your scene's constructor and keep the result as a class member, or otherwise make sure it only happens 
-           once.  In the off chance that you have a somehow deformable shape that MUST change every frame, then at least use the special
-           arguments of copy_onto_graphics_card to limit which buffers get overwritten every frame to only the necessary ones.`;
+           once.  In the off chance that you have a somehow deformable shape that must really be updated every frame, then at least use the special
+           arguments of copy_onto_graphics_card to select which buffers get overwritten every frame to only the necessary ones.`;
 } 
 
 
-const Vertex_Buffer = tiny.Vertex_Buffer =
-class Vertex_Buffer
+const Shape = tiny.Shape =
+class Shape
 {                       // **Vertex_Buffer** organizes data related to one 3D shape and copies it into GPU memory.  That data
                         // is broken down per vertex in the shape.  To use, make a subclass of it that overrides the 
                         // constructor and fills in the "arrays" property.  Within "arrays", you can make several fields that 
@@ -102,41 +102,20 @@ class Vertex_Buffer
                                                               // Run the shaders to draw every triangle now:
       this.execute_shaders( webgl_manager.context, gpu_instance, type );
     }
-}
 
+    // All the below functions further assume that your vertex buffer includes fields called "position" and "normal"
+    // stored at each point, instead of just any arbitrary fields.  Each vertex will have a 3D position and a
+    // 3D normal vector as available fields within "arrays" (both of type Vector3).  
 
-const Shape = tiny.Shape =
-class Shape extends Vertex_Buffer
-{           // **Shape** extends Vertex_Buffer to give it an awareness that it holds data about 3D space.  This class
-            // is used the same way as Vertex_Buffer, by subclassing it and writing a constructor that fills in the
-            // "arrays" property with some custom arrays.
-
-            // Shape extends Vertex_Buffer's functionality for copying shapes into buffers the graphics card's memory,
-            // adding the basic assumption that each vertex will have a 3D position and a 3D normal vector as available 
-            // fields to look up.  This means there will be at least two arrays for the user to fill in:  "positions" 
-            // enumerating all the vertices' locations, and "normals" enumerating all vertices' normal vectors pointing 
-            // away from the surface.  Both are of type Vector3.
-
-            // By including  these, Shape adds to class Vertex_Buffer the ability to compound shapes in together into a 
-            // single performance-friendly Vertex_Buffer, placing this shape into a larger one at a custom transforms by
-            // adjusting positions and normals with a call to insert_transformed_copy_into().  Compared to Vertex_Buffer
-            // we also gain the ability via flat-shading to compute normals from scratch for a shape that has none, and 
-            // the ability to eliminate inter-triangle sharing of vertices for any data we want to abruptly vary as we 
-            // cross over a triangle edge (such as texture images).
-            
-            // Like in class Vertex_Buffer we have an array "indices" to fill in as well, a list of index triples
-            // defining which three vertices belong to each triangle.  Call new on a Shape and fill its arrays (probably
-            // in an overridden constructor).
-
-            // IMPORTANT: To use this class you must define all fields for every single vertex by filling in the arrays
-            // of each field, so this includes positions, normals, any more fields a specific Shape subclass decides to 
-            // include per vertex, such as texture coordinates.  Be warned that leaving any empty elements in the lists 
-            // will result in an out of bounds GPU warning (and nothing drawn) whenever the "indices" list contains
-            // references to that position in the lists.
+    // Warning:  Your arrays must be full!  The below functions will FAIL if you leave so much as a single element
+    // of your arrays empty.  Likewise, if your "indices" references any elements that aren't filled in, your shape 
+    // won't draw on the GPU.
+    
   static insert_transformed_copy_into( recipient, args, points_transform = Mat4.identity() )
     {               // insert_transformed_copy_into():  For building compound shapes.  A copy of this shape is made
                     // and inserted into any recipient shape you pass in.  Compound shapes help reduce draw calls
-                    // and speed up performane.
+                    // and speed up performance.  One shape joins the other at a custom transform offset, adjusting
+                    // positions and normals appropriately.
 
                       // Here if you try to bypass making a temporary shape and instead directly insert new data into
                       // the recipient, you'll run into trouble when the recursion tree stops at different depths.
@@ -157,17 +136,18 @@ class Shape extends Vertex_Buffer
     }
   make_flat_shaded_version()
     {                                     // make_flat_shaded_version(): Auto-generate a new class that re-uses any
-                                          // Shape's points, but with new normals generated from flat shading.
+                                          // Shape's points, but with new normals -- generated from flat shading.
+                                          // A way to compute normals from scratch for shapes that have none.
       return class extends this.constructor
       { constructor( ...args )
           { super( ...args );  this.duplicate_the_shared_vertices();  this.flat_shade(); }        
       }
     }
   duplicate_the_shared_vertices()
-    {                   // (Internal helper function)
-                        //  Prepare an indexed shape for flat shading if it is not ready -- that is, if there are any
-                        // edges where the same vertices are indexed by both the adjacent triangles, and those two 
-                        // triangles are not co-planar.  The two would therefore fight over assigning different normal 
+    {                   // duplicate_the_shared_vertices(): Eliminate inter-triangle sharing of vertices for any data we want to abruptly vary as we 
+                        // cross over a triangle edge (such as texture images).
+                        // Modify an indexed shape to remove any edges where the same vertices are indexed by both
+                        // the adjacent triangles.  Unless co-planar, the two would fight over assigning different normal 
                         // vectors to the shared vertices.
       const arrays = {};
       for( let arr in this.arrays ) arrays[ arr ] = [];
