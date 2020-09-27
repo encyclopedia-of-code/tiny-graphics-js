@@ -1,7 +1,7 @@
 import {tiny, defs} from './common.js';
 
                                                   // Pull these names into this module's scope for convenience:
-const { vec3, vec4, color, Mat4, Light, Shape, Material, Shader, Texture, Component } = tiny;
+const { vec3, vec4, color, Mat4, Shape, Material, Shader, Texture, Component } = tiny;
 
 export 
 const Transforms_Sandbox_Base = defs.Transforms_Sandbox_Base =
@@ -73,7 +73,7 @@ class Transforms_Sandbox_Base extends Component
       const t = this.t = shared_uniforms.animation_time/1000;
       const angle = Math.sin( t );
       const light_position = Mat4.rotation( angle,   1,0,0 ).times( vec4( 0,-1,1,0 ) );
-      shared_uniforms.lights = [ new Light( light_position, color( 1,1,1,1 ), 1000000 ) ];
+      shared_uniforms.lights = [ defs.Phong_Shader.light_source( light_position, color( 1,1,1,1 ), 1000000 ) ];
     }
 }
 

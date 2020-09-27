@@ -1,7 +1,7 @@
 import {tiny, defs} from './common.js';
 
                                                   // Pull these names into this module's scope for convenience:
-const { vec3, unsafe3, vec4, color, Mat4, Light, Shape, Material, Shader, Texture, Component } = tiny;
+const { vec3, unsafe3, vec4, color, Mat4, Shape, Material, Shader, Texture, Component } = tiny;
 
 export
 const Body = defs.Body =
@@ -209,7 +209,7 @@ export class Inertia_Demo extends Simulation
           shared_uniforms.set_camera( Mat4.translation( 0,0,-50 ) );    // Locate the camera here (inverted matrix).
         }
       shared_uniforms.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 500 );
-      shared_uniforms.lights = [ new Light( vec4( 0,-5,-10,1 ), color( 1,1,1,1 ), 100000 ) ];
+      shared_uniforms.lights = [ defs.Phong_Shader.light_source( vec4( 0,-5,-10,1 ), color( 1,1,1,1 ), 100000 ) ];
                                                                                               // Draw the ground:
       this.shapes.square.draw( context, shared_uniforms, Mat4.translation( 0,-10,0 )
                                        .times( Mat4.rotation( Math.PI/2,   1,0,0 ) ).times( Mat4.scale( 50,50,1 ) ),
@@ -300,7 +300,7 @@ export class Collision_Demo extends Simulation
           shared_uniforms.set_camera( Mat4.translation( 0,0,-50 ) );    // Locate the camera here (inverted matrix).
         }
       shared_uniforms.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 500 );
-      shared_uniforms.lights = [ new Light( vec4( .7,1.5,2,0 ), color( 1,1,1,1 ), 100000 ) ];
+      shared_uniforms.lights = [ defs.Phong_Shader.light_source( vec4( .7,1.5,2,0 ), color( 1,1,1,1 ), 100000 ) ];
 
                                                                // Draw an extra bounding sphere around each drawn shape to show
                                                                // the physical shape that is really being collided with:

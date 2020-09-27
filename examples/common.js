@@ -586,6 +586,14 @@ class Phong_Shader extends Shader
             gl_FragColor.xyz += phong_model_lights( normalize( N ), vertex_worldspace );
           } ` ;
     }
+  static light_source( position, color, size ) 
+    {                     // light_source():  How to represent properties of one light source.  Position is
+                          // of type Vector4 and is homogeneous, and so is either a point or a vector.  Use w=0 for a
+                          // vector (directional) light, and w=1 for a point light / spotlight.
+                          // For spotlights, a light also needs a "size" factor for how quickly the brightness
+                          // should attenuate (reduce) as distance from the spotlight increases.
+      return { position, color, attenuation: 1/size };
+    }
   send_material( gl, gpu, material )
     {                                       // send_material(): Send the desired shape-wide material qualities to the
                                             // graphics card, where they will tweak the Phong lighting formula.                                      

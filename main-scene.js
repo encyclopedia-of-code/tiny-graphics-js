@@ -1,6 +1,6 @@
 import {tiny, defs} from './examples/common.js';
                                                   // Pull these names into this module's scope for convenience:
-const { Vector, Vector3, vec, vec3, vec4, color, Matrix, Mat4, Light, Shape, Material, Shader, Texture, Scene,
+const { Vector, Vector3, vec, vec3, vec4, color, Matrix, Mat4, Shape, Material, Shader, Texture, Scene,
         Default_Layout, Code_Widget, Editor_Widget, Text_Widget } = tiny;
 
     // Now we have loaded everything in the files tiny-graphics.js, tiny-graphics-widgets.js, and common.js.

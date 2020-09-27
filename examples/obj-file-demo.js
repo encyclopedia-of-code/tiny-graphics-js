@@ -1,6 +1,6 @@
 import {tiny, defs} from './common.js';
                                                   // Pull these names into this module's scope for convenience:
-const { vec3, vec4, vec, color, Mat4, Light, Shape, Material, Shader, Texture, Component } = tiny;
+const { vec3, vec4, vec, color, Mat4, Shape, Material, Shader, Texture, Component } = tiny;
 
 export
 const Shape_From_File = defs.Shape_From_File =
@@ -124,7 +124,7 @@ export class Obj_File_Demo extends Component
         shared_uniforms.set_camera( Mat4.translation( 0,0,-5 ) );    // Locate the camera here (inverted matrix).                  
         shared_uniforms.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 500 );
                                                 // A spinning light to show off the bump map:
-        shared_uniforms.lights = [ new Light( 
+        shared_uniforms.lights = [ defs.Phong_Shader.light_source( 
                                    Mat4.rotation( t/300,   1,0,0 ).times( vec4( 3,2,10,1 ) ), 
                                              color( 1,.7,.7,1 ), 100000 ) ];
         

@@ -1,6 +1,6 @@
 import {tiny, defs} from './common.js';
                                                   // Pull these names into this module's scope for convenience:
-const { vec3, vec4, color, Mat4, Light, Shape, Material, Shader, Texture, Component } = tiny;
+const { vec3, vec4, color, Mat4, Shape, Material, Shader, Texture, Component } = tiny;
 
 import { Transforms_Sandbox } from "./transforms-sandbox.js"
 

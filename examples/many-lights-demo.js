@@ -1,6 +1,6 @@
 import {tiny, defs} from './common.js';
                                             // Pull these names into this module's scope for convenience:
-const { vec3, vec4, color, Mat4, Light, Shape, Material, Shader, Texture, Component } = tiny;
+const { vec3, vec4, color, Mat4, Shape, Material, Shader, Texture, Component } = tiny;
 
 export class Many_Lights_Demo extends Component
 {                             // **Many_Lights_Demo** demonstrates how to make the illusion that 
@@ -44,8 +44,8 @@ export class Many_Lights_Demo extends Component
                                     // To draw each individual box, select the two lights sharing 
                                     // a row and column with it, and draw using those.
       this.box_positions.forEach( (p,i,a) =>
-        { shared_uniforms.lights = [ new Light( this.row_lights   [ ~~p[2] ].to4(1), color( p[2]%1,1,1,1 ), 9 ),
-                                   new Light( this.column_lights[ ~~p[0] ].to4(1), color( 1,1,p[0]%1,1 ), 9 ) ];
+        { shared_uniforms.lights = [ defs.Phong_Shader.light_source( this.row_lights   [ ~~p[2] ].to4(1), color( p[2]%1,1,1,1 ), 9 ),
+                                     defs.Phong_Shader.light_source( this.column_lights[ ~~p[0] ].to4(1), color( 1,1,p[0]%1,1 ), 9 ) ];
                                             // Draw the box:
           this.shapes.cube.draw( context, shared_uniforms, Mat4.translation( ...p ).times( Mat4.scale( .3,1,.3 ) ), this.brick )
         } );

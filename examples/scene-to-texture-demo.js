@@ -1,6 +1,6 @@
 import {tiny, defs} from './common.js';
                                                   // Pull these names into this module's scope for convenience:
-const { vec3, vec4, color, Mat4, Light, Shape, Material, Shader, Texture, Component } = tiny;
+const { vec3, vec4, color, Mat4, Shape, Material, Shader, Texture, Component } = tiny;
 
 export class Scene_To_Texture_Demo extends Component
   {                   // **Scene_To_Texture_Demo** is a crude way of doing multi-pass rendering.
@@ -51,7 +51,7 @@ export class Scene_To_Texture_Demo extends Component
       }
     render_animation( context, shared_uniforms )
       {                                 // render_animation():  Draw both scenes, clearing the buffer in between.
-        shared_uniforms.lights = [ new Light( vec4( -5,5,5,1 ), color( 0,1,1,1 ), 100000 ) ];
+        shared_uniforms.lights = [ defs.Phong_Shader.light_source( vec4( -5,5,5,1 ), color( 0,1,1,1 ), 100000 ) ];
         const t = shared_uniforms.animation_time / 1000, dt = shared_uniforms.animation_delta_time / 1000;
 
         shared_uniforms.set_camera( Mat4.look_at( vec3( 0,0,5 ), vec3( 0,0,0 ), vec3( 0,1,0 ) ) );

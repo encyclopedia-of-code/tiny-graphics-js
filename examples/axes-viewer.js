@@ -1,6 +1,6 @@
 import {tiny, defs} from './common.js';
                                                   // Pull these names into this module's scope for convenience:
-const { vec3, vec4, color, Mat4, Light, Shape, Material, Shader, Texture, Component } = tiny;
+const { vec3, vec4, color, Mat4, Shape, Material, Shader, Texture, Component } = tiny;
 
 export
 const Axes_Viewer = defs.Axes_Viewer =
@@ -77,7 +77,7 @@ export class Axes_Viewer_Test_Scene extends Component
     { this.control_panel.innerHTML += "(Substitute your own scene here)" }
   render_animation( context, shared_uniforms )
     {                                   // display():  *********** See instructions below ***********
-      shared_uniforms.lights = [ new Light( vec4( 0,0,1,0 ), color( 0,1,1,1 ), 100000 ) ];
+      shared_uniforms.lights = [ defs.Phong_Shader.light_source( vec4( 0,0,1,0 ), color( 0,1,1,1 ), 100000 ) ];
 
       if( !context.scratchpad.controls ) 
         { this.animated_children.push( context.scratchpad.controls = new defs.Movement_Controls() ); 
@@ -240,8 +240,8 @@ export class Matrix_Game_1 extends Component
   trim_string( s ) { const trimmed = s.slice( 0, this.trim_factor ); return trimmed.length == 0 ? s[0] : trimmed }
   display( shared_uniforms )
     {            
-      context.globals.shared_uniforms.lights = [ new Light( Vec.of( 1,1,0,0 ).normalized(), Color.of(  1, .5, .5, 1 ), 100000 ),
-                                                new Light( Vec.of( 0,1,0,0 ).normalized(), Color.of( .5,  1, .5, 1 ), 100000 ) ];
+      context.globals.shared_uniforms.lights = [ defs.Phong_Shader.light_source( Vec.of( 1,1,0,0 ).normalized(), Color.of(  1, .5, .5, 1 ), 100000 ),
+                                                 defs.Phong_Shader.light_source( Vec.of( 0,1,0,0 ).normalized(), Color.of( .5,  1, .5, 1 ), 100000 ) ];
 
 
 
@@ -417,7 +417,7 @@ export class Matrix_Game extends Component
           const t = this.t = shared_uniforms.animation_time/1000;
           const angle = Math.sin( t );
           const light_position = Mat4.rotation( angle,   1,0,0 ).times( vec4( 0,0,1,0 ) );
-          shared_uniforms.lights = [ new Light( light_position, color( 1,1,1,1 ), 1000000 ) ]; 
+          shared_uniforms.lights = [ defs.Phong_Shader.light_source( light_position, color( 1,1,1,1 ), 1000000 ) ]; 
         }
       else
         this[ "display_scene_" + this.scene_id ] ( context, shared_uniforms );
