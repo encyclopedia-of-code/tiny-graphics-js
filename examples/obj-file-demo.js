@@ -15,14 +15,13 @@ class Shape_From_File extends Shape
     }
   load_file( filename )
       {                             // Request the external file and wait for it to load.
-                                    // Failure mode:  Loads an empty shape.
         return fetch( filename )
           .then( response =>
             { if ( response.ok )  return Promise.resolve( response.text() )
               else                return Promise.reject ( response.status )
             })
           .then( obj_file_contents => this.parse_into_mesh( obj_file_contents ) )
-          .catch( error => { this.copy_onto_graphics_card( this.gl ); } )
+          .catch( error => { throw "OBJ file loader:  OBJ file either not found or is of unsupported format." } )
       }
   parse_into_mesh( data )
     {                           // Adapted from the "webgl-obj-loader.js" library found online:

@@ -13,7 +13,7 @@ import {widgets} from '../tiny-graphics-gui.js';
 Object.assign( tiny, widgets );
 
                                                   // Pull these names into this module's scope for convenience:
-const { Vector3, color, Matrix, Mat4, Keyboard_Manager } = tiny;
+const { Vector3, vec3, color, Matrix, Mat4, Keyboard_Manager } = tiny;
 
 
 
