@@ -24,16 +24,15 @@ class Transforms_Sandbox_Base extends Component
       this.shapes = { 'box'  : new defs.Cube(),
                       'ball' : new defs.Subdivision_Sphere( 4 ) };
 
-                                                  // *** Materials: *** Define a shader, and then define materials that use
-                                                  // that shader.  Materials wrap a dictionary of "options" for the shader.
-                                                  // Here we use a Phong shader and the Material stores the scalar
-                                                  // coefficients that appear in the Phong lighting formulas so that the
-                                                  // appearance of particular materials can be tweaked via these numbers.
+                                                  // *** Materials: ***  A "material" used on individual shapes specifies all fields
+                                                  // that a Shader queries to light/color it properly.  Here we use a Phong shader.
+                                                  // We can now tweak the scalar coefficients from the Phong lighting formulas.
+                                                  // Expected values can be found listed in Phong_Shader::update_GPU().
       const phong = new defs.Phong_Shader();
-      this.materials = { plastic: new Material( phong,
-                                    { ambient: .2, diffusivity: 1, specularity: .5, color: color( .9,.5,.9,1 ) } ),
-                           metal: new Material( phong,
-                                    { ambient: .2, diffusivity: 1, specularity:  1, color: color( .9,.5,.9,1 ) } ) };
+      this.materials = { plastic:
+                    { shader: phong, ambient: .2, diffusivity: 1, specularity: .5, color: color( .9,.5,.9,1 ) },
+                           metal:
+                    { shader: phong, ambient: .2, diffusivity: 1, specularity:  1, color: color( .9,.5,.9,1 ) } };
     }
   make_control_panel()
     {                                 // make_control_panel(): Sets up a panel of interactive HTML elements, including
@@ -104,6 +103,10 @@ export class Transforms_Sandbox extends Transforms_Sandbox_Base
                                                 // Call the setup code that we left inside the base class:
       super.render_animation( context, shared_uniforms );
 
+                                                // Define a little helper for making materials of new colors:
+      const use_color = ( material, color ) => Object.assign( {}, material, { color } );
+
+
       /**********************************
       Start coding down here!!!!
       **********************************/
@@ -113,6 +116,7 @@ export class Transforms_Sandbox extends Transforms_Sandbox_Base
                                                   // function times(), which generates products of matrices.
 
       const blue = color( 0,0,1,1 ), yellow = color( 1,1,0,1 );
+
 
                                     // Variable model_transform will be a local matrix value that helps us position shapes.
                                     // It starts over as the identity every single frame - coordinate axes at the origin.
@@ -130,13 +134,13 @@ export class Transforms_Sandbox extends Transforms_Sandbox_Base
                                                      // shape, and place it at the coordinate origin 0,0,0:
       model_transform = model_transform.times( Mat4.translation( 0,0,0 ) );
                                                                                               // Draw the top box:
-      this.shapes.box.draw( context, shared_uniforms, model_transform, this.materials.plastic.override( yellow ) );
+      this.shapes.box.draw( context, shared_uniforms, model_transform, { ...this.materials.plastic, color: yellow } );
 
                                                      // Tweak our coordinate system downward 2 units for the next shape.
       model_transform = model_transform.times( Mat4.translation( 0, -2, 0 ) );
                                                                            // Draw the ball, a child of the hierarchy root.
                                                                            // The ball will have its own children as well.
-      this.shapes.ball.draw( context, shared_uniforms, model_transform, this.materials.metal.override( blue ) );
+      this.shapes.ball.draw( context, shared_uniforms, model_transform, use_color( this.materials.metal, blue ) );
 
                                                                       // Prepare to draw another box object 2 levels deep
                                                                       // within our hierarchy.
@@ -160,7 +164,7 @@ export class Transforms_Sandbox extends Transforms_Sandbox_Base
                                          .times( Mat4.scale      ( 1,   2, 1 ) )
                                          .times( Mat4.translation( 0,-1.5, 0 ) );
                                                                                     // Draw the bottom (child) box:
-      this.shapes.box.draw( context, shared_uniforms, model_transform, this.materials.plastic.override( yellow ) );
+      this.shapes.box.draw( context, shared_uniforms, model_transform, use_color( this.materials.plastic, yellow ) );
 
                               // Note that our coordinate system stored in model_transform still has non-uniform scaling
                               // due to our scale() call.  This could have undesired effects for subsequent transforms;

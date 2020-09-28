@@ -411,7 +411,7 @@ class Minimal_Webgl_Demo extends Component
     }
   render_animation( context, shared_uniforms )
     {                                           // Every frame, simply draw the Triangle at its default location.
-      this.shapes.triangle.draw( context, shared_uniforms, Mat4.identity(), new Material( this.shader ) );
+      this.shapes.triangle.draw( context, shared_uniforms, Mat4.identity(), { shader: this.shader } );
     }
 }
 

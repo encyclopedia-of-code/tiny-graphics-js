@@ -176,10 +176,9 @@ export class Inertia_Demo extends Simulation
       this.shapes = Object.assign( {}, this.data.shapes );
       this.shapes.square = new defs.Square();
       const shader = new defs.Fake_Bump_Map( 1 );
-      this.material = new Material( shader, { color: color( .4,.8,.4,1 ),
-                                  ambient:.4, texture: this.data.textures.stars })
+      this.material = { shader, color: color( .4,.8,.4,1 ), ambient:.4, texture: this.data.textures.stars }
     }
-  random_color() { return this.material.override( color( .6,.6*Math.random(),.6*Math.random(),1 ) ); }
+  random_color() { return { ...this.material, color: color( .6,.6*Math.random(),.6*Math.random(),1 ) } }
   update_state( dt )
     {                 // update_state():  Override the base time-stepping code to say what this particular
                       // scene should do to its bodies every frame -- including applying forces.
@@ -213,7 +212,7 @@ export class Inertia_Demo extends Simulation
                                                                                               // Draw the ground:
       this.shapes.square.draw( context, shared_uniforms, Mat4.translation( 0,-10,0 )
                                        .times( Mat4.rotation( Math.PI/2,   1,0,0 ) ).times( Mat4.scale( 50,50,1 ) ),
-                               this.material.override( this.data.textures.earth ) );
+                               { ...this.material, texture: this.data.textures.earth } );
     }
   render_documentation()
     { this.document_region.innerHTML += `<p>This demo lets random initial momentums carry bodies until they fall and bounce.  It shows a good way to do incremental movements, which are crucial for making objects look like they're moving on their own instead of following a pre-determined path.  Animated objects look more real when they have inertia and obey physical laws, instead of being driven by simple sinusoids or periodic functions.
@@ -241,10 +240,10 @@ export class Collision_Demo extends Simulation
                                                           // Materials:
       const phong = new defs.Phong_Shader ( 1 );
       const bump  = new defs.Fake_Bump_Map( 1 )
-      this.inactive_color = new Material( bump, { color: color( .5,.5,.5,1 ), ambient: .2,
-                                           texture: this.data.textures.rgb });
-      this.active_color = this.inactive_color.override( { color: color( .5,0,0,1 ), ambient: .5 } );
-      this.bright = new Material( phong, { color: color( 0,1,0,.5 ), ambient: 1 });
+      this.inactive_color = { shader: bump, color: color( .5,.5,.5,1 ), ambient: .2,
+                                           texture: this.data.textures.rgb };
+      this.active_color = { ...this.inactive_color, color: color( .5,0,0,1 ), ambient: .5 };
+      this.bright = { shader: phong, color: color( 0,1,0,.5 ), ambient: 1 };
     }
   make_control_panel()
     { this.key_triggered_button( "Previous collider", [ "b" ], this.decrease );

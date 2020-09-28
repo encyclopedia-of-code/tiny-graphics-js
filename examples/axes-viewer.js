@@ -26,8 +26,8 @@ class Axes_Viewer extends Component
       this.reset();
       this.shapes = { axes: new defs.Axis_Arrows() };
       const bump = new defs.Fake_Bump_Map();
-      this.material = new Material( bump, { color: color( 0,0,0,1 ), ambient: 1,
-                          texture: new Texture( "assets/rgb.jpg" ) });
+      this.material = { shader: bump, color: color( 0,0,0,1 ), ambient: 1,
+                          texture: new Texture( "assets/rgb.jpg" ) };
     }
   insert( basis, group_id = ++this.cursor )
     {                                         // insert(): Default to putting the basis in the next empty group; otherwise
@@ -71,7 +71,7 @@ export class Axes_Viewer_Test_Scene extends Component
                                                                   // Scene defaults:
       this.shapes = { box: new defs.Cube() };
       const phong = new defs.Phong_Shader();
-      this.material = new Material( phong, { color: color( .8,.4,.8,1 ) } );
+      this.material = { shader: phong, color: color( .8,.4,.8,1 ) };
     }
   make_control_panel()
     { this.control_panel.innerHTML += "(Substitute your own scene here)" }

@@ -16,20 +16,6 @@ Object.assign( tiny, widgets );
 const { Vector3, vec3, color, Matrix, Mat4, Keyboard_Manager } = tiny;
 
 
-
-const test_rookie_mistake = function()
-{
-  test_rookie_mistake.counter |= 0;
-  if( test_rookie_mistake.counter++ > 200  )
-    throw `Error: You are sending a lot of object definitions to the GPU, probably by mistake!  Many of them are likely duplicates, which you
-           don't want since sending each one is very slow.  To avoid this, avoid ever declaring a Shape, Shader, or Texture (or subclass of
-           these) with "new" from within your render_animation() function, thus causing the definition to be re-created and re-transmitted every frame.
-           Instead, call these from within your scene's constructor and keep the result as a class member, or otherwise make sure it only happens
-           once.  In the off chance that you have a somehow deformable shape that must really be updated every frame, then at least use the special
-           arguments of copy_onto_graphics_card to select which buffers get overwritten every frame to only the necessary ones.`;
-}
-
-
 const Shape = tiny.Shape =
 class Shape
 {                       // **Vertex_Buffer** organizes data related to one 3D shape and copies it into GPU memory.  That data
@@ -63,7 +49,7 @@ class Shape
       const existing_instance = this.gpu_instances.get( context );
       if( !existing_instance ) test_rookie_mistake();
 
-          // If this has never used on this GPU context before, then prepare new buffer indices for this context.
+          // If this Shape was never used on this GPU context before, then prepare new buffer indices for this context.
       const gpu_instance = existing_instance || this.gpu_instances.set( context, defaults ).get( context );
 
       const gl = context;
@@ -188,39 +174,16 @@ class Shape
 }
 
 
-const Container = tiny.Container =
-class Container
-{                   // **Container** allows a way to create patch JavaScript objects within a single line.  Some properties get
-                    // replaced with substitutes that you provide, without having to write out a new object from scratch.
-                    // To override, simply pass in "replacement", a JS Object of keys/values you want to override, to generate
-                    // a new object.  For shorthand you can leave off the key and only provide a value (pass in directly as
-                    // "replacement") and a guess will be used for which member you want overridden based on type.
-  override( replacement )                     // override(): Generate a copy by value, replacing certain properties.
-    { return this.helper( replacement, Object.create( this.constructor.prototype ) ) }
-  replace(  replacement )                     // replace(): Like override, but modifies the original object.
-    { return this.helper( replacement, this ) }
-  helper( replacement, target )               // (Internal helper function)
-    { Object.assign( target, this );
-      if( replacement.constructor === Object )             // If a JS object was given, use its entries to override:
-        return Object.assign( target, replacement );
-                                                           // Otherwise we'll try to guess the key to override by type:
-      const matching_keys_by_type = Object.entries( this ).filter( ([key, value]) => replacement instanceof value.constructor );
-      if( !matching_keys_by_type[0] ) throw "Container: Can't figure out which value you're trying to replace; nothing matched by type.";
-      return Object.assign( target, { [ matching_keys_by_type[0][0] ]: replacement } );
-    }
-}
-
-
-const Material = tiny.Material =
-class Material extends Container
-{                                       // **Material** contains messages for a shader program.  These configure the shader
-                                        // for the particular color and style of one shape being drawn.  A material consists
-                                        // of a pointer to the particular Shader it uses (to select that Shader for the draw
-                                        // command), as well as a collection of any options wanted by the shader.
-  constructor( shader, options )
-  { super();
-    Object.assign( this, { shader }, options );
-  }
+const test_rookie_mistake = function()
+{
+  test_rookie_mistake.counter |= 0;
+  if( test_rookie_mistake.counter++ > 200  )
+    throw `Error: You are sending a lot of object definitions to the GPU, probably by mistake!  Many of them are likely duplicates, which you
+           don't want since sending each one is very slow.  To avoid this, avoid ever declaring a Shape, Shader, or Texture (or subclass of
+           these) with "new" from within your render_animation() function, thus causing the definition to be re-created and re-transmitted every frame.
+           Instead, call these from within your scene's constructor and keep the result as a class member, or otherwise make sure it only happens
+           once.  In the off chance that you have a somehow deformable shape that must really be updated every frame, then at least use the special
+           arguments of copy_onto_graphics_card to select which buffers get overwritten every frame to only the necessary ones.`;
 }
 
 
@@ -247,7 +210,7 @@ class Shader
       const existing_instance = this.gpu_instances.get( context );
       if( !existing_instance ) test_rookie_mistake();
 
-          // If this has never used on this GPU context before, then prepare new buffer indices for this context.
+          // If this Shader was never used on this GPU context before, then prepare new buffer indices for this context.
       const gpu_instance = existing_instance || this.gpu_instances.set( context, defaults ).get( context );
 
       class Graphics_Addresses
@@ -256,7 +219,8 @@ class Shader
                                   // the memory addresses it will use for uniform variables, and the types and indices of its per-
                                   // vertex attributes.  We'll need those for building vertex buffers.
         constructor( program, gl )
-        { const num_uniforms = gl.getProgramParameter(program, gl.ACTIVE_UNIFORMS);
+        {
+          const num_uniforms = gl.getProgramParameter(program, gl.ACTIVE_UNIFORMS);
           for (let i = 0; i < num_uniforms; ++i)
             {                 // Retrieve the GPU addresses of each uniform variable in the shader
                               // based on their names, and store these pointers for later.
@@ -332,7 +296,7 @@ class Shader
   vertex_glsl_code(){}
   fragment_glsl_code(){}
   static uniforms_object( initial_values )
-    {                           // uniforms_object():  Non-standard (meant for WebGL1). A group of variables meant
+    {                           // uniforms_object():  Non-standard solution for WebGL 1.  Build a group of variables meant
                                 // to become shader uniforms.  These objects should be shared across
                                 // scenes in a canvas, or even across canvases, to sync the contents.
 
@@ -421,7 +385,7 @@ class Texture
       const existing_instance = this.gpu_instances.get( context );
       if( !existing_instance ) test_rookie_mistake();
 
-          // If this has never used on this GPU context before, then prepare new buffer indices for this context.
+          // If this Texture was never used on this GPU context before, then prepare new buffer indices for this context.
       const gpu_instance = existing_instance || this.gpu_instances.set( context, defaults ).get( context );
 
       if( !gpu_instance.texture_buffer_pointer ) gpu_instance.texture_buffer_pointer = context.createTexture();
