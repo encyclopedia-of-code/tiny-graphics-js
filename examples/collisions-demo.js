@@ -10,7 +10,7 @@ class Body
                                     // moves from its previous place due to velocities.  It conforms to the
                                     // approach outlined in the "Fix Your Timestep!" blog post by Glenn Fiedler.
   constructor( shape, material, size )
-    { Object.assign( this, 
+    { Object.assign( this,
              { shape, material, size } )
     }
   emplace( location_matrix, linear_velocity, angular_velocity, spin_axis = vec3( 0,0,0 ).randomized(1).normalized() )
@@ -23,7 +23,7 @@ class Body
       this.temp_matrix = Mat4.identity();
       return Object.assign( this, { linear_velocity, angular_velocity, spin_axis } )
     }
-  advance( time_amount ) 
+  advance( time_amount )
     {                           // advance(): Perform an integration (the simplistic Forward Euler method) to
                                 // advance all the linear and angular velocities one time-step forward.
       this.previous = { center: this.center.copy(), rotation: this.rotation.copy() };
@@ -32,24 +32,24 @@ class Body
       this.center = this.center.plus( this.linear_velocity.times( time_amount ) );
       this.rotation.pre_multiply( Mat4.rotation( time_amount * this.angular_velocity, ...this.spin_axis ) );
     }
-  blend_rotation( alpha )         
+  blend_rotation( alpha )
     {                        // blend_rotation(): Just naively do a linear blend of the rotations, which looks
                              // ok sometimes but otherwise produces shear matrices, a wrong result.
 
-                                  // TODO:  Replace this function with proper quaternion blending, and perhaps 
+                                  // TODO:  Replace this function with proper quaternion blending, and perhaps
                                   // store this.rotation in quaternion form instead for compactness.
        return this.rotation.map( (x,i) => vec4( ...this.previous.rotation[i] ).mix( x, alpha ) );
     }
-  blend_state( alpha )            
+  blend_state( alpha )
     {                             // blend_state(): Compute the final matrix we'll draw using the previous two physical
-                                  // locations the object occupied.  We'll interpolate between these two states as 
+                                  // locations the object occupied.  We'll interpolate between these two states as
                                   // described at the end of the "Fix Your Timestep!" blog post.
       this.drawn_location = Mat4.translation( ...this.previous.center.mix( this.center, alpha ) )
                                       .times( this.blend_rotation( alpha ) )
                                       .times( Mat4.scale( ...this.size ) );
     }
                                               // The following are our various functions for testing a single point,
-                                              // p, against some analytically-known geometric volume formula 
+                                              // p, against some analytically-known geometric volume formula
                                               // (within some margin of distance).
   static intersect_cube( p, margin = 0 )
     { return p.every( value => value >= -1 - margin && value <=  1 + margin )
@@ -59,21 +59,21 @@ class Body
     }
   check_if_colliding( b, collider )
     {                                     // check_if_colliding(): Collision detection function.
-                                          // DISCLAIMER:  The collision method shown below is not used by anyone; it's just very quick 
-                                          // to code.  Making every collision body an ellipsoid is kind of a hack, and looping 
-                                          // through a list of discrete sphere points to see if the ellipsoids intersect is *really* a 
-                                          // hack (there are perfectly good analytic expressions that can test if two ellipsoids 
+                                          // DISCLAIMER:  The collision method shown below is not used by anyone; it's just very quick
+                                          // to code.  Making every collision body an ellipsoid is kind of a hack, and looping
+                                          // through a list of discrete sphere points to see if the ellipsoids intersect is *really* a
+                                          // hack (there are perfectly good analytic expressions that can test if two ellipsoids
                                           // intersect without discretizing them into points).
-      if ( this == b ) 
+      if ( this == b )
         return false;                     // Nothing collides with itself.
                                           // Convert sphere b to the frame where a is a unit sphere:
       const T = this.inverse.times( b.drawn_location, this.temp_matrix );
 
       const { intersect_test, points, leeway } = collider;
                                           // For each vertex in that b, shift to the coordinate frame of
-                                          // a_inv*b.  Check if in that coordinate frame it penetrates 
+                                          // a_inv*b.  Check if in that coordinate frame it penetrates
                                           // the unit sphere at the origin.  Leave some leeway.
-      return points.arrays.position.some( p => 
+      return points.arrays.position.some( p =>
         intersect_test( T.times( p.to4(1) ).to3(), leeway ) );
     }
 }
@@ -87,16 +87,16 @@ class Simulation extends Component
                                           // the simulation from the frame rate (see below).
   constructor()
     { super();
-      Object.assign( this, { time_accumulator: 0, time_scale: 1, t: 0, dt: 1/20, bodies: [], steps_taken: 0 } );            
+      Object.assign( this, { time_accumulator: 0, time_scale: 1, t: 0, dt: 1/20, bodies: [], steps_taken: 0 } );
     }
   simulate( frame_time )
-    {                                     // simulate(): Carefully advance time according to Glenn Fiedler's 
+    {                                     // simulate(): Carefully advance time according to Glenn Fiedler's
                                           // "Fix Your Timestep" blog post.
                                           // This line gives ourselves a way to trick the simulator into thinking
                                           // that the display framerate is running fast or slow:
       frame_time = this.time_scale * frame_time;
 
-                                          // Avoid the spiral of death; limit the amount of time we will spend 
+                                          // Avoid the spiral of death; limit the amount of time we will spend
                                           // computing during this timestep if display lags:
       this.time_accumulator += Math.min( frame_time, 0.1 );
                                           // Repeatedly step the simulation until we're caught up with this frame:
@@ -105,7 +105,7 @@ class Simulation extends Component
         this.update_state( this.dt );
         for( let b of this.bodies )
           b.advance( this.dt );
-                                          // Following the advice of the article, de-couple 
+                                          // Following the advice of the article, de-couple
                                           // our simulation time from our frame rate:
         this.t                += Math.sign( frame_time ) * this.dt;
         this.time_accumulator -= Math.sign( frame_time ) * this.dt;
@@ -127,10 +127,10 @@ class Simulation extends Component
     }
   render_animation( context, shared_uniforms )
     {                                     // display(): advance the time and state of our whole simulation.
-      if( shared_uniforms.animate ) 
+      if( shared_uniforms.animate )
         this.simulate( shared_uniforms.animation_delta_time );
                                           // Draw each shape at its current location:
-      for( let b of this.bodies ) 
+      for( let b of this.bodies )
         b.shape.draw( context, shared_uniforms, b.drawn_location, b.material );
     }
   update_state( dt )      // update_state(): Your subclass of Simulation has to override this abstract function.
@@ -157,7 +157,7 @@ class Test_Data
                       prism  : new ( defs.Capped_Cylinder   .prototype.make_flat_shaded_version() )( 10, 10, [[0,2],[0,1]] ),
                       gem    : new ( defs.Subdivision_Sphere.prototype.make_flat_shaded_version() )( 2 ),
                       donut2 : new ( defs.Torus             .prototype.make_flat_shaded_version() )( 20, 20, [[0,2],[0,1]] ),
-                    }; 
+                    };
     }
   random_shape( shape_list = this.shapes )
     {                                       // random_shape():  Extract a random shape from this.shapes.
@@ -188,7 +188,7 @@ export class Inertia_Demo extends Simulation
         this.bodies.push( new Body( this.data.random_shape(), this.random_color(), vec3( 1,1+Math.random(),1 ) )
               .emplace( Mat4.translation( ...vec3( 0,15,0 ).randomized(10) ),
                         vec3( 0,-1,0 ).randomized(2).normalized().times(3), Math.random() ) );
-      
+
       for( let b of this.bodies )
       {                                         // Gravity on Earth, where 1 unit in world space = 1 meter:
         b.linear_velocity[1] += dt * -9.8;
@@ -202,8 +202,8 @@ export class Inertia_Demo extends Simulation
   render_animation( context, shared_uniforms )
     {                                 // display(): Draw everything else in the scene besides the moving bodies.
       super.render_animation( context, shared_uniforms );
-      
-      if( !context.scratchpad.controls ) 
+
+      if( !context.scratchpad.controls )
         { this.animated_children.push( context.scratchpad.controls = new defs.Movement_Controls() );
           this.animated_children.push( new defs.Shared_Uniforms_Viewer() );
           Shader.assign_camera( Mat4.translation( 0,0,-50 ), shared_uniforms );    // Locate the camera here (inverted matrix).
@@ -250,11 +250,11 @@ export class Collision_Demo extends Simulation
     { this.key_triggered_button( "Previous collider", [ "b" ], this.decrease );
       this.key_triggered_button( "Next",              [ "n" ], this.increase );
       this.new_line();
-      super.make_control_panel();      
+      super.make_control_panel();
     }
   increase() { this.collider_selection = Math.min( this.collider_selection + 1, this.colliders.length-1 ); }
   decrease() { this.collider_selection = Math.max( this.collider_selection - 1, 0 ) }
-  update_state( dt, num_bodies = 40 )                                                            
+  update_state( dt, num_bodies = 40 )
     {                 // update_state():  Override the base time-stepping code to say what this particular
                       // scene should do to its bodies every frame -- including applying forces.
                                                               // Generate moving bodies:
@@ -263,8 +263,8 @@ export class Collision_Demo extends Simulation
               .emplace(         Mat4.translation( ...unsafe3( 0,0,0 ).randomized(30) )
                         .times( Mat4.rotation( Math.PI, ...unsafe3( 0,0,0 ).randomized(1).normalized() ) ),
                         unsafe3( 0,0,0 ).randomized(20), Math.random() ) );
-                                      // Sometimes we delete some so they can re-generate as new ones:                            
-      this.bodies = this.bodies.filter( b => ( Math.random() > .01 ) || b.linear_velocity.norm() > 1 ); 
+                                      // Sometimes we delete some so they can re-generate as new ones:
+      this.bodies = this.bodies.filter( b => ( Math.random() > .01 ) || b.linear_velocity.norm() > 1 );
 
       const collider = this.colliders[ this.collider_selection ];
                                                     // Loop through all bodies (call each "a"):
@@ -279,7 +279,7 @@ export class Collision_Demo extends Simulation
             continue;
                                                       // *** Collision process is here ***
                                                       // Loop through all bodies again (call each "b"):
-          for( let b of this.bodies )                                      
+          for( let b of this.bodies )
           {                               // Pass the two bodies and the collision shape to check_if_colliding():
             if( !a.check_if_colliding( b, collider ) )
               continue;
@@ -291,10 +291,10 @@ export class Collision_Demo extends Simulation
           }
         }
     }
-  render_animation( context, shared_uniforms )           
+  render_animation( context, shared_uniforms )
     {                                 // display(): Draw everything else in the scene besides the moving bodies.
       super.render_animation( context, shared_uniforms );
-      if( !context.scratchpad.controls ) 
+      if( !context.scratchpad.controls )
         { this.animated_children.push( context.scratchpad.controls = new defs.Movement_Controls() );
           this.animated_children.push( new defs.Shared_Uniforms_Viewer() );
           Shader.assign_camera( Mat4.translation( 0,0,-50 ), shared_uniforms );    // Locate the camera here (inverted matrix).

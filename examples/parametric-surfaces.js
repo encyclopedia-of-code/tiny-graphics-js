@@ -10,7 +10,7 @@ export class Parametric_Surfaces extends Component
     {
       this.div = div;
       div.className = "documentation_treenode";
-                                                        // Fit the existing document content to a fixed size:    
+                                                        // Fit the existing document content to a fixed size:
       div.style.margin = "auto";
       div.style.width = "1080px";
 
@@ -24,7 +24,7 @@ export class Parametric_Surfaces extends Component
         this[ "region_" + i ] = inner_div
         this.inner_scenes.push( inner_scene );
 
-        inner_scene.render_layout( inner_div );        
+        inner_scene.render_layout( inner_div );
       }
     }
   initialize_shared_state()
@@ -57,12 +57,12 @@ export class Parametric_Surfaces extends Component
 export class Parametric_Surfaces_Section extends Component
 { constructor( parent, section_index )
     { super();
-      
+
       this.parent = parent;
       this.section_index = section_index;
 
       this.animated_children.push( parent.movement_controls );
-      
+
                                   // Switch on section_index to decide what to actually construct.
       const handler_at_index = this[ "construct_section_" + section_index ];
       handler_at_index.call( this );
@@ -82,11 +82,11 @@ export class Parametric_Surfaces_Section extends Component
     {
       this.div = div;
       div.className = "documentation_treenode";
-                                                        // Fit the existing document content to a fixed size:    
+                                                        // Fit the existing document content to a fixed size:
       div.style.margin = "auto";
       div.style.width = "1080px";
-                
-      this.document_region = div.appendChild( document.createElement( "div" ) );    
+
+      this.document_region = div.appendChild( document.createElement( "div" ) );
       this.document_region.className = "documentation";
       this.render_documentation();
                                                         // The next div down will hold a canvas and/or related interactive areas.
@@ -132,7 +132,7 @@ export class Parametric_Surfaces_Section extends Component
   construct_section_0()
     { const initial_corner_point = vec3( -1,-1,0 );
                           // These two callbacks will step along s and t of the first sheet:
-      const row_operation = (s,p) => p ? Mat4.translation( 0,.2,0 ).times(p.to4(1)).to3() 
+      const row_operation = (s,p) => p ? Mat4.translation( 0,.2,0 ).times(p.to4(1)).to3()
                                        : initial_corner_point;
       const column_operation = (t,p) =>  Mat4.translation( .2,0,0 ).times(p.to4(1)).to3();
                           // These two callbacks will step along s and t of the second sheet:
@@ -140,7 +140,7 @@ export class Parametric_Surfaces_Section extends Component
       const column_operation_2 = (t,p,s) => vec3( 2*t-1,2*s-1,Math.random()/2 );
 
       this.shapes = { sheet : new defs.Grid_Patch( 10, 10, row_operation, column_operation ),
-                      sheet2: new defs.Grid_Patch( 10, 10, row_operation_2, column_operation_2 ) };      
+                      sheet2: new defs.Grid_Patch( 10, 10, row_operation_2, column_operation_2 ) };
     }
   display_section_0( context, shared_uniforms )
     {
@@ -155,7 +155,7 @@ export class Parametric_Surfaces_Section extends Component
            <p>Grid_Patch is a generalized parametric surface.  It is always made of a sheet of squares arranged in rows and columns, corresponding to s and t.  The sheets are always guaranteed to have this row/column arrangement, but where it goes as you follow an edge to the next row or column over could vary.  When generating the shape below, we told it to do the most obvious thing whenever s or t increase; just increase X and Y.  A flat rectangle results.</p>
            <p>The shape on the right is the same except instead of building it incrementally by moving from the previous point, we assigned points manually.  The z values are a random height map.  The light is moving over its static peaks and valleys.  We have full control over where the sheet's points go.</p>
            <p>To create a new Grid_Patch shape, initialize it with the desired amounts of rows and columns you'd like.  The next two arguments are callback functions that return a new point given an old point (called p) and the current (s,t) coordinates.  The first callback is for rows, and will recieve arguments (s,p) back from Grid_Patch.  The second one is for columns, and will recieve arguments (t,p,s) back from Grid_Patch. </p>
-           <p>Scroll down for more animations!</p>`;      
+           <p>Scroll down for more animations!</p>`;
     }
 }
 
@@ -164,17 +164,17 @@ export class Parametric_Surfaces_Section extends Component
 // class Multi_Canvas_Scene extends tiny.Scene
 // {                               // **Multi_Canvas_Scene** is a special Scene whose documentation, when printed out by a Document_Builder,
 //                                 // expands out into several sections -- each potentially drawing their own variation of the Scene or
-//                                 // of any Scene.  Text and interactive areas can alternate as needed by the author. State of the 
-//                                 // document is managed in a shared object at the top level, which continuously updates the sections' 
+//                                 // of any Scene.  Text and interactive areas can alternate as needed by the author. State of the
+//                                 // document is managed in a shared object at the top level, which continuously updates the sections'
 //                                 // contents via their display() functions.  Override the indicated functions with useful behavior.
 //   constructor( content )
 //     { super();
 
 //       this.widget_options = { show_canvas: false };
-                
+
 //       this.inner_scenes = [];
-                            
-//                             // Instance child objects for each section.       
+
+//                             // Instance child objects for each section.
 //       for( let i = 0; i < this.num_sections(); i++ )
 //         this.inner_scenes.push( new content( i ) );
 
@@ -234,7 +234,7 @@ export class Parametric_Surfaces extends tiny.Multi_Canvas_Scene
     }
   num_sections() { return 7 }
   display( context, shared_uniforms_unused )
-    { 
+    {
       const shared_uniforms = this.update_shared_state( context );
 
       context.scratchpad.controls = this.movement_controls;
@@ -256,7 +256,7 @@ class Parametric_Surfaces_Section extends Scene
     {
       super();
                                     // Switch on section_index to decide what to actually construct.
-      this.section_index = section_index;      
+      this.section_index = section_index;
       const handler_at_index = this[ "construct_section_" + section_index ];
       handler_at_index.call( this );
     }
@@ -282,26 +282,26 @@ class Parametric_Surfaces_Section extends Scene
         const constructor_box = document_builder.div.appendChild( document.createElement( "div" ) );
         constructor_box.className = "code-widget";
 
-        const code = new tiny.Code_Widget( constructor_box, 
+        const code = new tiny.Code_Widget( constructor_box,
                            this[ "construct_section_" + this.section_index ],
                            [], this, { hide_navigator: true } );
 
         const display_box = document_builder.div.appendChild( document.createElement( "div" ) );
         display_box.className = "code-widget";
 
-        const code_2 = new tiny.Code_Widget( display_box, 
+        const code_2 = new tiny.Code_Widget( display_box,
                            this[ "display_section_" + this.section_index ],
                            [], this, { hide_navigator: true } );
 
-        if( this.section_index < 6 ) 
+        if( this.section_index < 6 )
           return;
-          
+
         const final_text = document_builder.div.appendChild( document.createElement( "div" ) );
         final_text.className = "documentation";
         final_text.innerHTML = `<p>That's all the examples.  Below are interactive controls, and then the code that generates this whole multi-part tutorial is printed:</p>`;
     }
   display( context, shared_uniforms )
-    { 
+    {
                         // Part I:  All sections do this every frame:
       this.r = Mat4.rotation( -.5*Math.sin( shared_uniforms.animation_time/5000 ),   1,1,1 );
 
@@ -317,7 +317,7 @@ class Parametric_Surfaces_Section extends Scene
   construct_section_0()
     { const initial_corner_point = vec3( -1,-1,0 );
                           // These two callbacks will step along s and t of the first sheet:
-      const row_operation = (s,p) => p ? Mat4.translation( 0,.2,0 ).times(p.to4(1)).to3() 
+      const row_operation = (s,p) => p ? Mat4.translation( 0,.2,0 ).times(p.to4(1)).to3()
                                        : initial_corner_point;
       const column_operation = (t,p) =>  Mat4.translation( .2,0,0 ).times(p.to4(1)).to3();
                           // These two callbacks will step along s and t of the second sheet:
@@ -325,11 +325,11 @@ class Parametric_Surfaces_Section extends Scene
       const column_operation_2 = (t,p,s) => vec3( 2*t-1,2*s-1,Math.random()/2 );
 
       this.shapes = { sheet : new defs.Grid_Patch( 10, 10, row_operation, column_operation ),
-                      sheet2: new defs.Grid_Patch( 10, 10, row_operation_2, column_operation_2 ) };      
+                      sheet2: new defs.Grid_Patch( 10, 10, row_operation_2, column_operation_2 ) };
     }
   construct_section_1()
     { const initial_corner_point = vec3( -1,-1,0 );
-      const row_operation = (s,p) => p ? Mat4.translation( 0,.2,0 ).times(p.to4(1)).to3() 
+      const row_operation = (s,p) => p ? Mat4.translation( 0,.2,0 ).times(p.to4(1)).to3()
                                        : initial_corner_point;
       const column_operation = (t,p) =>  Mat4.translation( .2,0,0 ).times(p.to4(1)).to3();
       this.shapes = { sheet : new defs.Grid_Patch( 10, 10, row_operation, column_operation ) };
@@ -378,7 +378,7 @@ class Parametric_Surfaces_Section extends Scene
 
       // Fill in the correct points for a 1D star curve:
 
-      star_array   =   star_array.map( (x,i,a) => 
+      star_array   =   star_array.map( (x,i,a) =>
                     Mat4.rotation( i/(a.length-1) * 2*Math.PI,   0,0,1 )
             .times( Mat4.translation( (i%2)/2,0,0 ) )
             .times( x.to4(1) ).to3() );
@@ -409,11 +409,11 @@ class Parametric_Surfaces_Section extends Scene
       this.shapes.sheet2.draw( context, shared_uniforms, Mat4.translation(  1.5,0,0 ).times(r), this.material );
     }
   display_section_1( context, shared_uniforms )
-    { 
+    {
       const random = ( x ) => Math.sin( 1000*x + shared_uniforms.animation_time/1000 );
-      
+
                                                       // Update the JavaScript-side shape with new vertices:
-      this.shapes.sheet.arrays.position.forEach( (p,i,a) => 
+      this.shapes.sheet.arrays.position.forEach( (p,i,a) =>
                       a[i] = vec3( p[0], p[1], .15*random( i/a.length ) ) );
                                                      // Update the normals to reflect the surface's new arrangement.
                                                      // This won't be perfect flat shading because vertices are shared.
@@ -422,8 +422,8 @@ class Parametric_Surfaces_Section extends Scene
       this.shapes.sheet.draw( context, shared_uniforms, this.r, this.material );
 
                                                 // Update the gpu-side shape with new vertices.
-                                                // Warning:  You can't call this until you've already drawn the shape once.      
-      this.shapes.sheet.copy_onto_graphics_card( context.context, ["position","normal"], false );      
+                                                // Warning:  You can't call this until you've already drawn the shape once.
+      this.shapes.sheet.copy_onto_graphics_card( context.context, ["position","normal"], false );
     }
   display_section_2( context, shared_uniforms )
     { const model_transform = Mat4.translation( -5,0,-2 );
@@ -440,12 +440,12 @@ class Parametric_Surfaces_Section extends Scene
   display_section_4( context, shared_uniforms )
     {                                       // First, draw the compound axis shape all at once:
       this.shapes.axis.draw( context, shared_uniforms, Mat4.translation( 2,-1,-2 ), this.material );
-      
+
           // Manually recreate the above compound Shape out of individual components:
       const base = Mat4.translation( -1,-1,-2 );
       const ball_matrix = base.times( Mat4.rotation( Math.PI/2,   0,1,0 ).times( Mat4.scale( .25, .25, .25 ) ) );
       this.shapes.ball.draw( context, shared_uniforms, ball_matrix, this.material );
-      const matrices = [ Mat4.identity(), 
+      const matrices = [ Mat4.identity(),
                          Mat4.rotation(-Math.PI/2,  1,0,0 ).times( Mat4.scale(  1,-1,1 )),
                          Mat4.rotation( Math.PI/2,  0,1,0 ).times( Mat4.scale( -1, 1,1 )) ];
       for( let i = 0; i < 3; i++ )
@@ -455,9 +455,9 @@ class Parametric_Surfaces_Section extends Scene
               box2_matrix = m.times( Mat4.translation( .95,   0, .5 ) ).times( Mat4.scale( .05, .05, .4  ) ),
               box3_matrix = m.times( Mat4.translation(   0, .95, .5 ) ).times( Mat4.scale( .05, .05, .4  ) ),
               tube_matrix = m.times( Mat4.translation(   0,   0,  1 ) ).times( Mat4.scale(  .1,  .1,  2  ) );
-        this.shapes[ "cone_"+i ].draw( context, shared_uniforms, cone_matrix, this.material );       
-        this.shapes.box         .draw( context, shared_uniforms, box1_matrix, this.material );    
-        this.shapes.box         .draw( context, shared_uniforms, box2_matrix, this.material );    
+        this.shapes[ "cone_"+i ].draw( context, shared_uniforms, cone_matrix, this.material );
+        this.shapes.box         .draw( context, shared_uniforms, box1_matrix, this.material );
+        this.shapes.box         .draw( context, shared_uniforms, box2_matrix, this.material );
         this.shapes.box         .draw( context, shared_uniforms, box3_matrix, this.material );
         this.shapes[ "tube_"+i ].draw( context, shared_uniforms, tube_matrix, this.material );
       }
@@ -474,24 +474,24 @@ class Parametric_Surfaces_Section extends Scene
   display_section_6( context, shared_uniforms )
     { const model_transform = Mat4.rotation( shared_uniforms.animation_time/5000,   0,1,0 );
       this.shapes.shell.draw( context, shared_uniforms, model_transform.times( this.r ), this.material );
-    } 
+    }
   explain_section_0( document_element )
     { document_element.innerHTML =
           `<p>Parametric Surfaces can be generated by parametric functions that are driven by changes to two variables - s and t.  As either s or t increase, we can step along the shape's surface in some direction aligned with the shape, not the usual X,Y,Z axes.</p>
            <p>Grid_Patch is a generalized parametric surface.  It is always made of a sheet of squares arranged in rows and columns, corresponding to s and t.  The sheets are always guaranteed to have this row/column arrangement, but where it goes as you follow an edge to the next row or column over could vary.  When generating the shape below, we told it to do the most obvious thing whenever s or t increase; just increase X and Y.  A flat rectangle results.</p>
            <p>The shape on the right is the same except instead of building it incrementally by moving from the previous point, we assigned points manually.  The z values are a random height map.  The light is moving over its static peaks and valleys.  We have full control over where the sheet's points go.</p>
            <p>To create a new Grid_Patch shape, initialize it with the desired amounts of rows and columns you'd like.  The next two arguments are callback functions that return a new point given an old point (called p) and the current (s,t) coordinates.  The first callback is for rows, and will recieve arguments (s,p) back from Grid_Patch.  The second one is for columns, and will recieve arguments (t,p,s) back from Grid_Patch. </p>
-           <p>Scroll down for more animations!</p>`;      
+           <p>Scroll down for more animations!</p>`;
     }
   explain_section_1( document_element )
     { document_element.innerHTML =
          `<p>Shapes in tiny-graphics.js can also be modified and animated if need be.  The shape drawn below has vertex positions and normals that are recalculated for every frame.</p>
-          <p>Call copy_onto_graphics_card() on the Shape to make this happen.  Pass in the context, then an array of the buffer names you'd like to overwrite, then false to indicate that indices should be left alone.  Overwriting buffers in place saves us from slow reallocations.  Warning:  Do not try calling copy_onto_graphics_card() to update a shape until after the shape's first draw() call has completed.</p>`;            
+          <p>Call copy_onto_graphics_card() on the Shape to make this happen.  Pass in the context, then an array of the buffer names you'd like to overwrite, then false to indicate that indices should be left alone.  Overwriting buffers in place saves us from slow reallocations.  Warning:  Do not try calling copy_onto_graphics_card() to update a shape until after the shape's first draw() call has completed.</p>`;
     }
   explain_section_2( document_element )
     { document_element.innerHTML =
          `<p>Parametric surfaces can be wrapped around themselves in circles, if increasing one of s or t causes a rotation around an axis.  These are called <a href="http://mathworld.wolfram.com/SurfaceofRevolution.html" target="blank">surfaces of revolution.</a></p>
-          <p>To draw these using Grid_Patch, we provide another class called Surface_Of_Revolution that extends Grid_Patch and takes a set of points as input.  Surface_Of_Revolution automatically sweeps the given points around the Z axis to make each column.  Your list of points, which become the rows, could be arranged to make any 1D curve.  The direction of your points matters; be careful not to end up with your normal vectors all pointing inside out after the sweep.</p>`;      
+          <p>To draw these using Grid_Patch, we provide another class called Surface_Of_Revolution that extends Grid_Patch and takes a set of points as input.  Surface_Of_Revolution automatically sweeps the given points around the Z axis to make each column.  Your list of points, which become the rows, could be arranged to make any 1D curve.  The direction of your points matters; be careful not to end up with your normal vectors all pointing inside out after the sweep.</p>`;
     }
   explain_section_3( document_element )
     { document_element.innerHTML =

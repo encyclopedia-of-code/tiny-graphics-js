@@ -4,14 +4,14 @@ const { Vector, vec3, vec4, color, Mat4, Shape, Material, Shader, Texture, Compo
 
 export
 const Text_Line = defs.Text_Line =
-class Text_Line extends Shape                
-{                           // **Text_Line** embeds text in the 3D world, using a crude texture 
+class Text_Line extends Shape
+{                           // **Text_Line** embeds text in the 3D world, using a crude texture
                             // method.  This Shape is made of a horizontal arrangement of quads.
-                            // Each is textured over with images of ASCII characters, spelling 
+                            // Each is textured over with images of ASCII characters, spelling
                             // out a string.  Usage:  Instantiate the Shape with the desired
                             // character line width.  Then assign it a single-line string by calling
                             // set_string("your string") on it. Draw the shape on a material
-                            // with full ambient weight, and text.png assigned as its texture 
+                            // with full ambient weight, and text.png assigned as its texture
                             // file.  For multi-line strings, repeat this process and draw with
                             // a different matrix.
   constructor( max_size )
@@ -25,7 +25,7 @@ class Text_Line extends Shape
       }
     }
   set_string( line, context )
-    {           // set_string():  Call this to overwrite the texture coordinates buffer with new 
+    {           // set_string():  Call this to overwrite the texture coordinates buffer with new
                 // values per quad, which enclose each of the string's characters.
       this.arrays.texture_coord = [];
       for( var i = 0; i < this.max_size; i++ )
@@ -34,7 +34,7 @@ class Text_Line extends Shape
               col = Math.floor( ( i < line.length ? line.charCodeAt( i ) : ' '.charCodeAt() ) % 16 );
 
           var skip = 3, size = 32, sizefloor = size - skip;
-          var dim = size * 16,  
+          var dim = size * 16,
               left  = (col * size + skip) / dim,      top    = (row * size + skip) / dim,
               right = (col * size + sizefloor) / dim, bottom = (row * size + sizefloor + 5) / dim;
 
@@ -58,10 +58,10 @@ export class Text_Demo extends Component
       this.shapes = { cube: new defs.Cube(), text: new Text_Line( 35 ) };
                                       // Don't create any DOM elements to control this scene:
       this.widget_options = { make_controls: false };
-        
+
       const phong   = new defs.Phong_Shader();
       const texture = new defs.Textured_Phong( 1 );
-      this.grey       = new Material( phong, { color: color( .5,.5,.5,1 ), ambient: 0, 
+      this.grey       = new Material( phong, { color: color( .5,.5,.5,1 ), ambient: 0,
                                       diffusivity: .3, specularity: .5, smoothness: 10 })
 
                               // To show text you need a Material like this one:
@@ -73,17 +73,17 @@ export class Text_Demo extends Component
                                  defs.Phong_Shader.light_source( vec4( 3,10,10,1 ), color( 1,.7,.7,1 ), 100000 ) ];
       Shader.assign_camera( Mat4.look_at( ...Vector.cast( [ 0,0,4 ], [0,0,0], [0,1,0] ) ), shared_uniforms );
       shared_uniforms.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 500 );
-      
+
       const t = shared_uniforms.animation_time/1000;
       const funny_orbit = Mat4.rotation( Math.PI/4*t,   Math.cos(t), Math.sin(t), .7*Math.cos(t) );
       this.shapes.cube.draw( context, shared_uniforms, funny_orbit, this.grey );
-      
-      
-      let strings = [ "This is some text", "More text", "1234567890", "This is a line.\n\n\n"+"This is another line.", 
+
+
+      let strings = [ "This is some text", "More text", "1234567890", "This is a line.\n\n\n"+"This is another line.",
                       Text_Line.toString(), Text_Line.toString() ];
-      
+
                         // Sample the "strings" array and draw them onto a cube.
-      for( let i = 0; i < 3; i++ )                    
+      for( let i = 0; i < 3; i++ )
         for( let j = 0; j < 2; j++ )
         {             // Find the matrix for a basis located along one of the cube's sides:
           let cube_side = Mat4.rotation( i == 0 ? Math.PI/2 : 0,   1, 0, 0 )

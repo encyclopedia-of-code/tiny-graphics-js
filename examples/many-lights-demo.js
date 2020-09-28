@@ -3,8 +3,8 @@ import {tiny, defs} from './common.js';
 const { vec3, vec4, color, Mat4, Shape, Material, Shader, Texture, Component } = tiny;
 
 export class Many_Lights_Demo extends Component
-{                             // **Many_Lights_Demo** demonstrates how to make the illusion that 
-                              // there are many lights, despite only passing two to the shader.  
+{                             // **Many_Lights_Demo** demonstrates how to make the illusion that
+                              // there are many lights, despite only passing two to the shader.
                               // We re-locate the lights in between individual shape draws.
                               // Doing this trick performs much faster than looping through a
                               // long list of lights within the fragment shader, none of which
@@ -17,15 +17,15 @@ export class Many_Lights_Demo extends Component
       this.shapes = { cube: new defs.Cube() };
       const shader = new defs.Fake_Bump_Map();
       this.brick = new Material( shader, { color: color( 1,1,1,1 ),
-                                 ambient: .05, diffusivity: .5, specularity: .5, smoothness: 10, 
+                                 ambient: .05, diffusivity: .5, specularity: .5, smoothness: 10,
                                  texture: new Texture( "assets/rgb.jpg" ) });
-     
+
                                       // Don't create any DOM elements to control this scene:
       this.widget_options = { make_controls: false };
-      
+
       this.box_positions = [];    this.row_lights = {};    this.column_lights = {};
                               // Make initial grid of boxes at random heights:
-      for(   let row = 0;       row < this.rows;       row++ ) 
+      for(   let row = 0;       row < this.rows;       row++ )
         for( let column = 0; column < this.columns; column++ )
           this.box_positions.push( vec3( row, -2-2*Math.random(), -column ).randomized( 1 ) );
 
@@ -40,8 +40,8 @@ export class Many_Lights_Demo extends Component
     {                                         // display():  Draw each frame to animate the scene.
       Shader.assign_camera( Mat4.look_at( vec3( this.rows/2,5,5 ), vec3( this.rows/2,0,-4 ), vec3( 0,1,0 ) ), shared_uniforms );
       shared_uniforms.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 500 );
-      
-                                    // To draw each individual box, select the two lights sharing 
+
+                                    // To draw each individual box, select the two lights sharing
                                     // a row and column with it, and draw using those.
       this.box_positions.forEach( (p,i,a) =>
         { shared_uniforms.lights = [ defs.Phong_Shader.light_source( this.row_lights   [ ~~p[2] ].to4(1), color( p[2]%1,1,1,1 ), 9 ),
@@ -57,7 +57,7 @@ export class Many_Lights_Demo extends Component
           this.column_lights[key][2] %= this.columns*2;
         }
                               // Move other lights forward along rows, then bound them to a range.
-      for( const [key,val] of Object.entries( this.row_lights ) ) 
+      for( const [key,val] of Object.entries( this.row_lights ) )
         { this.   row_lights[key][0] += shared_uniforms.animation_delta_time/50;
           this.   row_lights[key][0] %= this.rows*2;
         }
@@ -66,18 +66,18 @@ export class Many_Lights_Demo extends Component
         { a[i] = p.plus( vec3( 0,0,shared_uniforms.animation_delta_time/1000 ) );
           if( a[i][2] > 1 ) a[i][2] = -this.columns + .001;
         } );
-    }                                                        
+    }
   render_documentation()
-    { this.document_region.innerHTML += 
+    { this.document_region.innerHTML +=
         `<p>This demo shows how to make the illusion that there are many lights, despite the shader only being aware of two.
-         The shader used here (class Phong_Shader) is told to take only two lights into account when coloring in a shape. 
-         This has the benefit of fewer lights that have to be looped through in the fragment shader, which has to run 
+         The shader used here (class Phong_Shader) is told to take only two lights into account when coloring in a shape.
+         This has the benefit of fewer lights that have to be looped through in the fragment shader, which has to run
          hundreds of thousands of times.
-         </p><p>You can get away with seemingly having more lights in your overall scene by having the lights only affect 
+         </p><p>You can get away with seemingly having more lights in your overall scene by having the lights only affect
          certain shapes, such that only two are influencing any given shape at a time.   We re-locate the lights in between
-         individual shape draws. For this to look right, it helps for shapes to be aware of which lights are nearby versus 
+         individual shape draws. For this to look right, it helps for shapes to be aware of which lights are nearby versus
          which are too far away or too small for their effects to matter, so the best pair can be chosen.
-         </p><p>In this scene, one light exists per row and one per column, and a box simply looks up the lights it is 
+         </p><p>In this scene, one light exists per row and one per column, and a box simply looks up the lights it is
          sharing a row or column with.</p>`;
     }
 }

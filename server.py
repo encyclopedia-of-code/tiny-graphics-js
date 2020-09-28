@@ -19,7 +19,7 @@ if sys.version_info < (3, 0):
         '.js':  'application/x-javascript',
         '': 'application/octet-stream', # Default
     }
-    
+
     httpd = SocketServer.TCPServer(("", PORT), Handler)
 
     print("serving at port", PORT)

@@ -6,13 +6,13 @@ const { Vector, Vector3, vec, vec3, vec4, color, Matrix, Mat4, Shape, Material, 
     // Now we have loaded everything in the files tiny-graphics.js, tiny-graphics-widgets.js, and common.js.
     // This yielded "tiny", an object wrapping the stuff in the first two files, and "defs" for wrapping all the rest.
 
-    // ******************** Extra step only for when executing on a local machine:  
+    // ******************** Extra step only for when executing on a local machine:
     //                      Load any more files in your directory and copy them into "defs."
-    //                      (On the web, a server should instead just pack all these as well 
+    //                      (On the web, a server should instead just pack all these as well
     //                      as common.js into one file for you, such as "dependencies.js")
 
 const Minimal_Webgl_Demo = defs.Minimal_Webgl_Demo;
-import { Axes_Viewer, Axes_Viewer_Test_Scene, Matrix_Game } 
+import { Axes_Viewer, Axes_Viewer_Test_Scene, Matrix_Game }
   from "./examples/axes-viewer.js"
 import { Demonstration }
   from "./examples/demonstration.js"

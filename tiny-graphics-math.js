@@ -10,22 +10,22 @@ export const math = {};
 
 // Part I: Vectors:      *************************************************************************************
 
-    // You will be able to declare a 3D vector [x,y,z] supporting various common vector operations 
-    // with syntax:  vec(x,y), vec3( x,y,z ) or vec4( x,y,z, zero or one ).  For general sized vectors, use 
+    // You will be able to declare a 3D vector [x,y,z] supporting various common vector operations
+    // with syntax:  vec(x,y), vec3( x,y,z ) or vec4( x,y,z, zero or one ).  For general sized vectors, use
     // class Vector and declare them with standard Array-supported operations like .of().
 
     // For matrices, you will use class Mat4 to generate the 4 by 4 matrices that are common
     // in graphics, or for general sized matrices you can use class Matrix.
 
-    // To get vector algebra that performs well in JavaScript, we based class Vector on consecutive 
-    // buffers (using type Float32Array).  Implementations should specialize for common vector 
+    // To get vector algebra that performs well in JavaScript, we based class Vector on consecutive
+    // buffers (using type Float32Array).  Implementations should specialize for common vector
     // sizes 3 and 4 since JavaScript engines can better optimize functions when they can predict
     // argument count.  Implementations should also avoid allocating new array objects since these
     // will all have to be garbage collected.
 
       // Examples:
-      
-  //  ** For size 3 **   
+
+  //  ** For size 3 **
   //     equals: "vec3( 1,0,0 ).equals( vec3( 1,0,0 ) )" returns true.
   //       plus: "vec3( 1,0,0 ).plus  ( vec3( 1,0,0 ) )" returns the Vector [ 2,0,0 ].
   //      minus: "vec3( 1,0,0 ).minus ( vec3( 1,0,0 ) )" returns the Vector [ 0,0,0 ].
@@ -42,7 +42,7 @@ export const math = {};
   //        to4: "vec3( 1,2,3 ).to4( true or false )" returns the homogeneous vec4 [ 1,2,3, 1 or 0 ].
   //      cross: "vec3( 1,0,0 ).cross( vec3( 0,1,0 ) )" returns the Vector [ 0,0,1 ].  Use only on 3x1 Vecs.
   //  to_string: "vec3( 1,2,3 ).to_string()" returns "[vec3 1, 2, 3]"
-  //  ** For size 4, same except: **    
+  //  ** For size 4, same except: **
   //        to3: "vec4( 4,3,2,1 ).to3()" returns the vec3 [ 4,3,2 ].  Use to truncate vec4 to vec3.
   //  ** To assign by value **
   //       copy: "let new_vector = old_vector.copy()" assigns by value so you get a different vector object.
@@ -60,9 +60,9 @@ class Vector extends Float32Array
   static create( ...arr )
     { return new Vector( arr );
     }
-  copy() 
+  copy()
     { return new Vector( this ) }
-  equals( b ) 
+  equals( b )
     { return this.every( (x,i) => x == b[i] ) }
   plus( b )
     { return this.map(   (x,i) => x +  b[i] ) }
@@ -76,7 +76,7 @@ class Vector extends Float32Array
     { return this.map(       x => s*x ) }
   randomized( s )
     { return this.map(       x => x + s*(Math.random()-.5) ) }
-  mix( b, s ) 
+  mix( b, s )
     { return this.map(   (x,i) => (1-s)*x + s*b[i] ) }
   norm()
     { return Math.sqrt( this.dot( this ) ) }
@@ -86,11 +86,11 @@ class Vector extends Float32Array
     {     this.scale_by( 1/this.norm() ) }
   dot(b)
     { if( this.length == 2 )                    // Optimize for Vectors of size 2
-        return this[0]*b[0] + this[1]*b[1];  
+        return this[0]*b[0] + this[1]*b[1];
       return this.reduce( ( acc, x, i ) => { return acc + x*b[i]; }, 0 );
     }
   static cast( ...args )
-                            // cast(): For compact syntax when declaring lists.      
+                            // cast(): For compact syntax when declaring lists.
     { return args.map( x => Vector.from(x) ) }
                 // to3() / to4() / cross():  For standardizing the API with Vector3/Vector4, so
                 // the performance hit of changing between these types can be measured.
@@ -125,7 +125,7 @@ class Vector3 extends Float32Array
     { return vec3( this[0]*s,    this[1]*s,    this[2]*s    ) }
   times_pairwise( b )
     { return vec3( this[0]*b[0], this[1]*b[1], this[2]*b[2] ) }
-                                            // Pre-fix operations: Use these for better performance (to avoid new allocation).  
+                                            // Pre-fix operations: Use these for better performance (to avoid new allocation).
   add_by( b )
     { this[0] += b[0];  this[1] += b[1];  this[2] += b[2] }
   subtract_by( b )
@@ -134,9 +134,9 @@ class Vector3 extends Float32Array
     { this[0] *= s;  this[1] *= s;  this[2] *= s }
   scale_pairwise_by( b )
     { this[0] *= b[0];  this[1] *= b[1];  this[2] *= b[2] }
-                                            // Other operations:  
+                                            // Other operations:
   randomized( s )
-    { return vec3( this[0]+s*(Math.random()-.5), 
+    { return vec3( this[0]+s*(Math.random()-.5),
                    this[1]+s*(Math.random()-.5),
                    this[2]+s*(Math.random()-.5) );
     }
@@ -153,7 +153,7 @@ class Vector3 extends Float32Array
     }
   normalize()
     { const d = 1/this.norm();
-      this[0] *= d;  this[1] *= d;  this[2] *= d; 
+      this[0] *= d;  this[1] *= d;  this[2] *= d;
     }
   dot( b )
     { return this[0]*b[0] + this[1]*b[1] + this[2]*b[2] }
@@ -167,7 +167,7 @@ class Vector3 extends Float32Array
     }
   static shared_memory = Vector3.create( 0,0,0 )
   static unsafe( x,y,z )
-    {                // unsafe(): returns vec3s only meant to be consumed immediately. Aliases into 
+    {                // unsafe(): returns vec3s only meant to be consumed immediately. Aliases into
                      // shared memory, to be overwritten upon next unsafe3 call.  Faster.
       Vector3.shared_memory[0] = x;  Vector3.shared_memory[1] = y;  Vector3.shared_memory[2] = z;
       return Vector3.shared_memory;
@@ -201,7 +201,7 @@ class Vector4 extends Float32Array
     { return vec4( this[0]*s, this[1]*s, this[2]*s, this[3]*s ) }
   times_pairwise( b )
     { return vec4( this[0]*b[0], this[1]*b[1], this[2]*b[2], this[3]*b[3] ) }
-                                            // Pre-fix operations: Use these for better performance (to avoid new allocation).  
+                                            // Pre-fix operations: Use these for better performance (to avoid new allocation).
   add_by( b )
     { this[0] += b[0];  this[1] += b[1];  this[2] += b[2];  this[3] += b[3] }
   subtract_by( b )
@@ -210,9 +210,9 @@ class Vector4 extends Float32Array
     { this[0] *= s;  this[1] *= s;  this[2] *= s;  this[3] *= s }
   scale_pairwise_by( b )
     { this[0] *= b[0];  this[1] *= b[1];  this[2] *= b[2];  this[3] *= b[3] }
-                                            // Other operations:  
+                                            // Other operations:
   randomized( s )
-    { return vec4( this[0]+s*(Math.random()-.5), 
+    { return vec4( this[0]+s*(Math.random()-.5),
                    this[1]+s*(Math.random()-.5),
                    this[2]+s*(Math.random()-.5),
                    this[3]+s*(Math.random()-.5) );
@@ -220,7 +220,7 @@ class Vector4 extends Float32Array
   mix( b, s )
     { return vec4( (1-s)*this[0] + s*b[0],
                    (1-s)*this[1] + s*b[1],
-                   (1-s)*this[2] + s*b[2], 
+                   (1-s)*this[2] + s*b[2],
                    (1-s)*this[3] + s*b[3] );
     }
                 // The norms should behave like for Vector3 because of the homogenous format.
@@ -238,9 +238,9 @@ class Vector4 extends Float32Array
     { return this[0]*b[0] + this[1]*b[1] + this[2]*b[2] + this[3]*b[3] }
   static shared_memory = Vector4.create( 0,0,0,0 )
   static unsafe( x,y,z, w )
-    {                // unsafe(): returns vec4s only meant to be consumed immediately. Aliases into 
+    {                // unsafe(): returns vec4s only meant to be consumed immediately. Aliases into
                      // shared memory, to be overwritten upon next unsafe4 call.  Faster.
-      Vector4.shared_memory[0] = x;  Vector4.shared_memory[1] = y;  
+      Vector4.shared_memory[0] = x;  Vector4.shared_memory[1] = y;
       Vector4.shared_memory[2] = z;  Vector4.shared_memory[3] = w;
       return Vector4.shared_memory;
     }
@@ -274,7 +274,7 @@ class Matrix extends Array
   //  "M.copy()" creates a deep copy of M and returns it so you can modify it without affecting the original.
   //  "M.equals(b)", "M.plus(b)", and "M.minus(b)" are operations betwen two matrices.
   //  "M.transposed()" returns a new matrix where all rows of M became columns and vice versa.
-  //  "M.times(b)" (where the post-multiplied b can be a scalar, a Vector4, or another Matrix) returns a 
+  //  "M.times(b)" (where the post-multiplied b can be a scalar, a Vector4, or another Matrix) returns a
   //               new Matrix or Vector4 holding the product.
   //  "M.pre_multiply(b)"  overwrites the Matrix M with the product of b * M where b must be another Matrix.
   //  "M.post_multiply(b)" overwrites the Matrix M with the product of M * b where b can be a Matrix or scalar.
@@ -287,14 +287,14 @@ class Matrix extends Array
       this.push( ...args )
     }
   set( M )
-    { this.length = 0; 
+    { this.length = 0;
       this.push( ...M );
     }
   set_identity ( m, n )
-    { this.length = 0; 
-      for( let i = 0; i < m; i++ ) 
-      { this.push( Array(n).fill(0) ); 
-        if( i < n ) this[i][i] = 1; 
+    { this.length = 0;
+      for( let i = 0; i < m; i++ )
+      { this.push( Array(n).fill(0) );
+        if( i < n ) this[i][i] = 1;
       }
     }
   sub_block( start, end )  { return Matrix.from( this.slice( start[0], end[0] ).map( r => r.slice( start[1], end[1] ) ) ); }
@@ -303,13 +303,13 @@ class Matrix extends Array
   plus     (b) { return this.map(   (r,i) => r.map  ( (x,j) => x +  b[i][j] ) ) }
   minus    (b) { return this.map(   (r,i) => r.map  ( (x,j) => x -  b[i][j] ) ) }
   transposed() { return this.map(   (r,i) => r.map  ( (x,j) =>   this[j][i] ) ) }
-  times    (b, optional_preallocated_result)                                                                       
+  times    (b, optional_preallocated_result)
     { const len = b.length;
       if( typeof len  === "undefined" ) return this.map( r => r.map( x => b*x ) );   // Matrix * scalar case.
-      const len2 = b[0].length;    
+      const len2 = b[0].length;
       if( typeof len2 === "undefined" )
       { let result = optional_preallocated_result || new Vector4( this.length );     // Matrix * Vector4 case.
-        for( let r=0; r < len; r++ ) result[r] = b.dot(this[r]);                      
+        for( let r=0; r < len; r++ ) result[r] = b.dot(this[r]);
         return result;
       }
       let result = optional_preallocated_result || Matrix.from( new Array( this.length ) );
@@ -347,7 +347,7 @@ class Mat4 extends Matrix
         { const n = Math.sqrt( x*x + y*y + z*z );
           return [ x/n, y/n, z/n ]
         }
-      let [ i, j, k ] = normalize( x,y,z ), 
+      let [ i, j, k ] = normalize( x,y,z ),
              [ c, s ] = [ Math.cos( angle ), Math.sin( angle ) ],
                   omc = 1.0 - c;
       return Matrix.of( [ i*i*omc + c,   i*j*omc - k*s, i*k*omc + j*s, 0 ],
@@ -362,31 +362,31 @@ class Mat4 extends Matrix
                         [ 0, 0, z, 0 ],
                         [ 0, 0, 0, 1 ] );
     }
-  static translation( x,y,z ) 
+  static translation( x,y,z )
     {                                               // translation(): Builds and returns a translation matrix using x,y,z.
       return Matrix.of( [ 1, 0, 0, x ],
                         [ 0, 1, 0, y ],
                         [ 0, 0, 1, z ],
                         [ 0, 0, 0, 1 ] );
     }
-  static look_at( eye, at, up )                      
+  static look_at( eye, at, up )
     {                                   // look_at():  Produce a traditional graphics camera "lookat" matrix.
                                         // Each input must be a 3x1 Vector.
                                         // Note:  look_at() assumes the result will be used for a camera and stores its
-                                        // result in inverse space.  
+                                        // result in inverse space.
                                         // If you want to use look_at to point a non-camera towards something, you can
                                         // do so, but to generate the correct basis you must re-invert its result.
-  
+
           // Compute vectors along the requested coordinate axes. "y" is the "updated" and orthogonalized local y axis.
       let z = at.minus( eye ).normalized(),
           x =  z.cross( up  ).normalized(),
           y =  x.cross( z   ).normalized();
-          
-                             // Check for NaN, indicating a degenerate cross product, which 
+
+                             // Check for NaN, indicating a degenerate cross product, which
                              // happens if eye == at, or if at minus eye is parallel to up.
-      if( !x.every( i => i==i ) )                  
+      if( !x.every( i => i==i ) )
         throw "Two parallel vectors were given";
-      z.scale_by( -1 );                               // Enforce right-handed coordinate system.                                   
+      z.scale_by( -1 );                               // Enforce right-handed coordinate system.
       return Mat4.translation( -x.dot( eye ), -y.dot( eye ), -z.dot( eye ) )
              .times( Matrix.of( x.to4(0), y.to4(0), z.to4(0), vec4( 0,0,0,1 ) ) );
     }
@@ -404,8 +404,8 @@ class Mat4 extends Matrix
                         [ 0,        0, -(near+far) / d, -2*near*far / d ],
                         [ 0,        0,              -1,               0 ] );
     }
-  static inverse( m )              
-    {                         // inverse(): A 4x4 inverse.  Computing it is slow because of 
+  static inverse( m )
+    {                         // inverse(): A 4x4 inverse.  Computing it is slow because of
                               // the amount of steps; call fewer times when possible.
       const result = Mat4.identity(), m00 = m[0][0], m01 = m[0][1], m02 = m[0][2], m03 = m[0][3],
                                       m10 = m[1][0], m11 = m[1][1], m12 = m[1][2], m13 = m[1][3],

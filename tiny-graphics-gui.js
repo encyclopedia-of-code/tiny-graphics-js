@@ -8,7 +8,7 @@ export const widgets = {};
 const Controls_Widget = widgets.Controls_Widget =
 class Controls_Widget
 {                                               // **Controls_Widget** adds an array of panels to the document, one per loaded
-                                                // Scene object, each providing interactive elements such as buttons with key 
+                                                // Scene object, each providing interactive elements such as buttons with key
                                                 // bindings, live readouts of Scene data members, etc.
   constructor( component )
     { const rules = [ ".controls-widget * { font-family: monospace }",
@@ -34,7 +34,7 @@ class Controls_Widget
                       ".link { text-decoration:underline; cursor: pointer }",
                       ".show { transform: scaleY(1); height:200px; overflow:auto }",
                       ".hide { transform: scaleY(0); height:0px; overflow:hidden  }" ];
-                      
+
       tiny.Component.initialize_CSS( Controls_Widget, rules );
 
       const table = component.embedded_controls_area.appendChild( document.createElement( "table" ) );
@@ -51,14 +51,14 @@ class Controls_Widget
       this.row.innerHTML = "";
                                                         // Traverse all scenes and their children, recursively:
       const open_list = [ this.component ];
-      while( open_list.length )                       
+      while( open_list.length )
       { open_list.push( ...open_list[0].animated_children );
         const scene = open_list.shift();
 
         const control_box = this.row.insertCell();
         this.panels.push( control_box );
                                                                                         // Draw top label bar:
-        control_box.appendChild( Object.assign( document.createElement("div"), { 
+        control_box.appendChild( Object.assign( document.createElement("div"), {
                                       textContent: scene.constructor.name, className: "control-title" } ) )
 
         const control_panel = control_box.appendChild( document.createElement( "div" ) );
@@ -66,22 +66,22 @@ class Controls_Widget
         scene.control_panel = control_panel;
         scene.timestamp = time;
                                                         // Draw each registered animation:
-        scene.make_control_panel();                     
+        scene.make_control_panel();
       }
     }
   render( time = 0 )
-    {                       // Check to see if we need to re-create the panels due to any scene being new.                      
+    {                       // Check to see if we need to re-create the panels due to any scene being new.
                             // Traverse all scenes and their children, recursively:
       const open_list = [ this.component ];
-      while( open_list.length )                       
+      while( open_list.length )
       { open_list.push( ...open_list[0].animated_children );
         const scene = open_list.shift();
-        if( !scene.timestamp || scene.timestamp > this.timestamp )        
+        if( !scene.timestamp || scene.timestamp > this.timestamp )
         { this.make_panels( time );
           break;
         }
 
-        // TODO: Check for updates to each scene's desired_controls_position, including if the 
+        // TODO: Check for updates to each scene's desired_controls_position, including if the
         // scene just appeared in the tree, in which case call make_control_panel().
       }
 
@@ -94,14 +94,14 @@ class Controls_Widget
 
 
 const Keyboard_Manager = widgets.Keyboard_Manager =
-class Keyboard_Manager     
+class Keyboard_Manager
 {                        // **Keyboard_Manager** maintains a running list of which keys are depressed.  You can map combinations of
-                         // shortcut keys to trigger callbacks you provide by calling add().  See add()'s arguments.  The shortcut 
+                         // shortcut keys to trigger callbacks you provide by calling add().  See add()'s arguments.  The shortcut
                          // list is indexed by strings, conveniently showing each bound shortcut combination.
   constructor( target = document, callback_behavior = ( callback, event ) => callback( event ) )
-    {                    // The constructor  optionally takes "target", which is the desired DOM element for keys to be pressed 
+    {                    // The constructor  optionally takes "target", which is the desired DOM element for keys to be pressed
                          // inside of, and "callback_behavior", which will be called for every key action to allow extra behavior
-                         // on each event -- giving an opportunity to customize their bubbling, preventDefault, and more.  It 
+                         // on each event -- giving an opportunity to customize their bubbling, preventDefault, and more.  It
                          // defaults to no additional behavior besides the callback itself on each assigned key action.
       this.saved_controls = {};
       this.actively_pressed_keys = new Set();
@@ -128,14 +128,14 @@ class Keyboard_Manager
 
       const lifted_key_symbols = [ event.key, upper_symbols[ lower_symbols.indexOf( event.key ) ],
                                               lower_symbols[ upper_symbols.indexOf( event.key ) ] ];
-                                                                                        // Call keyup for any shortcuts 
+                                                                                        // Call keyup for any shortcuts
       for( let saved of Object.values( this.saved_controls ) )                          // that depended on the released
         if( lifted_key_symbols.some( s => saved.shortcut_combination.includes( s ) ) )  // key or its shift-key counterparts.
           this.callback_behavior( saved.keyup_callback, event );                  // The keys match, so fire the callback.
       lifted_key_symbols.forEach( k => this.actively_pressed_keys.delete( k ) );
     }
   add( shortcut_combination, callback = () => {}, keyup_callback = () => {} )
-    {                                 // add(): Creates a keyboard operation.  The argument shortcut_combination wants an 
+    {                                 // add(): Creates a keyboard operation.  The argument shortcut_combination wants an
                                       // array of strings that follow standard KeyboardEvent key names. Both the keyup
                                       // and keydown callbacks for any key combo are optional.
       this.saved_controls[ shortcut_combination.join('+') ] = { shortcut_combination, callback, keyup_callback };
@@ -144,7 +144,7 @@ class Keyboard_Manager
 
 
 const Code_Manager = widgets.Code_Manager =
-class Code_Manager                     
+class Code_Manager
 {                                  // **Code_Manager** breaks up a string containing code (any ES6 JavaScript).  The RegEx being used
                                    // to parse is from https://github.com/lydell/js-tokens which states the following limitation:
                                    // "If the end of a statement looks like a regex literal (even if it isn’t), it will be treated
@@ -170,10 +170,10 @@ class Code_Manager
           else if ( single_token[  9 ] ) token.type = "number"
           else if ( single_token[ 10 ] ) token.type = "name"
           else if ( single_token[ 11 ] ) token.type = "punctuator"
-          else if ( single_token[ 12 ] ) token.type = "whitespace"        
+          else if ( single_token[ 12 ] ) token.type = "whitespace"
           this.tokens.push( token )
           if( token.type != "whitespace" && token.type != "comment" ) this.no_comments.push( token.value );
-        }  
+        }
     }
 }
 
@@ -194,16 +194,16 @@ class Code_Widget
       this.component = component;
 
       import( './main-scene.js' )
-        .then( module => { 
-        
+        .then( module => {
+
           this.build_reader(      component.embedded_code_nav_area, component.constructor, module.defs );
           if( !options.hide_navigator )
-            this.build_navigator( component.embedded_code_nav_area, component.constructor, 
+            this.build_navigator( component.embedded_code_nav_area, component.constructor,
                                   component.animated_children, module.defs );
         } )
     }
   build_reader( element, main_scene, definitions )
-    {                                           // (Internal helper function)      
+    {                                           // (Internal helper function)
       this.definitions = definitions;
       const code_panel = element.appendChild( document.createElement( "div" ) );
       code_panel.className = "code-panel";
@@ -217,7 +217,7 @@ class Code_Widget
 
                                                 // TODO:  List out the additional_scenes somewhere.
       const class_list = element.appendChild( document.createElement( "table" ) );
-      class_list.className = "class-list";   
+      class_list.className = "class-list";
       const top_cell = class_list.insertRow( -1 ).insertCell( -1 );
       top_cell.colSpan = 2;
       top_cell.appendChild( document.createTextNode("Click below to navigate through all classes that are defined.") );
@@ -262,7 +262,7 @@ class Code_Widget
   display_code( class_to_display )
     {                                           // display_code():  Populate the code textbox.
                                                 // Pass undefined to choose index.html source.
-      if( this.component.embedded_editor ) 
+      if( this.component.embedded_editor )
         this.component.embedded_editor.select_class( class_to_display );
       if( class_to_display ) this.format_code( class_to_display.toString() );
       else fetch( document.location.href )
@@ -272,7 +272,7 @@ class Code_Widget
   format_code( code_string )
     {                                           // (Internal helper function)
       this.code_display.innerHTML = "";
-      const color_map = { string: "chocolate", comment: "green", regex: "blue", number: "magenta", 
+      const color_map = { string: "chocolate", comment: "green", regex: "blue", number: "magenta",
                             name: "black", punctuator: "red", whitespace: "black" };
 
       for( let t of new Code_Manager( code_string ).tokens )
@@ -310,13 +310,13 @@ class Editor_Widget
 
       const form = this.form = component.embedded_editor_area.appendChild( document.createElement( "form" ) );
                                                           // Don't refresh the page on submit:
-      form.addEventListener( 'submit', event => 
-        { event.preventDefault(); this.submit_demo() }, false );    
+      form.addEventListener( 'submit', event =>
+        { event.preventDefault(); this.submit_demo() }, false );
 
       const explanation = form.appendChild( document.createElement( "p" ) );
       explanation.innerHTML = `<i><b>What can I put here?</b></i>  A JavaScript class, with any valid JavaScript inside.  Your code can use classes from this demo,
                                <br>or from ANY demo on Demopedia --  the dependencies will automatically be pulled in to run your demo!<br>`;
-      
+
       const run_button = this.run_button = form.appendChild( document.createElement( "button" ) );
       run_button.type             = "button";
       run_button.style            = "background:maroon";
@@ -330,7 +330,7 @@ class Editor_Widget
       author_box.name             = "author";
       author_box.type             = "text";
       author_box.placeholder      = "Author name";
-      
+
       const password_box = this.password_box = form.appendChild( document.createElement( "input" ) );
       password_box.name           = "password";
       password_box.type           = "text";
@@ -354,20 +354,20 @@ class Editor_Widget
     { this.new_demo_code.value = class_definition.toString(); }
   fetch_handler( url, body )          // A general utility function for sending / receiving JSON, with error handling.
     { return fetch( url,
-      { body: body, method: body === undefined ? 'GET' : 'POST', 
-        headers: { 'content-type': 'application/json'  } 
+      { body: body, method: body === undefined ? 'GET' : 'POST',
+        headers: { 'content-type': 'application/json'  }
       }).then( response =>
       { if ( response.ok )  return Promise.resolve( response.json() )
         else                return Promise.reject ( response.status )
       })
     }
   submit_demo()
-    { const form_fields = Array.from( this.form.elements ).reduce( ( accum, elem ) => 
+    { const form_fields = Array.from( this.form.elements ).reduce( ( accum, elem ) =>
         { if( elem.value && !( ['checkbox', 'radio'].includes( elem.type ) && !elem.checked ) )
-            accum[ elem.name ] = elem.value; 
+            accum[ elem.name ] = elem.value;
           return accum;
         }, {} );
-      
+
       this.submit_result.innerHTML = "";
       return this.fetch_handler( "/submit-demo?Unapproved", JSON.stringify( form_fields ) )
         .then ( response => { if( response.show_password  ) this.password_box.style.display = "inline";

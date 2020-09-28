@@ -11,7 +11,7 @@ export class Demonstration extends Component
     {
       this.div = div;
       div.className = "documentation_treenode";
-                                                        // Fit the existing document content to a fixed size:    
+                                                        // Fit the existing document content to a fixed size:
       div.style.margin = "auto";
       div.style.width = "1080px";
 
@@ -24,17 +24,17 @@ export class Demonstration extends Component
       const region_1 = div.appendChild( document.createElement( "div" ) );
       region_1.classList.add( "documentation", "documentation-big", "documentation-big-top" );
 
-      region_1.appendChild( document.createElement("p") ).textContent = 
+      region_1.appendChild( document.createElement("p") ).textContent =
         `Welcome to Demopedia.  The WebGL demo below can be edited, remixed, and saved at a new  URL.`
 
-      region_1.appendChild( document.createElement("p") ).textContent =  
+      region_1.appendChild( document.createElement("p") ).textContent =
         `Below that you'll find the starting code for a graphics assignment. Your goal is to model an insect.`;
 
       region_1.appendChild( document.createElement("p") ).textContent =
-        `Try making changes to the code below.  The code comments suggest how to do so.  Once you have 
+        `Try making changes to the code below.  The code comments suggest how to do so.  Once you have
          modeled an insect, save your result to a URL you can share!`;
 
-      region_1.appendChild( document.createElement("p") ).textContent =  
+      region_1.appendChild( document.createElement("p") ).textContent =
         `First, the demo:`;
 
             // TODO:  One use case may have required canvas to be styled as a rule instead of as an element.  Keep an eye out.
@@ -54,7 +54,7 @@ export class Demonstration extends Component
       const region_2 = div.appendChild( document.createElement( "div" ) );
       region_2.classList.add( "documentation", "documentation-big" );
 
-      region_2.appendChild( document.createElement("p") ).textContent = 
+      region_2.appendChild( document.createElement("p") ).textContent =
         `Next, type here to edit the code, which is drawing the above:`
 
       this.embedded_editor_area = div.appendChild( document.createElement( "div" ) );
@@ -65,10 +65,10 @@ export class Demonstration extends Component
       const region_3 = div.appendChild( document.createElement( "div" ) );
       region_3.classList.add( "documentation", "documentation-big" );
 
-      region_3.appendChild( document.createElement("p") ).textContent = 
+      region_3.appendChild( document.createElement("p") ).textContent =
         `Lastly, here is a code navigator to show the whole program we are using.`
       region_3.appendChild( document.createElement("p") ).textContent =
-        `The tiny-graphics.js library wraps the WebGL API for us and helps display the graphical 
+        `The tiny-graphics.js library wraps the WebGL API for us and helps display the graphical
          output in a document that can interact with it.`
 
       this.embedded_code_nav_area = div.appendChild( document.createElement( "div" ) );

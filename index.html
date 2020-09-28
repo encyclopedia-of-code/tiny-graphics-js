@@ -1,11 +1,11 @@
-<!-- Graphics Example Code.  
+<!-- Graphics Example Code.
      index.html - The web page document containing the canvas (drawing surface).  It launches your JavaScript files. //-->
 <!DOCTYPE html> <html> <head> <meta charset="UTF-8"/> <link rel="icon" href="assets/fav.ico"> </head>
 <body style="background: DarkGray">       <!-- Begin typing your web page here. //-->
 
       <!-- The following code embeds a WebGL canvas panel, loads certain scene(s), and displays panel(s) of their controls. //-->
 <div id="main-section" class="document-builder"></div>
-<script type=module >      // ********************* THE ENTRY POINT OF YOUR WHOLE PROGRAM STARTS HERE ********************* 
+<script type=module >      // ********************* THE ENTRY POINT OF YOUR WHOLE PROGRAM STARTS HERE *********************
                            // Indicate which element on the page you want the Canvas_Widget to replace with a 3D WebGL area:
   const element_to_replace = document.querySelector( "#main-section" );
   import { main_scene, additional_scenes, Default_Layout } from './main-scene.js';  // Import the file that defines a scene.

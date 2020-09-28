@@ -1,6 +1,6 @@
 # tiny-graphics.js
 
-This is a small, single file JavaScript utility.  It organizes WebGL programs to be object-oriented and minimally cluttered.  
+This is a small, single file JavaScript utility.  It organizes WebGL programs to be object-oriented and minimally cluttered.
 
 Writing code with raw JavaScript and WebGL can be repetitive and tedious.  Using frameworks like three.js can create an undesired separation between you and the raw JavaScript and WebGL and common graphics operations you want to learn.  Unlike other frameworks, tiny-graphics.js is purpose-built for education, has small source code, and teaches you how it is made.
 

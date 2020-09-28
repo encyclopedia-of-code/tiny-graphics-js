@@ -46,7 +46,7 @@ export class Scene_To_Texture_Demo extends Component
 
         this.live_string( box => { box.textContent = this.spin } );  this.new_line();
 
-        this.result_img = this.control_panel.appendChild( Object.assign( document.createElement( "img" ), 
+        this.result_img = this.control_panel.appendChild( Object.assign( document.createElement( "img" ),
                 { style:"width:200px; height:" + 200 * this.aspect_ratio + "px" } ) );
       }
     render_animation( context, shared_uniforms )
@@ -56,12 +56,12 @@ export class Scene_To_Texture_Demo extends Component
 
         Shader.assign_camera( Mat4.look_at( vec3( 0,0,5 ), vec3( 0,0,0 ), vec3( 0,1,0 ) ), shared_uniforms );
         shared_uniforms.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, .5, 500 );
-        
+
             // Update persistent matrix state:
         this.cube_1.post_multiply( Mat4.rotation( this.spin * dt * 30 / 60 * 2*Math.PI,   1,0,0 ) );
         this.cube_2.post_multiply( Mat4.rotation( this.spin * dt * 20 / 60 * 2*Math.PI,   0,1,0 ) );
 
-                                          // Perform two rendering passes.  The first one we erase and 
+                                          // Perform two rendering passes.  The first one we erase and
                                           // don't display after using to it generate our texture.
             // Draw Scene 1:
         this.shapes.box.draw( context, shared_uniforms, this.cube_1, this.materials.a );
