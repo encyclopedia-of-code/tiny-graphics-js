@@ -30,8 +30,8 @@ export class Parametric_Surfaces extends Component
   initialize_shared_state()
   {
                              // Make a new uniforms holder for all child graphics contexts to share.
-      this.shared_uniforms = new tiny.Shared_Uniforms();
-      this.shared_uniforms.set_camera( Mat4.translation( 0,0,-3 ) );
+      this.shared_uniforms = tiny.Shader.uniforms_object();
+      Shader.assign_camera( Mat4.translation( 0,0,-3 ), this.shared_uniforms );
 
       const shader = new defs.Textured_Phong( 1 );
 

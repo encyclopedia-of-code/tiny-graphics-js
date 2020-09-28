@@ -54,7 +54,7 @@ export class Scene_To_Texture_Demo extends Component
         shared_uniforms.lights = [ defs.Phong_Shader.light_source( vec4( -5,5,5,1 ), color( 0,1,1,1 ), 100000 ) ];
         const t = shared_uniforms.animation_time / 1000, dt = shared_uniforms.animation_delta_time / 1000;
 
-        shared_uniforms.set_camera( Mat4.look_at( vec3( 0,0,5 ), vec3( 0,0,0 ), vec3( 0,1,0 ) ) );
+        Shader.assign_camera( Mat4.look_at( vec3( 0,0,5 ), vec3( 0,0,0 ), vec3( 0,1,0 ) ), shared_uniforms );
         shared_uniforms.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, .5, 500 );
         
             // Update persistent matrix state:

@@ -82,7 +82,7 @@ export class Axes_Viewer_Test_Scene extends Component
       if( !context.scratchpad.controls ) 
         { this.animated_children.push( context.scratchpad.controls = new defs.Movement_Controls() ); 
         
-          shared_uniforms.set_camera( Mat4.translation( -1,-1,-20 ) );    // Locate the camera here (inverted matrix).
+          Shader.assign_camera( Mat4.translation( -1,-1,-20 ), shared_uniforms );    // Locate the camera here (inverted matrix).
         }
       shared_uniforms.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 500 );
       const t = shared_uniforms.animation_time / 1000, dt = shared_uniforms.animation_delta_time / 1000;

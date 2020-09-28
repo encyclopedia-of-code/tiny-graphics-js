@@ -120,7 +120,7 @@ export class Obj_File_Demo extends Component
     render_animation( context, shared_uniforms )
       { const t = shared_uniforms.animation_time;
 
-        shared_uniforms.set_camera( Mat4.translation( 0,0,-5 ) );    // Locate the camera here (inverted matrix).                  
+        Shader.assign_camera( Mat4.translation( 0,0,-5 ), shared_uniforms );    // Locate the camera here (inverted matrix).
         shared_uniforms.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 500 );
                                                 // A spinning light to show off the bump map:
         shared_uniforms.lights = [ defs.Phong_Shader.light_source( 

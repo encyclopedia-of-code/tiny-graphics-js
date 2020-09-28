@@ -331,6 +331,22 @@ class Shader
     }                           // Your custom Shader has to override the following functions:    
   vertex_glsl_code(){}
   fragment_glsl_code(){}
+  static uniforms_object( initial_values )
+    {                           // uniforms_object():  Non-standard (meant for WebGL1). A group of variables meant
+                                // to become shader uniforms.  These objects should be shared across
+                                // scenes in a canvas, or even across canvases, to sync the contents.
+
+                        // Offer some more very common variables that are useful as shader uniforms:
+      const defaults = { camera_inverse: Mat4.identity(), camera_transform: Mat4.identity(),
+                         projection_transform: Mat4.identity(),
+                         animate: true, animation_time: 0, animation_delta_time: 0 };
+      return Object.assign( {}, defaults, initial_values );;
+    }
+  static assign_camera( camera_inverse, uniforms_object )
+    {                           // Camera matrices and their inverses should be cached together, in sync, since
+                                // both are frequently needed, and to limit slow calls to inverse().
+      Object.assign( uniforms_object, { camera_inverse, camera_transform: Mat4.inverse( camera_inverse ) } );
+    }
   update_GPU(){}
 
         // *** How those four functions work (and how GPU shader programs work in general):
@@ -437,36 +453,12 @@ class Texture
 }
 
 
-const Shared_Uniforms = tiny.Shared_Uniforms =
-class Shared_Uniforms extends Container
-{                                     // **Shared_Uniforms** stores any values that affect how your whole scene is drawn, 
-                                      // such as its current lights and the camera position.  Class Shader uses whatever
-                                      // values are wrapped here as inputs to your custom shader program.  Your Shader
-                                      // subclass must override its method "update_GPU()" to define how to send your
-                                      // Shared_Uniforms' particular values over to your custom shader program.
-  constructor( camera_transform = Mat4.identity(), projection_transform = Mat4.identity() ) 
-    { super();
-      this.set_camera( camera_transform );
-      const defaults = { projection_transform, animate: true, animation_time: 0, animation_delta_time: 0 };
-      Object.assign( this, defaults );
-    }
-  set_camera( matrix )
-    {                       // set_camera():  Applies a new (inverted) camera matrix to the Shared_Uniforms.
-                            // It's often useful to cache both the camera matrix and its inverse.  Both are needed
-                            // often and matrix inversion is too slow to recompute needlessly.  
-                            // Note that setting a camera matrix traditionally means storing the inverted version, 
-                            // so that's the one this function expects to receive; it automatically sets the other.
-      Object.assign( this, { camera_transform: Mat4.inverse( matrix ), camera_inverse: matrix } )
-    }
-}
-
-
 const Webgl_Manager = tiny.Webgl_Manager =
 class Webgl_Manager
 {                        // **Webgl_Manager** manages a whole graphics program for one on-page canvas, including its 
                          // textures, shapes, shaders, and scenes.  It requests a WebGL context and stores Scenes.
   constructor( canvas, background_color = color( 0,0,0,1 ), dimensions )
-    { const members = { prev_time: 0, scratchpad: {}, canvas, shared_uniforms: new Shared_Uniforms() };
+    { const members = { prev_time: 0, scratchpad: {}, canvas, shared_uniforms: Shader.uniforms_object() };
       Object.assign( this, members );
                                                  // Get the GPU ready, creating a new WebGL context for this canvas:
       for( let name of [ "webgl", "experimental-webgl", "webkit-3d", "moz-webgl" ] )

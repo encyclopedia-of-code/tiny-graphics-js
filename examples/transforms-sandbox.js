@@ -64,7 +64,7 @@ class Transforms_Sandbox_Base extends Component
                     // orthographic() automatically generate valid matrices for one.  The input arguments of
                     // perspective() are field of view, aspect ratio, and distances to the near plane and far plane.
 
-          shared_uniforms.set_camera( Mat4.translation( 0,3,-10 ) );
+          Shader.assign_camera( Mat4.translation( 0,3,-10 ), shared_uniforms );
         }
       shared_uniforms.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 100 );
 

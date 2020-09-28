@@ -206,7 +206,7 @@ export class Inertia_Demo extends Simulation
       if( !context.scratchpad.controls ) 
         { this.animated_children.push( context.scratchpad.controls = new defs.Movement_Controls() );
           this.animated_children.push( new defs.Shared_Uniforms_Viewer() );
-          shared_uniforms.set_camera( Mat4.translation( 0,0,-50 ) );    // Locate the camera here (inverted matrix).
+          Shader.assign_camera( Mat4.translation( 0,0,-50 ), shared_uniforms );    // Locate the camera here (inverted matrix).
         }
       shared_uniforms.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 500 );
       shared_uniforms.lights = [ defs.Phong_Shader.light_source( vec4( 0,-5,-10,1 ), color( 1,1,1,1 ), 100000 ) ];
@@ -297,7 +297,7 @@ export class Collision_Demo extends Simulation
       if( !context.scratchpad.controls ) 
         { this.animated_children.push( context.scratchpad.controls = new defs.Movement_Controls() );
           this.animated_children.push( new defs.Shared_Uniforms_Viewer() );
-          shared_uniforms.set_camera( Mat4.translation( 0,0,-50 ) );    // Locate the camera here (inverted matrix).
+          Shader.assign_camera( Mat4.translation( 0,0,-50 ), shared_uniforms );    // Locate the camera here (inverted matrix).
         }
       shared_uniforms.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 500 );
       shared_uniforms.lights = [ defs.Phong_Shader.light_source( vec4( .7,1.5,2,0 ), color( 1,1,1,1 ), 100000 ) ];
