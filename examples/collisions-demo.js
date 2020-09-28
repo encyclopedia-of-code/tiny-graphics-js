@@ -173,7 +173,7 @@ export class Inertia_Demo extends Simulation
   constructor()
     { super();
       this.data = new Test_Data();
-      this.shapes = Object.assign( {}, this.data.shapes );
+      this.shapes = { ...this.data.shapes };
       this.shapes.square = new defs.Square();
       const shader = new defs.Fake_Bump_Map( 1 );
       this.material = { shader, color: color( .4,.8,.4,1 ), ambient:.4, texture: this.data.textures.stars }
@@ -229,7 +229,7 @@ export class Collision_Demo extends Simulation
   constructor()
     { super();
       this.data = new Test_Data();
-      this.shapes = Object.assign( {}, this.data.shapes );
+      this.shapes = { ...this.data.shapes };
                                   // Make simpler dummy shapes for representing all other shapes during collisions:
       this.colliders = [
         { intersect_test: Body.intersect_sphere, points: new defs.Subdivision_Sphere(1), leeway: .5 },

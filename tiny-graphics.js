@@ -304,7 +304,7 @@ class Shader
       const defaults = { camera_inverse: Mat4.identity(), camera_transform: Mat4.identity(),
                          projection_transform: Mat4.identity(),
                          animate: true, animation_time: 0, animation_delta_time: 0 };
-      return Object.assign( {}, defaults, initial_values );;
+      return Object.assign( defaults, initial_values );
     }
   static assign_camera( camera_inverse, uniforms_object )
     {                           // Camera matrices and their inverses should be cached together, in sync, since
