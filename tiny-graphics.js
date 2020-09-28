@@ -295,17 +295,11 @@ class Shader
     }                           // Your custom Shader has to override the following functions:
   vertex_glsl_code(){}
   fragment_glsl_code(){}
-  static uniforms_object( initial_values )
-    {                           // uniforms_object():  Non-standard solution for WebGL 1.  Build a group of variables meant
-                                // to become shader uniforms.  These objects should be shared across
-                                // scenes in a canvas, or even across canvases, to sync the contents.
-
-                        // Offer some more very common variables that are useful as shader uniforms:
-      const defaults = { camera_inverse: Mat4.identity(), camera_transform: Mat4.identity(),
-                         projection_transform: Mat4.identity(),
-                         animate: true, animation_time: 0, animation_delta_time: 0 };
-      return Object.assign( defaults, initial_values );
-    }
+  static default_uniforms()
+  {
+      return { camera_inverse: Mat4.identity(), camera_transform: Mat4.identity(), projection_transform: Mat4.identity(),
+               animate: true, animation_time: 0, animation_delta_time: 0 };
+  }
   static assign_camera( camera_inverse, uniforms_object )
     {                           // Camera matrices and their inverses should be cached together, in sync, since
                                 // both are frequently needed, and to limit slow calls to inverse().
@@ -422,7 +416,11 @@ class Webgl_Manager
 {                        // **Webgl_Manager** manages a whole graphics program for one on-page canvas, including its
                          // textures, shapes, shaders, and scenes.  It requests a WebGL context and stores Scenes.
   constructor( canvas, background_color = color( 0,0,0,1 ), dimensions )
-    { const members = { prev_time: 0, scratchpad: {}, canvas, shared_uniforms: Shader.uniforms_object() };
+    { const members = { prev_time: 0, scratchpad: {}, canvas };
+                      // Non-standard solution for WebGL 1.  Build a group of variables meant
+                      // to become shader uniforms.  These objects should be shared across
+                      // scenes in a canvas, or even across canvases, to sync the contents.
+      members.shared_uniforms = Shader.default_uniforms();
       Object.assign( this, members );
                                                  // Get the GPU ready, creating a new WebGL context for this canvas:
       for( let name of [ "webgl", "experimental-webgl", "webkit-3d", "moz-webgl" ] )
