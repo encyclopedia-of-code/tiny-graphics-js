@@ -16,9 +16,9 @@ export class Many_Lights_Demo extends Component
 
       this.shapes = { cube: new defs.Cube() };
       const shader = new defs.Fake_Bump_Map();
-      this.brick = new Material( shader, { color: color( 1,1,1,1 ),
+      this.brick = { shader, color: color( 1,1,1,1 ),
                                  ambient: .05, diffusivity: .5, specularity: .5, smoothness: 10,
-                                 texture: new Texture( "assets/rgb.jpg" ) });
+                                 texture: new Texture( "assets/rgb.jpg" ) };
 
                                       // Don't create any DOM elements to control this scene:
       this.widget_options = { make_controls: false };

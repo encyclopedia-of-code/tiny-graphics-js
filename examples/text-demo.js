@@ -61,12 +61,12 @@ export class Text_Demo extends Component
 
       const phong   = new defs.Phong_Shader();
       const texture = new defs.Textured_Phong( 1 );
-      this.grey       = new Material( phong, { color: color( .5,.5,.5,1 ), ambient: 0,
-                                      diffusivity: .3, specularity: .5, smoothness: 10 })
+      this.grey       = { shader: phong, color: color( .5,.5,.5,1 ), ambient: 0,
+                                      diffusivity: .3, specularity: .5, smoothness: 10 }
 
                               // To show text you need a Material like this one:
-      this.text_image = new Material( texture, { ambient: 1, diffusivity: 0, specularity: 0,
-                                                 texture: new Texture( "assets/text.png" ) });
+      this.text_image = { shader: texture, ambient: 1, diffusivity: 0, specularity: 0,
+                                      texture: new Texture( "assets/text.png" ) };
     }
   render_animation( context, shared_uniforms )
     { shared_uniforms.lights = [ defs.Phong_Shader.light_source( vec4( 3,2,1,0 ),   color( 1,1,1,1 ),  1000000 ),
