@@ -103,10 +103,6 @@ export class Transforms_Sandbox extends Transforms_Sandbox_Base
                                                 // Call the setup code that we left inside the base class:
       super.render_animation( context, shared_uniforms );
 
-                                                // Define a little helper for making materials of new colors:
-      const use_color = ( material, color ) => Object.assign( {}, material, { color } );
-
-
       /**********************************
       Start coding down here!!!!
       **********************************/
@@ -140,7 +136,7 @@ export class Transforms_Sandbox extends Transforms_Sandbox_Base
       model_transform = model_transform.times( Mat4.translation( 0, -2, 0 ) );
                                                                            // Draw the ball, a child of the hierarchy root.
                                                                            // The ball will have its own children as well.
-      this.shapes.ball.draw( context, shared_uniforms, model_transform, use_color( this.materials.metal, blue ) );
+      this.shapes.ball.draw( context, shared_uniforms, model_transform, { ...this.materials.metal, color: blue } );
 
                                                                       // Prepare to draw another box object 2 levels deep
                                                                       // within our hierarchy.
@@ -164,7 +160,7 @@ export class Transforms_Sandbox extends Transforms_Sandbox_Base
                                          .times( Mat4.scale      ( 1,   2, 1 ) )
                                          .times( Mat4.translation( 0,-1.5, 0 ) );
                                                                                     // Draw the bottom (child) box:
-      this.shapes.box.draw( context, shared_uniforms, model_transform, use_color( this.materials.plastic, yellow ) );
+      this.shapes.box.draw( context, shared_uniforms, model_transform, { ...this.materials.plastic, color: yellow } );
 
                               // Note that our coordinate system stored in model_transform still has non-uniform scaling
                               // due to our scale() call.  This could have undesired effects for subsequent transforms;

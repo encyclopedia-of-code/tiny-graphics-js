@@ -30,11 +30,11 @@ export class Scene_To_Texture_Demo extends Component
         this.scratchpad.height  = 256;                // Initial image source: Blank gif file:
         this.texture = new Texture( "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" );
 
-        const bump = new defs.Fake_Bump_Map( 1 );
+        const shader = new defs.Fake_Bump_Map( 1 );
         this.materials =
-          {  a: new Material( bump, { ambient: .5, texture: new Texture( "assets/rgb.jpg" ) }),
-             b: new Material( bump, { ambient: .5, texture: new Texture( "assets/earth.gif" ) }),
-             c: new Material( bump, { ambient:  1, texture: this.texture })
+          {  a: { shader, ambient: .5, texture: new Texture( "assets/rgb.jpg" ) },
+             b: { shader, ambient: .5, texture: new Texture( "assets/earth.gif" ) },
+             c: { shader, ambient:  1, texture: this.texture }
           }
 
         this.spin = 0;

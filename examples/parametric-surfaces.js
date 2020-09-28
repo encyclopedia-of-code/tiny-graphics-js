@@ -35,7 +35,7 @@ export class Parametric_Surfaces extends Component
 
       const shader = new defs.Textured_Phong( 1 );
 
-      this.material = new Material( shader, { ambient: .5, texture: new Texture( "assets/rgb.jpg" ) } );
+      this.material = { shader, ambient: .5, texture: new Texture( "assets/rgb.jpg" ) };
 
       this.movement_controls = new defs.Movement_Controls();
   }
