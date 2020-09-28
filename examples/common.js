@@ -642,9 +642,9 @@ class Phong_Shader extends Shader
 
                   // Fill in any missing fields in the Material object with custom defaults for this shader:
       const defaults = { color: color( 0,0,0,1 ), ambient: 0, diffusivity: 1, specularity: 1, smoothness: 40 };
-      material = Object.assign( {}, defaults, material );
+      let full_material = Object.assign( defaults, material );
 
-      this.send_material ( context, gpu_addresses, material );
+      this.send_material ( context, gpu_addresses, full_material );
       this.send_gpu_state( context, gpu_addresses, gpu_state, model_transform );
     }
 }
