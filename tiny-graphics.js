@@ -6,10 +6,10 @@
                            // local scope (const) as well as store them in this JS object:
 export const tiny = {};
 
-import {math} from '../tiny-graphics-math.js';
+import {math} from './tiny-graphics-math.js';
 Object.assign( tiny, math );
 
-import {widgets} from '../tiny-graphics-gui.js';
+import {widgets} from './tiny-graphics-gui.js';
 Object.assign( tiny, widgets );
 
                                                   // Pull these names into this module's scope for convenience:
