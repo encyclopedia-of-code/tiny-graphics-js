@@ -41,15 +41,13 @@ export class Demonstration extends Component
       const canvas = div.appendChild( document.createElement( "canvas" ) );
       canvas.style = `width:1080px; height:600px; background:DimGray; margin:auto; margin-bottom:-4px`;
 
-                                        // Use tiny-graphics-js to draw graphics to the canvas, using the given scene objects.
-      this.webgl_manager = new tiny.Webgl_Manager( canvas );
+      const child_section = new Transforms_Sandbox();
+      this.document_children.push( child_section );
+      child_section.make_context( canvas );
 
-      this.webgl_manager.component = new Transforms_Sandbox();
-      this.webgl_manager.set_size( [ 1080,400 ] )
-
-                                       // Start WebGL main loop - render() will re-queue itself for continuous calls.
-      this.webgl_manager.event = window.requestAnimFrame( this.webgl_manager.render.bind( this.webgl_manager ) );
-
+      child_section.set_canvas_size( [ 1080,400 ] )
+                                    // Start WebGL main loop - render() will re-queue itself for continuous calls.
+      child_section.event = window.requestAnimFrame( child_section.frame_advance.bind( child_section ) );
 
       const region_2 = div.appendChild( document.createElement( "div" ) );
       region_2.classList.add( "documentation", "documentation-big" );
