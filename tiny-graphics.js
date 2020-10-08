@@ -411,13 +411,6 @@ class Texture
 }
 
 
-const Webgl_Manager = tiny.Webgl_Manager =
-class Webgl_Manager
-{                        // **Webgl_Manager** manages a whole graphics program for one on-page canvas, including its
-                         // textures, shapes, shaders, and scenes.  It requests a WebGL context and stores Scenes.
-}
-
-
 const Component = tiny.Component =
 class Component
 {                           // **Scene** is the base class for any scene part or code snippet that you can add to a
@@ -426,6 +419,8 @@ class Component
                             // buttons and readouts, respectively.  Scenes exist in a hierarchy; their child Scenes
                             // can either contribute more drawn shapes or provide some additional tool to the end
                             // user via drawing additional control panel buttons or live text readouts.
+                            // Root component manages a whole graphics program for one on-page canvas, including its
+                            // textures, shapes, shaders, and scenes.  It requests a WebGL context and stores Scenes.
   constructor()
     {
       const rules = [
@@ -437,6 +432,7 @@ class Component
 
       this.animated_children =  [];
       this.document_children =  [];
+      this.scratchpad = {};
                                                 // Set up how we'll handle key presses for the scene's control panel:
       const callback_behavior = ( callback, event ) =>
            { callback( event );
@@ -456,13 +452,12 @@ class Component
       Component.types_used_before.add( classType )
     }
   make_context( canvas, background_color = color( 0,0,0,1 ), dimensions )
-    { const members = { prev_time: 0, scratchpad: {}, canvas };
-
+    {
       // Non-standard solution for WebGL 1.  Build a group of variables meant
       // to become shader uniforms.  These objects should be shared across
       // scenes in a canvas, or even across canvases, to sync the contents.
-      members.shared_uniforms = Shader.default_uniforms();
-      Object.assign( this, members );
+      const shared_uniforms = Shader.default_uniforms();
+      Object.assign( this, { shared_uniforms, canvas, prev_time: 0 } );
 
       // Get the GPU ready, creating a new WebGL context for this canvas:
       const try_making_context = name => this.context = this.canvas.getContext( name );
