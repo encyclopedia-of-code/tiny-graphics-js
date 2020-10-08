@@ -110,10 +110,10 @@ class Shape
                                               // Copy each array from temp_shape into the recipient shape:
       for( let a in temp_shape.arrays )
       {                                 // Apply points_transform to all points added during this call:
-        if( a == "position" || a == "tangents" )
+        if( a === "position" || a === "tangents" )
           recipient.arrays[a].push( ...temp_shape.arrays[a].map( p => points_transform.times( p.to4(1) ).to3() ) );
                                         // Do the same for normals, but use the inverse transpose matrix as math requires:
-        else if( a == "normal" )
+        else if( a === "normal" )
           recipient.arrays[a].push( ...temp_shape.arrays[a].map( n =>
                                          Mat4.inverse( points_transform.transposed() ).times( n.to4(1) ).to3() ) );
                                         // All other arrays get copied in unmodified:
@@ -394,8 +394,8 @@ class Texture
       }                                                                                    // when zoomed in.
 
       gl.texImage2D   ( gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this.image );
-      if( this.min_filter = "LINEAR_MIPMAP_LINEAR" )      // If the user picked tri-linear sampling (the default) then generate
-        gl.generateMipmap(gl.TEXTURE_2D);                 // the necessary "mips" of the texture and store them on the GPU with it.
+      if( this.min_filter === "LINEAR_MIPMAP_LINEAR" )      // If the user picked tri-linear sampling (the default) then generate
+        gl.generateMipmap(gl.TEXTURE_2D);                   // the necessary "mips" of the texture and store them on the GPU with it.
       return gpu_instance;
     }
   activate( context, texture_unit = 0 )
@@ -444,7 +444,7 @@ class Webgl_Manager
       window.requestAnimFrame = ( w =>
            w.requestAnimationFrame    || w.webkitRequestAnimationFrame
         || w.mozRequestAnimationFrame || w.oRequestAnimationFrame || w.msRequestAnimationFrame
-        || function( callback, element ) { w.setTimeout(callback, 1000/60);  } )( window );
+        || function( callback ) { w.setTimeout(callback, 1000/60);  } )( window );
     }
   set_size( dimensions = [ 1080, 600 ] )
     {                                   // set_size():  Allows you to re-size the canvas anytime.  To work, it must change the
@@ -515,7 +515,7 @@ class Component
       if( Component.types_used_before.has( classType ) )
         return;
 
-      if( document.styleSheets.length == 0 ) document.head.appendChild( document.createElement( "style" ) );
+      if( document.styleSheets.length === 0 ) document.head.appendChild( document.createElement( "style" ) );
       for( const r of rules ) document.styleSheets[document.styleSheets.length - 1].insertRule( r, 0 )
       Component.types_used_before.add( classType )
     }

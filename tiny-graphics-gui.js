@@ -115,10 +115,10 @@ class Keyboard_Manager
       this.actively_pressed_keys.add( event.key );                              // Track the pressed key.
       for( let saved of Object.values( this.saved_controls ) )                  // Re-check all the keydown handlers.
       { if( saved.shortcut_combination.every( s => this.actively_pressed_keys.has( s ) )
-          && event. ctrlKey   == saved.shortcut_combination.includes( "Control" )
-          && event.shiftKey   == saved.shortcut_combination.includes( "Shift" )
-          && event.  altKey   == saved.shortcut_combination.includes( "Alt" )
-          && event. metaKey   == saved.shortcut_combination.includes( "Meta" ) )  // Modifiers must exactly match.
+          && event. ctrlKey   === saved.shortcut_combination.includes( "Control" )
+          && event.shiftKey   === saved.shortcut_combination.includes( "Shift" )
+          && event.  altKey   === saved.shortcut_combination.includes( "Alt" )
+          && event. metaKey   === saved.shortcut_combination.includes( "Meta" ) )  // Modifiers must exactly match.
             this.callback_behavior( saved.callback, event );                      // The keys match, so fire the callback.
       }
     }
@@ -151,11 +151,11 @@ class Code_Manager
                                    // as one."  (This can miscolor lines of code containing divisions and comments).
   constructor( code )
     { const es6_tokens_parser = RegExp( [
-        /((['"])(?:(?!\2|\\).|\\(?:\r\n|[\s\S]))*(\2)?|`(?:[^`\\$]|\\[\s\S]|\$(?!\{)|\$\{(?:[^{}]|\{[^}]*\}?)*\}?)*(`)?)/,    // Any string.
+        /((['"])(?:(?!\2|\\).|\\(?:\r\n|[\s\S]))*(\2)?|`(?:[^`\\$]|\\[\s\S]|\$(?!{)|\${(?:[^{}]|{[^}]*}?)*}?)*(`)?)/,    // Any string.
         /(\/\/.*)|(\/\*(?:[^*]|\*(?!\/))*(\*\/)?)/,                                                                           // Any comment (2 forms).  And next, any regex:
-        /(\/(?!\*)(?:\[(?:(?![\]\\]).|\\.)*\]|(?![\/\]\\]).|\\.)+\/(?:(?!\s*(?:\b|[\u0080-\uFFFF$\\'"~({]|[+\-!](?!=)|\.?\d))|[gmiyu]{1,5}\b(?![\u0080-\uFFFF$\\]|\s*(?:[+\-*%&|^<>!=?({]|\/(?![\/*])))))/,
+        /(\/(?!\*)(?:\[(?:(?![\]\\]).|\\.)*]|(?![\/\]\\]).|\\.)+\/(?:(?!\s*(?:\b|[\u0080-\uFFFF$\\'"~({]|[+\-!](?!=)|\.?\d))|[gmiyu]{1,5}\b(?![\u0080-\uFFFF$\\]|\s*(?:[+\-*%&|^<>!=?({]|\/(?![\/*])))))/,
         /(0[xX][\da-fA-F]+|0[oO][0-7]+|0[bB][01]+|(?:\d*\.\d+|\d+\.?)(?:[eE][+-]?\d+)?)/,                                     // Any number.
-        /((?!\d)(?:(?!\s)[$\w\u0080-\uFFFF]|\\u[\da-fA-F]{4}|\\u\{[\da-fA-F]+\})+)/,                                          // Any name.
+        /((?!\d)(?:(?!\s)[$\w\u0080-\uFFFF]|\\u[\da-fA-F]{4}|\\u{[\da-fA-F]+})+)/,                                          // Any name.
         /(--|\+\+|&&|\|\||=>|\.{3}|(?:[+\-\/%&|^]|\*{1,2}|<{1,2}|>{1,3}|!=?|={1,2})=?|[?~.,:;[\](){}])/,                      // Any punctuator.
         /(\s+)|(^$|[\s\S])/                                                                                                   // Any whitespace. Lastly, blank/invalid.
           ].map( r => r.source ).join('|'), 'g' );
@@ -172,7 +172,7 @@ class Code_Manager
           else if ( single_token[ 11 ] ) token.type = "punctuator"
           else if ( single_token[ 12 ] ) token.type = "whitespace"
           this.tokens.push( token )
-          if( token.type != "whitespace" && token.type != "comment" ) this.no_comments.push( token.value );
+          if( token.type !== "whitespace" && token.type !== "comment" ) this.no_comments.push( token.value );
         }
     }
 }
