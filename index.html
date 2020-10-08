@@ -1,6 +1,7 @@
 <!-- Graphics Example Code.
      index.html - The web page document containing the canvas (drawing surface).  It launches your JavaScript files. //-->
-<!DOCTYPE html> <html> <head> <meta charset="UTF-8"/> <link rel="icon" href="assets/fav.ico"> </head>
+<!DOCTYPE html> <html lang="en"> <head> <meta charset="UTF-8"/> <link rel="icon" href="assets/fav.ico">
+    <title>Displaying WebGL with tiny-graphics.js</title></head>
 <body style="background: DarkGray">       <!-- Begin typing your web page here. //-->
 
       <!-- The following code embeds a WebGL canvas panel, loads certain scene(s), and displays panel(s) of their controls. //-->
@@ -9,7 +10,7 @@
                            // Indicate which element on the page you want the Canvas_Widget to replace with a 3D WebGL area:
   const element_to_replace = document.querySelector( "#main-section" );
   import { main_scene, additional_scenes } from './main-scene.js';  // Import the file that defines a scene.
-  const root = new main_scene( element_to_replace );
+  const root = new main_scene();
   root.animated_children.push( ...additional_scenes.map( scene => new scene() ) );    // This line creates your scene.
   root.render_layout( element_to_replace );
 </script>
