@@ -13,6 +13,9 @@ export class Parametric_Surfaces extends Component
       div.style.margin = "auto";
       div.style.width = "1080px";
 
+      const rules = [ `.documentation-big { width:1030px; padding:0 25px; font-size: 29px; font-family: Arial` ];
+      Component.initialize_CSS( Parametric_Surfaces, rules );
+
       this.initialize_shared_state();
 
       for( let i = 0; i < this.num_sections(); i++ )
@@ -26,6 +29,11 @@ export class Parametric_Surfaces extends Component
       }
       // Start re-render loop:
       this.event = window.requestAnimFrame( this.frame_advance.bind( this ) );
+
+      const final_text = div.appendChild( document.createElement( "div" ) );
+      final_text.classList.add( "documentation", "documentation-big" );
+      final_text.innerHTML = `<p>That's all the examples.  Below are interactive controls, and then the code that generates this whole multi-part tutorial is printed:</p>`;
+
     }
   initialize_shared_state()
   {
@@ -83,7 +91,7 @@ export class Parametric_Surfaces_Section extends Component
       div.style.width = "1080px";
 
       this.document_region = div.appendChild( document.createElement( "div" ) );
-      this.document_region.className = "documentation";
+      this.document_region.classList.add( "documentation", "documentation-big" );
       this[ "explain_section_" + this.section_index ]();
                                                         // The next div down will hold a canvas and/or related interactive areas.
       this.program_stuff = div.appendChild( document.createElement( "div" ) );
