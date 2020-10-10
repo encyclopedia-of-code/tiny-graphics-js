@@ -9,8 +9,8 @@ export class Many_Lights_Demo extends Component
                               // Doing this trick performs much faster than looping through a
                               // long list of lights within the fragment shader, none of which
                               // need to affect every single shape in the scene.
-  constructor()
-    { super();
+  constructor( props )
+    { super( props );
                               // Define how many boxes (buildings) to draw:
       Object.assign( this, { rows: 20, columns: 35 } );
 
@@ -36,34 +36,34 @@ export class Many_Lights_Demo extends Component
       for( let r = 0; r < this.rows;    r++ )
         this.column_lights [ ~~( r) ] = vec3( r, -Math.random(), -2*Math.random()*this.columns  );
     }
-  render_animation( context, shared_uniforms )
+  render_animation( context )
     {                                         // display():  Draw each frame to animate the scene.
-      Shader.assign_camera( Mat4.look_at( vec3( this.rows/2,5,5 ), vec3( this.rows/2,0,-4 ), vec3( 0,1,0 ) ), shared_uniforms );
-      shared_uniforms.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 500 );
+      Shader.assign_camera( Mat4.look_at( vec3( this.rows/2,5,5 ), vec3( this.rows/2,0,-4 ), vec3( 0,1,0 ) ), this.uniforms );
+      this.uniforms.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 500 );
 
                                     // To draw each individual box, select the two lights sharing
                                     // a row and column with it, and draw using those.
       this.box_positions.forEach( (p,i,a) =>
-        { shared_uniforms.lights = [ defs.Phong_Shader.light_source( this.row_lights   [ ~~p[2] ].to4(1), color( p[2]%1,1,1,1 ), 9 ),
+        { this.uniforms.lights = [ defs.Phong_Shader.light_source( this.row_lights   [ ~~p[2] ].to4(1), color( p[2]%1,1,1,1 ), 9 ),
                                      defs.Phong_Shader.light_source( this.column_lights[ ~~p[0] ].to4(1), color( 1,1,p[0]%1,1 ), 9 ) ];
                                             // Draw the box:
-          this.shapes.cube.draw( context, shared_uniforms, Mat4.translation( ...p ).times( Mat4.scale( .3,1,.3 ) ), this.brick )
+          this.shapes.cube.draw( context, this.uniforms, Mat4.translation( ...p ).times( Mat4.scale( .3,1,.3 ) ), this.brick )
         } );
-      if( !shared_uniforms.animate || shared_uniforms.animation_delta_time > 500 )
+      if( !this.uniforms.animate || this.uniforms.animation_delta_time > 500 )
         return;
                               // Move some lights forward along columns, then bound them to a range.
       for( const [key,val] of Object.entries( this.column_lights ) )
-        { this.column_lights[key][2] -= shared_uniforms.animation_delta_time/50;
+        { this.column_lights[key][2] -= this.uniforms.animation_delta_time/50;
           this.column_lights[key][2] %= this.columns*2;
         }
                               // Move other lights forward along rows, then bound them to a range.
       for( const [key,val] of Object.entries( this.row_lights ) )
-        { this.   row_lights[key][0] += shared_uniforms.animation_delta_time/50;
+        { this.   row_lights[key][0] += this.uniforms.animation_delta_time/50;
           this.   row_lights[key][0] %= this.rows*2;
         }
                               // Move the boxes backwards, then bound them to a range.
       this.box_positions.forEach( (p,i,a) =>
-        { a[i] = p.plus( vec3( 0,0,shared_uniforms.animation_delta_time/1000 ) );
+        { a[i] = p.plus( vec3( 0,0,this.uniforms.animation_delta_time/1000 ) );
           if( a[i][2] > 1 ) a[i][2] = -this.columns + .001;
         } );
     }

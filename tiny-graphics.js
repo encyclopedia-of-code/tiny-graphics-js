@@ -79,12 +79,12 @@ class Shape
       }
       else  gl.drawArrays( gl[type], 0, Object.values( this.arrays )[0].length );
     }
-  draw( webgl_manager, shared_uniforms, model_transform, material, type = "TRIANGLES" )
+  draw( webgl_manager, uniforms, model_transform, material, type = "TRIANGLES" )
     {                                       // draw():  To appear onscreen, a shape of any variety goes through this function,
                                             // which executes the shader programs.  The shaders draw the right shape due to
                                             // pre-selecting the correct buffer region in the GPU that holds that shape's data.
       const gpu_instance = this.gpu_instances.get( webgl_manager.context ) || this.copy_onto_graphics_card( webgl_manager.context );
-      material.shader.activate( webgl_manager.context, gpu_instance.webGL_buffer_pointers, shared_uniforms, model_transform, material );
+      material.shader.activate( webgl_manager.context, gpu_instance.webGL_buffer_pointers, uniforms, model_transform, material );
                                                               // Run the shaders to draw every triangle now:
       this.execute_shaders( webgl_manager.context, gpu_instance, type );
     }
@@ -271,7 +271,7 @@ class Shader
       Object.assign( gpu_instance, { program, vertShdr, fragShdr, gpu_addresses: new Graphics_Addresses( program, gl ) } );
       return gpu_instance;
     }
-  activate( context, buffer_pointers, shared_uniforms, model_transform, material )
+  activate( context, buffer_pointers, uniforms, model_transform, material )
     {                                     // activate(): Selects this Shader in GPU memory so the next shape draws using it.
       if( !this.gpu_instances ) this.gpu_instances = new Map();     // Track which GPU contexts this object has copied itself onto.
       const gpu_instance = this.gpu_instances.get( context ) || this.copy_onto_graphics_card( context );
@@ -279,7 +279,7 @@ class Shader
       context.useProgram( gpu_instance.program );
 
           // --- Send over all the values needed by this particular shader to the GPU: ---
-      this.update_GPU( context, gpu_instance.gpu_addresses, shared_uniforms, model_transform, material );
+      this.update_GPU( context, gpu_instance.gpu_addresses, uniforms, model_transform, material );
 
           // --- Turn on all the correct attributes and make sure they're pointing to the correct ranges in GPU memory. ---
       for( let [ attr_name, attribute ] of Object.entries( gpu_instance.gpu_addresses.shader_attributes ) )
@@ -300,10 +300,10 @@ class Shader
       return { camera_inverse: Mat4.identity(), camera_transform: Mat4.identity(), projection_transform: Mat4.identity(),
                animate: true, animation_time: 0, animation_delta_time: 0 };
   }
-  static assign_camera( camera_inverse, uniforms_object )
+  static assign_camera( camera_inverse, uniforms )
     {                           // Camera matrices and their inverses should be cached together, in sync, since
                                 // both are frequently needed, and to limit slow calls to inverse().
-      Object.assign( uniforms_object, { camera_inverse, camera_transform: Mat4.inverse( camera_inverse ) } );
+      Object.assign( uniforms, { camera_inverse, camera_transform: Mat4.inverse( camera_inverse ) } );
     }
   update_GPU(){}
 
@@ -421,7 +421,7 @@ class Component
                             // user via drawing additional control panel buttons or live text readouts.
                             // Root component manages a whole graphics program for one on-page canvas, including its
                             // textures, shapes, shaders, and scenes.  It requests a WebGL context and stores Scenes.
-  constructor()
+  constructor( props = {} )
     {
       const rules = [
         `.documentation_treenode { }`,
@@ -429,6 +429,13 @@ class Component
                                     box-shadow:10px 10px 90px 0 inset LightGray }`
         ];
       Component.initialize_CSS( Component, rules );
+
+      this.props = props;
+
+      // Non-standard solution for WebGL 1.  Build a group of variables meant
+      // to become shader uniforms.  These objects should be shared across
+      // scenes in a canvas, or even across canvases, to sync the contents.
+      this.uniforms = this.props.uniforms || Shader.default_uniforms();
 
       this.animated_children =  [];
       this.document_children =  [];
@@ -453,13 +460,8 @@ class Component
     }
   make_context( canvas, background_color = color( 0,0,0,1 ), dimensions )
     {
-      // Non-standard solution for WebGL 1.  Build a group of variables meant
-      // to become shader uniforms.  These objects should be shared across
-      // scenes in a canvas, or even across canvases, to sync the contents.
-      const shared_uniforms = Shader.default_uniforms();
-      Object.assign( this, { shared_uniforms, canvas, prev_time: 0 } );
-
       // Get the GPU ready, creating a new WebGL context for this canvas:
+      this.canvas = canvas;
       const try_making_context = name => this.context = this.canvas.getContext( name );
       for( let name of [ "webgl", "experimental-webgl", "webkit-3d", "moz-webgl" ] )
         if( try_making_context( name ) ) break;
@@ -502,28 +504,26 @@ class Component
     {
       // render(): Draw a single frame of animation, using all loaded Scene objects.  Measure
       // how much real time has transpired in order to animate shapes' movements accordingly.
-      this.shared_uniforms.animation_delta_time = time - this.prev_time;
-      if( this.shared_uniforms.animate ) this.shared_uniforms.animation_time += this.shared_uniforms.animation_delta_time;
-      this.prev_time = time;
+      if( !this.props.dont_tick )
+      {
+        this.uniforms.animation_delta_time = time - this.prev_time | 0;
+        if( this.uniforms.animate ) this.uniforms.animation_time += this.uniforms.animation_delta_time;
+        this.prev_time = time;
+      }
 
       const gl = this.context;
-      gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);        // Clear the canvas's pixels and z-buffer.
+      if( gl )
+        gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);        // Clear the canvas's pixels and z-buffer.
 
       const open_list = [ this ];
       while( open_list.length )                           // Traverse all Scenes and their children, recursively.
       { open_list.push( ...open_list[0].animated_children );
         // Call display() to draw each registered animation:
-        open_list.shift().render_animation( this, this.shared_uniforms );
+        open_list.shift().render_animation( this );
       }
       // Now that this frame is drawn, request that render() happen
       // again as soon as all other web page events are processed:
       this.event = window.requestAnimFrame( this.frame_advance.bind( this ) );
-    }
-  update_shared_state( context )
-    {
-          // Use the provided context to tick shared_uniforms.animation_time only once per frame.
-      context.shared_uniforms = this.shared_uniforms;
-      return this.shared_uniforms;
     }
   new_line( parent=this.control_panel )       // new_line():  Formats a scene's control panel with a new line break.
     { parent.appendChild( document.createElement( "br" ) ) }
@@ -585,7 +585,6 @@ class Component
         canvas.style.display = "none";
                                         // Use tiny-graphics-js to draw graphics to the canvas, using the given scene objects.
       this.make_context( canvas );
-
                                        // Start WebGL main loop - render() will re-queue itself for continuous calls.
       this.event = window.requestAnimFrame( this.frame_advance.bind( this ) );
 
@@ -607,7 +606,7 @@ class Component
     }
                                                 // To use class Scene, override at least one of the below functions,
                                                 // which will be automatically called by other classes:
-  render_animation( context, shared_uniforms )
+  render_animation( context )
     {}                            // display(): Called by Webgl_Manager for drawing.
   render_documentation()
     {}                            // show_document(): Called by Document_Builder for generating documentation.

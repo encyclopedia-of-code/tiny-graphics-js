@@ -12,9 +12,10 @@ class Transforms_Sandbox_Base extends Component
                                            // scene demonstrating a few concepts.  A subclass of it, Transforms_Sandbox,
                                            // exposes only the display() method, which actually places and draws the shapes,
                                            // isolating that code so it can be experimented with on its own.
-  constructor()
-    {                  // constructor(): Scenes begin by populating initial values like the Shapes and Materials they'll need.
-      super();
+  constructor( props )
+    {
+      super( props );
+                        // constructor(): Scenes begin by populating initial values like the Shapes and Materials they'll need.
       this.hover = this.swarm = false;
                                                         // At the beginning of our program, load one of each of these shape
                                                         // definitions onto the GPU.  NOTE:  Only do this ONCE per shape it
@@ -29,10 +30,9 @@ class Transforms_Sandbox_Base extends Component
                                                   // We can now tweak the scalar coefficients from the Phong lighting formulas.
                                                   // Expected values can be found listed in Phong_Shader::update_GPU().
       const phong = new defs.Phong_Shader();
-      this.materials = { plastic:
-                    { shader: phong, ambient: .2, diffusivity: 1, specularity: .5, color: color( .9,.5,.9,1 ) },
-                           metal:
-                    { shader: phong, ambient: .2, diffusivity: 1, specularity:  1, color: color( .9,.5,.9,1 ) } };
+      this.materials = {};
+      this.materials.plastic = { shader: phong, ambient: .2, diffusivity: 1, specularity: .5, color: color( .9,.5,.9,1 ) }
+      this.materials.metal   = { shader: phong, ambient: .2, diffusivity: 1, specularity:  1, color: color( .9,.5,.9,1 ) }
     }
   make_control_panel()
     {                                 // make_control_panel(): Sets up a panel of interactive HTML elements, including
@@ -46,7 +46,7 @@ class Transforms_Sandbox_Base extends Component
       this.new_line();
       this.key_triggered_button( "Swarm mode", [ "m" ], function() { this.swarm ^= 1; } );
     }
-  render_animation( context, shared_uniforms )
+  render_animation( context )
     {                                                // display():  Called once per frame of animation.  We'll isolate out
                                                      // the code that actually draws things into Transforms_Sandbox, a
                                                      // subclass of this Scene.  Here, the base class's display only does
@@ -54,7 +54,7 @@ class Transforms_Sandbox_Base extends Component
 
                            // Setup -- This part sets up the scene's overall camera matrix, projection matrix, and lights:
       if( !context.scratchpad.controls )
-        { this.animated_children.push( context.scratchpad.controls = new defs.Movement_Controls() );
+        { this.animated_children.push( context.scratchpad.controls = new defs.Movement_Controls( { uniforms: this.uniforms } ) );
 
                     // Define the global camera and projection matrices, which are stored in shared_uniforms.  The camera
                     // matrix follows the usual format for transforms, but with opposite values (cameras exist as
@@ -63,16 +63,16 @@ class Transforms_Sandbox_Base extends Component
                     // orthographic() automatically generate valid matrices for one.  The input arguments of
                     // perspective() are field of view, aspect ratio, and distances to the near plane and far plane.
 
-          Shader.assign_camera( Mat4.translation( 0,3,-10 ), shared_uniforms );
+          Shader.assign_camera( Mat4.translation( 0,3,-10 ), this.uniforms );
         }
-      shared_uniforms.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 100 );
+      this.uniforms.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 100 );
 
                                                 // *** Lights: *** Values of vector or point lights.  They'll be consulted by
                                                 // the shader when coloring shapes.  See Light's class definition for inputs.
-      const t = this.t = shared_uniforms.animation_time/1000;
+      const t = this.t = this.uniforms.animation_time/1000;
       const angle = Math.sin( t );
       const light_position = Mat4.rotation( angle,   1,0,0 ).times( vec4( 0,-1,1,0 ) );
-      shared_uniforms.lights = [ defs.Phong_Shader.light_source( light_position, color( 1,1,1,1 ), 1000000 ) ];
+      this.uniforms.lights = [ defs.Phong_Shader.light_source( light_position, color( 1,1,1,1 ), 1000000 ) ];
     }
 }
 
@@ -85,7 +85,7 @@ export class Transforms_Sandbox extends Transforms_Sandbox_Base
                                                      // the shapes.  We isolate that code so it can be experimented with on its own.
                                                      // This gives you a very small code sandbox for editing a simple scene, and for
                                                      // experimenting with matrix transformations.
-  render_animation( context, shared_uniforms )
+  render_animation( context )
     {                                                // display():  Called once per frame of animation.  For each shape that you want to
                                                      // appear onscreen, place a .draw() call for it inside.  Each time, pass in a
                                                      // different matrix value to control where the shape appears.
@@ -101,7 +101,7 @@ export class Transforms_Sandbox extends Transforms_Sandbox_Base
                                                      // context:  Wraps the WebGL rendering context shown onscreen.  Pass to draw().
 
                                                 // Call the setup code that we left inside the base class:
-      super.render_animation( context, shared_uniforms );
+      super.render_animation( context );
 
       /**********************************
       Start coding down here!!!!
@@ -130,19 +130,19 @@ export class Transforms_Sandbox extends Transforms_Sandbox_Base
                                                      // shape, and place it at the coordinate origin 0,0,0:
       model_transform = model_transform.times( Mat4.translation( 0,0,0 ) );
                                                                                               // Draw the top box:
-      this.shapes.box.draw( context, shared_uniforms, model_transform, { ...this.materials.plastic, color: yellow } );
+      this.shapes.box.draw( context, this.uniforms, model_transform, { ...this.materials.plastic, color: yellow } );
 
                                                      // Tweak our coordinate system downward 2 units for the next shape.
       model_transform = model_transform.times( Mat4.translation( 0, -2, 0 ) );
                                                                            // Draw the ball, a child of the hierarchy root.
                                                                            // The ball will have its own children as well.
-      this.shapes.ball.draw( context, shared_uniforms, model_transform, { ...this.materials.metal, color: blue } );
+      this.shapes.ball.draw( context, this.uniforms, model_transform, { ...this.materials.metal, color: blue } );
 
                                                                       // Prepare to draw another box object 2 levels deep
                                                                       // within our hierarchy.
                                                                       // Find how much time has passed in seconds; we can use
                                                                       // time as an input when calculating new transforms:
-      const t = this.t = shared_uniforms.animation_time/1000;
+      const t = this.t = this.uniforms.animation_time/1000;
 
                                                       // Spin our current coordinate frame as a function of time.  Only do
                                                       // this movement if the button on the page has not been toggled off.
@@ -160,7 +160,7 @@ export class Transforms_Sandbox extends Transforms_Sandbox_Base
                                          .times( Mat4.scale      ( 1,   2, 1 ) )
                                          .times( Mat4.translation( 0,-1.5, 0 ) );
                                                                                     // Draw the bottom (child) box:
-      this.shapes.box.draw( context, shared_uniforms, model_transform, { ...this.materials.plastic, color: yellow } );
+      this.shapes.box.draw( context, this.uniforms, model_transform, { ...this.materials.plastic, color: yellow } );
 
                               // Note that our coordinate system stored in model_transform still has non-uniform scaling
                               // due to our scale() call.  This could have undesired effects for subsequent transforms;

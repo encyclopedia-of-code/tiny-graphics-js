@@ -41,13 +41,12 @@ export class Demonstration extends Component
       const canvas = div.appendChild( document.createElement( "canvas" ) );
       canvas.style = `width:1080px; height:600px; background:DimGray; margin:auto; margin-bottom:-4px`;
 
-      const child_section = new Transforms_Sandbox();
-      this.document_children.push( child_section );
-      child_section.make_context( canvas );
+      this.animated_children.push( new Transforms_Sandbox( { uniforms: this.uniforms } ) );
+      this.make_context( canvas );
 
-      child_section.set_canvas_size( [ 1080,400 ] )
+      this.set_canvas_size( [ 1080,400 ] )
                                     // Start WebGL main loop - render() will re-queue itself for continuous calls.
-      child_section.event = window.requestAnimFrame( child_section.frame_advance.bind( child_section ) );
+      this.event = window.requestAnimFrame( this.frame_advance.bind( this ) );
 
       const region_2 = div.appendChild( document.createElement( "div" ) );
       region_2.classList.add( "documentation", "documentation-big" );

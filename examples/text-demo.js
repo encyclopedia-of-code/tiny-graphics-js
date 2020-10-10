@@ -53,8 +53,8 @@ class Text_Line extends Shape
 
 export class Text_Demo extends Component
 {             // **Text_Demo** is a scene with a cube, for demonstrating the Text_Line utility Shape.
-  constructor()
-    { super()
+  constructor( props )
+    { super( props )
       this.shapes = { cube: new defs.Cube(), text: new Text_Line( 35 ) };
                                       // Don't create any DOM elements to control this scene:
       this.widget_options = { make_controls: false };
@@ -68,15 +68,15 @@ export class Text_Demo extends Component
       this.text_image = { shader: texture, ambient: 1, diffusivity: 0, specularity: 0,
                                       texture: new Texture( "assets/text.png" ) };
     }
-  render_animation( context, shared_uniforms )
-    { shared_uniforms.lights = [ defs.Phong_Shader.light_source( vec4( 3,2,1,0 ),   color( 1,1,1,1 ),  1000000 ),
+  render_animation( context, uniforms )
+    { this.uniforms.lights = [ defs.Phong_Shader.light_source( vec4( 3,2,1,0 ),   color( 1,1,1,1 ),  1000000 ),
                                  defs.Phong_Shader.light_source( vec4( 3,10,10,1 ), color( 1,.7,.7,1 ), 100000 ) ];
-      Shader.assign_camera( Mat4.look_at( ...Vector.cast( [ 0,0,4 ], [0,0,0], [0,1,0] ) ), shared_uniforms );
-      shared_uniforms.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 500 );
+      Shader.assign_camera( Mat4.look_at( ...Vector.cast( [ 0,0,4 ], [0,0,0], [0,1,0] ) ), this.uniforms );
+      this.uniforms.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 500 );
 
-      const t = shared_uniforms.animation_time/1000;
+      const t = this.uniforms.animation_time/1000;
       const funny_orbit = Mat4.rotation( Math.PI/4*t,   Math.cos(t), Math.sin(t), .7*Math.cos(t) );
-      this.shapes.cube.draw( context, shared_uniforms, funny_orbit, this.grey );
+      this.shapes.cube.draw( context, this.uniforms, funny_orbit, this.grey );
 
 
       let strings = [ "This is some text", "More text", "1234567890", "This is a line.\n\n\n"+"This is another line.",
@@ -95,7 +95,7 @@ export class Text_Demo extends Component
           for( let line of multi_line_string.slice( 0,30 ) )
           {             // Assign the string to Text_String, and then draw it.
             this.shapes.text.set_string( line, context.context );
-            this.shapes.text.draw( context, shared_uniforms, funny_orbit.times( cube_side )
+            this.shapes.text.draw( context, this.uniforms, funny_orbit.times( cube_side )
                                                  .times( Mat4.scale( .03,.03,.03 ) ), this.text_image );
                         // Move our basis down a line.
             cube_side.post_multiply( Mat4.translation( 0,-.06,0 ) );

@@ -19,8 +19,8 @@ class Axes_Viewer extends Component
                                           // omitting it inserts your basis in the next empty group.  To re-use IDs easily,
                                           // obtain the next unused ID by calling next_group_id(), so you can re-use it for
                                           // all bases that you want to appear at the same level.
-  constructor()
-    { super();
+  constructor( props )
+    { super( props );
 
       this.selected_basis_id = 0;
       this.reset();
@@ -52,11 +52,11 @@ class Axes_Viewer extends Component
     }
   increase() { this.selected_basis_id = Math.min( this.selected_basis_id + 1, this.groups.length-1 ); }
   decrease() { this.selected_basis_id = Math.max( this.selected_basis_id - 1, 0 ); }   // Don't allow selection of negative IDs.
-  render_animation( context, shared_uniforms )
+  render_animation( context )
     {                                                 // display(): Draw the selected group of axes arrows.
       if( this.groups[ this.selected_basis_id ] )
         for( let a of this.groups[ this.selected_basis_id ] )
-          this.shapes.axes.draw( context, shared_uniforms, a, this.material );
+          this.shapes.axes.draw( context, this.uniforms, a, this.material );
     }
 }
 
@@ -67,7 +67,7 @@ export class Axes_Viewer_Test_Scene extends Component
                               // bases in your scene's hierarchy at the correct levels.
   constructor()
     { super();
-      this.animated_children.push( this.axes_viewer = new Axes_Viewer() );
+      this.animated_children.push( this.axes_viewer = new Axes_Viewer( { uniforms: this.uniforms } ) );
                                                                   // Scene defaults:
       this.shapes = { box: new defs.Cube() };
       const phong = new defs.Phong_Shader();
@@ -75,21 +75,21 @@ export class Axes_Viewer_Test_Scene extends Component
     }
   make_control_panel()
     { this.control_panel.innerHTML += "(Substitute your own scene here)" }
-  render_animation( context, shared_uniforms )
+  render_animation( context )
     {                                   // display():  *********** See instructions below ***********
-      shared_uniforms.lights = [ defs.Phong_Shader.light_source( vec4( 0,0,1,0 ), color( 0,1,1,1 ), 100000 ) ];
+      this.uniforms.lights = [ defs.Phong_Shader.light_source( vec4( 0,0,1,0 ), color( 0,1,1,1 ), 100000 ) ];
 
       if( !context.scratchpad.controls )
-        { this.animated_children.push( context.scratchpad.controls = new defs.Movement_Controls() );
+        { this.animated_children.push( context.scratchpad.controls = new defs.Movement_Controls( { uniforms: this.uniforms } ) );
 
-          Shader.assign_camera( Mat4.translation( -1,-1,-20 ), shared_uniforms );    // Locate the camera here (inverted matrix).
+          Shader.assign_camera( Mat4.translation( -1,-1,-20 ), this.uniforms );    // Locate the camera here (inverted matrix).
         }
-      shared_uniforms.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 500 );
-      const t = shared_uniforms.animation_time / 1000, dt = shared_uniforms.animation_delta_time / 1000;
+      this.uniforms.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 500 );
+      const t = this.uniforms.animation_time / 1000, dt = this.uniforms.animation_delta_time / 1000;
 
-      this.shapes.box.draw( context, shared_uniforms, Mat4.scale( 10,.1,.1 ), this.material );    // Mark the global coordinate axes.
-      this.shapes.box.draw( context, shared_uniforms, Mat4.scale( .1,10,.1 ), this.material );
-      this.shapes.box.draw( context, shared_uniforms, Mat4.scale( .1,.1,10 ), this.material );
+      this.shapes.box.draw( context, this.uniforms, Mat4.scale( 10,.1,.1 ), this.material );    // Mark the global coordinate axes.
+      this.shapes.box.draw( context, this.uniforms, Mat4.scale( .1,10,.1 ), this.material );
+      this.shapes.box.draw( context, this.uniforms, Mat4.scale( .1,.1,10 ), this.material );
 
 
                                     // *********** How to use the Axes_Viewer ***********
@@ -110,7 +110,7 @@ export class Axes_Viewer_Test_Scene extends Component
                                     // Obtain the next group's ID number:
       const id = this.axes_viewer.next_group_id();
                                                         // We'll draw our scene's boxes as an outline so it doesn't block the axes.
-      this.shapes.box.draw( context, shared_uniforms, model_transform.times( Mat4.scale( 2,2,2 ) ), this.material, "LINE_STRIP" );
+      this.shapes.box.draw( context, this.uniforms, model_transform.times( Mat4.scale( 2,2,2 ) ), this.material, "LINE_STRIP" );
 
       let center = model_transform.copy();
       for( let side of [ -1, 1 ] )
@@ -127,7 +127,7 @@ export class Axes_Viewer_Test_Scene extends Component
         model_transform.post_multiply( Mat4.translation( side*2,2,0 ) );
         this.axes_viewer.insert( model_transform.copy() );
                                                        // Again, draw our scene's boxes as an outline so it doesn't block the axes.
-        this.shapes.box.draw( context, shared_uniforms, model_transform.times( Mat4.scale( 2,2,2 ) ), this.material, "LINE_STRIP" );
+        this.shapes.box.draw( context, this.uniforms, model_transform.times( Mat4.scale( 2,2,2 ) ), this.material, "LINE_STRIP" );
       }
     }
 }
@@ -238,9 +238,9 @@ export class Matrix_Game_1 extends Component
       //this.goals.push( Mat.of( [ r[0][0], r[1][0], 0, r2() ], [ r[0][1], r[1][1], 0, r2() ], [ 0, 0, 1, 0 ], [ 0,0,0,1 ] ) ) }
     }
   trim_string( s ) { const trimmed = s.slice( 0, this.trim_factor ); return trimmed.length == 0 ? s[0] : trimmed }
-  display( shared_uniforms )
+  display( uniforms )
     {
-      context.globals.shared_uniforms.lights = [ defs.Phong_Shader.light_source( Vec.of( 1,1,0,0 ).normalized(), Color.of(  1, .5, .5, 1 ), 100000 ),
+      context.globals.uniforms.lights = [ defs.Phong_Shader.light_source( Vec.of( 1,1,0,0 ).normalized(), Color.of(  1, .5, .5, 1 ), 100000 ),
                                                  defs.Phong_Shader.light_source( Vec.of( 0,1,0,0 ).normalized(), Color.of( .5,  1, .5, 1 ), 100000 ) ];
 
 
@@ -248,7 +248,7 @@ export class Matrix_Game_1 extends Component
       let model_transform = Mat4.identity();
       this.combine();    // iterate through current product and combine neighbors of the same matrix type.
 
-      const color = shared_uniforms.animation_time/1000 % 1 < .5 ? "unset" : "black",
+      const color = uniforms.animation_time/1000 % 1 < .5 ? "unset" : "black",
            cursor = Object.assign( document.createElement( "span" ), { textContent: "_", style: "font-size:30px; background-color:" + color } );
 
       this.current_product_div.innerHTML = "Current Matrix: ";
@@ -296,12 +296,12 @@ export class Matrix_Game_1 extends Component
       this.lag_matrix = model_transform.map( (x,i) => Vec.from( this.lag_matrix[i] ).mix( x, .2 ) );  // Move the current basis with lag
 
       const camera_base = this.lock_camera ? Mat4.inverse( this.lag_matrix ) : Mat4.identity();
-      Object.assign( shared_uniforms, { camera_transform:  camera_base.times( Mat4.translation([ 0,-4,-20 ]) ) } );
+      Object.assign( uniforms, { camera_transform:  camera_base.times( Mat4.translation([ 0,-4,-20 ]) ) } );
 
-      this.shapes.arrows.draw( shared_uniforms, this.lag_matrix, this.rgb );                           // Draw the current basis.
+      this.shapes.arrows.draw( uniforms, this.lag_matrix, this.rgb );                           // Draw the current basis.
                                                                                                       // Draw the goal bases:
-      this.goals    .forEach( (x,i) => { this.shapes.arrows.draw( shared_uniforms, x, this.material.override( { color: Color.of( 1,+(i==0),0,1/i**1.3 ) } ) ); } )
-      this.old_goals.forEach( (x,i) => { this.shapes.arrows.draw( shared_uniforms, x, this.material.override( { color: Color.of( 1,      0,1,1/i**1.3 ) } ) ); } )
+      this.goals    .forEach( (x,i) => { this.shapes.arrows.draw( uniforms, x, this.material.override( { color: Color.of( 1,+(i==0),0,1/i**1.3 ) } ) ); } )
+      this.old_goals.forEach( (x,i) => { this.shapes.arrows.draw( uniforms, x, this.material.override( { color: Color.of( 1,      0,1,1/i**1.3 ) } ) ); } )
 
       this.compare_to_goals( model_transform );
     }
@@ -379,7 +379,7 @@ export class Matrix_Game extends Component
               const cw = new tiny.Canvas_Widget( element, undefined,
                 { make_controls: i==0, show_explanation: false, make_editor: false, make_code_nav: false } );
               cw.webgl_manager.scenes.push( this.sections[ i ] );
-              cw.webgl_manager.shared_uniforms = webgl_manager.shared_uniforms;
+              cw.webgl_manager.uniforms = webgl_manager.uniforms;
               cw.webgl_manager.set_size( [ 1080,400 ] )
 
 
@@ -406,20 +406,20 @@ export class Matrix_Game extends Component
        else
          this[ "explain_scene_" + this.scene_id ] ( document_element );
     }
-  display( context, shared_uniforms )
+  display( context, uniforms )
     {
-      shared_uniforms.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 100 );
-      this.r = Mat4.rotation( -.5*Math.sin( shared_uniforms.animation_time/5000 ),   1,1,1 );
+      uniforms.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 100 );
+      this.r = Mat4.rotation( -.5*Math.sin( uniforms.animation_time/5000 ),   1,1,1 );
 
       if( this.is_master )
         {                                           // *** Lights: *** Values of vector or point lights.  They'll be consulted by
                                                     // the shader when coloring shapes.  See Light's class definition for inputs.
-          const t = this.t = shared_uniforms.animation_time/1000;
+          const t = this.t = uniforms.animation_time/1000;
           const angle = Math.sin( t );
           const light_position = Mat4.rotation( angle,   1,0,0 ).times( vec4( 0,0,1,0 ) );
-          shared_uniforms.lights = [ defs.Phong_Shader.light_source( light_position, color( 1,1,1,1 ), 1000000 ) ];
+          uniforms.lights = [ defs.Phong_Shader.light_source( light_position, color( 1,1,1,1 ), 1000000 ) ];
         }
       else
-        this[ "display_scene_" + this.scene_id ] ( context, shared_uniforms );
+        this[ "display_scene_" + this.scene_id ] ( context, uniforms );
     }
 }

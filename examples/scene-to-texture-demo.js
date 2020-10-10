@@ -13,9 +13,9 @@ export class Scene_To_Texture_Demo extends Component
                       // NOTE: To use this for two-pass rendering, you simply need to write
                       // any shader that acts upon the input texture as if it were a
                       // previous rendering result.
-    constructor()
+    constructor( props )
       {               // Request the camera, shapes, and materials our Scene will need:
-        super();
+        super( props );
         this.shapes = { box:   new defs.Cube(),
                         box_2: new defs.Cube(),
                         axis:  new defs.Axis_Arrows()
@@ -49,13 +49,13 @@ export class Scene_To_Texture_Demo extends Component
         this.result_img = this.control_panel.appendChild( Object.assign( document.createElement( "img" ),
                 { style:"width:200px; height:" + 200 * this.aspect_ratio + "px" } ) );
       }
-    render_animation( context, shared_uniforms )
+    render_animation( context )
       {                                 // render_animation():  Draw both scenes, clearing the buffer in between.
-        shared_uniforms.lights = [ defs.Phong_Shader.light_source( vec4( -5,5,5,1 ), color( 0,1,1,1 ), 100000 ) ];
-        const t = shared_uniforms.animation_time / 1000, dt = shared_uniforms.animation_delta_time / 1000;
+        this.uniforms.lights = [ defs.Phong_Shader.light_source( vec4( -5,5,5,1 ), color( 0,1,1,1 ), 100000 ) ];
+        const t = this.uniforms.animation_time / 1000, dt = this.uniforms.animation_delta_time / 1000;
 
-        Shader.assign_camera( Mat4.look_at( vec3( 0,0,5 ), vec3( 0,0,0 ), vec3( 0,1,0 ) ), shared_uniforms );
-        shared_uniforms.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, .5, 500 );
+        Shader.assign_camera( Mat4.look_at( vec3( 0,0,5 ), vec3( 0,0,0 ), vec3( 0,1,0 ) ), this.uniforms );
+        this.uniforms.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, .5, 500 );
 
             // Update persistent matrix state:
         this.cube_1.post_multiply( Mat4.rotation( this.spin * dt * 30 / 60 * 2*Math.PI,   1,0,0 ) );
@@ -64,7 +64,7 @@ export class Scene_To_Texture_Demo extends Component
                                           // Perform two rendering passes.  The first one we erase and
                                           // don't display after using to it generate our texture.
             // Draw Scene 1:
-        this.shapes.box.draw( context, shared_uniforms, this.cube_1, this.materials.a );
+        this.shapes.box.draw( context, this.uniforms, this.cube_1, this.materials.a );
 
         this.scratchpad_context.drawImage( context.canvas, 0, 0, 256, 256 );
         this.texture.image.src = this.result_img.src = this.scratchpad.toDataURL("image/png");
@@ -80,7 +80,7 @@ export class Scene_To_Texture_Demo extends Component
         context.context.clear( context.context.COLOR_BUFFER_BIT | context.context.DEPTH_BUFFER_BIT);
 
             // Draw Scene 2:
-        this.shapes.box  .draw( context, shared_uniforms, this.cube_1, this.materials.b );
-        this.shapes.box_2.draw( context, shared_uniforms, this.cube_2, this.materials.c );
+        this.shapes.box  .draw( context, this.uniforms, this.cube_1, this.materials.b );
+        this.shapes.box_2.draw( context, this.uniforms, this.cube_2, this.materials.c );
       }
   }
