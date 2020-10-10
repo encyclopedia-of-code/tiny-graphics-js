@@ -196,9 +196,10 @@ class Code_Widget
       import( './main-scene.js' )
         .then( module => {
 
-          this.build_reader(      component.embedded_code_nav_area, component.constructor, module.defs );
+          const code_in_focus = options.code_in_focus || component.constructor;
+          this.build_reader(      component.embedded_code_nav_area, code_in_focus, module.defs );
           if( !options.hide_navigator )
-            this.build_navigator( component.embedded_code_nav_area, component.constructor,
+            this.build_navigator( component.embedded_code_nav_area, code_in_focus,
                                   component.animated_children, module.defs );
         } )
     }
@@ -259,12 +260,12 @@ class Code_Widget
         }
       }
     }
-  display_code( class_to_display )
+  display_code( code_in_focus )
     {                                           // display_code():  Populate the code textbox.
                                                 // Pass undefined to choose index.html source.
       if( this.component.embedded_editor )
-        this.component.embedded_editor.select_class( class_to_display );
-      if( class_to_display ) this.format_code( class_to_display.toString() );
+        this.component.embedded_editor.select_class( code_in_focus );
+      if( code_in_focus ) this.format_code( code_in_focus.toString() );
       else fetch( document.location.href )
                 .then(   response => response.text() )
                 .then( pageSource => this.format_code( pageSource ) );
@@ -305,7 +306,7 @@ class Editor_Widget
 
       tiny.Component.initialize_CSS( Editor_Widget, rules );
 
-      this.associated_webgl_manager = component.webgl_manager;
+      this.component = component;
       this.options = options;
 
       const form = this.form = component.embedded_editor_area.appendChild( document.createElement( "form" ) );
@@ -348,7 +349,8 @@ class Editor_Widget
       new_demo_code.name    = "new_demo_code";
       new_demo_code.rows    = this.options.rows || 25;
       new_demo_code.cols    = 140;
-      this.select_class( component.constructor );
+      const code_in_focus = options.code_in_focus || component.constructor;
+      this.select_class( code_in_focus );
     }
   select_class( class_definition )
     { this.new_demo_code.value = class_definition.toString(); }

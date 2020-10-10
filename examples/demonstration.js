@@ -43,7 +43,6 @@ export class Demonstration extends Component
 
       this.animated_children.push( new Transforms_Sandbox( { uniforms: this.uniforms } ) );
       this.make_context( canvas );
-
       this.set_canvas_size( [ 1080,400 ] )
                                     // Start WebGL main loop - render() will re-queue itself for continuous calls.
       this.event = window.requestAnimFrame( this.frame_advance.bind( this ) );
@@ -56,8 +55,7 @@ export class Demonstration extends Component
 
       this.embedded_editor_area = div.appendChild( document.createElement( "div" ) );
       this.embedded_editor_area.className = "editor-widget";
-
-      this.embedded_editor = new tiny.Editor_Widget( this, { rows: 40 } );
+      this.embedded_editor = new tiny.Editor_Widget( this, { code_in_focus: Transforms_Sandbox, rows: 40 } );
 
       const region_3 = div.appendChild( document.createElement( "div" ) );
       region_3.classList.add( "documentation", "documentation-big" );
@@ -70,7 +68,6 @@ export class Demonstration extends Component
 
       this.embedded_code_nav_area = div.appendChild( document.createElement( "div" ) );
       this.embedded_code_nav_area.className = "code-widget";
-
-      this.embedded_code_nav = new tiny.Code_Widget( this );
+      this.embedded_code_nav = new tiny.Code_Widget( this, { code_in_focus: Transforms_Sandbox } );
     }
 }

@@ -1,7 +1,6 @@
 import {tiny, defs} from './common.js';
                                                   // Pull these names into this module's scope for convenience:
-const { Vector3, vec3, vec4, color, Mat4, Shape, Material, Shader, Texture, Component } = tiny;
-const { Triangle, Square, Tetrahedron, Windmill, Cube, Subdivision_Sphere } = defs;
+const { Vector3, vec3, vec4, color, Mat4, Shader, Texture, Component } = tiny;
 
 
 export class Parametric_Surfaces extends Component
@@ -103,25 +102,17 @@ export class Parametric_Surfaces_Section extends Component
 
       this.make_context( canvas );
 
-      this.set_canvas_size( [ 1080,400 ] )
-      // Start WebGL main loop - render() will re-queue itself for continuous calls.
+      this.set_canvas_size( [ 1080,300 ] )
+                                      // Start WebGL main loop - render() will re-queue itself for continuous calls.
       this.event = window.requestAnimFrame( this.frame_advance.bind( this ) );
 
-      if( overridden_options.make_controls )
-      { this.embedded_controls_area = this.program_stuff.appendChild( document.createElement( "div" ) );
-        this.embedded_controls_area.className = "controls-widget";
-        this.embedded_controls = new tiny.Controls_Widget( this );
-      }
-      if( overridden_options.make_code_nav )
-      { this.embedded_code_nav_area = this.program_stuff.appendChild( document.createElement( "div" ) );
-        this.embedded_code_nav_area.className = "code-widget";
-        this.embedded_code_nav = new tiny.Code_Widget( this );
-      }
-      if( overridden_options.make_editor )
-      { this.embedded_editor_area = this.program_stuff.appendChild( document.createElement( "div" ) );
-        this.embedded_editor_area.className = "editor-widget";
-        this.embedded_editor = new tiny.Editor_Widget( this );
-      }
+      this.embedded_code_nav_area = this.program_stuff.appendChild( document.createElement( "div" ) );
+      this.embedded_code_nav_area.className = "code-widget";
+      this.embedded_code_nav = new tiny.Code_Widget( this, { code_in_focus: this[ "construct_section_" + this.section_index ], hide_navigator: true } );
+
+      this.secondary_embedded_code_nav_area = this.program_stuff.appendChild( document.createElement( "div" ) );
+      this.secondary_embedded_code_nav_area.className = "code-widget";
+      this.secondary_embedded_code_nav = new tiny.Code_Widget( this, { code_in_focus: this[ "display_section_" + this.section_index ], hide_navigator: true } );
     }
   construct_section_0()
     { const initial_corner_point = vec3( -1,-1,0 );
