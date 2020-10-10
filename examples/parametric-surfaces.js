@@ -84,7 +84,7 @@ export class Parametric_Surfaces_Section extends Component
 
       this.document_region = div.appendChild( document.createElement( "div" ) );
       this.document_region.className = "documentation";
-      this.render_documentation();
+      this[ "explain_section_" + this.section_index ]();
                                                         // The next div down will hold a canvas and/or related interactive areas.
       this.program_stuff = div.appendChild( document.createElement( "div" ) );
 
