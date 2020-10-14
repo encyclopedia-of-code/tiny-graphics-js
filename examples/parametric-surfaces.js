@@ -32,8 +32,15 @@ export class Parametric_Surfaces extends Component
 
       const final_text = div.appendChild( document.createElement( "div" ) );
       final_text.classList.add( "documentation", "documentation-big" );
-      final_text.innerHTML = `<p>That's all the examples.  Below are interactive controls, and then the code that generates this whole multi-part tutorial is printed:</p>`;
+      final_text.innerHTML = `<p>That's all the examples.  Below are interactive controls available on all the above canvases, and then the code that generates this whole multi-part tutorial is printed:</p>`;
 
+      this.embedded_controls_area = div.appendChild( document.createElement( "div" ) );
+      this.embedded_controls_area.className = "controls-widget";
+      this.embedded_controls = new tiny.Controls_Widget( this );
+
+      this.embedded_code_nav_area = div.appendChild( document.createElement( "div" ) );
+      this.embedded_code_nav_area.className = "code-widget";
+      this.embedded_code_nav = new tiny.Code_Widget( this );
     }
   initialize_shared_state()
   {
@@ -44,6 +51,8 @@ export class Parametric_Surfaces extends Component
       this.material = { shader, ambient: .5, texture: new Texture( "assets/rgb.jpg" ) };
 
       this.movement_controls = new defs.Movement_Controls( { uniforms: this.uniforms } );
+
+      this.animated_children.push( this.movement_controls );
   }
   render_animation( context )
     {
@@ -64,8 +73,6 @@ export class Parametric_Surfaces_Section extends Component
 
       this.parent = parent;
       this.section_index = section_index;
-
-      this.animated_children.push( parent.movement_controls );
 
                                   // Switch on section_index to decide what to actually construct.
       const handler_at_index = this[ "construct_section_" + section_index ];
@@ -104,6 +111,9 @@ export class Parametric_Surfaces_Section extends Component
             // TODO:  One use case may have required canvas to be styled as a rule instead of as an element.  Keep an eye out.
       const canvas = this.program_stuff.appendChild( document.createElement( "canvas" ) );
       canvas.style = `width:1080px; height:600px; background:DimGray; margin:auto; margin-bottom:-4px`;
+
+                            // Each section's canvas listens (by mouse) for the master Movement_Controls.
+      this.parent.movement_controls.add_mouse_controls( canvas );
 
       if( !overridden_options.show_canvas )
         canvas.style.display = "none";

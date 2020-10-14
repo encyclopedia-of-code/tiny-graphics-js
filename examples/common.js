@@ -764,6 +764,9 @@ class Movement_Controls extends Component
     }
   add_mouse_controls( canvas )
     {                                       // add_mouse_controls():  Attach HTML mouse events to the drawing canvas.
+      if( this.mouse_enabled_canvases.has( canvas ) )
+        return;
+      this.mouse_enabled_canvases.add( canvas )
                                             // First, measure mouse steering, for rotating the flyaround camera:
       this.mouse = { "from_center": vec( 0,0 ) };
       const mouse_position = ( e, rect = canvas.getBoundingClientRect() ) =>
@@ -881,14 +884,11 @@ class Movement_Controls extends Component
             r = this.speed_multiplier * this.radians_per_frame,
             dt = this.uniforms.animation_delta_time / 1000;
 
+                // TODO:  Once there is a way to test it, remove the below, because uniforms are no longer inaccessible
+                // outside this function, so we could just tell this class to take over the uniforms' matrix anytime.
       if( this.will_take_over_uniforms )
       { this.reset();
         this.will_take_over_uniforms = false;
-      }
-
-      if( !this.mouse_enabled_canvases.has( context.canvas ) )
-      { this.add_mouse_controls( context.canvas );
-        this.mouse_enabled_canvases.add( context.canvas )
       }
                                      // Move in first-person.  Scale the normal camera aiming speed by dt for smoothness:
       this.first_person_flyaround( dt * r, dt * m );
