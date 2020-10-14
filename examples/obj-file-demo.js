@@ -87,11 +87,11 @@ class Shape_From_File extends Shape
       this.normalize_positions( false );
       this.ready = true;
     }
-  draw( context, uniforms, model_transform, material )
+  draw( caller, uniforms, model_transform, material )
     {               // draw(): Same as always for shapes, but cancel all
                     // attempts to draw the shape before it loads:
       if( this.ready )
-        super.draw( context, uniforms, model_transform, material );
+        super.draw( caller, uniforms, model_transform, material );
     }
 }
 
@@ -117,11 +117,11 @@ export class Obj_File_Demo extends Component
         this.bumps = { shader: new defs.Fake_Bump_Map(  1 ), color: color( .5,.5,.5,1 ),
           ambient: .3, diffusivity: .5, specularity: .5, texture: new Texture( "assets/stars.png" ) };
       }
-    render_animation( context )
+    render_animation( caller )
       { const t = this.uniforms.animation_time;
 
         Shader.assign_camera( Mat4.translation( 0,0,-5 ), this.uniforms );    // Locate the camera here (inverted matrix).
-        this.uniforms.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 500 );
+        this.uniforms.projection_transform = Mat4.perspective( Math.PI/4, caller.width/caller.height, 1, 500 );
                                                 // A spinning light to show off the bump map:
         this.uniforms.lights = [ defs.Phong_Shader.light_source(
                                    Mat4.rotation( t/300,   1,0,0 ).times( vec4( 3,2,10,1 ) ),
@@ -133,7 +133,7 @@ export class Obj_File_Demo extends Component
                           .times( Mat4.translation( 2*i, 0, 0 ) )
                           .times( Mat4.rotation( t/1500,   -1,2,0 ) )
                           .times( Mat4.rotation( -Math.PI/2,   1,0,0 ) );
-          this.shapes.teapot.draw( context, this.uniforms, model_transform, i == 1 ? this.stars : this.bumps );
+          this.shapes.teapot.draw( caller, this.uniforms, model_transform, i == 1 ? this.stars : this.bumps );
         }
       }
   render_documentation()

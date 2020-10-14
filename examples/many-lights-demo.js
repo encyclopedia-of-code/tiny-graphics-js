@@ -36,10 +36,10 @@ export class Many_Lights_Demo extends Component
       for( let r = 0; r < this.rows;    r++ )
         this.column_lights [ ~~( r) ] = vec3( r, -Math.random(), -2*Math.random()*this.columns  );
     }
-  render_animation( context )
+  render_animation( caller )
     {                                         // display():  Draw each frame to animate the scene.
       Shader.assign_camera( Mat4.look_at( vec3( this.rows/2,5,5 ), vec3( this.rows/2,0,-4 ), vec3( 0,1,0 ) ), this.uniforms );
-      this.uniforms.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 500 );
+      this.uniforms.projection_transform = Mat4.perspective( Math.PI/4, caller.width/caller.height, 1, 500 );
 
                                     // To draw each individual box, select the two lights sharing
                                     // a row and column with it, and draw using those.
@@ -47,7 +47,7 @@ export class Many_Lights_Demo extends Component
         { this.uniforms.lights = [ defs.Phong_Shader.light_source( this.row_lights   [ ~~p[2] ].to4(1), color( p[2]%1,1,1,1 ), 9 ),
                                      defs.Phong_Shader.light_source( this.column_lights[ ~~p[0] ].to4(1), color( 1,1,p[0]%1,1 ), 9 ) ];
                                             // Draw the box:
-          this.shapes.cube.draw( context, this.uniforms, Mat4.translation( ...p ).times( Mat4.scale( .3,1,.3 ) ), this.brick )
+          this.shapes.cube.draw( caller, this.uniforms, Mat4.translation( ...p ).times( Mat4.scale( .3,1,.3 ) ), this.brick )
         } );
       if( !this.uniforms.animate || this.uniforms.animation_delta_time > 500 )
         return;

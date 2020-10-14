@@ -46,16 +46,16 @@ class Transforms_Sandbox_Base extends Component
       this.new_line();
       this.key_triggered_button( "Swarm mode", [ "m" ], function() { this.swarm ^= 1; } );
     }
-  render_animation( context )
+  render_animation( caller )
     {                                                // display():  Called once per frame of animation.  We'll isolate out
                                                      // the code that actually draws things into Transforms_Sandbox, a
                                                      // subclass of this Scene.  Here, the base class's display only does
                                                      // some initial setup.
 
                            // Setup -- This part sets up the scene's overall camera matrix, projection matrix, and lights:
-      if( !context.scratchpad.controls )
-        { this.animated_children.push( context.scratchpad.controls = new defs.Movement_Controls( { uniforms: this.uniforms } ) );
-          context.scratchpad.controls.add_mouse_controls( this.canvas );
+      if( !caller.scratchpad.controls )
+        { this.animated_children.push( caller.scratchpad.controls = new defs.Movement_Controls( { uniforms: this.uniforms } ) );
+          caller.scratchpad.controls.add_mouse_controls( caller.canvas );
 
                     // Define the global camera and projection matrices, which are stored in shared_uniforms.  The camera
                     // matrix follows the usual format for transforms, but with opposite values (cameras exist as
@@ -66,7 +66,7 @@ class Transforms_Sandbox_Base extends Component
 
           Shader.assign_camera( Mat4.translation( 0,3,-10 ), this.uniforms );
         }
-      this.uniforms.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 100 );
+      this.uniforms.projection_transform = Mat4.perspective( Math.PI/4, caller.width/caller.height, 1, 100 );
 
                                                 // *** Lights: *** Values of vector or point lights.  They'll be consulted by
                                                 // the shader when coloring shapes.  See Light's class definition for inputs.
@@ -86,7 +86,7 @@ export class Transforms_Sandbox extends Transforms_Sandbox_Base
                                                      // the shapes.  We isolate that code so it can be experimented with on its own.
                                                      // This gives you a very small code sandbox for editing a simple scene, and for
                                                      // experimenting with matrix transformations.
-  render_animation( context )
+  render_animation( caller )
     {                                                // display():  Called once per frame of animation.  For each shape that you want to
                                                      // appear onscreen, place a .draw() call for it inside.  Each time, pass in a
                                                      // different matrix value to control where the shape appears.
@@ -99,10 +99,10 @@ export class Transforms_Sandbox extends Transforms_Sandbox_Base
                                                      // this.lights:  A pre-made collection of Light objects.
                                                      // this.hover:  A boolean variable that changes when the user presses a button.
                                                      // shared_uniforms:  Information the shader needs for drawing.  Pass to draw().
-                                                     // context:  Wraps the WebGL rendering context shown onscreen.  Pass to draw().
+                                                     // caller:  Wraps the WebGL rendering context shown onscreen.  Pass to draw().
 
                                                 // Call the setup code that we left inside the base class:
-      super.render_animation( context );
+      super.render_animation( caller );
 
       /**********************************
       Start coding down here!!!!
@@ -131,13 +131,13 @@ export class Transforms_Sandbox extends Transforms_Sandbox_Base
                                                      // shape, and place it at the coordinate origin 0,0,0:
       model_transform = model_transform.times( Mat4.translation( 0,0,0 ) );
                                                                                               // Draw the top box:
-      this.shapes.box.draw( context, this.uniforms, model_transform, { ...this.materials.plastic, color: yellow } );
+      this.shapes.box.draw( caller, this.uniforms, model_transform, { ...this.materials.plastic, color: yellow } );
 
                                                      // Tweak our coordinate system downward 2 units for the next shape.
       model_transform = model_transform.times( Mat4.translation( 0, -2, 0 ) );
                                                                            // Draw the ball, a child of the hierarchy root.
                                                                            // The ball will have its own children as well.
-      this.shapes.ball.draw( context, this.uniforms, model_transform, { ...this.materials.metal, color: blue } );
+      this.shapes.ball.draw( caller, this.uniforms, model_transform, { ...this.materials.metal, color: blue } );
 
                                                                       // Prepare to draw another box object 2 levels deep
                                                                       // within our hierarchy.
@@ -161,7 +161,7 @@ export class Transforms_Sandbox extends Transforms_Sandbox_Base
                                          .times( Mat4.scale      ( 1,   2, 1 ) )
                                          .times( Mat4.translation( 0,-1.5, 0 ) );
                                                                                     // Draw the bottom (child) box:
-      this.shapes.box.draw( context, this.uniforms, model_transform, { ...this.materials.plastic, color: yellow } );
+      this.shapes.box.draw( caller, this.uniforms, model_transform, { ...this.materials.plastic, color: yellow } );
 
                               // Note that our coordinate system stored in model_transform still has non-uniform scaling
                               // due to our scale() call.  This could have undesired effects for subsequent transforms;

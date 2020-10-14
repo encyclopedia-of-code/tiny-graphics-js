@@ -54,9 +54,9 @@ export class Parametric_Surfaces extends Component
 
       this.animated_children.push( this.movement_controls );
   }
-  render_animation( context )
+  render_animation( caller )
     {
-      context.scratchpad.controls = this.movement_controls;
+      caller.scratchpad.controls = this.movement_controls;
 
                              // Tick values that update only once per frame (not per section).
       const t = this.t = this.uniforms.animation_time/1000;
@@ -78,16 +78,16 @@ export class Parametric_Surfaces_Section extends Component
       const handler_at_index = this[ "construct_section_" + section_index ];
       handler_at_index.call( this );
     }
-  render_animation( context )
+  render_animation( caller )
     {
                         // Part I:  All sections do this every frame:
       this.r = Mat4.rotation( -.5*Math.sin( this.uniforms.animation_time/5000 ),   1,1,1 );
 
-      this.uniforms.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 100 );
+      this.uniforms.projection_transform = Mat4.perspective( Math.PI/4, caller.width/caller.height, 1, 100 );
 
                         // Part II:  Switch on section_index to decide what to actually draw.
       const handler_at_index = this[ "display_section_" + this.section_index ];
-      handler_at_index.call( this, context );
+      handler_at_index.call( this, caller );
     }
   render_layout( div, options = {} )
     {
@@ -219,14 +219,14 @@ export class Parametric_Surfaces_Section extends Component
     this.shapes = { shell : new defs.Grid_Patch( 30, 30, sampler2, sample_two_arrays, [[0,1],[0,1]] )
     };
   }
-  display_section_0( context )
+  display_section_0( caller )
     {
                         // Draw the sheets, flipped 180 degrees so their normals point at us.
       const r = Mat4.rotation( Math.PI,   0,1,0 ).times( this.r );
-      this.shapes.sheet .draw( context, this.uniforms, Mat4.translation( -1.5,0,0 ).times(r), this.parent.material );
-      this.shapes.sheet2.draw( context, this.uniforms, Mat4.translation(  1.5,0,0 ).times(r), this.parent.material );
+      this.shapes.sheet .draw( caller, this.uniforms, Mat4.translation( -1.5,0,0 ).times(r), this.parent.material );
+      this.shapes.sheet2.draw( caller, this.uniforms, Mat4.translation(  1.5,0,0 ).times(r), this.parent.material );
     }
-  display_section_1( context )
+  display_section_1( caller )
   {
     const random = ( x ) => Math.sin( 1000*x + this.uniforms.animation_time/1000 );
 
@@ -237,32 +237,32 @@ export class Parametric_Surfaces_Section extends Component
     // This won't be perfect flat shading because vertices are shared.
     this.shapes.sheet.flat_shade();
     // Draw the current sheet shape.
-    this.shapes.sheet.draw( context, this.uniforms, this.r, this.parent.material );
+    this.shapes.sheet.draw( caller, this.uniforms, this.r, this.parent.material );
 
     // Update the gpu-side shape with new vertices.
     // Warning:  You can't call this until you've already drawn the shape once.
-    this.shapes.sheet.copy_onto_graphics_card( context.context, ["position","normal"], false );
+    this.shapes.sheet.copy_onto_graphics_card( caller.context, ["position","normal"], false );
   }
-  display_section_2( context )
+  display_section_2( caller )
   { const model_transform = Mat4.translation( -5,0,-2 );
     // Draw all the shapes stored in this.shapes side by side.
     for( let s of Object.values( this.shapes ) )
-    { s.draw( context, this.uniforms, model_transform.times( this.r ), this.parent.material );
+    { s.draw( caller, this.uniforms, model_transform.times( this.r ), this.parent.material );
       model_transform.post_multiply( Mat4.translation( 2,0,0 ) );
     }
   }
-  display_section_3( context )
+  display_section_3( caller )
   { const model_transform = Mat4.rotation( this.uniforms.animation_time/5000,   0,1,0 );
-    this.shapes.bullet.draw( context, this.uniforms, model_transform.times( this.r ), this.solid );
+    this.shapes.bullet.draw( caller, this.uniforms, model_transform.times( this.r ), this.solid );
   }
-  display_section_4( context )
+  display_section_4( caller )
   {                                       // First, draw the compound axis shape all at once:
-    this.shapes.axis.draw( context, this.uniforms, Mat4.translation( 2,-1,-2 ), this.parent.material );
+    this.shapes.axis.draw( caller, this.uniforms, Mat4.translation( 2,-1,-2 ), this.parent.material );
 
     // Manually recreate the above compound Shape out of individual components:
     const base = Mat4.translation( -1,-1,-2 );
     const ball_matrix = base.times( Mat4.rotation( Math.PI/2,   0,1,0 ).times( Mat4.scale( .25, .25, .25 ) ) );
-    this.shapes.ball.draw( context, this.uniforms, ball_matrix, this.parent.material );
+    this.shapes.ball.draw( caller, this.uniforms, ball_matrix, this.parent.material );
     const matrices = [ Mat4.identity(),
       Mat4.rotation(-Math.PI/2,  1,0,0 ).times( Mat4.scale(  1,-1,1 )),
       Mat4.rotation( Math.PI/2,  0,1,0 ).times( Mat4.scale( -1, 1,1 )) ];
@@ -273,25 +273,25 @@ export class Parametric_Surfaces_Section extends Component
           box2_matrix = m.times( Mat4.translation( .95,   0, .5 ) ).times( Mat4.scale( .05, .05, .4  ) ),
           box3_matrix = m.times( Mat4.translation(   0, .95, .5 ) ).times( Mat4.scale( .05, .05, .4  ) ),
           tube_matrix = m.times( Mat4.translation(   0,   0,  1 ) ).times( Mat4.scale(  .1,  .1,  2  ) );
-      this.shapes[ "cone_"+i ].draw( context, this.uniforms, cone_matrix, this.parent.material );
-      this.shapes.box         .draw( context, this.uniforms, box1_matrix, this.parent.material );
-      this.shapes.box         .draw( context, this.uniforms, box2_matrix, this.parent.material );
-      this.shapes.box         .draw( context, this.uniforms, box3_matrix, this.parent.material );
-      this.shapes[ "tube_"+i ].draw( context, this.uniforms, tube_matrix, this.parent.material );
+      this.shapes[ "cone_"+i ].draw( caller, this.uniforms, cone_matrix, this.parent.material );
+      this.shapes.box         .draw( caller, this.uniforms, box1_matrix, this.parent.material );
+      this.shapes.box         .draw( caller, this.uniforms, box2_matrix, this.parent.material );
+      this.shapes.box         .draw( caller, this.uniforms, box3_matrix, this.parent.material );
+      this.shapes[ "tube_"+i ].draw( caller, this.uniforms, tube_matrix, this.parent.material );
     }
   }
-  display_section_5( context )
+  display_section_5( caller )
   { const model_transform = Mat4.translation( -5,0,-2 );
     const r = Mat4.rotation( this.uniforms.animation_time/3000,   1,1,1 );
     // Draw all the shapes stored in this.shapes side by side.
     for( let s of Object.values( this.shapes ) )
-    { s.draw( context, this.uniforms, model_transform.times( r ), this.parent.material );
+    { s.draw( caller, this.uniforms, model_transform.times( r ), this.parent.material );
       model_transform.post_multiply( Mat4.translation( 2.5,0,0 ) );
     }
   }
-  display_section_6( context )
+  display_section_6( caller )
   { const model_transform = Mat4.rotation( this.uniforms.animation_time/5000,   0,1,0 );
-    this.shapes.shell.draw( context, this.uniforms, model_transform.times( this.r ), this.parent.material );
+    this.shapes.shell.draw( caller, this.uniforms, model_transform.times( this.r ), this.parent.material );
   }
   explain_section_0()
     { this.document_region.innerHTML =

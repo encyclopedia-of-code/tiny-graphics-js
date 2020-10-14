@@ -52,11 +52,11 @@ class Axes_Viewer extends Component
     }
   increase() { this.selected_basis_id = Math.min( this.selected_basis_id + 1, this.groups.length-1 ); }
   decrease() { this.selected_basis_id = Math.max( this.selected_basis_id - 1, 0 ); }   // Don't allow selection of negative IDs.
-  render_animation( context )
+  render_animation( caller )
     {                                                 // display(): Draw the selected group of axes arrows.
       if( this.groups[ this.selected_basis_id ] )
         for( let a of this.groups[ this.selected_basis_id ] )
-          this.shapes.axes.draw( context, this.uniforms, a, this.material );
+          this.shapes.axes.draw( caller, this.uniforms, a, this.material );
     }
 }
 
@@ -75,21 +75,22 @@ export class Axes_Viewer_Test_Scene extends Component
     }
   make_control_panel()
     { this.control_panel.innerHTML += "(Substitute your own scene here)" }
-  render_animation( context )
+  render_animation( caller )
     {                                   // display():  *********** See instructions below ***********
       this.uniforms.lights = [ defs.Phong_Shader.light_source( vec4( 0,0,1,0 ), color( 0,1,1,1 ), 100000 ) ];
 
-      if( !context.scratchpad.controls )
-        { this.animated_children.push( context.scratchpad.controls = new defs.Movement_Controls( { uniforms: this.uniforms } ) );
+      if( !caller.scratchpad.controls )
+        { this.animated_children.push( caller.scratchpad.controls = new defs.Movement_Controls( { uniforms: this.uniforms } ) );
+          caller.scratchpad.controls.add_mouse_controls( caller.canvas );
 
           Shader.assign_camera( Mat4.translation( -1,-1,-20 ), this.uniforms );    // Locate the camera here (inverted matrix).
         }
-      this.uniforms.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 500 );
+      this.uniforms.projection_transform = Mat4.perspective( Math.PI/4, caller.width/caller.height, 1, 500 );
       const t = this.uniforms.animation_time / 1000, dt = this.uniforms.animation_delta_time / 1000;
 
-      this.shapes.box.draw( context, this.uniforms, Mat4.scale( 10,.1,.1 ), this.material );    // Mark the global coordinate axes.
-      this.shapes.box.draw( context, this.uniforms, Mat4.scale( .1,10,.1 ), this.material );
-      this.shapes.box.draw( context, this.uniforms, Mat4.scale( .1,.1,10 ), this.material );
+      this.shapes.box.draw( caller, this.uniforms, Mat4.scale( 10,.1,.1 ), this.material );    // Mark the global coordinate axes.
+      this.shapes.box.draw( caller, this.uniforms, Mat4.scale( .1,10,.1 ), this.material );
+      this.shapes.box.draw( caller, this.uniforms, Mat4.scale( .1,.1,10 ), this.material );
 
 
                                     // *********** How to use the Axes_Viewer ***********
@@ -110,7 +111,7 @@ export class Axes_Viewer_Test_Scene extends Component
                                     // Obtain the next group's ID number:
       const id = this.axes_viewer.next_group_id();
                                                         // We'll draw our scene's boxes as an outline so it doesn't block the axes.
-      this.shapes.box.draw( context, this.uniforms, model_transform.times( Mat4.scale( 2,2,2 ) ), this.material, "LINE_STRIP" );
+      this.shapes.box.draw( caller, this.uniforms, model_transform.times( Mat4.scale( 2,2,2 ) ), this.material, "LINE_STRIP" );
 
       let center = model_transform.copy();
       for( let side of [ -1, 1 ] )
@@ -127,7 +128,7 @@ export class Axes_Viewer_Test_Scene extends Component
         model_transform.post_multiply( Mat4.translation( side*2,2,0 ) );
         this.axes_viewer.insert( model_transform.copy() );
                                                        // Again, draw our scene's boxes as an outline so it doesn't block the axes.
-        this.shapes.box.draw( context, this.uniforms, model_transform.times( Mat4.scale( 2,2,2 ) ), this.material, "LINE_STRIP" );
+        this.shapes.box.draw( caller, this.uniforms, model_transform.times( Mat4.scale( 2,2,2 ) ), this.material, "LINE_STRIP" );
       }
     }
 }

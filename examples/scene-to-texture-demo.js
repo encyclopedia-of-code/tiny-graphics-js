@@ -49,13 +49,13 @@ export class Scene_To_Texture_Demo extends Component
         this.result_img = this.control_panel.appendChild( Object.assign( document.createElement( "img" ),
                 { style:"width:200px; height:" + 200 * this.aspect_ratio + "px" } ) );
       }
-    render_animation( context )
+    render_animation( caller )
       {                                 // render_animation():  Draw both scenes, clearing the buffer in between.
         this.uniforms.lights = [ defs.Phong_Shader.light_source( vec4( -5,5,5,1 ), color( 0,1,1,1 ), 100000 ) ];
         const t = this.uniforms.animation_time / 1000, dt = this.uniforms.animation_delta_time / 1000;
 
         Shader.assign_camera( Mat4.look_at( vec3( 0,0,5 ), vec3( 0,0,0 ), vec3( 0,1,0 ) ), this.uniforms );
-        this.uniforms.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, .5, 500 );
+        this.uniforms.projection_transform = Mat4.perspective( Math.PI/4, caller.width/caller.height, .5, 500 );
 
             // Update persistent matrix state:
         this.cube_1.post_multiply( Mat4.rotation( this.spin * dt * 30 / 60 * 2*Math.PI,   1,0,0 ) );
@@ -64,23 +64,23 @@ export class Scene_To_Texture_Demo extends Component
                                           // Perform two rendering passes.  The first one we erase and
                                           // don't display after using to it generate our texture.
             // Draw Scene 1:
-        this.shapes.box.draw( context, this.uniforms, this.cube_1, this.materials.a );
+        this.shapes.box.draw( caller, this.uniforms, this.cube_1, this.materials.a );
 
-        this.scratchpad_context.drawImage( context.canvas, 0, 0, 256, 256 );
+        this.scratchpad_context.drawImage( caller.canvas, 0, 0, 256, 256 );
         this.texture.image.src = this.result_img.src = this.scratchpad.toDataURL("image/png");
 
                                     // Don't call copy to GPU until the event loop has had a chance
                                     // to act on our SRC setting once:
         if( this.skipped_first_frame )
                                                      // Update the texture with the current scene:
-            this.texture.copy_onto_graphics_card( context.context, false );
+            this.texture.copy_onto_graphics_card( caller.context, false );
         this.skipped_first_frame = true;
 
                                     // Start over on a new drawing, never displaying the prior one:
-        context.context.clear( context.context.COLOR_BUFFER_BIT | context.context.DEPTH_BUFFER_BIT);
+        caller.context.clear( caller.context.COLOR_BUFFER_BIT | caller.context.DEPTH_BUFFER_BIT);
 
             // Draw Scene 2:
-        this.shapes.box  .draw( context, this.uniforms, this.cube_1, this.materials.b );
-        this.shapes.box_2.draw( context, this.uniforms, this.cube_2, this.materials.c );
+        this.shapes.box  .draw( caller, this.uniforms, this.cube_1, this.materials.b );
+        this.shapes.box_2.draw( caller, this.uniforms, this.cube_2, this.materials.c );
       }
   }

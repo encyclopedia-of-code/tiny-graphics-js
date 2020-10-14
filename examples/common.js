@@ -409,9 +409,9 @@ class Minimal_Webgl_Demo extends Component
       this.shapes = { triangle : new Minimal_Shape() };
       this.shader = new Basic_Shader();
     }
-  render_animation( context )
+  render_animation( caller )
     {                                           // Every frame, simply draw the Triangle at its default location.
-      this.shapes.triangle.draw( context, this.uniforms, Mat4.identity(), { shader: this.shader } );
+      this.shapes.triangle.draw( caller, this.uniforms, Mat4.identity(), { shader: this.shader } );
     }
 }
 
