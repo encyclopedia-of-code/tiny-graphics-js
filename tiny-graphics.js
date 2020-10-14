@@ -439,7 +439,6 @@ class Component
 
       this.animated_children =  [];
       this.document_children =  [];
-      this.scratchpad = {};
                                                 // Set up how we'll handle key presses for the scene's control panel:
       const callback_behavior = ( callback, event ) =>
            { callback( event );

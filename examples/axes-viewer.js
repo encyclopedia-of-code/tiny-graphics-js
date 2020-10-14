@@ -79,9 +79,9 @@ export class Axes_Viewer_Test_Scene extends Component
     {                                   // display():  *********** See instructions below ***********
       this.uniforms.lights = [ defs.Phong_Shader.light_source( vec4( 0,0,1,0 ), color( 0,1,1,1 ), 100000 ) ];
 
-      if( !caller.scratchpad.controls )
-        { this.animated_children.push( caller.scratchpad.controls = new defs.Movement_Controls( { uniforms: this.uniforms } ) );
-          caller.scratchpad.controls.add_mouse_controls( caller.canvas );
+      if( !caller.controls )
+        { this.animated_children.push( caller.controls = new defs.Movement_Controls( { uniforms: this.uniforms } ) );
+          caller.controls.add_mouse_controls( caller.canvas );
 
           Shader.assign_camera( Mat4.translation( -1,-1,-20 ), this.uniforms );    // Locate the camera here (inverted matrix).
         }

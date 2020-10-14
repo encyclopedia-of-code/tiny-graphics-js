@@ -202,9 +202,9 @@ export class Inertia_Demo extends Simulation
     {                                 // display(): Draw everything else in the scene besides the moving bodies.
       super.render_animation( caller );
 
-      if( !caller.scratchpad.controls )
-        { this.animated_children.push( caller.scratchpad.controls = new defs.Movement_Controls( { uniforms: this.uniforms } ) );
-          caller.scratchpad.controls.add_mouse_controls( caller.canvas );
+      if( !caller.controls )
+        { this.animated_children.push( caller.controls = new defs.Movement_Controls( { uniforms: this.uniforms } ) );
+          caller.controls.add_mouse_controls( caller.canvas );
           this.animated_children.push( new defs.Shared_Uniforms_Viewer( { uniforms: this.uniforms } ) );
           Shader.assign_camera( Mat4.translation( 0,0,-50 ), this.uniforms );    // Locate the camera here (inverted matrix).
         }
@@ -294,9 +294,9 @@ export class Collision_Demo extends Simulation
   render_animation( caller )
     {                                 // display(): Draw everything else in the scene besides the moving bodies.
       super.render_animation( caller );
-      if( !caller.scratchpad.controls )
-        { this.animated_children.push( caller.scratchpad.controls = new defs.Movement_Controls( { uniforms: this.uniforms } ) );
-          caller.scratchpad.controls.add_mouse_controls( caller.canvas );
+      if( !caller.controls )
+        { this.animated_children.push( caller.controls = new defs.Movement_Controls( { uniforms: this.uniforms } ) );
+          caller.controls.add_mouse_controls( caller.canvas );
           this.animated_children.push( new defs.Shared_Uniforms_Viewer( { uniforms: this.uniforms } ) );
           Shader.assign_camera( Mat4.translation( 0,0,-50 ), this.uniforms );    // Locate the camera here (inverted matrix).
         }
