@@ -20,7 +20,7 @@ export class Parametric_Surfaces extends Component
 
       for( let i = 0; i < this.num_sections(); i++ )
       {
-        const inner_scene = new Parametric_Surfaces_Section( { uniforms: this.uniforms, dont_tick: true }, this, i );
+        const inner_scene = new Parametric_Surfaces_Section( { uniforms: this.uniforms, dont_tick: true, parent: this, section_index: i } );
         const inner_div = div.appendChild( document.createElement( "div" ) );
         this[ "region_" + i ] = inner_div
         this.document_children.push( inner_scene );
@@ -70,13 +70,13 @@ export class Parametric_Surfaces extends Component
 export
 const Parametric_Surfaces_Section = defs.Parametric_Surfaces_Section =
 class Parametric_Surfaces_Section extends Component
-{ init( parent, section_index )
+{ init()
     {
-      this.parent = parent;
-      this.section_index = section_index;
+      this.parent = this.props.parent;
+      this.section_index = this.props.section_index;
 
                                   // Switch on section_index to decide what to actually construct.
-      const handler_at_index = this[ "construct_section_" + section_index ];
+      const handler_at_index = this[ "construct_section_" + this.section_index ];
       handler_at_index.call( this );
     }
   render_animation( caller )
