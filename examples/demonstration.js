@@ -69,5 +69,9 @@ export class Demonstration extends Component
       this.embedded_code_nav_area = div.appendChild( document.createElement( "div" ) );
       this.embedded_code_nav_area.className = "code-widget";
       this.embedded_code_nav = new tiny.Code_Widget( this, { code_in_focus: Transforms_Sandbox } );
+
+      this.embedded_controls_area = div.appendChild( document.createElement( "div" ) );
+      this.embedded_controls_area.className = "controls-widget";
+      this.embedded_controls = new tiny.Controls_Widget( this, { hide_controls: true } );
     }
 }

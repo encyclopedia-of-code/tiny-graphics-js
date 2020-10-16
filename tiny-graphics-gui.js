@@ -10,7 +10,7 @@ class Controls_Widget
 {                                               // **Controls_Widget** adds an array of panels to the document, one per loaded
                                                 // Scene object, each providing interactive elements such as buttons with key
                                                 // bindings, live readouts of Scene data members, etc.
-  constructor( component )
+  constructor( component, options = {} )
     { const rules = [ ".controls-widget * { font-family: monospace }",
                       ".controls-widget div { background: white }",
                       ".controls-widget table { border-collapse: collapse; display:block; overflow-x: auto; }",
@@ -40,6 +40,7 @@ class Controls_Widget
       const table = component.embedded_controls_area.appendChild( document.createElement( "table" ) );
       table.className = "control-box";
       this.row = table.insertRow( 0 );
+      if( options.hide_controls ) component.embedded_controls_area.style.display = "none";
 
       this.panels = [];
       this.component = component;
@@ -77,7 +78,8 @@ class Controls_Widget
       { open_list.push( ...open_list[0].animated_children );
         const scene = open_list.shift();
         if( !scene.timestamp || scene.timestamp > this.timestamp )
-        { this.make_panels( time );
+        {         // One needed an update, so break out of this check and update them all.
+          this.make_panels( time );
           break;
         }
 
