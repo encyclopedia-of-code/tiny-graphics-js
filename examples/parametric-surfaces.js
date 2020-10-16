@@ -75,8 +75,8 @@ class Parametric_Surfaces_Section extends Component
       this.parent = this.props.parent;
       this.section_index = this.props.section_index;
 
-                                  // Switch on section_index to decide what to actually construct.
-      const handler_at_index = this[ "construct_section_" + this.section_index ];
+                                  // Switch on section_index to decide what to actually init.
+      const handler_at_index = this[ "init_section_" + this.section_index ];
       handler_at_index.call( this );
     }
   render_animation( caller )
@@ -127,13 +127,13 @@ class Parametric_Surfaces_Section extends Component
 
       this.embedded_code_nav_area = this.program_stuff.appendChild( document.createElement( "div" ) );
       this.embedded_code_nav_area.className = "code-widget";
-      this.embedded_code_nav = new tiny.Code_Widget( this, { code_in_focus: this[ "construct_section_" + this.section_index ], hide_navigator: true } );
+      this.embedded_code_nav = new tiny.Code_Widget( this, { code_in_focus: this[ "init_section_" + this.section_index ], hide_navigator: true } );
 
       this.secondary_embedded_code_nav_area = this.program_stuff.appendChild( document.createElement( "div" ) );
       this.secondary_embedded_code_nav_area.className = "code-widget";
       this.secondary_embedded_code_nav = new tiny.Code_Widget( this, { code_in_focus: this[ "display_section_" + this.section_index ], hide_navigator: true } );
     }
-  construct_section_0()
+  init_section_0()
     { const initial_corner_point = vec3( -1,-1,0 );
                           // These two callbacks will step along s and t of the first sheet:
       const row_operation = (s,p) => p ? Mat4.translation( 0,.2,0 ).times(p.to4(1)).to3()
@@ -146,14 +146,14 @@ class Parametric_Surfaces_Section extends Component
       this.shapes = { sheet : new defs.Grid_Patch( 10, 10, row_operation, column_operation ),
                       sheet2: new defs.Grid_Patch( 10, 10, row_operation_2, column_operation_2 ) };
     }
-  construct_section_1()
+  init_section_1()
   { const initial_corner_point = vec3( -1,-1,0 );
     const row_operation = (s,p) => p ? Mat4.translation( 0,.2,0 ).times(p.to4(1)).to3()
         : initial_corner_point;
     const column_operation = (t,p) =>  Mat4.translation( .2,0,0 ).times(p.to4(1)).to3();
     this.shapes = { sheet : new defs.Grid_Patch( 10, 10, row_operation, column_operation ) };
   }
-  construct_section_2()
+  init_section_2()
   { this.shapes = { donut : new defs.Torus             ( 15, 15, [[0,2],[0,1]] ),
     hexagon : new defs.Regular_2D_Polygon( 1, 5 ),
     cone : new defs.Cone_Tip          ( 4, 10,  [[0,2],[0,1]] ),
@@ -162,7 +162,7 @@ class Parametric_Surfaces_Section extends Component
     donut2 : new ( defs.Torus.prototype.make_flat_shaded_version() )( 20, 20, [[0,2],[0,1]] ),
   };
   }
-  construct_section_3()
+  init_section_3()
   { const points = Vector3.cast( [0,0,.8], [.5,0,1], [.5,0,.8], [.4,0,.7], [.4,0,.5], [.5,0,.4], [.5,0,-1], [.4,0,-1.5], [.25,0,-1.8], [0,0,-1.7] );
 
     this.shapes = { bullet: new defs.Surface_Of_Revolution( 9, 9, points ) };
@@ -170,7 +170,7 @@ class Parametric_Surfaces_Section extends Component
     const phong = new defs.Phong_Shader( 1 );
     this.solid = { shader: phong, diffusivity: .5, smoothness: 800, color: color( .7,.8,.6,1 ) };
   }
-  construct_section_4()
+  init_section_4()
   { this.shapes = { axis : new defs.Axis_Arrows(),
     ball : new defs.Subdivision_Sphere( 3 ),
     box : new defs.Cube(),
@@ -182,7 +182,7 @@ class Parametric_Surfaces_Section extends Component
     tube_2 : new defs.Cylindrical_Tube( 7, 7,  [[  0 ,.33 ], [ 0,1 ]] ),
   };
   }
-  construct_section_5()
+  init_section_5()
   { this.shapes = { box : new defs.Cube(),
     cone : new defs.Closed_Cone            ( 4, 10,  [[0,2],[0,1]] ),
     capped : new defs.Capped_Cylinder        ( 1, 10,  [[0,2],[0,1]] ),
@@ -190,7 +190,7 @@ class Parametric_Surfaces_Section extends Component
     capped2 : new defs.Rounded_Capped_Cylinder( 5, 10,  [[0,2],[0,1]] )
   };
   }
-  construct_section_6()
+  init_section_6()
   { // Some helper arrays of points located along curves.  We'll extrude these into surfaces:
     let square_array = Vector3.cast( [ 1,0,-1 ], [ 0,1,-1 ], [ -1,0,-1 ], [ 0,-1,-1 ], [ 1,0,-1 ] ),
         star_array = Array(19).fill( vec3( 1,0,-1 ) );
