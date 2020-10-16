@@ -421,7 +421,7 @@ class Component
                             // user via drawing additional control panel buttons or live text readouts.
                             // Root component manages a whole graphics program for one on-page canvas, including its
                             // textures, shapes, shaders, and scenes.  It requests a WebGL context and stores Scenes.
-  constructor( props = {} )
+  constructor( props = {}, ...args )
     {
       const rules = [
         `.documentation_treenode { }`,
@@ -446,6 +446,8 @@ class Component
              event.stopPropagation();   // Don't bubble the event to parent nodes; let child elements be targetted in isolation.
            }
       this.key_controls = new Keyboard_Manager( document, callback_behavior);
+                              // Finally, run the user's code for setting up their scene:
+      this.init( ...args );
     }
   static types_used_before = new Set()
   static initialize_CSS( classType, rules )
@@ -605,6 +607,8 @@ class Component
     }
                                                 // To use class Scene, override at least one of the below functions,
                                                 // which will be automatically called by other classes:
+  init()
+    {}
   render_animation( context )
     {}                            // display(): Called by Webgl_Manager for drawing.
   render_documentation()

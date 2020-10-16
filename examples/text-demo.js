@@ -53,9 +53,8 @@ class Text_Line extends Shape
 
 export class Text_Demo extends Component
 {             // **Text_Demo** is a scene with a cube, for demonstrating the Text_Line utility Shape.
-  constructor( props )
-    { super( props )
-      this.shapes = { cube: new defs.Cube(), text: new Text_Line( 35 ) };
+  init()
+    { this.shapes = { cube: new defs.Cube(), text: new Text_Line( 35 ) };
                                       // Don't create any DOM elements to control this scene:
       this.widget_options = { make_controls: false };
 

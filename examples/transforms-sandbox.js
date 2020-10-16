@@ -12,9 +12,8 @@ class Transforms_Sandbox_Base extends Component
                                            // scene demonstrating a few concepts.  A subclass of it, Transforms_Sandbox,
                                            // exposes only the display() method, which actually places and draws the shapes,
                                            // isolating that code so it can be experimented with on its own.
-  constructor( props )
+  init()
     {
-      super( props );
                         // constructor(): Scenes begin by populating initial values like the Shapes and Materials they'll need.
       this.hover = this.swarm = false;
                                                         // At the beginning of our program, load one of each of these shape

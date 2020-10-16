@@ -13,9 +13,8 @@ export class Scene_To_Texture_Demo extends Component
                       // NOTE: To use this for two-pass rendering, you simply need to write
                       // any shader that acts upon the input texture as if it were a
                       // previous rendering result.
-    constructor( props )
+    init()
       {               // Request the camera, shapes, and materials our Scene will need:
-        super( props );
         this.shapes = { box:   new defs.Cube(),
                         box_2: new defs.Cube(),
                         axis:  new defs.Axis_Arrows()

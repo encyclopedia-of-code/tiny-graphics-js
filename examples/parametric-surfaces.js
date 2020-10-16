@@ -70,9 +70,8 @@ export class Parametric_Surfaces extends Component
 export
 const Parametric_Surfaces_Section = defs.Parametric_Surfaces_Section =
 class Parametric_Surfaces_Section extends Component
-{ constructor( props, parent, section_index )
-    { super( props );
-
+{ init( parent, section_index )
+    {
       this.parent = parent;
       this.section_index = section_index;
 

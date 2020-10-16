@@ -9,9 +9,8 @@ export class Many_Lights_Demo extends Component
                               // Doing this trick performs much faster than looping through a
                               // long list of lights within the fragment shader, none of which
                               // need to affect every single shape in the scene.
-  constructor( props )
-    { super( props );
-                              // Define how many boxes (buildings) to draw:
+  init()
+    {                         // Define how many boxes (buildings) to draw:
       Object.assign( this, { rows: 20, columns: 35 } );
 
       this.shapes = { cube: new defs.Cube() };

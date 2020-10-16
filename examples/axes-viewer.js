@@ -65,9 +65,8 @@ export class Axes_Viewer_Test_Scene extends Component
 {                             // **Axes_Viewer_Test_Scene** is an example of how your scene should properly manaage
                               // an Axes_Viewer child scene, so that it is able to help you draw all the coordinate
                               // bases in your scene's hierarchy at the correct levels.
-  constructor()
-    { super();
-      this.animated_children.push( this.axes_viewer = new Axes_Viewer( { uniforms: this.uniforms } ) );
+  init()
+    { this.animated_children.push( this.axes_viewer = new Axes_Viewer( { uniforms: this.uniforms } ) );
                                                                   // Scene defaults:
       this.shapes = { box: new defs.Cube() };
       const phong = new defs.Phong_Shader();

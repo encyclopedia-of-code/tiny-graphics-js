@@ -401,9 +401,8 @@ class Minimal_Shape extends tiny.Shape
 const Minimal_Webgl_Demo = defs.Minimal_Webgl_Demo =
 class Minimal_Webgl_Demo extends Component
 {                                       // **Minimal_Webgl_Demo** is an extremely simple example of a Scene class.
-  constructor()
-    { super();
-                                                // Don't create any DOM elements to control this scene:
+  init()
+    {                                           // Don't create any DOM elements to control this scene:
       this.widget_options = { make_controls: false };
                                                 // Send a Triangle's vertices to the GPU's buffers:
       this.shapes = { triangle : new Minimal_Shape() };
@@ -603,8 +602,8 @@ class Phong_Shader extends Shader
       gl.uniform1f ( gpu.specularity,    material.specularity );
       gl.uniform1f ( gpu.smoothness,     material.smoothness  );
     }
-  send_gpu_state( gl, gpu, uniforms, model_transform )
-    {                                       // send_gpu_state():  Send the state of our whole drawing context to the GPU.
+  send_uniforms( gl, gpu, uniforms, model_transform )
+    {                                       // send_uniforms():  Send the state of our whole drawing context to the GPU.
       const O = vec4( 0,0,0,1 ), camera_center = uniforms.camera_transform.times( O ).to3();
       gl.uniform3fv( gpu.camera_center, camera_center );
                                          // Use the squared scale trick from "Eric's blog" instead of inverse transpose matrix:
@@ -633,7 +632,7 @@ class Phong_Shader extends Shader
       gl.uniform4fv( gpu.light_colors,               light_colors_flattened );
       gl.uniform1fv( gpu.light_attenuation_factors, uniforms.lights.map( l => l.attenuation ) );
     }
-  update_GPU( context, gpu_addresses, gpu_state, model_transform, material )
+  update_GPU( context, gpu_addresses, uniforms, model_transform, material )
     {             // update_GPU(): Define how to synchronize our JavaScript's variables to the GPU's.  This is where the shader
                   // receives ALL of its inputs.  Every value the GPU wants is divided into two categories:  Values that belong
                   // to individual objects being drawn (which we call "Material") and values belonging to the whole scene or
@@ -645,7 +644,7 @@ class Phong_Shader extends Shader
       let full_material = Object.assign( defaults, material );
 
       this.send_material ( context, gpu_addresses, full_material );
-      this.send_gpu_state( context, gpu_addresses, gpu_state, model_transform );
+      this.send_uniforms( context, gpu_addresses, uniforms, model_transform );
     }
 }
 
@@ -692,9 +691,9 @@ class Textured_Phong extends Phong_Shader
             gl_FragColor.xyz += phong_model_lights( normalize( N ), vertex_worldspace );
           } ` ;
     }
-  update_GPU( context, gpu_addresses, gpu_state, model_transform, material )
+  update_GPU( context, gpu_addresses, uniforms, model_transform, material )
     {             // update_GPU(): Add a little more to the base class's version of this method.
-      super.update_GPU( context, gpu_addresses, gpu_state, model_transform, material );
+      super.update_GPU( context, gpu_addresses, uniforms, model_transform, material );
 
       if( material.texture && material.texture.ready )
       {                         // Select texture unit 0 for the fragment shader Sampler2D uniform called "texture":
@@ -739,9 +738,8 @@ class Movement_Controls extends Component
                                         // person style controls into the website.  These can be used to manually move your
                                         // camera or other objects smoothly through your scene using key, mouse, and HTML
                                         // button controls to help you explore what's in it.
-  constructor( props )
-    { super( props );
-      const data_members = { roll: 0, look_around_locked: true,
+  init()
+    { const data_members = { roll: 0, look_around_locked: true,
                              thrust: vec3( 0,0,0 ), pos: vec3( 0,0,0 ), z_axis: vec3( 0,0,0 ),
                              radians_per_frame: 1/200, meters_per_frame: 20, speed_multiplier: 1 };
       Object.assign( this, data_members );
