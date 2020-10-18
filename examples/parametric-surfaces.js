@@ -5,6 +5,7 @@ const { Vector3, vec3, vec4, color, Mat4, Shader, Texture, Component } = tiny;
 
 export class Parametric_Surfaces extends Component
 {
+  num_sections = 7;
   render_layout( div, options = {} )
     {
       this.div = div;
@@ -16,15 +17,15 @@ export class Parametric_Surfaces extends Component
       const rules = [ `.documentation-big { width:1030px; padding:0 25px; font-size: 29px; font-family: Arial` ];
       Component.initialize_CSS( Parametric_Surfaces, rules );
 
-      this.initialize_shared_state();
+      this.init_shared_objects();
 
-      for( let i = 0; i < this.num_sections(); i++ )
+      for( let i = 0; i < this.num_sections; i++ )
       {
-        const inner_scene = new Parametric_Surfaces_Section( { uniforms: this.uniforms, dont_tick: true, parent: this, section_index: i } );
         const inner_div = div.appendChild( document.createElement( "div" ) );
         this[ "region_" + i ] = inner_div
-        this.document_children.push( inner_scene );
 
+        const inner_scene = new Parametric_Surfaces_Section( { uniforms: this.uniforms, dont_tick: true, parent: this, section_index: i } );
+        this.document_children.push( inner_scene );
         inner_scene.render_layout( inner_div );
       }
       // Start re-render loop:
@@ -42,16 +43,14 @@ export class Parametric_Surfaces extends Component
       this.embedded_code_nav_area.className = "code-widget";
       this.embedded_code_nav = new tiny.Code_Widget( this );
     }
-  initialize_shared_state()
+  init_shared_objects()
   {
       Shader.assign_camera( Mat4.translation( 0,0,-3 ), this.uniforms );
 
       const shader = new defs.Textured_Phong( 1 );
-
       this.material = { shader, ambient: .5, texture: new Texture( "assets/rgb.jpg" ) };
 
       this.movement_controls = new defs.Movement_Controls( { uniforms: this.uniforms } );
-
       this.animated_children.push( this.movement_controls );
   }
   render_animation( caller )
@@ -64,7 +63,6 @@ export class Parametric_Surfaces extends Component
       const light_position = Mat4.rotation( angle,   1,0,0 ).times( vec4( 0,0,1,0 ) );
       this.uniforms.lights = [ defs.Phong_Shader.light_source( light_position, color( 1,1,1,1 ), 1000000 ) ];
     }
-  num_sections() { return 7 }
 }
 
 export

@@ -22,11 +22,11 @@ export class Scene_To_Texture_Demo extends Component
                                                 // Scale the texture coordinates:
         this.shapes.box_2.arrays.texture_coord.forEach( p => p.scale_by( 2 ) );
 
-        this.scratchpad = document.createElement('canvas');
+        this.scratch_canvas = document.createElement('canvas');
                                     // A hidden canvas for re-sizing the real canvas to be square:
-        this.scratchpad_context = this.scratchpad.getContext('2d');
-        this.scratchpad.width   = 256;
-        this.scratchpad.height  = 256;                // Initial image source: Blank gif file:
+        this.scratch_canvas_context = this.scratch_canvas.getContext('2d');
+        this.scratch_canvas.width   = 256;
+        this.scratch_canvas.height  = 256;                // Initial image source: Blank gif file:
         this.texture = new Texture( "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" );
 
         const shader = new defs.Fake_Bump_Map( 1 );
@@ -65,8 +65,8 @@ export class Scene_To_Texture_Demo extends Component
             // Draw Scene 1:
         this.shapes.box.draw( caller, this.uniforms, this.cube_1, this.materials.a );
 
-        this.scratchpad_context.drawImage( caller.canvas, 0, 0, 256, 256 );
-        this.texture.image.src = this.result_img.src = this.scratchpad.toDataURL("image/png");
+        this.scratch_canvas_context.drawImage( caller.canvas, 0, 0, 256, 256 );
+        this.texture.image.src = this.result_img.src = this.scratch_canvas.toDataURL("image/png");
 
                                     // Don't call copy to GPU until the event loop has had a chance
                                     // to act on our SRC setting once:
