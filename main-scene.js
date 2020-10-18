@@ -50,7 +50,7 @@ Object.assign( defs,
 // (Can define main_scene's class here)
 
 
-const main_scene = Scene_To_Texture_Demo;
+const main_scene = Transforms_Sandbox;
 const additional_scenes = [];
 
 export { main_scene, additional_scenes, Default_Layout, Code_Widget, Editor_Widget, Text_Widget, defs }

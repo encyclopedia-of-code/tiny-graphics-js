@@ -898,15 +898,3 @@ class Movement_Controls extends Component
       this.z_axis = this.inverse().times( vec4( 0,0,1,0 ) );
     }
 }
-
-
-
-const Shared_Uniforms_Viewer = defs.Shared_Uniforms_Viewer =
-class Shared_Uniforms_Viewer extends Component
-{                                             // **Shared_Uniforms_Viewer** just toggles, monitors, and reports some
-                                              // global values via its control panel.
-  make_control_panel()
-    {                         // render_animation() of this scene will replace the following object:
-      this.key_triggered_button( "(Un)pause animation", ["Alt", "a"], () => this.uniforms.animate ^= 1 );
-    }
-}

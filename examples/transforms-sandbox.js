@@ -41,6 +41,11 @@ class Transforms_Sandbox_Base extends Component
       this.live_string( box => { box.textContent = ( this.hover ? 0 : ( this.t % (2*Math.PI)).toFixed(2) ) + " radians" } );
       this.new_line();
                                                 // Add buttons so the user can actively toggle data members of our Scene:
+
+      // Keep one of these buttons in your animation, since being able to freeze
+      // your animation at any moment is often helpful for diagnosis!
+      this.key_triggered_button( "(Un)pause animation", ["Alt", "a"], () => this.uniforms.animate ^= 1 );
+      this.new_line();
       this.key_triggered_button( "Hover dragonfly in place", [ "h" ], function() { this.hover ^= 1; } );
       this.new_line();
       this.key_triggered_button( "Swarm mode", [ "m" ], function() { this.swarm ^= 1; } );
