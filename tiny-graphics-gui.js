@@ -10,7 +10,7 @@ class Controls_Widget
 {                                               // **Controls_Widget** adds an array of panels to the document, one per loaded
                                                 // Scene object, each providing interactive elements such as buttons with key
                                                 // bindings, live readouts of Scene data members, etc.
-  constructor( component )
+  constructor( component, options = {} )
     { const rules = [ ".controls-widget * { font-family: monospace }",
                       ".controls-widget div { background: white }",
                       ".controls-widget table { border-collapse: collapse; display:block; overflow-x: auto; }",
@@ -40,6 +40,7 @@ class Controls_Widget
       const table = component.embedded_controls_area.appendChild( document.createElement( "table" ) );
       table.className = "control-box";
       this.row = table.insertRow( 0 );
+      if( options.hide_controls ) component.embedded_controls_area.style.display = "none";
 
       this.panels = [];
       this.component = component;
@@ -77,7 +78,8 @@ class Controls_Widget
       { open_list.push( ...open_list[0].animated_children );
         const scene = open_list.shift();
         if( !scene.timestamp || scene.timestamp > this.timestamp )
-        { this.make_panels( time );
+        {         // One needed an update, so break out of this check and update them all.
+          this.make_panels( time );
           break;
         }
 
@@ -184,7 +186,7 @@ class Code_Widget
   constructor( component, options = {} )
     { const rules = [ ".code-widget .code-panel { margin:auto; background:white; overflow:auto; font-family:monospace; width:1060px; padding:10px; padding-bottom:40px; max-height: 500px; \
                                                       border-radius:12px; box-shadow: 20px 20px 90px 0px powderblue inset, 5px 5px 30px 0px blue inset }",
-                      ".code-widget .code-display { min-width:1000px; padding:10px; white-space:pre-wrap; background:transparent }",
+                      ".code-widget .code-display { min-width:1200px; padding:10px; white-space:pre-wrap; background:transparent }",
                       ".code-widget table { display:block; margin:auto; overflow-x:auto; width:1080px; border-radius:25px; border-collapse:collapse; border: 2px solid black; box-sizing: border-box }",
                       ".code-widget table.class-list td { border-width:thin; background: #EEEEEE; padding:12px; font-family:monospace; border: 1px solid black }"
                      ];
@@ -196,9 +198,10 @@ class Code_Widget
       import( './main-scene.js' )
         .then( module => {
 
-          this.build_reader(      component.embedded_code_nav_area, component.constructor, module.defs );
+          const code_in_focus = options.code_in_focus || component.constructor;
+          this.build_reader(      component.embedded_code_nav_area, code_in_focus, module.defs );
           if( !options.hide_navigator )
-            this.build_navigator( component.embedded_code_nav_area, component.constructor,
+            this.build_navigator( component.embedded_code_nav_area, code_in_focus,
                                   component.animated_children, module.defs );
         } )
     }
@@ -259,12 +262,12 @@ class Code_Widget
         }
       }
     }
-  display_code( class_to_display )
+  display_code( code_in_focus )
     {                                           // display_code():  Populate the code textbox.
                                                 // Pass undefined to choose index.html source.
       if( this.component.embedded_editor )
-        this.component.embedded_editor.select_class( class_to_display );
-      if( class_to_display ) this.format_code( class_to_display.toString() );
+        this.component.embedded_editor.select_class( code_in_focus );
+      if( code_in_focus ) this.format_code( code_in_focus.toString() );
       else fetch( document.location.href )
                 .then(   response => response.text() )
                 .then( pageSource => this.format_code( pageSource ) );
@@ -305,7 +308,7 @@ class Editor_Widget
 
       tiny.Component.initialize_CSS( Editor_Widget, rules );
 
-      this.associated_webgl_manager = component.webgl_manager;
+      this.component = component;
       this.options = options;
 
       const form = this.form = component.embedded_editor_area.appendChild( document.createElement( "form" ) );
@@ -348,7 +351,8 @@ class Editor_Widget
       new_demo_code.name    = "new_demo_code";
       new_demo_code.rows    = this.options.rows || 25;
       new_demo_code.cols    = 140;
-      this.select_class( component.constructor );
+      const code_in_focus = options.code_in_focus || component.constructor;
+      this.select_class( code_in_focus );
     }
   select_class( class_definition )
     { this.new_demo_code.value = class_definition.toString(); }

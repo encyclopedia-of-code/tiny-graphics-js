@@ -401,17 +401,16 @@ class Minimal_Shape extends tiny.Shape
 const Minimal_Webgl_Demo = defs.Minimal_Webgl_Demo =
 class Minimal_Webgl_Demo extends Component
 {                                       // **Minimal_Webgl_Demo** is an extremely simple example of a Scene class.
-  constructor()
-    { super();
-                                                // Don't create any DOM elements to control this scene:
+  init()
+    {                                           // Don't create any DOM elements to control this scene:
       this.widget_options = { make_controls: false };
                                                 // Send a Triangle's vertices to the GPU's buffers:
       this.shapes = { triangle : new Minimal_Shape() };
       this.shader = new Basic_Shader();
     }
-  render_animation( context, shared_uniforms )
+  render_animation( caller )
     {                                           // Every frame, simply draw the Triangle at its default location.
-      this.shapes.triangle.draw( context, shared_uniforms, Mat4.identity(), { shader: this.shader } );
+      this.shapes.triangle.draw( caller, this.uniforms, Mat4.identity(), { shader: this.shader } );
     }
 }
 
@@ -421,9 +420,9 @@ class Basic_Shader extends Shader
 {                                  // **Basic_Shader** is nearly the simplest example of a subclass of Shader, which stores and
                                    // maanges a GPU program.  Basic_Shader is a trivial pass-through shader that applies a
                                    // shape's matrices and then simply samples literal colors stored at each vertex.
- update_GPU( context, gpu_addresses, shared_uniforms, model_transform, material )
+ update_GPU( context, gpu_addresses, uniforms, model_transform, material )
       {       // update_GPU():  Defining how to synchronize our JavaScript's variables to the GPU's:
-        const [ P, C, M ] = [ shared_uniforms.projection_transform, shared_uniforms.camera_inverse, model_transform ],
+        const [ P, C, M ] = [ uniforms.projection_transform, uniforms.camera_inverse, model_transform ],
                       PCM = P.times( C ).times( M );
         context.uniformMatrix4fv( gpu_addresses.projection_camera_model_transform, false,
                                                                           Matrix.flatten_2D_to_1D( PCM.transposed() ) );
@@ -459,12 +458,12 @@ const Funny_Shader = defs.Funny_Shader =
 class Funny_Shader extends Shader
 {                                        // **Funny_Shader**: A simple "procedural" texture shader, with
                                          // texture coordinates but without an input image.
-  update_GPU( context, gpu_addresses, shared_uniforms, model_transform, material )
+  update_GPU( context, gpu_addresses, uniforms, model_transform, material )
       {        // update_GPU():  Define how to synchronize our JavaScript's variables to the GPU's:
-        const [ P, C, M ] = [ shared_uniforms.projection_transform, shared_uniforms.camera_inverse, model_transform ],
+        const [ P, C, M ] = [ uniforms.projection_transform, uniforms.camera_inverse, model_transform ],
                       PCM = P.times( C ).times( M );
         context.uniformMatrix4fv( gpu_addresses.projection_camera_model_transform, false, Matrix.flatten_2D_to_1D( PCM.transposed() ) );
-        context.uniform1f ( gpu_addresses.animation_time, shared_uniforms.animation_time / 1000 );
+        context.uniform1f ( gpu_addresses.animation_time, uniforms.animation_time / 1000 );
       }
   shared_glsl_code()            // ********* SHARED CODE, INCLUDED IN BOTH SHADERS *********
     { return `precision mediump float;
@@ -603,9 +602,9 @@ class Phong_Shader extends Shader
       gl.uniform1f ( gpu.specularity,    material.specularity );
       gl.uniform1f ( gpu.smoothness,     material.smoothness  );
     }
-  send_gpu_state( gl, gpu, gpu_state, model_transform )
-    {                                       // send_gpu_state():  Send the state of our whole drawing context to the GPU.
-      const O = vec4( 0,0,0,1 ), camera_center = gpu_state.camera_transform.times( O ).to3();
+  send_uniforms( gl, gpu, uniforms, model_transform )
+    {                                       // send_uniforms():  Send the state of our whole drawing context to the GPU.
+      const O = vec4( 0,0,0,1 ), camera_center = uniforms.camera_transform.times( O ).to3();
       gl.uniform3fv( gpu.camera_center, camera_center );
                                          // Use the squared scale trick from "Eric's blog" instead of inverse transpose matrix:
       const squared_scale = model_transform.reduce(
@@ -616,24 +615,24 @@ class Phong_Shader extends Shader
                                                       // cache and send those.  They will be the same throughout this draw
                                                       // call, and thus across each instance of the vertex shader.
                                                       // Transpose them since the GPU expects matrices as column-major arrays.
-      const PCM = gpu_state.projection_transform.times( gpu_state.camera_inverse ).times( model_transform );
+      const PCM = uniforms.projection_transform.times( uniforms.camera_inverse ).times( model_transform );
       gl.uniformMatrix4fv( gpu.                  model_transform, false, Matrix.flatten_2D_to_1D( model_transform.transposed() ) );
       gl.uniformMatrix4fv( gpu.projection_camera_model_transform, false, Matrix.flatten_2D_to_1D(             PCM.transposed() ) );
 
                                              // Omitting lights will show only the material color, scaled by the ambient term.
-      if( !gpu_state.lights || !gpu_state.lights.length )
+      if( !uniforms.lights || !uniforms.lights.length )
         return;
 
       const light_positions_flattened = [], light_colors_flattened = [];
-      for( var i = 0; i < 4 * gpu_state.lights.length; i++ )
-        { light_positions_flattened                  .push( gpu_state.lights[ Math.floor(i/4) ].position[i%4] );
-          light_colors_flattened                     .push( gpu_state.lights[ Math.floor(i/4) ].color[i%4] );
+      for( var i = 0; i < 4 * uniforms.lights.length; i++ )
+        { light_positions_flattened                  .push( uniforms.lights[ Math.floor(i/4) ].position[i%4] );
+          light_colors_flattened                     .push( uniforms.lights[ Math.floor(i/4) ].color[i%4] );
         }
       gl.uniform4fv( gpu.light_positions_or_vectors, light_positions_flattened );
       gl.uniform4fv( gpu.light_colors,               light_colors_flattened );
-      gl.uniform1fv( gpu.light_attenuation_factors, gpu_state.lights.map( l => l.attenuation ) );
+      gl.uniform1fv( gpu.light_attenuation_factors, uniforms.lights.map( l => l.attenuation ) );
     }
-  update_GPU( context, gpu_addresses, gpu_state, model_transform, material )
+  update_GPU( context, gpu_addresses, uniforms, model_transform, material )
     {             // update_GPU(): Define how to synchronize our JavaScript's variables to the GPU's.  This is where the shader
                   // receives ALL of its inputs.  Every value the GPU wants is divided into two categories:  Values that belong
                   // to individual objects being drawn (which we call "Material") and values belonging to the whole scene or
@@ -645,7 +644,7 @@ class Phong_Shader extends Shader
       let full_material = Object.assign( defaults, material );
 
       this.send_material ( context, gpu_addresses, full_material );
-      this.send_gpu_state( context, gpu_addresses, gpu_state, model_transform );
+      this.send_uniforms( context, gpu_addresses, uniforms, model_transform );
     }
 }
 
@@ -692,9 +691,9 @@ class Textured_Phong extends Phong_Shader
             gl_FragColor.xyz += phong_model_lights( normalize( N ), vertex_worldspace );
           } ` ;
     }
-  update_GPU( context, gpu_addresses, gpu_state, model_transform, material )
+  update_GPU( context, gpu_addresses, uniforms, model_transform, material )
     {             // update_GPU(): Add a little more to the base class's version of this method.
-      super.update_GPU( context, gpu_addresses, gpu_state, model_transform, material );
+      super.update_GPU( context, gpu_addresses, uniforms, model_transform, material );
 
       if( material.texture && material.texture.ready )
       {                         // Select texture unit 0 for the fragment shader Sampler2D uniform called "texture":
@@ -739,15 +738,14 @@ class Movement_Controls extends Component
                                         // person style controls into the website.  These can be used to manually move your
                                         // camera or other objects smoothly through your scene using key, mouse, and HTML
                                         // button controls to help you explore what's in it.
-  constructor()
-    { super();
-      const data_members = { roll: 0, look_around_locked: true,
+  init()
+    { const data_members = { roll: 0, look_around_locked: true,
                              thrust: vec3( 0,0,0 ), pos: vec3( 0,0,0 ), z_axis: vec3( 0,0,0 ),
                              radians_per_frame: 1/200, meters_per_frame: 20, speed_multiplier: 1 };
       Object.assign( this, data_members );
 
       this.mouse_enabled_canvases = new Set();
-      this.will_take_over_shared_uniforms = true;
+      this.will_take_over_uniforms = true;
     }
   set_recipient( matrix_closure, inverse_closure )
     {                               // set_recipient(): The camera matrix is not actually stored here inside Movement_Controls;
@@ -756,14 +754,17 @@ class Movement_Controls extends Component
       this.matrix  =  matrix_closure;
       this.inverse = inverse_closure;
     }
-  reset( shared_uniforms )
+  reset()
     {                         // reset(): Initially, the default target is the camera matrix that Shaders use, stored in the
                               // encountered shared_uniforms object.  Targets must be pointer references made using closures.
-      this.set_recipient( () => shared_uniforms.camera_transform,
-                          () => shared_uniforms.camera_inverse   );
+      this.set_recipient( () => this.uniforms.camera_transform,
+                          () => this.uniforms.camera_inverse   );
     }
   add_mouse_controls( canvas )
     {                                       // add_mouse_controls():  Attach HTML mouse events to the drawing canvas.
+      if( this.mouse_enabled_canvases.has( canvas ) )
+        return;
+      this.mouse_enabled_canvases.add( canvas )
                                             // First, measure mouse steering, for rotating the flyaround camera:
       this.mouse = { "from_center": vec( 0,0 ) };
       const mouse_position = ( e, rect = canvas.getBoundingClientRect() ) =>
@@ -831,7 +832,7 @@ class Movement_Controls extends Component
         }, "black" );
       this.new_line();
       this.key_triggered_button( "Attach to global camera", [ "Shift", "R" ],
-                                                 () => { this.will_take_over_shared_uniforms = true }, "blue" );
+                                                 () => { this.will_take_over_uniforms = true }, "blue" );
       this.new_line();
     }
   first_person_flyaround( radians_per_frame, meters_per_frame, leeway = 70 )
@@ -875,19 +876,17 @@ class Movement_Controls extends Component
       this. matrix().post_multiply( Mat4.translation( 0,0, +25 ) );
       this.inverse().pre_multiply(  Mat4.translation( 0,0, -25 ) );
     }
-  render_animation( context, shared_uniforms, dt = shared_uniforms.animation_delta_time / 1000 )
+  render_animation( context )
     {                                                            // The whole process of acting upon controls begins here.
       const m = this.speed_multiplier * this. meters_per_frame,
-            r = this.speed_multiplier * this.radians_per_frame;
+            r = this.speed_multiplier * this.radians_per_frame,
+            dt = this.uniforms.animation_delta_time / 1000;
 
-      if( this.will_take_over_shared_uniforms )
-      { this.reset( shared_uniforms );
-        this.will_take_over_shared_uniforms = false;
-      }
-
-      if( !this.mouse_enabled_canvases.has( context.canvas ) )
-      { this.add_mouse_controls( context.canvas );
-        this.mouse_enabled_canvases.add( context.canvas )
+                // TODO:  Once there is a way to test it, remove the below, because uniforms are no longer inaccessible
+                // outside this function, so we could just tell this class to take over the uniforms' matrix anytime.
+      if( this.will_take_over_uniforms )
+      { this.reset();
+        this.will_take_over_uniforms = false;
       }
                                      // Move in first-person.  Scale the normal camera aiming speed by dt for smoothness:
       this.first_person_flyaround( dt * r, dt * m );
@@ -897,21 +896,5 @@ class Movement_Controls extends Component
                                      // Log some values:
       this.pos    = this.inverse().times( vec4( 0,0,0,1 ) );
       this.z_axis = this.inverse().times( vec4( 0,0,1,0 ) );
-    }
-}
-
-
-
-const Shared_Uniforms_Viewer = defs.Shared_Uniforms_Viewer =
-class Shared_Uniforms_Viewer extends Component
-{                                             // **Shared_Uniforms_Viewer** just toggles, monitors, and reports some
-                                              // global values via its control panel.
-  make_control_panel()
-    {                         // render_animation() of this scene will replace the following object:
-      this.shared_uniforms = {};
-      this.key_triggered_button( "(Un)pause animation", ["Alt", "a"], () => this.shared_uniforms.animate ^= 1 );
-    }
-  render_animation( context, shared_uniforms )
-    { this.shared_uniforms = shared_uniforms;
     }
 }

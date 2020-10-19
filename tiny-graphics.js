@@ -79,12 +79,12 @@ class Shape
       }
       else  gl.drawArrays( gl[type], 0, Object.values( this.arrays )[0].length );
     }
-  draw( webgl_manager, shared_uniforms, model_transform, material, type = "TRIANGLES" )
+  draw( webgl_manager, uniforms, model_transform, material, type = "TRIANGLES" )
     {                                       // draw():  To appear onscreen, a shape of any variety goes through this function,
                                             // which executes the shader programs.  The shaders draw the right shape due to
                                             // pre-selecting the correct buffer region in the GPU that holds that shape's data.
       const gpu_instance = this.gpu_instances.get( webgl_manager.context ) || this.copy_onto_graphics_card( webgl_manager.context );
-      material.shader.activate( webgl_manager.context, gpu_instance.webGL_buffer_pointers, shared_uniforms, model_transform, material );
+      material.shader.activate( webgl_manager.context, gpu_instance.webGL_buffer_pointers, uniforms, model_transform, material );
                                                               // Run the shaders to draw every triangle now:
       this.execute_shaders( webgl_manager.context, gpu_instance, type );
     }
@@ -271,7 +271,7 @@ class Shader
       Object.assign( gpu_instance, { program, vertShdr, fragShdr, gpu_addresses: new Graphics_Addresses( program, gl ) } );
       return gpu_instance;
     }
-  activate( context, buffer_pointers, shared_uniforms, model_transform, material )
+  activate( context, buffer_pointers, uniforms, model_transform, material )
     {                                     // activate(): Selects this Shader in GPU memory so the next shape draws using it.
       if( !this.gpu_instances ) this.gpu_instances = new Map();     // Track which GPU contexts this object has copied itself onto.
       const gpu_instance = this.gpu_instances.get( context ) || this.copy_onto_graphics_card( context );
@@ -279,7 +279,7 @@ class Shader
       context.useProgram( gpu_instance.program );
 
           // --- Send over all the values needed by this particular shader to the GPU: ---
-      this.update_GPU( context, gpu_instance.gpu_addresses, shared_uniforms, model_transform, material );
+      this.update_GPU( context, gpu_instance.gpu_addresses, uniforms, model_transform, material );
 
           // --- Turn on all the correct attributes and make sure they're pointing to the correct ranges in GPU memory. ---
       for( let [ attr_name, attribute ] of Object.entries( gpu_instance.gpu_addresses.shader_attributes ) )
@@ -300,10 +300,10 @@ class Shader
       return { camera_inverse: Mat4.identity(), camera_transform: Mat4.identity(), projection_transform: Mat4.identity(),
                animate: true, animation_time: 0, animation_delta_time: 0 };
   }
-  static assign_camera( camera_inverse, uniforms_object )
+  static assign_camera( camera_inverse, uniforms )
     {                           // Camera matrices and their inverses should be cached together, in sync, since
                                 // both are frequently needed, and to limit slow calls to inverse().
-      Object.assign( uniforms_object, { camera_inverse, camera_transform: Mat4.inverse( camera_inverse ) } );
+      Object.assign( uniforms, { camera_inverse, camera_transform: Mat4.inverse( camera_inverse ) } );
     }
   update_GPU(){}
 
@@ -411,77 +411,6 @@ class Texture
 }
 
 
-const Webgl_Manager = tiny.Webgl_Manager =
-class Webgl_Manager
-{                        // **Webgl_Manager** manages a whole graphics program for one on-page canvas, including its
-                         // textures, shapes, shaders, and scenes.  It requests a WebGL context and stores Scenes.
-  constructor( canvas, background_color = color( 0,0,0,1 ), dimensions )
-    { const members = { prev_time: 0, scratchpad: {}, canvas };
-                      // Non-standard solution for WebGL 1.  Build a group of variables meant
-                      // to become shader uniforms.  These objects should be shared across
-                      // scenes in a canvas, or even across canvases, to sync the contents.
-      members.shared_uniforms = Shader.default_uniforms();
-      Object.assign( this, members );
-                                                 // Get the GPU ready, creating a new WebGL context for this canvas:
-      for( let name of [ "webgl", "experimental-webgl", "webkit-3d", "moz-webgl" ] )
-        if(  this.context = this.canvas.getContext( name ) ) break;
-      if( !this.context ) throw "Canvas failed to make a WebGL context.";
-      const gl = this.context;
-
-      this.set_size( dimensions );
-
-      gl.clearColor.apply( gl, background_color );           // Tell the GPU which color to clear the canvas with each frame.
-      gl.getExtension( "OES_element_index_uint" );           // Load an extension to allow shapes with more than 65535 vertices.
-      gl.enable( gl.DEPTH_TEST );                            // Enable Z-Buffering test.
-                        // Specify an interpolation method for blending "transparent" triangles over the existing pixels:
-      gl.enable( gl.BLEND );
-      gl.blendFunc( gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA );
-                                              // Store a single red pixel, as a placeholder image to prevent a console warning:
-      gl.bindTexture(gl.TEXTURE_2D, gl.createTexture() );
-      gl.texImage2D (gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([255, 0, 0, 255]));
-
-              // Find the correct browser's version of requestAnimationFrame() needed for queue-ing up re-display events:
-      window.requestAnimFrame = ( w =>
-           w.requestAnimationFrame    || w.webkitRequestAnimationFrame
-        || w.mozRequestAnimationFrame || w.oRequestAnimationFrame || w.msRequestAnimationFrame
-        || function( callback ) { w.setTimeout(callback, 1000/60);  } )( window );
-    }
-  set_size( dimensions = [ 1080, 600 ] )
-    {                                   // set_size():  Allows you to re-size the canvas anytime.  To work, it must change the
-                                        // size in CSS, wait for style to re-flow, and then change the size again within canvas
-                                        // attributes.  Both are needed because the attributes on a canvas ave a special effect
-                                        // on buffers, separate from their style.
-      const [ width, height ] = dimensions;
-      this.canvas.style[ "width" ]  =  width + "px";
-      this.canvas.style[ "height" ] = height + "px";
-      Object.assign( this,        { width, height } );
-      Object.assign( this.canvas, { width, height } );
-                            // Build the canvas's matrix for converting -1 to 1 ranged coords (NCDS) into its own pixel coords:
-      this.context.viewport( 0, 0, width, height );
-    }
-  render( time=0 )
-    {               // render(): Draw a single frame of animation, using all loaded Scene objects.  Measure
-                    // how much real time has transpired in order to animate shapes' movements accordingly.
-      this.shared_uniforms.animation_delta_time = time - this.prev_time;
-      if( this.shared_uniforms.animate ) this.shared_uniforms.animation_time += this.shared_uniforms.animation_delta_time;
-      this.prev_time = time;
-
-      const gl = this.context;
-      gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);        // Clear the canvas's pixels and z-buffer.
-
-      const open_list = [ this.component ];
-      while( open_list.length )                           // Traverse all Scenes and their children, recursively.
-      { open_list.push( ...open_list[0].animated_children );
-                                                                // Call display() to draw each registered animation:
-        open_list.shift().render_animation( this, this.shared_uniforms );
-      }
-                                              // Now that this frame is drawn, request that render() happen
-                                              // again as soon as all other web page events are processed:
-      this.event = window.requestAnimFrame( this.render.bind( this ) );
-    }
-}
-
-
 const Component = tiny.Component =
 class Component
 {                           // **Scene** is the base class for any scene part or code snippet that you can add to a
@@ -490,7 +419,9 @@ class Component
                             // buttons and readouts, respectively.  Scenes exist in a hierarchy; their child Scenes
                             // can either contribute more drawn shapes or provide some additional tool to the end
                             // user via drawing additional control panel buttons or live text readouts.
-  constructor()
+                            // Root component manages a whole graphics program for one on-page canvas, including its
+                            // textures, shapes, shaders, and scenes.  It requests a WebGL context and stores Scenes.
+  constructor( props = {} )
     {
       const rules = [
         `.documentation_treenode { }`,
@@ -498,6 +429,13 @@ class Component
                                     box-shadow:10px 10px 90px 0 inset LightGray }`
         ];
       Component.initialize_CSS( Component, rules );
+
+      this.props = props;
+
+      // Non-standard solution for WebGL 1.  Build a group of variables meant
+      // to become shader uniforms.  These objects should be shared across
+      // scenes in a canvas, or even across canvases, to sync the contents.
+      this.uniforms = this.props.uniforms || Shader.default_uniforms();
 
       this.animated_children =  [];
       this.document_children =  [];
@@ -508,6 +446,8 @@ class Component
              event.stopPropagation();   // Don't bubble the event to parent nodes; let child elements be targetted in isolation.
            }
       this.key_controls = new Keyboard_Manager( document, callback_behavior);
+                              // Finally, run the user's code for setting up their scene:
+      this.init();
     }
   static types_used_before = new Set()
   static initialize_CSS( classType, rules )
@@ -519,11 +459,72 @@ class Component
       for( const r of rules ) document.styleSheets[document.styleSheets.length - 1].insertRule( r, 0 )
       Component.types_used_before.add( classType )
     }
-  update_shared_state( context )
+  make_context( canvas, background_color = color( 0,0,0,1 ), dimensions )
     {
-          // Use the provided context to tick shared_uniforms.animation_time only once per frame.
-      context.shared_uniforms = this.shared_uniforms;
-      return this.shared_uniforms;
+      // Get the GPU ready, creating a new WebGL context for this canvas:
+      this.canvas = canvas;
+      const try_making_context = name => this.context = this.canvas.getContext( name );
+      for( let name of [ "webgl", "experimental-webgl", "webkit-3d", "moz-webgl" ] )
+        if( try_making_context( name ) ) break;
+      if( !this.context ) throw "Canvas failed to make a WebGL context.";
+      const gl = this.context;
+
+      this.set_canvas_size( dimensions );
+
+      gl.clearColor.apply( gl, background_color );           // Tell the GPU which color to clear the canvas with each frame.
+      gl.getExtension( "OES_element_index_uint" );           // Load an extension to allow shapes with more than 65535 vertices.
+      gl.enable( gl.DEPTH_TEST );                            // Enable Z-Buffering test.
+      // Specify an interpolation method for blending "transparent" triangles over the existing pixels:
+      gl.enable( gl.BLEND );
+      gl.blendFunc( gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA );
+      // Store a single red pixel, as a placeholder image to prevent a console warning:
+      gl.bindTexture(gl.TEXTURE_2D, gl.createTexture() );
+      gl.texImage2D (gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([255, 0, 0, 255]));
+
+      // Find the correct browser's version of requestAnimationFrame() needed for queue-ing up re-display events:
+      window.requestAnimFrame = ( w =>
+          w.requestAnimationFrame    || w.webkitRequestAnimationFrame
+          || w.mozRequestAnimationFrame || w.oRequestAnimationFrame || w.msRequestAnimationFrame
+          || function( callback ) { w.setTimeout(callback, 1000/60);  } )( window );
+    }
+  set_canvas_size( dimensions = [ 1080, 600 ] )
+    {
+      // set_size():  Allows you to re-size the canvas anytime.  To work, it must change the
+      // size in CSS, wait for style to re-flow, and then change the size again within canvas
+      // attributes.  Both are needed because the attributes on a canvas ave a special effect
+      // on buffers, separate from their style.
+      const [ width, height ] = dimensions;
+      this.canvas.style[ "width" ]  =  width + "px";
+      this.canvas.style[ "height" ] = height + "px";
+      Object.assign( this,        { width, height } );
+      Object.assign( this.canvas, { width, height } );
+      // Build the canvas's matrix for converting -1 to 1 ranged coords (NCDS) into its own pixel coords:
+      this.context.viewport( 0, 0, width, height );
+    }
+  frame_advance( time=0 )
+    {
+      // render(): Draw a single frame of animation, using all loaded Scene objects.  Measure
+      // how much real time has transpired in order to animate shapes' movements accordingly.
+      if( !this.props.dont_tick )
+      {
+        this.uniforms.animation_delta_time = time - this.prev_time | 0;
+        if( this.uniforms.animate ) this.uniforms.animation_time += this.uniforms.animation_delta_time;
+        this.prev_time = time;
+      }
+
+      const gl = this.context;
+      if( gl )
+        gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);        // Clear the canvas's pixels and z-buffer.
+
+      const open_list = [ this ];
+      while( open_list.length )                           // Traverse all Scenes and their children, recursively.
+      { open_list.push( ...open_list[0].animated_children );
+        // Call display() to draw each registered animation:
+        open_list.shift().render_animation( this );
+      }
+      // Now that this frame is drawn, request that render() happen
+      // again as soon as all other web page events are processed:
+      this.event = window.requestAnimFrame( this.frame_advance.bind( this ) );
     }
   new_line( parent=this.control_panel )       // new_line():  Formats a scene's control panel with a new line break.
     { parent.appendChild( document.createElement( "br" ) ) }
@@ -584,11 +585,9 @@ class Component
       if( !overridden_options.show_canvas )
         canvas.style.display = "none";
                                         // Use tiny-graphics-js to draw graphics to the canvas, using the given scene objects.
-      this.webgl_manager = new tiny.Webgl_Manager( canvas );
-      this.webgl_manager.component = this;
-
+      this.make_context( canvas );
                                        // Start WebGL main loop - render() will re-queue itself for continuous calls.
-      this.webgl_manager.event = window.requestAnimFrame( this.webgl_manager.render.bind( this.webgl_manager ) );
+      this.event = window.requestAnimFrame( this.frame_advance.bind( this ) );
 
       if( overridden_options.make_controls )
       { this.embedded_controls_area = this.program_stuff.appendChild( document.createElement( "div" ) );
@@ -608,7 +607,9 @@ class Component
     }
                                                 // To use class Scene, override at least one of the below functions,
                                                 // which will be automatically called by other classes:
-  render_animation( context, shared_uniforms )
+  init()
+    {}
+  render_animation( context )
     {}                            // display(): Called by Webgl_Manager for drawing.
   render_documentation()
     {}                            // show_document(): Called by Document_Builder for generating documentation.
