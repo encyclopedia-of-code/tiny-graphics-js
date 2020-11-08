@@ -372,5 +372,9 @@ const Mat4 = math.Mat4 =
                              m00 * m12 * m31 + m01 * m10 * m32 - m00 * m11 * m32;
           result[ 3 ][ 3 ] = m01 * m12 * m20 - m02 * m11 * m20 + m02 * m10 * m21 -
                              m00 * m12 * m21 - m01 * m10 * m22 + m00 * m11 * m22;
+          // Divide by determinant and return.
+          return result.times (
+            1 / (m00 * result[ 0 ][ 0 ] + m10 * result[ 0 ][ 1 ] + m20 * result[ 0 ][ 2 ] + m30 * result[ 0 ][ 3 ]));
+
       }
   };
