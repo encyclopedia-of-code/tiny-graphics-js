@@ -1,5 +1,3 @@
-// This file defines a lot of panels that can be placed on websites to create interactive graphics programs that use tiny-graphics.js.
-
 import {tiny} from './tiny-graphics.js';
 
 export const widgets = {};

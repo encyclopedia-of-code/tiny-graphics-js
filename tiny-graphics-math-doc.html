@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+Vector and Matrix algebra are not built into JavaScript at first. We will add it now.
+Part I of this file: Vectors, Part II of this file: Matrices
+
+Part I: Vectors: *************************************************************************************
+
+You will be able to declare a 3D vector [x,y,z] supporting various common vector operations
+with syntax: vec(x,y), vec3( x,y,z ) or vec4( x,y,z, zero or one ). For general sized vectors, use
+class Vector and declare them with standard Array-supported operations like .of().
+
+For matrices, you will use class Mat4 to generate the 4 by 4 matrices that are common
+in graphics, or for general sized matrices you can use class Matrix.
+
+To get vector algebra that performs well in JavaScript, we based class Vector on consecutive
+buffers (using type Float32Array). Implementations should specialize for common vector
+sizes 3 and 4 since JavaScript engines can better optimize functions when they can predict
+argument count. Implementations should also avoid allocating new array objects since these
+will all have to be garbage collected.
+
+Examples:
+
+** For size 3 **
+equals: "vec3( 1,0,0 ).equals( vec3( 1,0,0 ) )" returns true.
+plus: "vec3( 1,0,0 ).plus ( vec3( 1,0,0 ) )" returns the Vector [ 2,0,0 ].
+minus: "vec3( 1,0,0 ).minus ( vec3( 1,0,0 ) )" returns the Vector [ 0,0,0 ].
+mult-pairs: "vec3( 1,2,3 ).mult_pairs( vec3( 3,2,0 ) )" returns the Vector [ 3,4,0 ].
+scale: "vec3( 1,2,3 ).scale( 2 )" overwrites the Vector with [ 2,4,6 ].
+times: "vec3( 1,2,3 ).times( 2 )" returns the Vector [ 2,4,6 ].
+randomized: Returns this Vector plus a random vector of a given maximum length.
+mix: "vec3( 0,2,4 ).mix( vec3( 10,10,10 ), .5 )" returns the Vector [ 5,6,7 ].
+norm: "vec3( 1,2,3 ).norm()" returns the square root of 15.
+normalized: "vec3( 4,4,4 ).normalized()" returns the Vector [ sqrt(3), sqrt(3), sqrt(3) ]
+normalize: "vec3( 4,4,4 ).normalize()" overwrites the Vector with [ sqrt(3), sqrt(3), sqrt(3) ].
+dot: "vec3( 1,2,3 ).dot( vec3( 1,2,3 ) )" returns 15.
+cast: "vec3.cast( [-1,-1,0], [1,-1,0], [-1,1,0] )" converts a list of Array literals into a list of vec3's.
+to4: "vec3( 1,2,3 ).to4( true or false )" returns the homogeneous vec4 [ 1,2,3, 1 or 0 ].
+cross: "vec3( 1,0,0 ).cross( vec3( 0,1,0 ) )" returns the Vector [ 0,0,1 ]. Use only on 3x1 Vecs.
+to_string: "vec3( 1,2,3 ).to_string()" returns "[vec3 1, 2, 3]"
+** For size 4, same except: **
+to3: "vec4( 4,3,2,1 ).to3()" returns the vec3 [ 4,3,2 ]. Use to truncate vec4 to vec3.
+** To assign by value **
+copy: "let new_vector = old_vector.copy()" assigns by value so you get a different vector object.
+** For any size **
+to declare: Vector.of( 1,2,3,4,5,6,7,8,9,10 ) returns a Vector filled with those ten entries.
+** For multiplication by matrices **
+"any_mat4.times( vec4( 1,2,3,0 ) )" premultiplies the homogeneous Vector [1,2,3]
+by the 4x4 matrix and returns the new vec4. Requires a vec4 as input.
+
+class Vector extends Float32Array
+
+**Vector** stores vectors of floating point numbers. Puts vector math into JavaScript. Note: Vectors should be
+created with of() due to weirdness with the TypedArray spec. Tip: Assign Vectors
+with .copy() to avoid referring two variables to the same Vector object.
+
+static cast( ...args )
+
+cast(): For compact syntax when declaring lists.
+
+to3()
+to4( is_a_point )
+cross(b)
+
+to3() / to4() / cross(): For standardizing the API with Vector3/Vector4, so the performance hit of changing between
+these types can be measured.
+
+class Vector3 extends Float32Array
+
+**Vector3** is a specialization of Vector only for size 3, for performance reasons.
+
+static create( x, y, z )
+
+copy()
+
+In-fix operations: Use these for more readable math expressions.
+equals( b )
+plus( b )
+minus( b )
+times( s )
+times_pairwise( b )
+
+Pre-fix operations: Use these for better performance (to avoid new allocation).
+add_by( b )
+subtract_by( b )
+scale_by( s )
+scale_pairwise_by( b )
+
+Other operations:
+
+randomized( s )
+mix( b, s )
+norm()
+normalized()
+normalize()
+dot( b )
+cross( b )
+static cast( ...args )
+
+cast(): Converts a bunch of arrays into a bunch of vec3's.
+
+static unsafe( x,y,z )
+
+unsafe(): returns vec3s only meant to be consumed immediately. Aliases into shared memory, to be overwritten upon next
+unsafe3 call. Faster.
+
+to4( is_a_point )
+
+to4(): Convert to a homogeneous vector of 4 values.
+
+to_string()
+
+
+class Vector4 extends Float32Array
+
+**Vector4** is a specialization of Vector only for size 4, for performance reasons. The fourth coordinate value is
+homogenized (0 for a vector, 1 for a point).
+
+Same functions as Vector3 except for:
+
+static create( x, y, z, w )
+
+static unsafe( x,y,z, w )
+
+unsafe(): returns vec4s only meant to be consumed immediately. Aliases into shared memory, to be overwritten
+upon next unsafe4 call. Faster.
+
+to3()
+
+
+Shorthand -- vector aliases:
+math.vec = Vector .create;
+math.vec3 = Vector3.create;
+math.vec4 = Vector4.create;
+math.unsafe3 = Vector3.unsafe;
+math.unsafe4 = Vector4.unsafe;
+math.color = Vector4.create;
+
+math.color is just an alias for class Vector4. Colors should be made as special 4x1 vectors expressed as ( red, green,
+blue, opacity ) each ranging from 0 to 1.
+
+
+// Part II: Matrices: *************************************************************************************
+
+**Matrix** holds M by N matrices of floats. Enables matrix and vector math.
+Example usage:
+"Matrix( rows )" returns a Matrix with those rows, where rows is an array of float arrays.
+"M.set_identity( m, n )" assigns the m by n identity to Matrix M.
+"M.sub_block( start, end )" where start and end are each a [ row, column ] pair returns a sub-rectangle cut out from M.
+"M.copy()" creates a deep copy of M and returns it so you can modify it without affecting the original.
+"M.equals(b)", "M.plus(b)", and "M.minus(b)" are operations betwen two matrices.
+"M.transposed()" returns a new matrix where all rows of M became columns and vice versa.
+"M.times(b)" (where the post-multiplied b can be a scalar, a Vector4, or another Matrix) returns a
+new Matrix or Vector4 holding the product.
+"M.pre_multiply(b)" overwrites the Matrix M with the product of b * M where b must be another Matrix.
+"M.post_multiply(b)" overwrites the Matrix M with the product of M * b where b can be a Matrix or scalar.
+"Matrix.flatten_2D_to_1D( M )" flattens input (a Matrix or any array of Vectors or float arrays)
+into a row-major 1D array of raw floats.
+"M.to_string()" where M contains the 4x4 identity returns "[[1, 0, 0, 0] [0, 1, 0, 0] [0, 0, 1, 0] [0, 0, 0, 1]]".
+
+constructor( ...args )
+
+set( M )
+
+set_identity ( m, n )
+
+sub_block( start, end )
+
+copy ()
+
+equals (b)
+plus (b)
+minus (b)
+
+transposed()
+
+times (b, optional_preallocated_result)
+
+pre_multiply (b)
+
+post_multiply(b)
+
+static flatten_2D_to_1D( M )
+
+to_string()
+
+
+class Mat4 extends Matrix
+
+**Mat4** generates special 4x4 matrices that are useful for graphics. All the methods below return a certain 4x4 matrix.
+
+static identity()
+
+static rotation( angle, x,y,z )
+
+rotation(): Requires a scalar (angle) and a three-component axis vector.
+
+static scale( x,y,z )
+
+scale(): Builds and returns a scale matrix using x,y,z.
+
+static translation( x,y,z )
+
+translation(): Builds and returns a translation matrix using x,y,z.
+
+static look_at( eye, at, up )
+
+look_at(): Produce a traditional graphics camera "lookat" matrix. Each input must be a 3x1 Vector. Note: As per
+tradition in graphics, look_at() assumes the result will be used for a camera and stores its result in inverse space. If
+you want to use look_at to point a non-camera towards something, you can do so, but to generate the correct basis you
+must re-invert its result.
+
+static orthographic( left, right, bottom, top, near, far )
+
+orthographic(): Box-shaped view volume for projection.
+
+static perspective( fov_y, aspect, near, far )
+
+perspective(): Frustum-shaped view volume for projection.
+
+static inverse( m )
+
+inverse(): A 4x4 inverse.  Computing it is slow because of
+the amount of steps; call fewer times when possible.
+
+
+</body>
+</html>
