@@ -1,4 +1,4 @@
-import {tiny, defs} from './examples/common.js';
+import {defs} from './examples/common.js';
 
 // Now everything is loaded from tiny-graphics.js and its helper files. An object "tiny" wraps its contents, along
 // with "defs" for wrapping some additional utilities included in common.js.
