@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body style="white-space: pre-wrap;">
+
+class Triangle extends Shape
+
+**Triangle** The simplest possible 2D Shape – one triangle.  It stores 3 vertices,
+each having their own 3D position, normal vector, and texture-space coordinate.
+See code comments for a guided explanation.
+
+
+class Square extends Shape
+
+**Square** demonstrates two triangles that share vertices.  On any planar surface, the
+interior edges don't make any important seams.  In these cases there's no reason not
+to re-use data of the common vertices between triangles.  This makes all the vertex
+arrays (position, normals, etc) smaller and more cache friendly.
+See code comments for a guided explanation.
+
+class Tetrahedron extends Shape
+
+**Tetrahedron** demonstrates flat vs smooth shading (a boolean argument selects
+which one).  It is also our first 3D, non-planar shape.  Four triangles share
+corners with each other.  Unless we store duplicate points at each corner
+(storing the same position at each, but different normal vectors), the lighting
+will look "off".  To get crisp seams at the edges we need the repeats.
+See code comments for a guided explanation.
+
+class Windmill extends Shape
+
+**Windmill**  As our shapes get more complicated, we begin using matrices and flow
+control (including loops) to generate non-trivial point clouds and connect them.
+See code comments for a guided explanation.
+
+constructor( num_blades )
+
+class Cube extends Shape
+
+**Cube** A closed 3D shape, and the first example of a compound shape (a Shape constructed
+out of other Shapes).  A cube inserts six Square strips into its own arrays, using six
+different matrices as offsets for each square.
+
+
+class Subdivision_Sphere extends Shape
+
+**Subdivision_Sphere** defines a Sphere surface, with nice uniform triangles.  A subdivision surface
+(see Wikipedia article on those) is initially simple, then builds itself into a more and more
+detailed shape of the same layout.  Each act of subdivision makes it a better approximation of
+some desired mathematical surface by projecting each new point onto that surface's known
+implicit equation.  For a sphere, we begin with a closed 3-simplex (a tetrahedron).  For each
+face, connect the midpoints of each edge together to make more faces.  Repeat recursively until
+the desired level of detail is obtained.  Project all new vertices to unit vectors (onto the
+unit sphere) and group them into triangles by following the predictable pattern of the recursion.
+
+class Grid_Patch extends Shape
+
+A grid of rows and columns you can distort. A tesselation of triangles connects the points, generated with a certain predictable pattern of indices.  Two callbacks allow you to dynamically define how to reach the next row or column.
+
+static sample_array( array, ratio )
+
+Optional but sometimes useful as a next row or column operation. In a given array of points, intepolate the pair of points that our progress ratio falls between.
+
+class Surface_Of_Revolution extends Grid_Patch
+
+SURFACE OF REVOLUTION: Produce a curved "sheet" of triangles with rows and columns.
+Begin with an input array of points, defining a 1D path curving through 3D space --
+now let each such point be a row.  Sweep that whole curve around the Z axis in equal
+steps, stopping and storing new points along the way; let each step be a column. Now
+we have a flexible "generalized cylinder" spanning an area until total_curvature_angle.
+
+subdivide_triangle( a, b, c, count )
+
+subdivide_triangle(): Recurse through each level of detail by splitting triangle (a,b,c) into four smaller ones.
+See code comments for a guided explanation.
+
+class Regular_2D_Polygon extends Surface_Of_Revolution
+
+Approximates a flat polygonal disk, or a circle when there are enough sides
+
+class Cylindrical_Tube extends Surface_Of_Revolution
+
+An open tube shape with equally sized sections, pointing down Z locally.
+
+
+class Cone_Tip extends Surface_Of_Revolution
+
+Squares degenerate into triangles as they sweep around.
+Note:  Touches the Z axis; squares degenerate into triangles as they sweep around.
+
+class Torus extends Shape
+
+Build a donut shape.  An example of a surface of revolution.
+
+class Grid_Sphere extends Shape
+
+With lattitude / longitude divisions; this means singularities are at
+the mesh's top and bottom.  Subdivision_Sphere is a better alternative.
+
+
+class Closed_Cone extends Shape
+
+Combine a cone tip and a regular polygon to make a closed cone.
+
+
+class Rounded_Closed_Cone extends Surface_Of_Revolution
+An alternative without two separate sections
+
+
+class Capped_Cylinder extends Shape
+
+Combine a tube and two regular polygons to make a closed cylinder. Flat shade this to make a prism, where #columns = #sides.
+
+
+class Rounded_Capped_Cylinder extends Surface_Of_Revolution
+
+An alternative without three separate sections
+
+class Axis_Arrows extends Shape
+
+An axis set with arrows, made out of a lot of various primitives.
+
+class Minimal_Shape extends tiny.Shape
+
+A truly minimal triangle, with three vertices each holding a 3D position and a color.
+
+
+class Minimal_Webgl_Demo extends Component
+
+**Minimal_Webgl_Demo** is an extremely simple example of a Scene class.
+
+Send a Triangle's vertices to the GPU's buffers
+
+render_animation( caller )
+
+Every frame, simply draw the Triangle at its default location.
+
+class Basic_Shader extends Shader
+
+Basic_Shader is nearly the simplest way to subclass Shader, which stores and manages a GPU program.  Basic_Shader is a trivial pass-through shader that applies a
+shape's matrices and then simply samples literal colors stored at each vertex.
+
+update_GPU( context, gpu_addresses, uniforms, model_transform, material )
+
+Define how to synchronize our JavaScript's variables to the GPU's
+
+shared_glsl_code()
+
+SHARED CODE, INCLUDED IN BOTH SHADERS
+
+vertex_glsl_code()
+
+Returns a Vertex Shader program's source code as a string.
+
+fragment_glsl_code()
+
+Returns a Fragment Shader program's source code as a string.
+
+class Funny_Shader extends Shader
+
+**Funny_Shader**: A simple "procedural" texture shader, with texture coordinates but without an input image.
+
+Same functions as Basic_Shader.
+
+class Phong_Shader extends Shader
+
+**Phong_Shader** is a subclass of Shader, which stores and manages a GPU program.
+Graphic cards prior to year 2000 had shaders like this one hard-coded into them
+instead of customizable shaders.  "Phong-Blinn" Shading that we use is a process of
+determining brightness of pixels via vector math.  We compare the normal vector
+at one point with the vectors toward the camera and light sources.
+
+shared_glsl_code()
+
+********* SHARED CODE, INCLUDED IN BOTH SHADERS *********
+
+Specifier "varying" means a variable's final value will be passed from the vertex shader
+on to the next phase (fragment shader), then interpolated per-fragment, weighted by the
+pixel fragment's proximity to each of the 3 vertices (barycentric interpolation).
+
+vec3 phong_model_lights( vec3 N, vec3 vertex_worldspace )
+
+phong_model_lights():  Add up the lights' contributions.
+
+Lights store homogeneous coords - either a position or vector.  If w is 0, the
+light will appear directional (uniform direction from all points), and we
+simply obtain a vector towards the light by directly using the stored value.
+Otherwise if w is 1 it will appear as a point light -- compute the vector to
+the point light's location from the current surface point.  In either case,
+fade (attenuate) the light as the vector needed to reach it gets longer.
+
+fragment_glsl_code()
+
+A fragment is a pixel that's overlapped by the current triangle.
+Fragments affect the final image or get discarded due to depth.
+
+static light_source( position, color, size )
+
+light_source():  How to represent properties of one light source.  Position is
+of type Vector4 and is homogeneous, and so is either a point or a vector.  Use w=0 for a
+vector (directional) light, and w=1 for a point light / spotlight.
+For spotlights, a light also needs a "size" factor for how quickly the brightness
+should attenuate (reduce) as distance from the spotlight increases.
+
+send_material( gl, gpu, material )
+
+send_material(): Send the desired shape-wide material qualities to the
+graphics card, where they will tweak the Phong lighting formula.
+
+send_uniforms( gl, gpu, uniforms, model_transform )
+
+send_uniforms():  Send the state of our whole drawing context to the GPU.
+
+Use the squared scale trick from "Eric's blog" instead of inverse transpose matrix.
+
+Send the current matrices to the shader as a single pre-computed final matrix, the product.
+The three special matrices are safe to cache since they'll be the same throughout this draw
+call, and thus across each instance of the vertex shader.
+Transpose them since the GPU expects matrices as column-major arrays.
+
+update_GPU( context, gpu_addresses, uniforms, model_transform, material )
+
+update_GPU(): Define how to synchronize our JavaScript's variables to the GPU's.  This is where the shader
+receives ALL of its inputs.  Every value the GPU wants is divided into two categories:  Values that belong
+to individual objects being drawn (which we call "Material") and values belonging to the whole scene or
+program (which we call the "uniforms").  Send both a material and uniforms to the shaders
+within this function, one data field at a time, to fully initialize the shader for a draw.
+
+Fill in any missing fields in the Material object with custom defaults for this shader:
+
+class Textured_Phong extends Phong_Shader
+
+**Textured_Phong** is a Phong Shader extended to additionally wrap a 2D
+ image file over the drawn shape, lined up according to the texture
+coordinates that are stored at each shape vertex.
+
+fragment_glsl_code()         // ********* FRAGMENT SHADER *********
+
+A fragment is a pixel that's overlapped by the current triangle.
+Fragments affect the final image or get discarded due to depth.
+
+update_GPU( context, gpu_addresses, uniforms, model_transform, material )
+
+update_GPU(): Add a little more to the base class's version of this method.
+
+class Fake_Bump_Map extends Textured_Phong
+
+**Fake_Bump_Map** Same as Phong_Shader, except adds a line of code to
+compute a new normal vector, perturbed according to texture color.
+
+This time, slightly disturb normals based on sampling the same image that was used for texturing.
+
+class Movement_Controls extends Component
+
+**Movement_Controls** is a Scene that can be attached to a canvas, like any other
+Scene, but it is a Secondary Scene Component -- meant to stack alongside other
+scenes.  Rather than drawing anything it embeds both first-person and third-
+person style controls into the website.  These can be used to manually move your
+camera or other objects smoothly through your scene using key, mouse, and HTML
+button controls to help you explore what's in it.
+
+Default values: .....
+
+set_recipient( matrix_closure, inverse_closure )
+
+set_recipient(): The camera matrix is not actually stored here inside Movement_Controls;
+instead, track an external target matrix to modify.  Targets must be pointer references
+made using closures.
+
+reset()
+
+reset(): Initially, the default target is the camera matrix that Shaders use, stored in the
+encountered shared_uniforms object.  Targets must be pointer references made using closures.
+
+add_mouse_controls( canvas )
+
+add_mouse_controls():  Attach HTML mouse events to the drawing canvas.
+
+make_control_panel()
+
+make_control_panel(): Sets up a panel of interactive HTML elements, including
+buttons with key bindings for affecting this scene, and live info readouts.
+
+render_animation( context )
+
+The whole process of acting upon controls begins here.
+
+By default, take over the calling component's uniforms object as our own to modify the camera object of, according to user input.
+</body>
+</html>

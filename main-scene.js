@@ -5,7 +5,8 @@ import {tiny, defs} from './examples/common.js';
 
 // ******************** Before selecting which demo we want to display, we have to load its code. If this page is hosted
 // on the internet, the demo's class can be injected right here by the server.
-// Otherwise: Load demos from files in your directory and copy them into "defs."
+//
+// In this case, it's not, so you'll instead Load demos from files in your directory and copy them into "defs."
 
 const Minimal_Webgl_Demo = defs.Minimal_Webgl_Demo;
 import {Axes_Viewer, Axes_Viewer_Test_Scene, Matrix_Game}
