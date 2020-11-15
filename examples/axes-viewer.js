@@ -44,8 +44,8 @@ class Axes_Viewer extends Component
       this.groups = [ [] ];
       this.cursor = -1;
     }
-  make_control_panel()
-    {                           // make_control_panel(): Create the buttons for using the viewer.
+  render_controls()
+    {                           // render_controls(): Create the buttons for using the viewer.
       this.key_triggered_button( "Previous group", [ "g" ], this.decrease );
       this.key_triggered_button(     "Next group", [ "h" ], this.increase ); this.new_line();
       this.live_string( box => { box.textContent = "Selected basis id: " + this.selected_basis_id } );
@@ -72,7 +72,7 @@ export class Axes_Viewer_Test_Scene extends Component
       const phong = new defs.Phong_Shader();
       this.material = { shader: phong, color: color( .8,.4,.8,1 ) };
     }
-  make_control_panel()
+  render_controls()
     { this.control_panel.innerHTML += "(Substitute your own scene here)" }
   render_animation( caller )
     {                                   // display():  *********** See instructions below ***********
@@ -164,7 +164,7 @@ export class Matrix_Game_1 extends Component
                      Matrix.of( [ 0,-1, 0,-7], [ 1,-1, 0, 6], [ 0, 0, 1, 0], [ 0, 0, 0, 1] ),
                      Matrix.of( [-1,-1, 0,-7], [ 1, 0, 0,10], [ 0, 0, 1, 0], [ 0, 0, 0, 1] )  ];
     }
-  make_control_panel()                                                              // Draw the buttons, setup their actions and keyboard shortcuts, and monitor live variables.
+  render_controls()                                                              // Draw the buttons, setup their actions and keyboard shortcuts, and monitor live variables.
     { this.key_triggered_button( "Insert Translation(x)", ['1'], function() { this.current_product[ this.post_multiply ? "push" : "unshift" ]( { type: "Translation", amount: 1, color: "blue"  } ); }, "blue"  );
       this.key_triggered_button( "Insert Rotation(z)",    ['2'], function() { this.current_product[ this.post_multiply ? "push" : "unshift" ]( { type: "Rotation",    amount: 1, color: "green" } ); }, "green" );
       this.key_triggered_button( "Insert Scale(x)",       ['3'], function() { this.current_product[ this.post_multiply ? "push" : "unshift" ]( { type: "Scale",       amount:-1, color: "red"   } ); }, "red"   );

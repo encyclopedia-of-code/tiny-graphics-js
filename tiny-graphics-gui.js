@@ -63,7 +63,7 @@ const Controls_Widget = widgets.Controls_Widget =
               scene.control_panel     = control_panel;
               scene.timestamp         = time;
               // Draw each registered animation:
-              scene.make_control_panel ();
+              scene.render_controls ();
           }
       }
       render (time = 0) {
@@ -80,7 +80,7 @@ const Controls_Widget = widgets.Controls_Widget =
               }
 
               // TODO: Check for updates to each scene's desired_controls_position, including if the
-              // scene just appeared in the tree, in which case call make_control_panel().
+              // scene just appeared in the tree, in which case call render_controls().
           }
 
           for (let panel of this.panels)

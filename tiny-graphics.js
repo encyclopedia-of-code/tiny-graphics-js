@@ -1,4 +1,4 @@
-// tiny-graphics.js - A file that shows how to organize a complete graphics program.  It refactors common WebGL steps.
+// tiny-graphics.js - A file that shows how to organize a complete graphics program, refactoring common WebGL steps.
 // By Garett.
 
 // To organize the exported class definitions, declare each class both in local scope (const) as well as storing them in
@@ -36,7 +36,7 @@ const Shape = tiny.Shape =
           const gl = context;
 
           const write = existing_instance ? (target, data) => gl.bufferSubData (target, 0, data)
-            : (target, data) => gl.bufferData (target, data, gl.STATIC_DRAW);
+                                          : (target, data) => gl.bufferData (target, data, gl.STATIC_DRAW);
 
           for (let name of selection_of_arrays) {
               if ( !existing_instance)
@@ -67,8 +67,8 @@ const Shape = tiny.Shape =
           this.execute_shaders (webgl_manager.context, gpu_instance, type);
       }
 
-      // All below functions further assume that your vertex buffer includes fields called "position" and "normal"
-      // stored at each point, instead of just any arbitrary fields.
+      // NOTE: All the below functions make a further assumption: that your vertex buffer includes fields called
+      // "position" and "normal" stored at each point, instead of just any arbitrary fields.
 
       static insert_transformed_copy_into (recipient, args, points_transform = Mat4.identity ()) {
           // Here if you try to bypass making a temporary shape and instead directly insert new data into the
@@ -117,8 +117,8 @@ const Shape = tiny.Shape =
           for (let counter = 0; counter < (this.indices ? this.indices.length : this.arrays.position.length);
                counter += 3) {
               const indices      = this.indices.length ?
-                [this.indices[ counter ], this.indices[ counter + 1 ], this.indices[ counter + 2 ]]
-                : [counter, counter + 1, counter + 2];
+                                   [this.indices[ counter ], this.indices[ counter + 1 ], this.indices[ counter + 2 ]]
+                                                       : [counter, counter + 1, counter + 2];
               const [p1, p2, p3] = indices.map (i => this.arrays.position[ i ]);
               // Cross the two edge vectors of this triangle together to get its normal:
               const n1           = p1.minus (p2).cross (p3.minus (p1)).normalized ();
@@ -306,22 +306,21 @@ const Texture = tiny.Texture =
 
           if (need_initial_settings) {
               gl.pixelStorei (gl.UNPACK_FLIP_Y_WEBGL, true);
-              gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);         // Always use bi-linear
-                                                                                          // sampling when zoomed out.
-              gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl[ this.min_filter ]);  // Let the user to set
-                                                                                               // the sampling method
-          }                                                                                    // when zoomed in.
-
+              // Always use bi-linear sampling when zoomed out.
+              gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+              // Apply user-defined sampling method when zoomed in.
+              gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl[ this.min_filter ]);
+          }
           gl.texImage2D (gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this.image);
-          if (this.min_filter === "LINEAR_MIPMAP_LINEAR")      // If the user picked tri-linear sampling (the default) then
-            // generate
-              gl.generateMipmap (gl.TEXTURE_2D);                   // the necessary "mips" of the texture and store
-                                                                   // them on the GPU with it.
+          if (this.min_filter === "LINEAR_MIPMAP_LINEAR")
+            // For tri-linear sampling (the default), generate the necessary "mips" of the texture and store them
+            // on the GPU.
+              gl.generateMipmap (gl.TEXTURE_2D);
           return gpu_instance;
       }
       activate (context, texture_unit = 0) {
           if ( !this.ready)
-              return;
+              return;          // Terminate draw requests until the image file is actually loaded over the network.
           const gpu_instance = this.gpu_instances.get (context) || this.copy_onto_graphics_card (context);
           context.activeTexture (context[ "TEXTURE" + texture_unit ]);
           context.bindTexture (context.TEXTURE_2D, gpu_instance.texture_buffer_pointer);
@@ -331,6 +330,7 @@ const Texture = tiny.Texture =
 
 const Component = tiny.Component =
   class Component {
+      uniforms = Shader.default_uniforms ();
       constructor (props = {}) {
           const rules = [
               `.documentation_treenode { }`,
@@ -339,8 +339,8 @@ const Component = tiny.Component =
           ];
           Component.initialize_CSS (Component, rules);
 
-          this.props    = props;
-          this.uniforms = this.props.uniforms || Shader.default_uniforms ();
+          this.props = props;
+          if (this.props.uniforms) this.uniforms = this.props.uniforms;
 
           this.animated_children  = [];
           this.document_children  = [];
@@ -394,6 +394,8 @@ const Component = tiny.Component =
             || function (callback) { w.setTimeout (callback, 1000 / 60); }) (window);
       }
       set_canvas_size (dimensions = [1080, 600]) {
+          // We must change size in CSS, wait for style re-flow, and then change size again within canvas attributes.
+          // Both steps are needed; attributes on a canvas have a special effect on buffers, separate from their style.
           const [width, height]         = dimensions;
           this.canvas.style[ "width" ]  = width + "px";
           this.canvas.style[ "height" ] = height + "px";
@@ -511,5 +513,5 @@ const Component = tiny.Component =
       init () {}
       render_animation (context) {}                            // Called each frame for drawing.
       render_documentation () {}
-      make_control_panel () {}     // make_control_panel(): Called by Controls_Widget for generating interactive UI.
+      render_controls () {}     // render_controls(): Called by Controls_Widget for generating interactive UI.
   };

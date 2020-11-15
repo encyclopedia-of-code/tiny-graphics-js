@@ -6,47 +6,198 @@
 </head>
 <body style="white-space: pre-wrap;">
 
-tiny-graphics.js - A file that shows how to organize a complete graphics program.  It refactors common WebGL steps.
-By Garett.
+tiny-graphics-js
+
+A library that shows how to organize a complete graphics program, refactoring common WebGL steps.
+
+Tiny-graphics-js mainly excels in an educational setting by showing a compact but effective usage of WebGL commands.
+This project bridges the difficult gap that occurs once you've learned WebGL commands but still struggle with excessive
+setup code between steps. Tiny-graphics shows how to organize WebGL calls into a flexible program with reusable parts.
+With setup code out of the way, you can see your math more clearly, and focus on creativity.
+
+Currently, the main limitations of tiny-graphics-js to be aware of are:
+
+- Compared to crowd-sourced frameworks like three.js, not as many examples exist yet of how to make various graphics
+effects. Not all tiny-graphics-js demos are updated/available (such as for ray tracing).
+- tiny-graphics uses a draw() function to draw a single shape. Modern graphics frameworks, however, handle shapes and
+materials a better way. To reduce the total number of calls to the GPU, they draw as much of the scene at once as
+possible in a few "rendering passes". Frameworks like three.js sort your program into a scene graph in an optimized way
+to minimize GPU state changes. Although it's possible to design such a framework in tiny-graphics.js yourself out of
+Components, this functionality is not built in.
+- Parts of tiny-graphics are inspired by React, a popular JavaScript framework. Both feature a tree of Component objects
+that design a document. In tiny-graphics the Component tree nodes also do double duty for 3D graphics creation. However,
+unlike React, tiny-graphics is not intended for creating high-performance all-purpose documents. Our engine is simpler,
+so expect to follow a more fixed document layout that isn't made to track/sync complex UI changes.
+- Various still-pending fixes and API enhancements.
+
+tiny-graphics.js
+
+The main file (tiny-graphics.js) defines just four class definitions useful for a graphics program -- Shape, Shader,
+Texture, and Component.
+
+Shape: Explains to the GPU the layout of one type of 3D shape.
+Shader: Loads a GLSL shader program onto your graphics card, ultimately converting raw shape data into a final 2D image.
+Texture: Manages a 2D image on the GPU that can color (or exert other influence) along a shape's surface.
+Component: One piece of your overall program.
+
+In addition, tiny-graphics-js comes with a tiny math library (tiny-graphics-math.js) for common vector and matrix
+operations found in computer graphics. It also comes with a file full of helper objects (tiny-graphics-gui.js) for
+adding interactive document areas so the user can affect the nearby 3D drawing area. Lastly, tiny-graphics-js comes with
+several files containing useful code examples of Shapes, Shaders, and Components, the latter of which are live demos.
+
+Components
+
+A Component is one piece of your overall program. Each Component both represents some (or all) of a 3D scene, plus some
+(or all) of the interactive HTML document surrounding the scene. Components nest inside one another in a hierarchy. Your
+web document may contain several 3D canvas drawing areas. Any graphics canvas area on the page can display the combined
+3D result of any number of Components, some of which might even be shared across multiple canvas drawing areas.
+
+Component is the base class for any scene you might want to design. For simple scenes, your small code snippet will go
+in a Component. To use, make your own subclass(es) of Component and override a few of the special functions that affect
+how it renders. Depending on which function you override, "rendering" can mean different things:
+
+-render-animation(): Contributing to the 3D animation displayed in a canvas area
+-render-layout(): Contributing interactive features and layout changes to the web document
+-render-documentation(): Contributing text to the web document, such as a caption above a 3D drawing area explaining it.
+-render-controls(): Contributing HTML buttons that specifically control this Component, and live readouts of its values.
+
+Children of a Component might provide some additional tool to the end user -- such as via contributing more 3D shapes
+for visualization, or via drawing additional control panel buttons or live text readouts. The root component manages the
+whole web document and graphics program by requesting WebGL contexts from the browser and storing active
+tiny-graphics-js objects.
+
+Shaders
+
+How GPUs work in general:
+
+Every time the graphics card (GPU) draws a shape for us, it will run two programs: The vertex shader, then the fragment
+shader. That's their order. The code for both shader programs is just a string when you deal with it in JavaScript;
+later, at runtime, you will send it to the graphics card. Once the shaders arrive, both get compiled and linked by the
+GPU hardware, and then are ready to use.
+
+What shader programs do is to answer these questions:
+
+Vertex Shader: Given all the points defining a shape, where should they land onscreen this time?
+Fragment Shader: Given all the pixels overlapped by a triangle, what determines their colors?
+
+In the simple case, the vertex shader just relocates each given 3D point by applying the final matrix product to it. In
+the simple case, the fragment shader just compares some vectors (normal, light, and camera vectors) originating any
+given pixel to come up with a final color. Both shaders could get arbitrarily more complicated, because they're
+programs.
+
+Because the vertex shader program works on "each" vertex in your shape (and the source code will only mention one, in
+a variable like "position"), it may be tempting to think of a whole lot of vertex program instances running at once
+to process all your vertices. Likewise for the fragment shader, which works on "each" pixel in a triangle (and the
+source code again only mentions one), so you might be tempted to think of billions of processors each running your
+fragment shader program. After all, there are a lot of pixels to process per triangle, per shape, per scene!
+
+But instead, think of it this way: You have one GPU. It runs your vertex shader program, but it runs it on your whole
+vertex array *at once*. Every time you do an operation to access a per-vertex variable like "position", the program
+really accesses *all* the positions, creating an array of instances to store the result for each vertex. Every math
+operation modifies each array element in lockstep. Likewise, think of the fragment shader as running operations on
+every pixel at once in lockstep, coming up with colors for all of them.
+
+The amount of shader "units" determines how parallel a GPU is. Each unit is probably not a complete processor, but just
+more capacity to handle operations upon that many more array elements at once. Often there are too many vertices or
+pixels to process, exceeding the number of shader units in the hardware, so GPUs usually stream in as many elements as
+it can handle before going back for more. The streaming pipeline gradually receives vertices, outputs triangles to the
+fragment shader, then finally outputs pixels. Remember to think of each GLSL instruction as executing on every array
+index at once. In GLSL, any input data fields will appear to refer to just one element, but really they affect all the
+stored vertices at once in parallel. Branching down different code paths per element index isn't impossible but it's
+expensive (slow), because the hardware doesn't expect you to do it.
+
+Vertex Shaders
+
+The purpose of this vertex shader program is to calculate the final resting place of vertices in screen coordinates.
+Each vertex starts out in local object coordinates and then undergoes a matrix transform to land somewhere onscreen, or
+else misses the drawing area and is clipped (cancelled).
+
+Note that the GPU always adjusts the final point values from the vertex shader. In fact, it does a few extra
+invisible steps with your vertex output:
+
+1. When your vertex shader outputs a position, the GPU first adjusts it with the "perspective division", which
+compensates for any desired vanishing point effects by modifying
+the vector in a non-linear way that matrices cannot do.
+2. Next, the GPU clips out any points that fall outside the range between -1 and 1 on multiple axes; those outside the
+range will be off-screen and shouldn't be processed further.
+3. Next, the GPU scales your point to the space of the viewport, using your viewport settings, so that it is expressed
+in pixel coordinates on screen. Pixel coordinates tend to be large (think of your screen resolution), whereas before the
+point was in a normalized space from -1 to 1 for easier clipping.
+4. Next, multiple vertices are grouped together according to your index settings and chosen primitive type.
+5. Next, the GPU determines which pixels are overlapped by each primitive shape. In a process called "rasterization", it
+comes up with a discrete pixel list by stepping between the endpoints of a primitive.
+6. Finally, as per-triangle pixel lists become ready, the GPU launches an instance of the "Fragment Shader" to act on
+each pixel of each triangle. Moving on to the next phase of GPU drawing, the fragment program runs.
+
+Fragment Shaders
+
+The fragment shader runs after the vertex shader. Its input is the full set of pixels that the GPU has determined
+overlap one triangle. There are usually lots of triangles to draw and color, so the GPU will stream in the correct
+pixel list from each one as they become available, as more vertex shaders finish finding out where triangles should land
+on-screen.
+
+The fragment shader fills in (shades) every per-pixel color (called fragments) overlapping where the triangle landed.
+It retrieves different values (such as vectors) that are stored at three extreme points of the triangle, and then
+interpolates the values weighted by the pixel's proximity to each extreme point, using them in formulas to determine
+color. GLSL variables of type "varying" appear to have come from a single vertex, but are actually coming from all
+three. When you ask for a given data field that was available at the vertices, what you get instead from a "varying"
+field is a value that has been interpolated between the three values stored at vertices.
+
+The fragment colors may or may not become final pixel colors; there could already be other triangles' fragments
+occupying the same pixels. Instead, think of fragment colors as "candidiates" to become physical pixel colors on your
+screen. After the fragment shader runs, the Z-Buffer test may be applied to see if the new triangle is closer to the
+camera, and even if so, blending settings may interpolate some of the old color into the result. Finally, an image is
+displayed onscreen.
+
 
 class Shape
 
+Shape explains to the GPU the layout of one type of 3D shape. Each must organize all data related to one shape, along
+with managing a copy in GPU memory. Data is broken down per-vertex of the shape. To use a Shape, fill in the "arrays"
+property, within which you design all the fields that you can look up in a vertex. For each field, a whole array will be
+made here of that data type, indexed per vertex. Along with your fields is an additional array "indices" describing how
+vertices are grouped with each other into shape primitives. A triple of vertex indices makes one triangle, for example.
+If you omit an indices array, then your elements in "arrays" will be automatically be grouped into primitives, in the
+order they're listed in. The default is groups of three.
+
 constructor (...array_names)
 
-**Shape** organizes data related to one 3D shape, along with its copy in GPU memory. Data is broken down per-vertex of
-the shape. To use, fill in the "arrays" property, within which you design all the fields that you can look up in a
-vertex; for each field, a whole array will be made here of that data type and it will be indexed per vertex. Along with
-your fields is an additional array "indices" describing how vertices are connected to each other into shape
-primitives---which could includes triangles, expressed as triples of vertex indices.
+When creating any Shape, you must first tell it which per-vertex fields you intend to use. Argument array_names contains
+the desired names of your fields. Empty arrays will then be made for you.
 
 copy_onto_graphics_card (context, selection_of_arrays = Object.keys (this.arrays), write_to_indices = true)
-copy_onto_graphics_card(): Called automatically as needed to load this vertex array set onto one of your GPU contexts
-for its first time. Send the completed vertex and index lists to their own buffers within any of your existing graphics
-card contexts. Optional arguments allow calling this again to overwrite the GPU buffers related to this shape's arrays,
-or subsets of them as needed (if only some fields of your shape have changed).
+
+Called automatically as needed to load the vertex arrays of this Shape onto one of your GPU contexts for its first time.
+The goal is to send the completed vertex and index lists to their own buffers within any of your existing graphics card
+contexts. Optional arguments allow the user to manually call copy_onto_graphics_card again to overwrite the GPU buffers
+related to this shape's arrays, or overwrite subsets of them as needed (if only some fields of your shape have changed).
 
 execute_shaders (gl, gpu_instance, type)
 
-execute_shaders(): Draws this shape's entire vertex buffer. Draw shapes using indices if they exist. Otherwise, assume
-the vertices are arranged as triples.
+Draws this shape, by converting its entire vertex buffer into an image onscreen. This function contains the WebGL call
+that launches the two shader programs. Draw shapes using indices if they exist. Otherwise, assume the vertices are
+arranged in the order they should be grouped into.
 
 draw (webgl_manager, uniforms, model_transform, material, type = "TRIANGLES")
 
-draw(): To appear onscreen, a shape of any variety goes through this function, which executes the shader programs. The
-shaders draw the right shape due to pre-selecting the correct buffer region in the GPU that holds that shape's data.
+To appear onscreen, a shape of any variety goes through this function. It makes a call to Shape::execute_shaders(). The
+shaders draw the right shape because of a setup step taken here: pre-selection of the correct buffer region in the GPU
+that holds that shape's data.
 
-All the below functions further assume that your vertex buffer includes fields called "position" and "normal" stored at
-each point, instead of just any arbitrary fields. Each vertex will have a 3D position and a 3D normal vector as
-available fields within "arrays" (both of type Vector3).
+******
+NOTE: All the below functions make a further assumption: that your vertex buffer includes fields called "position" and
+"normal" stored at each point, instead of just any arbitrary fields. Each vertex will have a 3D position and a 3D normal
+vector as available fields within "arrays" (both of type Vector3).
 
 Warning: Your arrays must be full! The below functions will FAIL if you leave so much as a single element of your arrays
 empty. Likewise, if your "indices" references any elements that aren't filled in, your shape won't draw on the GPU.
 
 static insert_transformed_copy_into (recipient, args, points_transform = Mat4.identity ())
 
-insert_transformed_copy_into(): For building compound shapes. A copy of this shape is made and inserted into any
-recipient shape you pass in. Compound shapes help reduce draw calls and speed up performance. One shape joins the other
-at a custom transform offset, adjusting positions and normals appropriately.
+Builds compound shapes, which are Shapes with array contents combined out of smaller shapes' arrays. A copy of this
+shape is made (using the given args) and inserted into any recipient shape you pass in. Compound shapes help reduce draw
+calls and speed up performance. One shape joins the other at a custom transform offset "points_transform", adjusting
+positions and normals appropriately.
 
 make_flat_shaded_version ()
 
@@ -55,167 +206,165 @@ from flat shading. A way to compute normals from scratch for shapes that have no
 
 duplicate_the_shared_vertices ()
 
-duplicate_the_shared_vertices(): Eliminate inter-triangle sharing of vertices for any data we want to abruptly vary as
-we cross over a triangle edge (such as texture images). Modify an indexed shape to remove any edges where the same
-vertices are indexed by both the adjacent triangles. Unless co-planar, the two would fight over assigning different
-normal vectors to the shared vertices.
+duplicate_the_shared_vertices(): Eliminate inter-triangle sharing of vertices. Doing so is necessary for any points
+that hold data that we want to abruptly vary as we cross over a triangle edge. Examples include texture images that
+abruptly change over an edge, or abrupt normal vector changes that create the appearance of a hard edge with no
+blending. Modify an indexed shape to remove any edges where the same vertices are indexed by both the adjacent
+triangles. The two triangles otherwise fight over assigning their differing data values to the shared vertices.
 
 flat_shade ()
 
-flat_shade(): Automatically assign the correct normals to each triangular element to achieve flat shading. Affect all
-recently added triangles (those past "offset" in the list). Assumes that no vertices are shared across seams. Internal
-helper function.
+flat_shade(): Automatically assign the correct normals to each triangular element to achieve flat shading. Assumes that
+no vertices are shared across seams. Internal helper function.
 
 const Shader
 
-**Shader** loads a GLSL shader program onto your graphics card, starting from a JavaScript string. To use it, make
-subclasses of Shader that define these strings of GLSL code. The base class will command the GPU to recieve, compile,
-and run these programs. In WebGL 1, the shader runs once per every shape that is drawn onscreen.
+See the lesson called "Shaders".
+
+Shader loads a GLSL shader program onto your graphics card, starting from a JavaScript string. To use, make subclasses
+of Shader that override special functions that define these strings of GLSL code. The base class will command the GPU to
+receive, compile, and run these programs. In WebGL 1, the shader runs once per every shape that is drawn onscreen.
 
 Extend the class and fill in the abstract functions, some of which define GLSL strings, and others (update_GPU) which
-define the extra custom JavaScript code needed to populate your particular shader program with all the data values it is
-expecting, such as matrices. The shader pulls these values from two places in your JavaScript: A Material object, for
-values pertaining to the current shape only, and a Shared_Uniforms object, for values pertaining to your entire Scene or
-program.
+define the extra custom JavaScript code needed to populate the GPU's memory with all the data values your particular
+shader program is expecting, such as matrices. The shader pulls these values from two JavaScript objects: "material" for
+values pertaining to the current shape only, and "uniforms" for values pertaining to the whole scene at a given moment.
 
 copy_onto_graphics_card (context)
 
-copy_onto_graphics_card(): Called automatically as needed to load the shader program onto one of your GPU contexts for
-its first time.
+Called automatically as needed to load the shader program onto one of your GPU contexts for its first time. Once we
+move it there, the GPU compiles the shader program using our strings.
 
-class Graphics_Addresses
-
-constructor (program, gl)
-
-**Graphics_Addresses** is a helper inner class used internally in Shaders for organizing communication with the GPU.
-Once we've compiled the Shader, we can query some things about the compiled program, such as the memory addresses it
-will use for uniform variables, and the types and indices of its per- vertex attributes. We'll need those for building
-vertex buffers.
+NOTE: Class Graphics_Addresses is a helper inner class found here, used internally in Shaders for organizing
+communication with the GPU. Once we've compiled the Shader, we can query some things about the compiled program, such as
+the memory addresses it will use for uniform variables, and the types and indices of its per-vertex attributes. We'll
+need those for building vertex buffers.
 
 activate (context, buffer_pointers, uniforms, model_transform, material)
 
-activate(): Selects this Shader in GPU memory so the next shape draws using it.
+Selects this Shader in GPU memory so the next shape draws using it.
 
 static assign_camera (camera_inverse, uniforms)
 
 Camera matrices and their inverses should be cached together, in sync, since both are frequently needed, and to limit
-slow calls to inverse().
+slow calls to Mat4::inverse().
 
-vertex_glsl_code () { }
-fragment_glsl_code () { }
-update_GPU () { }
+******
+NOTE: Override the following:
 
-*** How those four functions work (and how GPU shader programs work in general):
+vertex_glsl_code ()
 
-vertex_glsl_code() and fragment_glsl_code() should each return strings that contain code for a custom vertex shader and
-fragment shader, respectively.
+You must override this function to make a Shader; does nothing by default. Returns a string containing GLSL code for
+a custom vertex shader. See the lesson called "Vertex Shaders".
 
-The "Vertex Shader" is code that is sent to the graphics card at runtime, where on each run it gets compiled and linked
-there. Thereafter, all of your calls to draw shapes will launch the vertex shader program, which runs every line of its
-code upon every vertex stored in your buffer simultaneously (each instruction executes on every array index at once).
-Any GLSL "attribute" variables will appear to refer to some data field of just one vertex, but really they affect all
-the stored vertices at once in parallel.
+fragment_glsl_code ()
 
-The purpose of this vertex shader program is to calculate the final resting place of vertices in screen coordinates.
-Each vertex starts out in local object coordinates and then undergoes a matrix transform to land somewhere onscreen, or
-else misses the drawing area and is clipped (cancelled). One this has program has executed on your whole set of
-vertices, groups of them (three if using triangles) are connected together into primitives, and the set of pixels your
-primitive overlaps onscreen is determined. This launches an instance of the "Fragment Shader", starting the next phase
-of GPU drawing.
+You must override this function to make a Shader; does nothing by default. Returns a string containing GLSL code for
+a custom fragment shader. See the lesson called "Fragment Shaders".
 
-The "Fragment Shader" is more code that gets sent to the graphics card at runtime. The fragment shader runs after the
-vertex shader on a set of pixels (again, executing in parallel on all pixels at once that were overlapped by a
-primitive). This of course can only happen once the final onscreen position of a primitive is known, which the vertex
-shader found.
+update_GPU ()
 
-The fragment shader fills in (shades) every pixel (fragment) overlapping where the triangle landed. It retrieves
-different values (such as vectors) that are stored at three extreme points of the triangle, and then interpolates the
-values weighted by the pixel's proximity to each extreme point, using them in formulas to determine color. GLSL
-variables of type "varying" appear to have come from a single vertex, but are actually coming from all three, and are
-computed for every pixel in parallel by interpolated between the different values of the variable stored at the three
-vertices in this fashion.
+You must override this function to make a Shader; does nothing by default. Include the extra custom JavaScript code
+needed to populate the GPU's memory with all the data values your particular shader program is expecting, such as
+matrices.
 
-The fragment colors may or may not become final pixel colors; there could already be other triangles' fragments
-occupying the same pixels. The Z-Buffer test is applied to see if the new triangle is closer to the camera, and even if
-so, blending settings may interpolate some of the old color into the result. Finally, an image is displayed onscreen.
-
-You must define an update_GPU() function that includes the extra custom JavaScript code needed to populate your
-particular shader program with all the data values it is expecting.
 
 class Texture
 
-**Texture** wraps a pointer to a new texture image where it is stored in GPU memory, along with a new HTML image object.
-This class initially copies the image to the GPU buffers, optionally generating mip maps of it and storing them there
-too.
+Texture manages a 2D image on the GPU that can color (or exert other influence) along a shape's surface. A new HTML
+image object stores the image. A Texture object copies the image to the GPU buffers as needed. It wraps a pointer to
+where it is stored in GPU memory, for referencing it later. Optionally, mip maps can be generated when the texture is
+created. too.
 
-copy_onto_graphics_card(): Called automatically as needed to load the texture image onto one of your GPU contexts for
-its first time.
+constructor (filename, min_filter = "LINEAR_MIPMAP_LINEAR")
 
-activate(): Selects this Texture in GPU memory so the next shape draws using it. Optionally select a texture unit in
-case you're using a shader with many samplers. Terminate draw requests until the image file is actually loaded over the
-network:
+Change min_filter to other WebGL settings to change the minification method, which is visible whenever the per-pixel
+screen samples appear larger than the per-image texture samples. By default, mip mapping is used for blending.
+
+copy_onto_graphics_card()
+
+Called automatically as needed to load the texture image onto one of your GPU contexts for its first time.
+
+activate()
+
+Selects this Texture in GPU memory so the next shape draws using it. Optionally select a texture unit in case you're
+using a shader with many sampler variables.
 
 class Component
 
-constructor (props = {}) {
+See the lesson called "Component".
 
-**Scene** is the base class for any scene part or code snippet that you can add to a canvas. Make your own subclass(es)
-of this and override their methods "display()" and "make_control_panel()" to make them draw to a canvas, or generate
-custom control buttons and readouts, respectively. Scenes exist in a hierarchy; their child Scenes can either contribute
-more drawn shapes or provide some additional tool to the end user via drawing additional control panel buttons or live
-text readouts. Root component manages a whole graphics program for one on-page canvas, including its textures, shapes,
-shaders, and scenes. It requests a WebGL context and stores Scenes.
+To use Component, override certain methods. To draw a 3D scene, override render_animation and call draw() on existing
+Shapes.
+
+constructor (props = {})
+
+Use the "props" argument to pass certain custom settings to a Component. For example, if it is sharing its "uniforms"
+collection with another Component, you would pass in the shared value through props.
 
 Component.uniforms
 
-Non-standard solution for WebGL 1. Build a group of variables meant to become shader uniforms. These objects should be
-shared across scenes in a canvas, or even across canvases, to sync the contents.
+The member "uniforms" builds a group of variables meant to become shader uniforms. This is a non-standard solution that
+works for WebGL 1. Uniforms objects may be shared across scenes in a canvas, or even across canvases, to sync their
+contents.
 
-make_context (canvas, background_color = color (0, 0, 0, 1), dimensions) {
+make_context (canvas, background_color = color (0, 0, 0, 1), dimensions)
 
-For Components with their own canvas, prepare a region of GPU memory to hold a new graphics context for it.
+For Components hosting their own canvas in their document area, prepare a region of GPU memory to hold a new graphics
+context for it.
 
-set_canvas_size (dimensions = [1080, 600]) {
+set_canvas_size (dimensions = [1080, 600])
 
-set_size(): Allows you to re-size the canvas anytime. To work, it must change the size in CSS, wait for style to
-re-flow, and then change the size again within canvas attributes. Both are needed because the attributes on a canvas ave
-a special effect on buffers, separate from their style.
+Re-sizes the canvas anytime.
 
-frame_advance (time = 0) {
+frame_advance (time = 0)
 
-Draw a single frame of animation, using all loaded Scene objects. Measure how much real time has transpired in order to
-animate shapes' movements accordingly.
+Draw a single frame of animation, including all child Component objects. Measure how much real time has transpired in
+order to animate movement accordingly.
 
 new_line (parent = this.control_panel)
 
-new_line(): Formats a scene's control panel with a new line break.
+Formats a scene's control panel area with a new line break.
 
-live_string (callback, parent = this.control_panel) {
+live_string (callback, parent = this.control_panel)
 
-live_string(): Create an element somewhere in the control panel that does reporting of the scene's values in real time.
-The event loop will constantly update all HTML elements made this way.
+Create an element somewhere in the control panel area that does reporting of the scene's values in real time. The event
+loop will constantly update all HTML elements made this way. Slow and not ideal; React-js does it better.
 
 key_triggered_button (description, shortcut_combination, callback,
 color = '#' + Math.random ().toString (9).slice (-6),
 release_event, recipient = this,
 parent = this.control_panel)
 
-key_triggered_button(): Trigger any scene behavior by assigning a key shortcut and a labelled HTML button to fire any
-callback function/method of a Scene. Optional release callback as well.
+Create an interactive button for affecting the Component visible on the its own control panel area. Label the HTML
+button using "description". Trigger any Component behavior from the button by assigning a key shortcut
+"shortcut_combination" to fire any callback function/method "callback". Assign button HTML hex color via "color", which
+defaults to a random hex color. Optional release callback "release_event" as well. Event recipient and UI capture
+area can be configured as well, useful for some applications.
 
-render_layout (div, options = {}) {
-
-To use class Scene, override at least one of the below 4 functions, which will be automatically called by other classes:
 
 init () {}
+
+You must override this function to make a Component; does nothing by default. Use init() to create initial values for
+your Component.
+
+WARNING: ALL Shape, Shader, and Texture declarations should go inside of init(). To declare them elsewhere will result
+in serious damage to performance, since these objects are not meant to be transmitted to the GPU more than once
+(remember that render_animation is called every frame!). If a failure to heed this is detected, an error message
+results.
+
+To use class Scene, override init() as well as at least one of the below 4 functions, which will be automatically
+called by other classes:
+
+render_layout (div, options = {})
 render_animation (context) {}
-
-Called by Webgl_Manager for drawing.
-
 render_documentation () {}
-make_control_panel () {}
+render_controls () {}
 
-make_control_panel(): Called by Controls_Widget for generating interactive UI.
+See lesson called "Component" for their descriptions. Consult the included demos for examples on how to make your
+own implementations.
 
+Note that render_layout() comes with a default implementation. By default, it sets up a reasonable HTML document with a
+canvas drawing area, making use of the tools in tiny-graphics-gui.js.
 </body>
 </html>

@@ -119,8 +119,8 @@ class Simulation extends Component
       let alpha = this.time_accumulator / this.dt;
       for( let b of this.bodies ) b.blend_state( alpha );
     }
-  make_control_panel()
-    {                       // make_control_panel(): Create the buttons for interacting with simulation time.
+  render_controls()
+    {                       // render_controls(): Create the buttons for interacting with simulation time.
       this.key_triggered_button( "Speed up time", [ "Shift","T" ], () => this.time_scale *= 5           );
       this.key_triggered_button( "Slow down time",        [ "t" ], () => this.time_scale /= 5           ); this.new_line();
       this.live_string( box => { box.textContent = "Time scale: "  + this.time_scale                  } ); this.new_line();
@@ -246,11 +246,11 @@ export class Collision_Demo extends Simulation
       this.active_color = { ...this.inactive_color, color: color( .5,0,0,1 ), ambient: .5 };
       this.bright = { shader: phong, color: color( 0,1,0,.5 ), ambient: 1 };
     }
-  make_control_panel()
+  render_controls()
     { this.key_triggered_button( "Previous collider", [ "b" ], this.decrease );
       this.key_triggered_button( "Next",              [ "n" ], this.increase );
       this.new_line();
-      super.make_control_panel();
+      super.render_controls();
     }
   increase() { this.collider_selection = Math.min( this.collider_selection + 1, this.colliders.length-1 ); }
   decrease() { this.collider_selection = Math.max( this.collider_selection - 1, 0 ) }
