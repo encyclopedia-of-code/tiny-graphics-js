@@ -12,8 +12,9 @@
     <title>Title</title>
 </head>
 <body style="white-space: pre-wrap;">
+```javascript
 class Shape
-
+```
 Shape explains to the GPU the layout of one type of 3D shape. Shape objects organize all data related to one shape,
 along with managing a copy in GPU memory. Data is broken down per-vertex of the shape. Think of vertices as the corner
 points of your shape, but in addition to storing a position, they could store additional data per vertex as needed. To
@@ -23,13 +24,15 @@ additional array "indices" describing how vertices are grouped with each other i
 indices makes one triangle, for example. If you omit an indices array, then your elements in "arrays" will be
 automatically be grouped into primitives, in the order they're listed in. The default is groups of three.
 
+```javascript
 constructor (...array_names)
-
+```
 When creating any Shape, you must first tell it which per-vertex fields you intend to use. Argument array_names contains
 the desired names of your fields. Empty arrays will then be made for you.
 
+```javascript
 copy_onto_graphics_card (context, selection_of_arrays = Object.keys (this.arrays), write_to_indices = true)
-
+```
 Called automatically as needed to load the vertex arrays of this Shape onto one of your GPU contexts for its first time.
 The goal is to send the completed vertex and index lists to their own buffers within any of your existing graphics card
 contexts. Optional arguments allow the user to manually call copy_onto_graphics_card again to overwrite the GPU buffers
@@ -216,12 +219,12 @@ in serious damage to performance, since these objects are not meant to be transm
 (remember that render_animation is called every frame!). If a failure to heed this is detected, an error message
 results.
 
-To use class Scene, override init() as well as at least one of the below 4 functions, which will be automatically
+To use class Component, override init() as well as at least one of the below 4 functions, which will be automatically
 called by other classes:
 
 render_layout (div, options = {})
 render_animation (context) {}
-render_documentation () {}
+render_explanation () {}
 render_controls () {}
 
 See lesson called "Component" for their descriptions. Consult the included demos for examples on how to make your

@@ -58,7 +58,7 @@ const Movement_Controls = defs.Movement_Controls =
           });
           canvas.addEventListener ("mouseout", e => { if ( !this.mouse.anchor) this.mouse.from_center.scale_by (0); });
       }
-      render_documentation (document_builder, document_element = document_builder.document_region) { }
+      render_explanation (document_builder, document_element = document_builder.document_region) { }
       render_controls () {
           this.control_panel.innerHTML += "Click and drag the scene to <br> spin your viewpoint around it.<br>";
           this.key_triggered_button ("Up", [" "], () => this.thrust[ 1 ] = -1, undefined, () => this.thrust[ 1 ] = 0);

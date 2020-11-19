@@ -470,7 +470,7 @@ const Component = tiny.Component =
 
           this.document_region           = div.appendChild (document.createElement ("div"));
           this.document_region.className = "documentation";
-          this.render_documentation ();
+          this.render_explanation ();
           // The next div down will hold a canvas and/or related interactive areas.
           this.program_stuff = div.appendChild (document.createElement ("div"));
 
@@ -512,6 +512,6 @@ const Component = tiny.Component =
 
       init () {}
       render_animation (context) {}                            // Called each frame for drawing.
-      render_documentation () {}
+      render_explanation () {}
       render_controls () {}     // render_controls(): Called by Controls_Widget for generating interactive UI.
   };

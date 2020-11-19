@@ -66,7 +66,7 @@ export class Many_Lights_Demo extends Component
           if( a[i][2] > 1 ) a[i][2] = -this.columns + .001;
         } );
     }
-  render_documentation()
+  render_explanation()
     { this.document_region.innerHTML +=
         `<p>This demo shows how to make the illusion that there are many lights, despite the shader only being aware of two.
          The shader used here (class Phong_Shader) is told to take only two lights into account when coloring in a shape.

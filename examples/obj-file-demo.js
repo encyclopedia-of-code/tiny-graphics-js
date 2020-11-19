@@ -135,7 +135,7 @@ export class Obj_File_Demo extends Component
           this.shapes.teapot.draw( caller, this.uniforms, model_transform, i == 1 ? this.stars : this.bumps );
         }
       }
-  render_documentation()
+  render_explanation()
     { this.document_region.innerHTML +=
         `<p>This demo loads an external 3D model file of a teapot.  It uses a condensed version of the "webgl-obj-loader.js"
          open source library, though this version is not guaranteed to be complete and may not handle some .OBJ files.  It is
