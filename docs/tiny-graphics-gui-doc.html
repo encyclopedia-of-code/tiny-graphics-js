@@ -5,57 +5,92 @@
     <title>Title</title>
 </head>
 <body style="white-space: pre-wrap;">
+
+Controls_Widget
+
 class Controls_Widget
 
-**Controls_Widget** adds an array of panels to the document, one per loaded
-Scene object, each providing interactive elements such as buttons with key
-bindings, live readouts of Scene data members, etc.
+Allows the user to control and interact with Components. Each panel provides interactive elements, such as buttons with
+key bindings, live readouts of Component data members, etc. A Controls_Widget adds a horizontal row of DOM panels to the
+document, one per loaded Component object that's affecting a given canvas.
 
 constructor( component, options = {} )
+
+Pass in the outer Component object that owns the canvas. Child components of it used for animation will be found by
+Controls_Widget and represented as HTML panels.
+
+Keyboard_Manager
 
 class Keyboard_Manager
 
-**Keyboard_Manager** maintains a running list of which keys are depressed.  You can map combinations of
-shortcut keys to trigger callbacks you provide by calling add().  See add()'s arguments.  The shortcut
-list is indexed by strings, conveniently showing each bound shortcut combination.
+Keyboard_Manager maintains a running list of which keys are depressed. You can map combinations of shortcut keys to
+the provided callback functions they should trigger by calling add(). See add()'s arguments. The shortcut list is
+indexed by strings, conveniently showing each bound shortcut combination.
 
 constructor( target = document, callback_behavior = ( callback, event ) => callback( event ) )
 
-The constructor  optionally takes "target", which is the desired DOM element for keys to be pressed
-inside of, and "callback_behavior", which will be called for every key action to allow extra behavior
-on each event -- giving an opportunity to customize their bubbling, preventDefault, and more.  It
-defaults to no additional behavior besides the callback itself on each assigned key action.
+A new Keyboard_Manager object is ready to use without any additional work. Optionally pass in "target", which is the
+desired DOM element that should capture key events. Optionally pass in "callback_behavior", which will be called for
+every key action to allow extra behavior on each event -- giving an opportunity to customize their bubbling,
+preventDefault, and more. It defaults to no additional behavior besides the callback itself on each assigned key action.
 
 add( shortcut_combination, callback = () => {}, keyup_callback = () => {} )
 
-add(): Creates a keyboard operation.  The argument shortcut_combination wants an
-array of strings that follow standard KeyboardEvent key names. Both the keyup
-and keydown callbacks for any key combo are optional.
+Creates a keyboard operation. The argument "shortcut_combination" expects an array of strings that follow standard
+KeyboardEvent key names. Both the keyup and keydown callbacks for any key combo are optional.
+
+Code_Manager
 
 class Code_Manager
 
-**Code_Manager** breaks up a string containing code (any ES6 JavaScript).  The RegEx being used
-to parse is from https://github.com/lydell/js-tokens which states the following limitation:
-"If the end of a statement looks like a regex literal (even if it isn’t), it will be treated
-as one."  (This can miscolor lines of code containing divisions and comments).
+Code_Manager breaks up a string containing code (any ES6 JavaScript) for syntax highlighting and display purposes. The
+RegEx being used to parse JavaScript code is from https://github.com/lydell/js-tokens
+
+Note: The source above states the following limitation of the regex: "If the end of a statement looks like a regex
+literal (even if it isn’t), it will be treated as one." (This can miscolor lines of code containing both divisions and
+EOL comments).
 
 constructor( code )
 
+Pass in any string of JavaScript code. The Code_Manager will set its members tokens and no_comments, which are
+arrays that respectively contain every token and every non-comment token. A token has both a type and a value. The
+former is for categorizing which type of JavaScript syntax it is; the latter is the actual content.
+
+Code_Widget
+
 class Code_Widget
 
-**Code_Widget** draws a code navigator panel with inline links to the entire program source code.
+Code_Widget draws a DOM element containing a code navigator panel, with colorful syntax highlighting and with inline
+links to the entire program source code. Clicking a linked class definition brings up that source code instead.
+Code_Widget considers all definitions that exist within the namespaces called "tiny" and "defs" when converting
+identifier names into links.
 
 constructor( component, options = {} )
+
+Pass in the Component that owns the document section this widget appears inside of. Option "code_in_focus" selects
+which source code class, method, or function to display. Option "hide_navigator" hides the table of links to all
+known code definitions appearing in namespaces "tiny" and "defs".
 
 display_code( code_in_focus )
 
-display_code():  Populate the code textbox. Pass undefined to choose index.html source.
+Populate the code textbox. Pass undefined to choose index.html's source as the code to display.
+
+Editor_Widget
 
 class Editor_Widget
 
+Currently does not work offline. This class is for submitting modified class definition to online hosted repositories
+of tiny-graphics demos. The button to refresh the demo with updated code is currently non-working.
+
 constructor( component, options = {} )
 
+Pass in the Component that owns the document section this widget appears inside of. Option "rows" determines the
+maximum amount of rows in the input before line wrapping. Option "code_in_focus" selects which source code class,
+method, or function to display.
+
 select_class( class_definition )
+
+Populates the editor textbox with an existing definition from source.
 
 fetch_handler (url, body)
 
