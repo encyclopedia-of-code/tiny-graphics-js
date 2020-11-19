@@ -27,7 +27,7 @@ unlike React, tiny-graphics is not intended for creating high-performance all-pu
 so expect to follow a more fixed document layout that isn't made to track/sync complex UI changes.
 - Various still-pending fixes and API enhancements.
 
-tiny-graphics.js
+## tiny-graphics.js
 
 The main file (tiny-graphics.js) defines just four class definitions useful for a graphics program -- Shape, Shader,
 Texture, and Component.
@@ -42,7 +42,7 @@ operations found in computer graphics. It also comes with a file full of helper 
 adding interactive document areas so the user can affect the nearby 3D drawing area. Lastly, tiny-graphics-js comes with
 several files containing useful code examples of Shapes, Shaders, and Components, the latter of which are live demos.
 
-Components
+## Components
 
 A Component is one piece of your overall program. Each Component both represents some (or all) of a 3D scene, plus some
 (or all) of the interactive HTML document surrounding the scene. Components nest inside one another in a hierarchy. Your
@@ -65,12 +65,16 @@ for visualization, or via drawing additional control panel buttons or live text 
 whole web document and graphics program by requesting WebGL contexts from the browser and storing active
 tiny-graphics-js objects.
 
-Documentation
+## Documentation
 
 Code documentation for this library (plus additional WebGL lessons) can be found in the Wiki for this Github project:
 https://github.com/encyclopedia-of-code/tiny-graphics-js/wiki
 
-Installing tiny-graphics.js
+## Wiki
+
+See the above link to the Wiki for this project.
+
+## Installing tiny-graphics.js
 
 To run a sample using tiny-graphics.js, visit its GitHub Pages link:
 https://encyclopedia-of-code.github.io/tiny-graphics-js/
@@ -93,7 +97,7 @@ To select a demo, open and edit main-scene.js.  Assign your choice to the Main_S
 
 The code comments in each file should help, especially if you look at the definition of Transforms_Sandbox.  So should the explanations that some demos print on the page.  Enjoy!
 
-About tiny-graphics.js
+## About tiny-graphics.js
 
 The tiny-graphics.js software library by Garett Ridge has accompanied UCLA Computer Science's 174a course (Intro to Computer Graphics) since 2016.
 
