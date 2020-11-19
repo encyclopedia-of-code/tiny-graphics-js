@@ -5,160 +5,23 @@
     <title>Title</title>
 </head>
 <body style="white-space: pre-wrap;">
-
-tiny-graphics-js
-
-A library that shows how to organize a complete graphics program, refactoring common WebGL steps.
-
-Tiny-graphics-js mainly excels in an educational setting by showing a compact but effective usage of WebGL commands.
-This project bridges the difficult gap that occurs once you've learned WebGL commands but still struggle with excessive
-setup code between steps. Tiny-graphics shows how to organize WebGL calls into a flexible program with reusable parts.
-With setup code out of the way, you can see your math more clearly, and focus on creativity.
-
-Currently, the main limitations of tiny-graphics-js to be aware of are:
-
-- Compared to crowd-sourced frameworks like three.js, not as many examples exist yet of how to make various graphics
-effects. Not all tiny-graphics-js demos are updated/available (such as for ray tracing).
-- tiny-graphics uses a draw() function to draw a single shape. Modern graphics frameworks, however, handle shapes and
-materials a better way. To reduce the total number of calls to the GPU, they draw as much of the scene at once as
-possible in a few "rendering passes". Frameworks like three.js sort your program into a scene graph in an optimized way
-to minimize GPU state changes. Although it's possible to design such a framework in tiny-graphics.js yourself out of
-Components, this functionality is not built in.
-- Parts of tiny-graphics are inspired by React, a popular JavaScript framework. Both feature a tree of Component objects
-that design a document. In tiny-graphics the Component tree nodes also do double duty for 3D graphics creation. However,
-unlike React, tiny-graphics is not intended for creating high-performance all-purpose documents. Our engine is simpler,
-so expect to follow a more fixed document layout that isn't made to track/sync complex UI changes.
-- Various still-pending fixes and API enhancements.
-
-tiny-graphics.js
-
-The main file (tiny-graphics.js) defines just four class definitions useful for a graphics program -- Shape, Shader,
-Texture, and Component.
-
-Shape: Explains to the GPU the layout of one type of 3D shape.
-Shader: Loads a GLSL shader program onto your graphics card, ultimately converting raw shape data into a final 2D image.
-Texture: Manages a 2D image on the GPU that can color (or exert other influence) along a shape's surface.
-Component: One piece of your overall program.
-
-In addition, tiny-graphics-js comes with a tiny math library (tiny-graphics-math.js) for common vector and matrix
-operations found in computer graphics. It also comes with a file full of helper objects (tiny-graphics-gui.js) for
-adding interactive document areas so the user can affect the nearby 3D drawing area. Lastly, tiny-graphics-js comes with
-several files containing useful code examples of Shapes, Shaders, and Components, the latter of which are live demos.
-
-Components
-
-A Component is one piece of your overall program. Each Component both represents some (or all) of a 3D scene, plus some
-(or all) of the interactive HTML document surrounding the scene. Components nest inside one another in a hierarchy. Your
-web document may contain several 3D canvas drawing areas. Any graphics canvas area on the page can display the combined
-3D result of any number of Components, some of which might even be shared across multiple canvas drawing areas.
-
-Component is the base class for any scene you might want to design. For simple scenes, your small code snippet will go
-in a Component. To use, make your own subclass(es) of Component and override a few of the special functions that affect
-how it renders. Depending on which function you override, "rendering" can mean different things:
-
--render-animation(): Contributing to the 3D animation displayed in a canvas area
--render-layout(): Contributing interactive features and layout changes to the web document
--render-documentation(): Contributing text to the web document, such as a caption above a 3D drawing area explaining it.
--render-controls(): Contributing HTML buttons that specifically control this Component, and live readouts of its values.
-
-Children of a Component might provide some additional tool to the end user -- such as via contributing more 3D shapes
-for visualization, or via drawing additional control panel buttons or live text readouts. The root component manages the
-whole web document and graphics program by requesting WebGL contexts from the browser and storing active
-tiny-graphics-js objects.
-
-Shaders
-
-How GPUs work in general:
-
-Every time the graphics card (GPU) draws a shape for us, it will run two programs: The vertex shader, then the fragment
-shader. That's their order. The code for both shader programs is just a string when you deal with it in JavaScript;
-later, at runtime, you will send it to the graphics card. Once the shaders arrive, both get compiled and linked by the
-GPU hardware, and then are ready to use.
-
-What shader programs do is to answer these questions:
-
-Vertex Shader: Given all the points defining a shape, where should they land onscreen this time?
-Fragment Shader: Given all the pixels overlapped by a triangle, what determines their colors?
-
-In the simple case, the vertex shader just relocates each given 3D point by applying the final matrix product to it. In
-the simple case, the fragment shader just compares some vectors (normal, light, and camera vectors) originating any
-given pixel to come up with a final color. Both shaders could get arbitrarily more complicated, because they're
-programs.
-
-Because the vertex shader program works on "each" vertex in your shape (and the source code will only mention one, in
-a variable like "position"), it may be tempting to think of a whole lot of vertex program instances running at once
-to process all your vertices. Likewise for the fragment shader, which works on "each" pixel in a triangle (and the
-source code again only mentions one), so you might be tempted to think of billions of processors each running your
-fragment shader program. After all, there are a lot of pixels to process per triangle, per shape, per scene!
-
-But instead, think of it this way: You have one GPU. It runs your vertex shader program, but it runs it on your whole
-vertex array *at once*. Every time you do an operation to access a per-vertex variable like "position", the program
-really accesses *all* the positions, creating an array of instances to store the result for each vertex. Every math
-operation modifies each array element in lockstep. Likewise, think of the fragment shader as running operations on
-every pixel at once in lockstep, coming up with colors for all of them.
-
-The amount of shader "units" determines how parallel a GPU is. Each unit is probably not a complete processor, but just
-more capacity to handle operations upon that many more array elements at once. Often there are too many vertices or
-pixels to process, exceeding the number of shader units in the hardware, so GPUs usually stream in as many elements as
-it can handle before going back for more. The streaming pipeline gradually receives vertices, outputs triangles to the
-fragment shader, then finally outputs pixels. Remember to think of each GLSL instruction as executing on every array
-index at once. In GLSL, any input data fields will appear to refer to just one element, but really they affect all the
-stored vertices at once in parallel. Branching down different code paths per element index isn't impossible but it's
-expensive (slow), because the hardware doesn't expect you to do it.
-
-Vertex Shaders
-
-The purpose of this vertex shader program is to calculate the final resting place of vertices in screen coordinates.
-Each vertex starts out in local object coordinates and then undergoes a matrix transform to land somewhere onscreen, or
-else misses the drawing area and is clipped (cancelled).
-
-Note that the GPU always adjusts the final point values from the vertex shader. In fact, it does a few extra
-invisible steps with your vertex output:
-
-1. When your vertex shader outputs a position, the GPU first adjusts it with the "perspective division", which
-compensates for any desired vanishing point effects by modifying
-the vector in a non-linear way that matrices cannot do.
-2. Next, the GPU clips out any points that fall outside the range between -1 and 1 on multiple axes; those outside the
-range will be off-screen and shouldn't be processed further.
-3. Next, the GPU scales your point to the space of the viewport, using your viewport settings, so that it is expressed
-in pixel coordinates on screen. Pixel coordinates tend to be large (think of your screen resolution), whereas before the
-point was in a normalized space from -1 to 1 for easier clipping.
-4. Next, multiple vertices are grouped together according to your index settings and chosen primitive type.
-5. Next, the GPU determines which pixels are overlapped by each primitive shape. In a process called "rasterization", it
-comes up with a discrete pixel list by stepping between the endpoints of a primitive.
-6. Finally, as per-triangle pixel lists become ready, the GPU launches an instance of the "Fragment Shader" to act on
-each pixel of each triangle. Moving on to the next phase of GPU drawing, the fragment program runs.
-
-Fragment Shaders
-
-The fragment shader runs after the vertex shader. Its input is the full set of pixels that the GPU has determined
-overlap one triangle. There are usually lots of triangles to draw and color, so the GPU will stream in the correct
-pixel list from each one as they become available, as more vertex shaders finish finding out where triangles should land
-on-screen.
-
-The fragment shader fills in (shades) every per-pixel color (called fragments) overlapping where the triangle landed.
-It retrieves different values (such as vectors) that are stored at three extreme points of the triangle, and then
-interpolates the values weighted by the pixel's proximity to each extreme point, using them in formulas to determine
-color. GLSL variables of type "varying" appear to have come from a single vertex, but are actually coming from all
-three. When you ask for a given data field that was available at the vertices, what you get instead from a "varying"
-field is a value that has been interpolated between the three values stored at vertices.
-
-The fragment colors may or may not become final pixel colors; there could already be other triangles' fragments
-occupying the same pixels. Instead, think of fragment colors as "candidiates" to become physical pixel colors on your
-screen. After the fragment shader runs, the Z-Buffer test may be applied to see if the new triangle is closer to the
-camera, and even if so, blending settings may interpolate some of the old color into the result. Finally, an image is
-displayed onscreen.
-
-
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body style="white-space: pre-wrap;">
 class Shape
 
-Shape explains to the GPU the layout of one type of 3D shape. Each must organize all data related to one shape, along
-with managing a copy in GPU memory. Data is broken down per-vertex of the shape. To use a Shape, fill in the "arrays"
-property, within which you design all the fields that you can look up in a vertex. For each field, a whole array will be
-made here of that data type, indexed per vertex. Along with your fields is an additional array "indices" describing how
-vertices are grouped with each other into shape primitives. A triple of vertex indices makes one triangle, for example.
-If you omit an indices array, then your elements in "arrays" will be automatically be grouped into primitives, in the
-order they're listed in. The default is groups of three.
+Shape explains to the GPU the layout of one type of 3D shape. Shape objects organize all data related to one shape,
+along with managing a copy in GPU memory. Data is broken down per-vertex of the shape. Think of vertices as the corner
+points of your shape, but in addition to storing a position, they could store additional data per vertex as needed. To
+use a Shape, fill in the "arrays" property, within which you design all the fields that you can look up in a vertex. For
+each field, a whole array will be made here of that data type, indexed per vertex. Along with your fields is an
+additional array "indices" describing how vertices are grouped with each other into shape primitives. A triple of vertex
+indices makes one triangle, for example. If you omit an indices array, then your elements in "arrays" will be
+automatically be grouped into primitives, in the order they're listed in. The default is groups of three.
 
 constructor (...array_names)
 
