@@ -11,9 +11,9 @@ export const tiny = {...math, ...widgets};
 // Pull these names into this module's scope for convenience:
 const {Vector3, vec3, color, Matrix, Mat4, Keyboard_Manager} = tiny;
 
-
 const Shape = tiny.Shape =
   class Shape {
+      // See description at https://github.com/encyclopedia-of-code/tiny-graphics-js/wiki/tiny-graphics.js#shape
       constructor (...array_names) {
           [this.arrays, this.indices] = [{}, []];
           this.gpu_instances          = new Map ();      // Track which GPU contexts this object has copied itself onto.
@@ -158,6 +158,7 @@ const test_rookie_mistake = function () {
 
 const Shader = tiny.Shader =
   class Shader {
+      // See description at https://github.com/encyclopedia-of-code/tiny-graphics-js/wiki/tiny-graphics.js#shader
       copy_onto_graphics_card (context) {
           // Define what this object should store in each new WebGL Context:
           const defaults = {
@@ -276,6 +277,7 @@ const Shader = tiny.Shader =
 
 const Texture = tiny.Texture =
   class Texture {
+      // See description at https://github.com/encyclopedia-of-code/tiny-graphics-js/wiki/tiny-graphics.js#texture
       constructor (filename, min_filter = "LINEAR_MIPMAP_LINEAR") {
           Object.assign (this, {filename, min_filter});
 
@@ -330,6 +332,7 @@ const Texture = tiny.Texture =
 
 const Component = tiny.Component =
   class Component {
+      // See description at https://github.com/encyclopedia-of-code/tiny-graphics-js/wiki/tiny-graphics.js#component
       uniforms = Shader.default_uniforms ();
       constructor (props = {}) {
           const rules = [

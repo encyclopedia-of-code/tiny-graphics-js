@@ -2,6 +2,7 @@ export const math = {};
 
 const Vector = math.Vector =
   class Vector extends Float32Array {
+      // See description at https://github.com/encyclopedia-of-code/tiny-graphics-js/wiki/tiny-graphics-math.js
       static create (...arr) {
           return new Vector (arr);
       }
@@ -36,6 +37,7 @@ const Vector = math.Vector =
 const Vector3 = math.Vector3 =
   class Vector3 extends Float32Array {
       // **Vector3** is a specialization of Vector only for size 3, for performance reasons.
+      // See description at https://github.com/encyclopedia-of-code/tiny-graphics-js/wiki/tiny-graphics-math.js#vector3
       static create (x, y, z) {
           const v = new Vector3 (3);
           v[ 0 ]  = x;
@@ -116,6 +118,7 @@ const Vector3 = math.Vector3 =
 const Vector4 = math.Vector4 =
   class Vector4 extends Float32Array {
       // **Vector4** is a specialization of Vector only for size 4, for performance reasons.
+      // See description at https://github.com/encyclopedia-of-code/tiny-graphics-js/wiki/tiny-graphics-math.js#vector4
       static create (x, y, z, w) {
           const v = new Vector4 (4);
           v[ 0 ]  = x;
@@ -201,6 +204,7 @@ const Vector4 = math.Vector4 =
       to_string () { return "[vec4 " + this.join (", ") + "]"; }
   };
 
+// See description at https://github.com/encyclopedia-of-code/tiny-graphics-js/wiki/tiny-graphics-math.js#shorthand
 const vec     = math.vec = Vector.create;
 const vec3    = math.vec3 = Vector3.create;
 const vec4    = math.vec4 = Vector4.create;
@@ -213,6 +217,7 @@ const color   = math.color = Vector4.create;
 
 const Matrix = math.Matrix =
   class Matrix extends Array {
+      // See description at https://github.com/encyclopedia-of-code/tiny-graphics-js/wiki/tiny-graphics-math.js#matrix
       constructor (...args) {
           super (0);
           this.push (...args);
@@ -281,6 +286,7 @@ const Matrix = math.Matrix =
 
 const Mat4 = math.Mat4 =
   class Mat4 extends Matrix {
+      // See description at https://github.com/encyclopedia-of-code/tiny-graphics-js/wiki/tiny-graphics-math.js#mat4
       static identity () { return Matrix.of ([1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]); };
       static rotation (angle, x, y, z) {
           const normalize = (x, y, z) => {

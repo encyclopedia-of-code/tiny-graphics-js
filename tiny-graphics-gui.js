@@ -5,30 +5,32 @@ export const widgets = {};
 
 const Controls_Widget = widgets.Controls_Widget =
   class Controls_Widget {
+      // See description at:
+      // https://github.com/encyclopedia-of-code/tiny-graphics-js/wiki/tiny-graphics-gui.js#controls-widget
       constructor (component, options = {}) {
           const rules = [".controls-widget * { font-family: monospace }",
-              ".controls-widget div { background: white }",
-              ".controls-widget table { border-collapse: collapse; display:block; overflow-x: auto; }",
-              ".controls-widget table.control-box { width: 1080px; border:0; margin:0; max-height:380px; transition:.5s; overflow-y:scroll; background:DimGray }",
-              ".controls-widget table.control-box:hover { max-height:500px }",
-              ".controls-widget table.control-box td { overflow:hidden; border:0; background:DimGray; border-radius:30px }",
-              ".controls-widget table.control-box td .control-div { background: #EEEEEE; height:338px; padding: 5px 5px 5px 30px; box-shadow: 25px 0px 60px -15px inset }",
-              ".controls-widget table.control-box td * { background:transparent }",
-              ".controls-widget table.control-box .control-div td { border-radius:unset }",
-              ".controls-widget table.control-box .control-title { padding:7px 40px; color:white; background:DarkSlateGray; box-shadow: 25px 0px 70px -15px inset black }",
-              ".controls-widget *.live_string { display:inline-block; background:unset }",
-              ".dropdown { display:inline-block }",
-              ".dropdown-content { display:inline-block; transition:.2s; transform: scaleY(0); overflow:hidden; position: absolute; \
-                                    z-index: 1; background:#E8F6FF; padding: 16px; margin-left:30px; min-width: 100px; \
-                                    box-shadow: 5px 10px 16px 0px rgba(0,0,0,0.2) inset; border-radius:10px }",
-              ".dropdown-content a { color: black; padding: 4px 4px; display: block }",
-              ".dropdown a:hover { background: #f1f1f1 }",
-              ".controls-widget button { background: #4C9F50; color: white; padding: 6px; border-radius:9px; \
-                                        box-shadow: 4px 6px 16px 0px rgba(0,0,0,0.3); transition: background .3s, transform .3s }",
-              ".controls-widget button:hover, button:focus { transform: scale(1.3); color:gold }",
-              ".link { text-decoration:underline; cursor: pointer }",
-              ".show { transform: scaleY(1); height:200px; overflow:auto }",
-              ".hide { transform: scaleY(0); height:0px; overflow:hidden  }"];
+                         ".controls-widget div { background: white }",
+                         ".controls-widget table { border-collapse: collapse; display:block; overflow-x: auto; }",
+                         ".controls-widget table.control-box { width: 1080px; border:0; margin:0; max-height:380px; transition:.5s; overflow-y:scroll; background:DimGray }",
+                         ".controls-widget table.control-box:hover { max-height:500px }",
+                         ".controls-widget table.control-box td { overflow:hidden; border:0; background:DimGray; border-radius:30px }",
+                         ".controls-widget table.control-box td .control-div { background: #EEEEEE; height:338px; padding: 5px 5px 5px 30px; box-shadow: 25px 0px 60px -15px inset }",
+                         ".controls-widget table.control-box td * { background:transparent }",
+                         ".controls-widget table.control-box .control-div td { border-radius:unset }",
+                         ".controls-widget table.control-box .control-title { padding:7px 40px; color:white; background:DarkSlateGray; box-shadow: 25px 0px 70px -15px inset black }",
+                         ".controls-widget *.live_string { display:inline-block; background:unset }",
+                         ".dropdown { display:inline-block }",
+                         ".dropdown-content { display:inline-block; transition:.2s; transform: scaleY(0); overflow:hidden; position: absolute; \
+                                               z-index: 1; background:#E8F6FF; padding: 16px; margin-left:30px; min-width: 100px; \
+                                               box-shadow: 5px 10px 16px 0px rgba(0,0,0,0.2) inset; border-radius:10px }",
+                         ".dropdown-content a { color: black; padding: 4px 4px; display: block }",
+                         ".dropdown a:hover { background: #f1f1f1 }",
+                         ".controls-widget button { background: #4C9F50; color: white; padding: 6px; border-radius:9px; \
+                                                   box-shadow: 4px 6px 16px 0px rgba(0,0,0,0.3); transition: background .3s, transform .3s }",
+                         ".controls-widget button:hover, button:focus { transform: scale(1.3); color:gold }",
+                         ".link { text-decoration:underline; cursor: pointer }",
+                         ".show { transform: scaleY(1); height:200px; overflow:auto }",
+                         ".hide { transform: scaleY(0); height:0px; overflow:hidden  }"];
 
           tiny.Component.initialize_CSS (Controls_Widget, rules);
 
@@ -93,14 +95,16 @@ const Controls_Widget = widgets.Controls_Widget =
 
 const Keyboard_Manager = widgets.Keyboard_Manager =
   class Keyboard_Manager {
+      // See description at:
+      // https://github.com/encyclopedia-of-code/tiny-graphics-js/wiki/tiny-graphics-gui.js#keyboard_manager
       constructor (target = document, callback_behavior = (callback, event) => callback (event)) {
           this.saved_controls        = {};
           this.actively_pressed_keys = new Set ();
           this.callback_behavior     = callback_behavior;
           target.addEventListener ("keydown", this.key_down_handler.bind (this));
           target.addEventListener ("keyup", this.key_up_handler.bind (this));
-          window.addEventListener ("focus", () => this.actively_pressed_keys.clear ());  // Deal with stuck keys during
-                                                                                         // focus change.
+          // Deal with stuck keys during focus change:
+          window.addEventListener ("focus", () => this.actively_pressed_keys.clear ());
       }
       key_down_handler (event) {
           if (["INPUT", "TEXTAREA"].includes (event.target.tagName)) return;    // Don't interfere with typing.
@@ -111,8 +115,7 @@ const Keyboard_Manager = widgets.Keyboard_Manager =
                   && event.shiftKey === saved.shortcut_combination.includes ("Shift")
                   && event.altKey === saved.shortcut_combination.includes ("Alt")
                   && event.metaKey === saved.shortcut_combination.includes ("Meta"))  // Modifiers must exactly match.
-                  this.callback_behavior (saved.callback, event);                      // The keys match, so fire the
-                                                                                       // callback.
+                  this.callback_behavior (saved.callback, event);       // The keys match, so fire the callback.
           }
       }
       key_up_handler (event) {
@@ -120,7 +123,7 @@ const Keyboard_Manager = widgets.Keyboard_Manager =
                 upper_symbols = "QWERTYUIOPASDFGHJKLZXCVBNM!@#$%^&*()_+{}|:\"<>?";
 
           const lifted_key_symbols = [event.key, upper_symbols[ lower_symbols.indexOf (event.key) ],
-              lower_symbols[ upper_symbols.indexOf (event.key) ]];
+                                      lower_symbols[ upper_symbols.indexOf (event.key) ]];
           // Call keyup for any shortcuts
           for (let saved of Object.values (this.saved_controls))                          // that depended on the released
               if (lifted_key_symbols.some (s => saved.shortcut_combination.includes (s)))  // key or its shift-key counterparts.
@@ -136,6 +139,8 @@ const Keyboard_Manager = widgets.Keyboard_Manager =
 
 const Code_Manager = widgets.Code_Manager =
   class Code_Manager {
+      // See description at:
+      // https://github.com/encyclopedia-of-code/tiny-graphics-js/wiki/tiny-graphics-gui.js#code_manager
       constructor (code) {
           const es6_tokens_parser = RegExp ([
                                                 /((['"])(?:(?!\2|\\).|\\(?:\r\n|[\s\S]))*(\2)?|`(?:[^`\\$]|\\[\s\S]|\$(?!{)|\${(?:[^{}]|{[^}]*}?)*}?)*(`)?)/,    // Any string.
@@ -169,12 +174,14 @@ const Code_Manager = widgets.Code_Manager =
 
 const Code_Widget = widgets.Code_Widget =
   class Code_Widget {
+      // See description at:
+      // https://github.com/encyclopedia-of-code/tiny-graphics-js/wiki/tiny-graphics-gui.js#code_widget
       constructor (component, options = {}) {
           const rules = [".code-widget .code-panel { margin:auto; background:white; overflow:auto; font-family:monospace; width:1060px; padding:10px; padding-bottom:40px; max-height: 500px; \
                                                       border-radius:12px; box-shadow: 20px 20px 90px 0px powderblue inset, 5px 5px 30px 0px blue inset }",
-              ".code-widget .code-display { min-width:1200px; padding:10px; white-space:pre-wrap; background:transparent }",
-              ".code-widget table { display:block; margin:auto; overflow-x:auto; width:1080px; border-radius:25px; border-collapse:collapse; border: 2px solid black; box-sizing: border-box }",
-              ".code-widget table.class-list td { border-width:thin; background: #EEEEEE; padding:12px; font-family:monospace; border: 1px solid black }"
+                         ".code-widget .code-display { min-width:1200px; padding:10px; white-space:pre-wrap; background:transparent }",
+                         ".code-widget table { display:block; margin:auto; overflow-x:auto; width:1080px; border-radius:25px; border-collapse:collapse; border: 2px solid black; box-sizing: border-box }",
+                         ".code-widget table.class-list td { border-width:thin; background: #EEEEEE; padding:12px; font-family:monospace; border: 1px solid black }"
           ];
 
           tiny.Component.initialize_CSS (Code_Widget, rules);
@@ -279,14 +286,16 @@ const Code_Widget = widgets.Code_Widget =
 
 const Editor_Widget = widgets.Editor_Widget =
   class Editor_Widget {
+      // See description at:
+      // https://github.com/encyclopedia-of-code/tiny-graphics-js/wiki/tiny-graphics-gui.js#editor_widget
       constructor (component, options = {}) {
           let rules = [".editor-widget { margin:auto; background:white; overflow:auto; font-family:monospace; width:1060px; padding:10px; \
                                       border-radius:12px; box-shadow: 20px 20px 90px 0px powderblue inset, 5px 5px 30px 0px blue inset }",
-              ".editor-widget button { background: #4C9F50; color: white; padding: 6px; border-radius:9px; margin-right:5px; \
-                                       box-shadow: 4px 6px 16px 0px rgba(0,0,0,0.3); transition: background .3s, transform .3s }",
-              ".editor-widget input { margin-right:5px }",
-              ".editor-widget textarea { white-space:pre; width:1040px; margin-bottom:30px }",
-              ".editor-widget button:hover, button:focus { transform: scale(1.3); color:gold }"
+                       ".editor-widget button { background: #4C9F50; color: white; padding: 6px; border-radius:9px; margin-right:5px; \
+                                                box-shadow: 4px 6px 16px 0px rgba(0,0,0,0.3); transition: background .3s, transform .3s }",
+                       ".editor-widget input { margin-right:5px }",
+                       ".editor-widget textarea { white-space:pre; width:1040px; margin-bottom:30px }",
+                       ".editor-widget button:hover, button:focus { transform: scale(1.3); color:gold }"
           ];
 
           tiny.Component.initialize_CSS (Editor_Widget, rules);
