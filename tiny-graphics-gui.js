@@ -268,6 +268,12 @@ const Code_Widget = widgets.Code_Widget =
               name  : "black", punctuator: "red", whitespace: "black"
           };
 
+          const url_regex = /(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig;
+          // const linkify   = text => text.replace (url_regex, url =>
+          //               '<a href="' + url + '" target="_blank"' + ' rel="noopener">' + url + '</a>');
+
+          // const linkify   = text => text.match (url_regex);
+
           for (let t of new Code_Manager (code_string).tokens)
               if (t.type == "name" && [...Object.keys (tiny), ...Object.keys (this.definitions)].includes (t.value)) {
                   const link = this.code_display.appendChild (document.createElement ('a'));
@@ -276,9 +282,26 @@ const Code_Widget = widgets.Code_Widget =
                                          () => this.display_code (tiny[ t.value ] || this.definitions[ t.value ]));
                   link.textContent = t.value;
               } else {
+                  const index_of_url = t.value.search (url_regex);
+
                   const span       = this.code_display.appendChild (document.createElement ('span'));
                   span.style.color = color_map[ t.type ];
-                  span.textContent = t.value;
+                  span.textContent = index_of_url === -1 ? t.value : t.value.slice (0, index_of_url);
+
+                  if (index_of_url !== -1) {
+                      const end_of_url = index_of_url + t.value.match (url_regex)[0].length;
+
+                      const url  = t.value.slice (index_of_url, end_of_url);
+                      const link = this.code_display.appendChild (document.createElement ('a'));
+                      link.target = "_blank";
+                      link.rel = "noopener";
+                      link.href  = link.textContent = url;
+
+                      const span       = this.code_display.appendChild (document.createElement ('span'));
+                      span.style.color = color_map[ t.type ];
+                      span.textContent = t.value.slice (end_of_url, t.value.length);
+                  }
+
               }
       }
   };
