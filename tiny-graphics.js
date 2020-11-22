@@ -6,7 +6,7 @@
 import {math}    from './tiny-graphics-math.js';
 import {widgets} from './tiny-graphics-gui.js';
 
-export const tiny = {...math, ...widgets};
+export const tiny = {...math, ...widgets, math, widgets };
 
 // Pull these names into this module's scope for convenience:
 const {Vector3, vec3, color, Matrix, Mat4, Keyboard_Manager} = tiny;

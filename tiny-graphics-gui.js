@@ -180,8 +180,8 @@ const Code_Widget = widgets.Code_Widget =
           const rules = [".code-widget .code-panel { margin:auto; background:white; overflow:auto; font-family:monospace; width:1060px; padding:10px; padding-bottom:40px; max-height: 500px; \
                                                       border-radius:12px; box-shadow: 20px 20px 90px 0px powderblue inset, 5px 5px 30px 0px blue inset }",
                          ".code-widget .code-display { min-width:1200px; padding:10px; white-space:pre-wrap; background:transparent }",
-                         ".code-widget table { display:block; margin:auto; overflow-x:auto; width:1080px; border-radius:25px; border-collapse:collapse; border: 2px solid black; box-sizing: border-box }",
-                         ".code-widget table.class-list td { border-width:thin; background: #EEEEEE; padding:12px; font-family:monospace; border: 1px solid black }"
+                         ".code-widget div.class-list { overflow-x:auto; width:1080px; border-radius:25px; margin:" +
+                         " 10px; box-sizing: border-box; background: #EEEEEE; font-family:monospace; padding:18px }"
           ];
 
           tiny.Component.initialize_CSS (Code_Widget, rules);
@@ -194,8 +194,7 @@ const Code_Widget = widgets.Code_Widget =
                 const code_in_focus = options.code_in_focus || component.constructor;
                 this.build_reader (component.embedded_code_nav_area, code_in_focus, module.defs);
                 if ( !options.hide_navigator)
-                    this.build_navigator (component.embedded_code_nav_area, code_in_focus,
-                                          component.animated_children, module.defs);
+                    this.build_navigator (component.embedded_code_nav_area, code_in_focus);
             });
       }
       build_reader (element, main_scene, definitions) {     // (Internal helper function)
@@ -207,51 +206,79 @@ const Code_Widget = widgets.Code_Widget =
           // Default textbox contents:
           this.display_code (main_scene);
       }
-      build_navigator (element, main_scene, additional_scenes, definitions) {       // (Internal helper function)
-          // TODO:  List out the additional_scenes somewhere.
-          const class_list     = element.appendChild (document.createElement ("table"));
-          class_list.className = "class-list";
-          const top_cell       = class_list.insertRow (-1).insertCell (-1);
-          top_cell.colSpan     = 2;
-          top_cell.appendChild (
-            document.createTextNode ("Click below to navigate through all classes that are defined."));
-          const content         = top_cell.appendChild (document.createElement ("p"));
-          content.style         = "text-align:center; margin:0; font-weight:bold";
-          content.innerHTML     = "main-scene.js<br>Main Scene: ";
-          const main_scene_link = content.appendChild (document.createElement ("a"));
-          main_scene_link.href  = "javascript:void(0);";
-          main_scene_link.addEventListener ('click', () => this.display_code (main_scene));
-          main_scene_link.textContent = main_scene.name;
+      build_navigator (element, main_scene) {       // (Internal helper function)
+          const div     = element.appendChild (document.createElement ("div"));
+          div.className = "class-list";
 
-          const second_cell    = class_list.insertRow (-1).insertCell (-1);
-          second_cell.colSpan  = 2;
-          second_cell.style    = "text-align:center; font-weight:bold";
-          const index_src_link = second_cell.appendChild (document.createElement ("a"));
-          index_src_link.href  = "javascript:void(0);";
-          index_src_link.addEventListener ('click', () => this.display_code ());
-          index_src_link.textContent = "This page's complete HTML source";
+          const make_link = (definition) => {
+              const link = div.appendChild (document.createElement ("a"));
+              link.href  = "javascript:void(0);";
+              link.addEventListener ('click', () => this.display_code (definition));
+              link.textContent  = definition ? definition.name : "index.html";
+              link.style.margin = "0 20px";
+          };
 
-          const third_row     = class_list.insertRow (-1);
-          third_row.style     = "text-align:center";
-          third_row.innerHTML = "<td><b>tiny-graphics.js</b><br>(Always the same)</td> \
-                             <td><b>All other class definitions from dependencies:</td>";
+          div.appendChild (document.createTextNode ("Navigate through source code below."));
+          div.appendChild (document.createElement ("br"));
+          div.appendChild (document.createTextNode ("This page's complete HTML source: "));
+          make_link ();
 
-          const fourth_row = class_list.insertRow (-1);
-          // Generate the navigator table of links:
-          for (let list of [tiny, definitions]) {
-              const cell        = fourth_row.appendChild (document.createElement ("td"));
-              // List all class names except the main one, which we'll display separately:
-              const class_names = Object.keys (list).filter (x => x != main_scene.name);
-              cell.style        = "white-space:normal";
-              for (let name of class_names) {
-                  const class_link                   = cell.appendChild (document.createElement ("a"));
-                  class_link.style[ "margin-right" ] = "80px";
-                  class_link.href                    = "javascript:void(0);";
-                  class_link.addEventListener ('click', () => this.display_code (tiny[ name ] || definitions[ name ]));
-                  class_link.textContent = name;
-                  cell.appendChild (document.createTextNode (" "));
-              }
+          div.appendChild (document.createElement ("br"));
+          div.appendChild (document.createTextNode ("Return to main/active source code: "));
+          make_link (main_scene);
+
+          div.appendChild (document.createElement ("br"));
+          div.appendChild (document.createTextNode ("Explore the core tiny-graphics library: "));
+          make_link (tiny.Shape);
+          make_link (tiny.Shader);
+          make_link (tiny.Texture);
+          make_link (tiny.Component);
+
+          div.appendChild (document.createElement ("br"));
+          div.appendChild (document.createTextNode ("Other loaded source code: "));
+          div.appendChild (document.createElement ("br"));
+          div.appendChild (document.createTextNode ("GUI helper definitions "));
+
+          const input1    = div.appendChild (document.createElement ("select"));
+          input1.onchange = () => this.display_code (tiny.widgets[ input1.value ]);
+          for (let definition of Object.keys (tiny.widgets)) {
+              const option = input1.appendChild (document.createElement ("option"));
+              option.value = option.innerText = definition;
           }
+
+          div.appendChild (document.createElement ("br"));
+          div.appendChild (document.createTextNode ("Math helper definitions "));
+
+          const input2    = div.appendChild (document.createElement ("select"));
+          input2.onchange = () => this.display_code (tiny.math[ input2.value ]);
+          for (let definition of Object.keys (tiny.math)) {
+              const option = input2.appendChild (document.createElement ("option"));
+              option.value = option.innerText = definition;
+          }
+
+          //
+          // const second_cell   = class_list.insertRow (-1).insertCell (-1);
+          // second_cell.colSpan = 2;
+          // second_cell.style   = "text-align:center; font-weight:bold";
+          //
+          // const third_row     = class_list.insertRow (-1);
+          // third_row.style     = "text-align:center";
+          // third_row.innerHTML = "<td><b>tiny-graphics.js</b><br>(Always the same)</td> \
+          //                    <td><b>All other class definitions from dependencies:</td>";
+          //
+          // const fourth_row = class_list.insertRow (-1);
+          // // Generate the navigator table of links:
+          // for (let list of [tiny, definitions]) {
+          //     const cell        = fourth_row.appendChild (document.createElement ("td"));
+          //     // List all class names except the main one, which we'll display separately:
+          //     const class_names = Object.keys (list).filter (x => x != main_scene.name);
+          //     cell.style        = "white-space:normal";
+          //     for (let name of class_names) {
+          //         const class_link                   = cell.appendChild (document.createElement ("a"));
+          //         class_link.style[ "margin-right" ] = "80px";
+          //         class_link.href                    = "javascript:void(0);";
+          //         class_link.addEventListener ('click', () => this.display_code (tiny[ name ] || definitions[ name
+          // ])); class_link.textContent = name; cell.appendChild (document.createTextNode (" ")); } }
       }
       display_code (code_in_focus) {
           if (this.component.embedded_editor)
@@ -268,12 +295,6 @@ const Code_Widget = widgets.Code_Widget =
               name  : "black", punctuator: "red", whitespace: "black"
           };
 
-          const url_regex = /(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig;
-          // const linkify   = text => text.replace (url_regex, url =>
-          //               '<a href="' + url + '" target="_blank"' + ' rel="noopener">' + url + '</a>');
-
-          // const linkify   = text => text.match (url_regex);
-
           for (let t of new Code_Manager (code_string).tokens)
               if (t.type == "name" && [...Object.keys (tiny), ...Object.keys (this.definitions)].includes (t.value)) {
                   const link = this.code_display.appendChild (document.createElement ('a'));
@@ -282,6 +303,7 @@ const Code_Widget = widgets.Code_Widget =
                                          () => this.display_code (tiny[ t.value ] || this.definitions[ t.value ]));
                   link.textContent = t.value;
               } else {
+                  const url_regex    = /(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig;
                   const index_of_url = t.value.search (url_regex);
 
                   const span       = this.code_display.appendChild (document.createElement ('span'));
@@ -289,13 +311,13 @@ const Code_Widget = widgets.Code_Widget =
                   span.textContent = index_of_url === -1 ? t.value : t.value.slice (0, index_of_url);
 
                   if (index_of_url !== -1) {
-                      const end_of_url = index_of_url + t.value.match (url_regex)[0].length;
+                      const end_of_url = index_of_url + t.value.match (url_regex)[ 0 ].length;
 
-                      const url  = t.value.slice (index_of_url, end_of_url);
-                      const link = this.code_display.appendChild (document.createElement ('a'));
+                      const url   = t.value.slice (index_of_url, end_of_url);
+                      const link  = this.code_display.appendChild (document.createElement ('a'));
                       link.target = "_blank";
-                      link.rel = "noopener";
-                      link.href  = link.textContent = url;
+                      link.rel    = "noopener";
+                      link.href   = link.textContent = url;
 
                       const span       = this.code_display.appendChild (document.createElement ('span'));
                       span.style.color = color_map[ t.type ];
