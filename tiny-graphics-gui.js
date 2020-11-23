@@ -6,7 +6,7 @@ export const widgets = {};
 const Controls_Widget = widgets.Controls_Widget =
   class Controls_Widget {
       // See description at:
-      // https://github.com/encyclopedia-of-code/tiny-graphics-js/wiki/tiny-graphics-gui.js#controls-widget
+      // https://github.com/encyclopedia-of-code/tiny-graphics-js/wiki/tiny-graphics-gui.js#controls_widget
       constructor (component, options = {}) {
           const rules = [".controls-widget * { font-family: monospace }",
                          ".controls-widget div { background: white }",
