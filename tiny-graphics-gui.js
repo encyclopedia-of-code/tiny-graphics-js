@@ -181,7 +181,8 @@ const Code_Widget = widgets.Code_Widget =
                                                       border-radius:12px; box-shadow: 20px 20px 90px 0px powderblue inset, 5px 5px 30px 0px blue inset }",
                          ".code-widget .code-display { min-width:1200px; padding:10px; white-space:pre-wrap; background:transparent }",
                          ".code-widget div.class-list { overflow-x:auto; width:1080px; border-radius:25px; margin:" +
-                         " 10px; box-sizing: border-box; background: #EEEEEE; font-family:monospace; padding:18px }"
+                         " 10px; box-sizing: border-box; background: #EEEEEE; font-family:monospace; padding:18px }",
+                         ".code-widget div.class-list .heading { display:inline-block; font-weight:bold }"
           ];
 
           tiny.Component.initialize_CSS (Code_Widget, rules);
@@ -218,7 +219,9 @@ const Code_Widget = widgets.Code_Widget =
               link.style.margin = "0 20px";
           };
 
-          div.appendChild (document.createTextNode ("Navigate through source code below."));
+          const heading = div.appendChild (document.createElement ("div"));
+          heading.className = "heading";
+          heading.appendChild (document.createTextNode ("Navigate through source code:"));
           div.appendChild (document.createElement ("br"));
           div.appendChild (document.createTextNode ("This page's complete HTML source: "));
           make_link ();
@@ -235,7 +238,9 @@ const Code_Widget = widgets.Code_Widget =
           make_link (tiny.Component);
 
           div.appendChild (document.createElement ("br"));
-          div.appendChild (document.createTextNode ("Other loaded source code: "));
+          const heading_2 = div.appendChild (document.createElement ("div"));
+          heading_2.className = "heading";
+          heading_2.appendChild (document.createTextNode ("Other loaded source code:"));
           div.appendChild (document.createElement ("br"));
           div.appendChild (document.createTextNode ("GUI helper definitions "));
 
@@ -255,30 +260,6 @@ const Code_Widget = widgets.Code_Widget =
               const option = input2.appendChild (document.createElement ("option"));
               option.value = option.innerText = definition;
           }
-
-          //
-          // const second_cell   = class_list.insertRow (-1).insertCell (-1);
-          // second_cell.colSpan = 2;
-          // second_cell.style   = "text-align:center; font-weight:bold";
-          //
-          // const third_row     = class_list.insertRow (-1);
-          // third_row.style     = "text-align:center";
-          // third_row.innerHTML = "<td><b>tiny-graphics.js</b><br>(Always the same)</td> \
-          //                    <td><b>All other class definitions from dependencies:</td>";
-          //
-          // const fourth_row = class_list.insertRow (-1);
-          // // Generate the navigator table of links:
-          // for (let list of [tiny, definitions]) {
-          //     const cell        = fourth_row.appendChild (document.createElement ("td"));
-          //     // List all class names except the main one, which we'll display separately:
-          //     const class_names = Object.keys (list).filter (x => x != main_scene.name);
-          //     cell.style        = "white-space:normal";
-          //     for (let name of class_names) {
-          //         const class_link                   = cell.appendChild (document.createElement ("a"));
-          //         class_link.style[ "margin-right" ] = "80px";
-          //         class_link.href                    = "javascript:void(0);";
-          //         class_link.addEventListener ('click', () => this.display_code (tiny[ name ] || definitions[ name
-          // ])); class_link.textContent = name; cell.appendChild (document.createTextNode (" ")); } }
       }
       display_code (code_in_focus) {
           if (this.component.embedded_editor)
