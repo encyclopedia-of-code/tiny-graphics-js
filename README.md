@@ -15,7 +15,7 @@ Currently, the main limitations of tiny-graphics-js to be aware of are:
 
 - Compared to crowd-sourced frameworks like three.js, not as many examples exist yet of how to make various graphics
 effects. Not all tiny-graphics-js demos are updated/available (such as for ray tracing).
-- Parts of tiny-graphics are inspired by React, a popular JavaScript framework. Both feature a tree of Component objects
+- Parts of tiny-graphics are inspired by React, a popular JavaScript framework. Both feature a tree of `Component` objects
 that design a document. In tiny-graphics the `Component` tree nodes also do double duty for 3D graphics creation, which is
 extremely powerful. However, unlike React, tiny-graphics is not intended for creating high-performance all-purpose 
 documents. Our engine is simpler, so expect to follow a more fixed document layout that isn't made to track/sync complex 
@@ -47,9 +47,9 @@ several files containing useful code examples of `Shapes`, `Shaders`, and `Compo
 A `Component` is one piece of your overall program. Each `Component` both represents some (or all) of a 3D scene, plus some
 (or all) of the interactive HTML document surrounding the scene. Components nest inside one another in a hierarchy. Your
 web document may contain several 3D canvas drawing areas. Any graphics canvas area on the page can display the combined
-3D result of any number of `Components`, some of which might even be shared across multiple canvas drawing areas.
+3D result of any number of Components, some of which might even be shared across multiple canvas drawing areas.
 
-For an example of how to use `Components` to draw to several 3D WebGL canvas areas at once, see the demo in "parametric-surfaces.js".
+For an example of how to use one `Component` to draw to several 3D WebGL canvas areas at once, see the demo in "parametric-surfaces.js".
 
 `Component` is the base class for any scene you might want to design. For simple 3D scenes, your small code snippet will go
 in a `Component`. To use, make your own subclass(es) of `Component` and override a few of the special functions that affect
@@ -86,7 +86,7 @@ https://encyclopedia-of-code.github.io/tiny-graphics-js/
 To see all the demos:  Open the included "host.py" file.  Next, open your web browser and direct it to your localhost
 address, with the correct port number reported by the "host.py" step.  (For many people this is: http://localhost:8000)
 
-To select a demo, open and edit main-scene.js.  Assign your choice to the `Main_Scene` variable.  Your choices for scenes are:
+To select a demo, open and edit main-scene.js.  Assign your choice to the `main_scene` variable.  Your choices for scenes are:
 
 * `Minimal_Webgl_Demo`
 * `Transforms_Sandbox`
