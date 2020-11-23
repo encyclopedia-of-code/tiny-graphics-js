@@ -103,7 +103,7 @@ These demos will be replaced soon with updated ones, but for now they demonstrat
 
 ## About tiny-graphics.js
 
-The tiny-graphics.js software library by Garett Ridge has accompanied UCLA Computer Science's 174a course (Intro to Computer Graphics) since 2016.  In Spring 2019, the course used all-new assignments based on tiny-graphics-js.  The library served as a framework for giving students a high-level tour of computer graphics concepts.  You can view the assignments from Spring 2019 at the link below, including their instructions/specification documents, code, and animated results:
+The tiny-graphics.js software library by Garett Ridge has accompanied UCLA Computer Science's 174a course (Intro to Computer Graphics) since 2016.  In Spring 2019, the course used all-new assignments based on tiny-graphics-js.  The library served as a framework for giving students a high-level tour of computer graphics concepts.  You can view the assignments from Spring 2019 at the link below, including their instructions/specification documents, starting code, and animated results:
 
 https://github.com/encyclopedia-of-code/tiny-graphics-assignments
 
