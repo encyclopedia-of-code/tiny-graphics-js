@@ -75,7 +75,7 @@ https://github.com/encyclopedia-of-code/tiny-graphics-js/wiki
 
 ## Wiki
 
-See the above link to the Wiki for this project.
+https://github.com/encyclopedia-of-code/tiny-graphics-js/wiki
 
 ## Installing tiny-graphics.js
 
@@ -99,7 +99,7 @@ To select a demo, open and edit main-scene.js.  Assign your choice to the `Main_
 * `Scene_To_Texture_Demo`
 * `Surfaces_Demo`
 
-These demos will be replaced soon with updated (better formatted) ones, but for now they demonstrate several features.  The code comments in each file should help, especially if you look at the definition of `Transforms_Sandbox`.  The explanations that some demos print on the page should be helpful too.  Enjoy!
+These demos will be replaced soon with updated ones, but for now they demonstrate several features.  The code comments in each file should help, especially if you look at the definition of `Transforms_Sandbox`.  The explanations that some demos print on the page should be helpful too.  Enjoy!
 
 ## About tiny-graphics.js
 
