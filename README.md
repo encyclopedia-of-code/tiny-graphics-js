@@ -32,7 +32,7 @@ to minimize GPU state changes. Although it's possible to design such a framework
 The main file (tiny-graphics.js) defines just four class definitions useful for a graphics program -- `Shape`, `Shader`,
 `Texture`, and `Component`.
 
-- **`Shape`**: Explains to the GPU the layout of one type of 3D shape.
+- **`Shape`**: Explains to the graphics card what the layout is of one type of 3D shape.
 - **`Shader`**: Loads a GLSL shader program onto your graphics card, ultimately converting raw shape data into a final 2D image.
 - **`Texture`**: Manages a 2D image on the GPU that can color (or exert other influence) along a shape's surface.
 - **`Component`**: One piece of your overall program.
