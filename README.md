@@ -40,7 +40,7 @@ The main file (tiny-graphics.js) defines just four class definitions useful for 
 In addition, tiny-graphics-js comes with a tiny math library (tiny-graphics-math.js) for common vector and matrix
 operations that are found in computer graphics. It also comes with a file full of helper objects (tiny-graphics-gui.js) for
 adding interactive document areas so the user can affect the nearby 3D drawing area. Lastly, tiny-graphics-js comes with
-several files containing useful code examples of `Shapes`, `Shaders`, and `Components`, the latter of which are live demos.
+several files containing useful code examples of possible `Shapes`, `Shaders`, and `Components`, the latter of which are live demos.
 
 ## Components
 
