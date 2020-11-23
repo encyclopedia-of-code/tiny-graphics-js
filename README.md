@@ -24,7 +24,7 @@ UI changes.
 materials a better way. To reduce the total number of calls to the GPU, they draw as much of the scene at once as
 possible in a few "rendering passes". Frameworks like three.js sort your program into a scene graph in an optimized way
 to minimize GPU state changes. Although it's possible to design such a framework in tiny-graphics.js yourself out of
-`Components`, this scene graph functionality is not immediately built in.
+`Component`s, this scene graph functionality is not immediately built in.
 - Various still-pending fixes and API enhancements.
 
 ## tiny-graphics.js
