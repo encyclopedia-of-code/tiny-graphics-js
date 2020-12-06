@@ -22,7 +22,7 @@ import {Obj_File_Demo}
 import {Parametric_Surfaces}
                     from "./examples/parametric-surfaces.js";
 import {Particle_Demo}
-                    from "./examples/partice-demo.js";
+                    from "./examples/particle-demo.js";
 import {Scene_To_Texture_Demo}
                     from "./examples/scene-to-texture-demo.js";
 import {Text_Demo}
@@ -46,7 +46,7 @@ Object.assign (defs,
 
 // ******************** SELECT THE DEMO TO DISPLAY:
 
-const main_scene        = Parametric_Surfaces;
+const main_scene        = Particle_Demo;
 const additional_scenes = [];
 
 export {main_scene, additional_scenes, defs};
