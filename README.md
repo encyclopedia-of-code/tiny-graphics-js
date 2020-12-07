@@ -1,7 +1,6 @@
 # tiny-graphics.js
 
-The tiny-graphics-js library refactors common WebGL steps to demonstrate how you can organize a complex graphics
-program.  
+The tiny-graphics-js library refactors common WebGL steps, demonstrating how to organize a complex graphics program.  
 
 Use this library to learn graphics and WebGL.  You will reduce the clutter and repetition that tends to fill up beginner 
 WebGL projects.
