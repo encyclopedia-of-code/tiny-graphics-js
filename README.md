@@ -26,7 +26,9 @@ to minimize GPU state changes. It's possible to design such a framework in tiny-
 Components, but this scene graph functionality is not immediately built in.
 - Various still-pending fixes and API enhancements.
 
-## tiny-graphics.js
+## Overview
+
+### tiny-graphics.js
 
 The main file (tiny-graphics.js) defines just four class definitions useful for a graphics program -- `Shape`, `Shader`,
 `Texture`, and `Component`.
@@ -41,7 +43,7 @@ operations that are found in computer graphics. It also comes with a file full o
 adding interactive document areas so the user can affect the nearby 3D drawing area. Lastly, tiny-graphics-js comes with
 several files containing useful code examples of possible `Shapes`, `Shaders`, and `Components`, the latter of which are live demos.
 
-## Components
+### Components
 
 A `Component` is one piece of your overall program. Each `Component` both represents some (or all) of a 3D scene, plus some
 (or all) of the interactive HTML document surrounding the scene. Components nest inside one another in a hierarchy. Your
