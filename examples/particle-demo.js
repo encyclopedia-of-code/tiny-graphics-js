@@ -3,38 +3,6 @@ import {Body, Simulation} from "./collisions-demo.js";
 // Pull these names into this module's scope for convenience:
 const {vec3, vec4, color, Mat4, Shape, Material, Shader, Texture, Component} = tiny;
 
-const Vortex = defs.Vortex =
-  class Vortex {
-      constructor (center, size) {
-          Object.assign (this, {center, size});
-      }
-      emplace (angular_velocity) {
-          this.rotation       = Mat4.translation (...this.center.times (-1)).times (location_matrix);
-          this.previous       = {center: this.center.copy (), rotation: this.rotation.copy ()};
-          // drawn_location gets replaced with an interpolated quantity:
-          this.drawn_location = location_matrix;
-          this.temp_matrix    = Mat4.identity ();
-          return Object.assign (this, {linear_velocity, angular_velocity, spin_axis});
-      }
-      advance (time_amount) {
-          this.previous = {center: this.center.copy (), rotation: this.rotation.copy ()};
-          // Linear velocity first, then angular:
-          this.center = this.center.plus (this.linear_velocity.times (time_amount));
-          this.rotation.pre_multiply (Mat4.rotation (time_amount * this.angular_velocity, ...this.spin_axis));
-      }
-      blend_rotation (alpha) {
-          return this.rotation.map ((x, i) => vec4 (...this.previous.rotation[ i ]).mix (x, alpha));
-      }
-      blend_state (alpha) {
-          this.drawn_location = Mat4.translation (...this.previous.center.mix (this.center, alpha))
-                                    .times (this.blend_rotation (alpha))
-                                    .times (Mat4.scale (...this.size));
-      }
-      static intersect_sphere (p, margin = 0) {
-          return p.dot (p) < 1 + margin;
-      }
-  };
-
 export class Particle_Demo extends Simulation {
     init () {
         this.num_particles = 1000;
