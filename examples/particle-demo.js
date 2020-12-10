@@ -8,30 +8,47 @@ const Vortex = defs.Vortex =
       constructor (center, size) {
           Object.assign (this, {center, size});
       }
-      emplace (angular_velocity) {
-          this.rotation       = Mat4.translation (...this.center.times (-1)).times (location_matrix);
-          this.previous       = {center: this.center.copy (), rotation: this.rotation.copy ()};
-          // drawn_location gets replaced with an interpolated quantity:
-          this.drawn_location = location_matrix;
-          this.temp_matrix    = Mat4.identity ();
-          return Object.assign (this, {linear_velocity, angular_velocity, spin_axis});
+      reset (initial_rotation, initial_angular_velocity) {
+          this.rotation         = this.drawn_location = initial_rotation;
+          this.angular_velocity = initial_angular_velocity;
+          this.previous         = {rotation: this.rotation.copy ()};
+          return this;
       }
       advance (time_amount) {
-          this.previous = {center: this.center.copy (), rotation: this.rotation.copy ()};
-          // Linear velocity first, then angular:
-          this.center = this.center.plus (this.linear_velocity.times (time_amount));
-          this.rotation.pre_multiply (Mat4.rotation (time_amount * this.angular_velocity, ...this.spin_axis));
+          this.previous = {rotation: this.rotation.copy ()};
+          this.rotation.pre_multiply (
+            Mat4.rotation (time_amount * this.angular_velocity.norm (), ...this.angular_velocity.normalized ()));
       }
       blend_rotation (alpha) {
-          return this.rotation.map ((x, i) => vec4 (...this.previous.rotation[ i ]).mix (x, alpha));
+          return this.rotation.map ((x, i) => vec4 (...this.previous.rotation[ i ]).mix (x, alpha));   // bad
       }
       blend_state (alpha) {
-          this.drawn_location = Mat4.translation (...this.previous.center.mix (this.center, alpha))
-                                    .times (this.blend_rotation (alpha))
-                                    .times (Mat4.scale (...this.size));
+          this.drawn_location = this.blend_rotation (alpha).times (Mat4.scale (...this.size));
       }
       static intersect_sphere (p, margin = 0) {
           return p.dot (p) < 1 + margin;
+      }
+  };
+
+const Particle = defs.Particle =
+  class Particle {
+      constructor (center) {
+          this.center = center;
+      }
+      reset (initial_translation, linear_velocity) {
+          this.translation     = this.drawn_location = initial_translation;
+          this.linear_velocity = linear_velocity;
+          this.previous        = {translation: this.translation.copy ()};
+          this.temp_matrix     = Mat4.identity ();
+          return this;
+      }
+      advance (time_amount) {
+          this.previous = {translation: this.translation.copy ()};
+          this.translation.pre_multiply (
+            Mat4.translation (...this.linear_velocity.times (time_amount)));
+      }
+      blend_state (alpha) {
+          this.drawn_location = Mat4.translation (...this.previous.center.mix (this.center, alpha));
       }
   };
 
@@ -39,13 +56,11 @@ export class Particle_Demo extends Simulation {
     init () {
         this.num_particles = 1000;
 
-
         this.shapes   = {particles: new Particle_Cloud (this.num_particles)};
         const shader  = new Particle_Shader ();
         this.material = {shader, color: color (.4, .8, .4, 1), ambient: .4};
     }
     update_state (dt) {
-
         const s           = this.shapes.particles.arrays;
         const random_vecs = Array (this.num_particles).fill (0).map (x => vec3 (0, .01, 0).randomized (.05));
         s.offset          = s.offset.map ((x, i) => x.plus (random_vecs[ ~~(i / 4) ]));
