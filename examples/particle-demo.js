@@ -37,19 +37,27 @@ const Vortex = defs.Vortex =
 
 const Particle = defs.Particle =
   class Particle {
-      reset (initial_position, linear_velocity) {
-          this.position         = this.position_between_steps = initial_position;
-          this.linear_velocity  = linear_velocity;
-          this.desired_velocity = vec3 (0, 0, 0);
-          this.previous         = {position: this.position.copy ()};
+      reset (x, y, z, dx, dy, dz) {
+          if ( !this.position) this.position = vec3 (0, 0, 0);
+          if ( !this.previous_position) this.previous_position = vec3 (0, 0, 0);
+          if ( !this.position_between_steps) this.position_between_steps = vec3 (0, 0, 0);
+          if ( !this.linear_velocity) this.linear_velocity = vec3 (0, 0, 0);
+          if ( !this.desired_velocity) this.desired_velocity = vec3 (0, 0, 0);
+          this.position.set (x, y, z);
+          this.previous_position.set (x, y, z);
+          this.position_between_steps.set (x, y, z);
+          this.linear_velocity.set (dx, dy, dz);
+          this.desired_velocity.set (0, 0, 0);
           return this;
       }
       advance (time_amount) {
-          this.previous = {position: this.position.copy ()};
+          this.previous_position.set (this.position[ 0 ], this.position[ 1 ], this.position[ 2 ]);
           this.position.add_by (this.linear_velocity.times (time_amount));
       }
       blend_state (alpha) {
-          this.position_between_steps = this.previous.position.mix (this.position, alpha);
+          for (let i = 0; i < 3; i++)
+              this.position_between_steps[ i ] =
+                (1 - alpha) * this.previous_position[ i ] + (alpha) * this.position[ i ];
       }
   };
 
@@ -57,19 +65,17 @@ const Particle = defs.Particle =
 export class Particle_Demo extends Simulation {
     init () {
         super.init ();
-        this.num_particles           = 2000;
-        this.domain_size             = 6;
-        this.dt                      = 1 / 15;
-        this.gravity                 = .01;
-        this.friction                = 0;
-        this.rotating_friction       = 0.01;
-        this.wall_friction           = .1;
-        this.small_vortex_preference = 2;
+        this.num_particles     = 2000;
+        this.domain_size       = 6;
+        this.dt                = 1 / 15;
+        this.gravity           = .01;
+        this.friction          = 0;
+        this.rotating_friction = 0.01;
+        this.wall_friction     = .1;
 
         this.particles = Array (this.num_particles).fill (0).map (() => new Particle ());
         for (let p of this.particles) {
-            p.reset (vec3 (999, 999, 999),
-                     vec3 (0, 0, 0));
+            p.reset (999, 999, 999, 0, 0, 0);
         }
 
         const sizes   = [1, 3, 5];
@@ -98,9 +104,9 @@ export class Particle_Demo extends Simulation {
             phong   : {shader: new defs.Phong_Shader (), color: color (.1, .2, .1, 1), ambient: .05}
         };
     }
-    static temp_vec4 = vec4 (0, 0, 0, 0);
     update_state (dt) {
-        const s = this.shapes.particles.arrays;
+        if ( !this.temp_vec3) this.temp_vec3 = vec3 (0, 0, 0);
+
         for (let i = 0; i < this.vortices.length; i++) {
             const v            = this.vortices[ i ];
             v.total_influences = 0;
@@ -111,37 +117,45 @@ export class Particle_Demo extends Simulation {
             p.total_influences = 0;
             p.desired_velocity.scale_by (0);
 
+            const spread          = this.domain_size * 1 / 8,
+                  velocity_spread = .01;
             if (Math.random () < .001)
-                p.reset (vec3 (-this.domain_size, this.domain_size / 2, this.domain_size / 2)
-                           .randomized (this.domain_size * 1 / 8),
-                         vec3 (1, 0, 0).randomized (.01));
+                p.reset (-this.domain_size + 2 * spread * (Math.random () - .5),
+                         this.domain_size / 2 + 2 * spread * (Math.random () - .5),
+                         this.domain_size / 2 + 2 * spread * (Math.random () - .5),
+                         1 + 2 * velocity_spread * (Math.random () - .5),
+                         2 * velocity_spread * (Math.random () - .5),
+                         2 * velocity_spread * (Math.random () - .5));
 
             for (let j = 0; j < this.vortices.length; j++) {
-                const v                         = this.vortices[ j ];
-                const particle_to_vortex_vector = p.position.minus (v.center);
+                const v = this.vortices[ j ];
+                this.temp_vec3.set (p.position[ 0 ] - v.center[ 0 ], p.position[ 1 ] - v.center[ 1 ],
+                                    p.position[ 2 ] - v.center[ 2 ]);
                 // Particles are only affected by vortices they're inside the sphere of:
-                if (particle_to_vortex_vector.norm () > v.size[ 0 ])
+                if (this.temp_vec3.norm () > v.size[ 0 ])
                     continue;
                 v.total_influences++;
                 p.total_influences++;
 
-                v.desired_angular_velocity.add_by (p.linear_velocity.cross (particle_to_vortex_vector).times (-1));
+                //v.desired_angular_velocity.add_by (p.linear_velocity.cross (this.temp_vec3).times (-1)
+                // Equivalent:
+                const a = p.linear_velocity,
+                      b = this.temp_vec3;
+                v.desired_angular_velocity[ 0 ] -= a[ 1 ] * b[ 2 ] - a[ 2 ] * b[ 1 ];
+                v.desired_angular_velocity[ 1 ] -= a[ 2 ] * b[ 0 ] - a[ 0 ] * b[ 2 ];
+                v.desired_angular_velocity[ 2 ] -= a[ 0 ] * b[ 1 ] - a[ 1 ] * b[ 0 ];
 
                 if (v.angular_velocity.norm () < .0000001)
                     continue;
 
-                this.temp_vec4 = vec4 (...p.position.minus (v.center), 1);
-                // Test of dividing by size of ball so smaller balls do more:
-                this.temp_vec4 = Mat4.rotation (
-                  -dt * v.angular_velocity.norm () /
-                  Math.pow (v.size.norm () / this.domain_size, this.small_vortex_preference),
-                  ...v.angular_velocity.normalized ()).times (this.temp_vec4);
-                this.temp_vec4.add_by (v.center.to4 ());
-                // Mat4.translation (...v.center).times (
-                //   Mat4.rotation (-dt * v.angular_velocity.norm (), ...v.angular_velocity.normalized ()))
-                //     .times (Mat4.translation (...v.center.times (-1)))
-                //     .times (vec4 (...p.position, 1));
-                p.desired_velocity.add_by (p.position.minus (this.temp_vec4));
+
+                Mat4.rotate_vec3 (this.temp_vec3, dt * v.angular_velocity.norm (), v.angular_velocity[ 0 ],
+                                  v.angular_velocity[ 1 ], v.angular_velocity[ 2 ]);
+                this.temp_vec3.set (this.temp_vec3[ 0 ] + v.center[ 0 ], this.temp_vec3[ 1 ] + v.center[ 1 ],
+                                    this.temp_vec3[ 2 ] + v.center[ 2 ]);
+                let vortex_influence_on_particle = this.temp_vec3.minus (p.position);
+                vortex_influence_on_particle.scale_by (1 / v.size[ 0 ]);
+                p.desired_velocity.add_by (vortex_influence_on_particle);
             }
 
             if (p.total_influences > 0) p.desired_velocity.scale_by (1 / p.total_influences);
@@ -154,13 +168,6 @@ export class Particle_Demo extends Simulation {
             for (let j = 0; j < 3; j++)
                 if (Math.abs (p.position[ j ]) > this.domain_size && p.linear_velocity[ j ] * p.position[ j ] >
                     0) p.linear_velocity[ j ] *= -1 * (1 - this.wall_friction);
-
-            //Update vertex array with new positions and velocities:
-            s.offset[ 4 * i ] = s.offset[ 4 * i + 1 ] =
-              s.offset[ 4 * i + 2 ] = s.offset[ 4 * i + 3 ] = this.particles[ i ].position_between_steps;
-
-            s.normal[ 4 * i ] = s.normal[ 4 * i + 1 ] =
-              s.normal[ 4 * i + 2 ] = s.normal[ 4 * i + 3 ] = p.linear_velocity;
         }
         for (let j = 0; j < this.vortices.length; j++) {
             const v = this.vortices[ j ];
@@ -188,6 +195,15 @@ export class Particle_Demo extends Simulation {
         if (this.uniforms.animate)
             this.simulate (this.uniforms.animation_delta_time);
 
+        //Update vertex array with new positions and velocities:
+        const s = this.shapes.particles.arrays;
+        for (let i = 0; i < this.particles.length; i++) {
+            s.offset[ 4 * i ] = s.offset[ 4 * i + 1 ] =
+              s.offset[ 4 * i + 2 ] = s.offset[ 4 * i + 3 ] = this.particles[ i ].position_between_steps;
+
+            s.normal[ 4 * i ] = s.normal[ 4 * i + 1 ] =
+              s.normal[ 4 * i + 2 ] = s.normal[ 4 * i + 3 ] = this.particles[ i ].linear_velocity;
+        }
         if (this.has_drawn)
             this.shapes.particles.copy_onto_graphics_card (caller.context, ["offset", "normal"], false);
 
