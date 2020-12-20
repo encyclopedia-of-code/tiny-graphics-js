@@ -5,8 +5,8 @@ const {vec3, vec4, color, Mat4, Shape, Material, Shader, Texture, Component} = t
 
 const Vortex = defs.Vortex =
   class Vortex {
-      constructor (center, size) {
-          Object.assign (this, {center, size});
+      constructor (center, size, influence, influencability) {
+          Object.assign (this, {center, size, influence, influencability});
       }
       reset (initial_rotation, initial_angular_velocity) {
           this.rotation                 = initial_rotation;
@@ -65,29 +65,40 @@ const Particle = defs.Particle =
 export class Particle_Demo extends Simulation {
     init () {
         super.init ();
-        this.num_particles     = 2000;
-        this.domain_size       = 6;
-        this.dt                = 1 / 15;
-        this.gravity           = .01;
-        this.friction          = 0;
-        this.rotating_friction = 0.01;
-        this.wall_friction     = .1;
+        this.num_particles            = 2000;
+        this.domain_size              = 6;
+        this.spread                   = this.domain_size * 1 / 16;
+        this.initial_velocity         = 3;
+        this.velocity_spread          = .015;
+        this.dt                       = 1 / 20;
+        this.gravity                  = .004;
+        this.friction                 = 0.01;
+        this.rotating_friction        = 0;
+        this.wall_friction            = .4;
+        this.linear_speed_cap         = 1.2;
+        this.rotating_speed_cap       = .9 * 2 * Math.PI;
+        this.vortex_sizes             = [1, 3, 5, 7];
+        this.vortex_multiplier        = 1;
+        this.particle_multiplier      = 50;
+        this.vortex_influencabilities = [.2, .2, .2, .2];
+        this.vortex_influences        = [.2, .2, .3, .35];
+        this.draw_vortices            = false;
 
         this.particles = Array (this.num_particles).fill (0).map (() => new Particle ());
         for (let p of this.particles) {
             p.reset (999, 999, 999, 0, 0, 0);
         }
 
-        const sizes   = [1, 3, 5];
         this.vortices = [];
-        for (let s of sizes) {
-            const radius = 1 / (s + 1);
+        for (let i = 0; i < this.vortex_sizes.length; i++) {
+            const radius = 1 / (this.vortex_sizes[ i ] + 1);
             for (let x = radius; x < 1; x += radius * 2)
                 for (let y = radius; y < 1; y += radius * 2)
                     for (let z = radius; z < 1; z += radius * 2) {
                         const position = vec3 (x, y, z).minus (vec3 (.5, .5, .5)).times (2 * this.domain_size);
                         const size     = vec3 (1, 1, 1).times (2 * radius * this.domain_size);
-                        this.vortices.push (new Vortex (position, size));
+                        this.vortices.push (
+                          new Vortex (position, size, this.vortex_influences[ i ], this.vortex_influencabilities[ i ]));
                     }
         }
         for (let v of this.vortices) {
@@ -116,16 +127,17 @@ export class Particle_Demo extends Simulation {
             const p            = this.particles[ i ];
             p.total_influences = 0;
             p.desired_velocity.scale_by (0);
+            // TEST --  see if not basing linear velocity on the previous frame is possible (vortex influence only):
+            //  p.linear_velocity.scale_by(0);
 
-            const spread          = this.domain_size * 1 / 8,
-                  velocity_spread = .01;
             if (Math.random () < .001)
-                p.reset (-this.domain_size + 2 * spread * (Math.random () - .5),
-                         this.domain_size / 2 + 2 * spread * (Math.random () - .5),
-                         this.domain_size / 2 + 2 * spread * (Math.random () - .5),
-                         1 + 2 * velocity_spread * (Math.random () - .5),
-                         2 * velocity_spread * (Math.random () - .5),
-                         2 * velocity_spread * (Math.random () - .5));
+                p.reset (-this.domain_size + 2 * this.spread * (Math.random () - .5),
+                         this.domain_size / 2 + 2 * this.spread * (Math.random () - .5),
+                         this.domain_size / 2 + 2 * this.spread * (Math.random () - .5),
+                         this.initial_velocity + 2 * this.velocity_spread * (Math.random () - .5),
+                         2 * this.velocity_spread * (Math.random () - .5),
+                         2 * this.velocity_spread * (Math.random () - .5));
+
 
             for (let j = 0; j < this.vortices.length; j++) {
                 const v = this.vortices[ j ];
@@ -137,32 +149,43 @@ export class Particle_Demo extends Simulation {
                 v.total_influences++;
                 p.total_influences++;
 
-                //v.desired_angular_velocity.add_by (p.linear_velocity.cross (this.temp_vec3).times (-1)
-                // Equivalent:
+                //v.desired_angular_velocity.add_by (p.linear_velocity.cross (this.temp_vec3).times (-1 / v.size[ 0 ])
+                // (Equivalent):
                 const a = p.linear_velocity,
                       b = this.temp_vec3;
-                v.desired_angular_velocity[ 0 ] -= a[ 1 ] * b[ 2 ] - a[ 2 ] * b[ 1 ];
-                v.desired_angular_velocity[ 1 ] -= a[ 2 ] * b[ 0 ] - a[ 0 ] * b[ 2 ];
-                v.desired_angular_velocity[ 2 ] -= a[ 0 ] * b[ 1 ] - a[ 1 ] * b[ 0 ];
+
+                const particle_influence_on_vortex = (1 / v.size[ 0 ]);
+                v.desired_angular_velocity[ 0 ] -= (a[ 1 ] * b[ 2 ] - a[ 2 ] * b[ 1 ]) * particle_influence_on_vortex;
+                v.desired_angular_velocity[ 1 ] -= (a[ 2 ] * b[ 0 ] - a[ 0 ] * b[ 2 ]) * particle_influence_on_vortex;
+                v.desired_angular_velocity[ 2 ] -= (a[ 0 ] * b[ 1 ] - a[ 1 ] * b[ 0 ]) * particle_influence_on_vortex;
 
                 if (v.angular_velocity.norm () < .0000001)
                     continue;
 
+                // P2 = -Translation * Rotation * Translation * p
 
                 Mat4.rotate_vec3 (this.temp_vec3, dt * v.angular_velocity.norm (), v.angular_velocity[ 0 ],
                                   v.angular_velocity[ 1 ], v.angular_velocity[ 2 ]);
                 this.temp_vec3.set (this.temp_vec3[ 0 ] + v.center[ 0 ], this.temp_vec3[ 1 ] + v.center[ 1 ],
                                     this.temp_vec3[ 2 ] + v.center[ 2 ]);
-                let vortex_influence_on_particle = this.temp_vec3.minus (p.position);
-                vortex_influence_on_particle.scale_by (1 / v.size[ 0 ]);
-                p.desired_velocity.add_by (vortex_influence_on_particle);
+
+
+                this.temp_vec3.subtract_by (p.position);
+                this.temp_vec3.scale_by (1 / v.size[ 0 ]);
+                this.temp_vec3.scale_by (this.particle_multiplier);
+                this.temp_vec3.scale_by (v.influence);
+                p.desired_velocity.add_by (this.temp_vec3);
             }
 
+            // Finish computing average of the vortices' influences:
             if (p.total_influences > 0) p.desired_velocity.scale_by (1 / p.total_influences);
-            p.linear_velocity.add_by (p.desired_velocity);
-            if (p.linear_velocity.norm () > 1) p.linear_velocity.normalize ();
+
             p.linear_velocity[ 1 ] -= this.gravity;                          // Gravity
             p.linear_velocity.scale_by (1 - this.friction);                  // Friction
+
+            p.linear_velocity.add_by (p.desired_velocity);
+            if (p.linear_velocity.norm () > this.linear_speed_cap)
+                p.linear_velocity.scale_by (this.linear_speed_cap / p.linear_velocity.norm ());
 
             // Prevent particles from going out of bounds:
             for (let j = 0; j < 3; j++)
@@ -171,10 +194,23 @@ export class Particle_Demo extends Simulation {
         }
         for (let j = 0; j < this.vortices.length; j++) {
             const v = this.vortices[ j ];
+
+            // TEST --  see if not basing angular velocity on the previous frame is possible (particle influence only):
+            // v.angular_velocity.scale_by(0);
+
+            v.desired_angular_velocity.scale_by (1 / v.size[ 0 ]);
+            v.desired_angular_velocity.scale_by (1 / this.domain_size);
+            v.desired_angular_velocity.scale_by (this.vortex_multiplier);
+            v.desired_angular_velocity.scale_by (v.influencability);
+
+            // Finish computing average of the particles' influences:
             if (v.total_influences > 0) v.desired_angular_velocity.scale_by (1 / v.total_influences);
+
             v.angular_velocity.add_by (v.desired_angular_velocity);
-            if (v.angular_velocity.norm () > 1 / this.domain_size) v.angular_velocity.scale_by (
-              1 / this.domain_size / v.angular_velocity.norm ());
+
+            if (v.angular_velocity.norm () > this.rotating_speed_cap)
+                v.angular_velocity.scale_by (this.rotating_speed_cap / v.angular_velocity.norm ());
+
             v.angular_velocity.scale_by (1 - this.rotating_friction);        // Friction
         }
     }
@@ -207,8 +243,9 @@ export class Particle_Demo extends Simulation {
         if (this.has_drawn)
             this.shapes.particles.copy_onto_graphics_card (caller.context, ["offset", "normal"], false);
 
-        // for (let v of this.vortices)
-        //     this.shapes.ball.draw (caller, this.uniforms, v.matrix_between_steps, this.materials.phong, "LINES");
+        if (this.draw_vortices)
+            for (let v of this.vortices)
+                this.shapes.ball.draw (caller, this.uniforms, v.matrix_between_steps, this.materials.phong, "LINES");
 
         this.shapes.particles.draw (caller, this.uniforms, Mat4.identity (), this.materials.particle);
         this.has_drawn = true;
