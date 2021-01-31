@@ -19,10 +19,10 @@ import {Many_Lights_Demo}
                     from "./examples/many-lights-demo.js";
 import {Obj_File_Demo}
                     from "./examples/obj-file-demo.js";
-import {Scene_To_Texture_Demo}
-                    from "./examples/scene-to-texture-demo.js";
 import {Parametric_Surfaces}
                     from "./examples/parametric-surfaces.js";
+import {Scene_To_Texture_Demo}
+                    from "./examples/scene-to-texture-demo.js";
 import {Text_Demo}
                     from "./examples/text-demo.js";
 import {Transforms_Sandbox_Base, Transforms_Sandbox}
@@ -35,8 +35,8 @@ Object.assign (defs,
                {Inertia_Demo, Collision_Demo},
                {Many_Lights_Demo},
                {Obj_File_Demo},
-               {Scene_To_Texture_Demo},
                {Parametric_Surfaces},
+               {Scene_To_Texture_Demo},
                {Text_Demo},
                {Transforms_Sandbox_Base, Transforms_Sandbox}
 );

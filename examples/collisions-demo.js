@@ -206,7 +206,6 @@ export class Inertia_Demo extends Simulation
       if( !caller.controls )
         { this.animated_children.push( caller.controls = new defs.Movement_Controls( { uniforms: this.uniforms } ) );
           caller.controls.add_mouse_controls( caller.canvas );
-          this.animated_children.push( new defs.Shared_Uniforms_Viewer( { uniforms: this.uniforms } ) );
           Shader.assign_camera( Mat4.translation( 0,0,-50 ), this.uniforms );    // Locate the camera here (inverted matrix).
         }
       this.uniforms.projection_transform = Mat4.perspective( Math.PI/4, caller.width/caller.height, 1, 500 );
@@ -297,7 +296,6 @@ export class Collision_Demo extends Simulation
       if( !caller.controls )
         { this.animated_children.push( caller.controls = new defs.Movement_Controls( { uniforms: this.uniforms } ) );
           caller.controls.add_mouse_controls( caller.canvas );
-          this.animated_children.push( new defs.Shared_Uniforms_Viewer( { uniforms: this.uniforms } ) );
           Shader.assign_camera( Mat4.translation( 0,0,-50 ), this.uniforms );    // Locate the camera here (inverted matrix).
         }
       this.uniforms.projection_transform = Mat4.perspective( Math.PI/4, caller.width/caller.height, 1, 500 );

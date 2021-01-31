@@ -33,8 +33,8 @@ class Transforms_Sandbox_Base extends Component
       this.materials.plastic = { shader: phong, ambient: .2, diffusivity: 1, specularity: .5, color: color( .9,.5,.9,1 ) }
       this.materials.metal   = { shader: phong, ambient: .2, diffusivity: 1, specularity:  1, color: color( .9,.5,.9,1 ) }
     }
-  make_control_panel()
-    {                                 // make_control_panel(): Sets up a panel of interactive HTML elements, including
+  render_controls()
+    {                                 // render_controls(): Sets up a panel of interactive HTML elements, including
                                       // buttons with key bindings for affecting this scene, and live info readouts.
       this.control_panel.innerHTML += "Dragonfly rotation angle: <br>";
                                                 // The next line adds a live text readout of a data member of our Scene.

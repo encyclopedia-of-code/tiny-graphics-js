@@ -328,9 +328,9 @@ const Mat4 = math.Mat4 =
                      .times (Matrix.of (x.to4 (0), y.to4 (0), z.to4 (0), vec4 (0, 0, 0, 1)));
       }
       static orthographic (left, right, bottom, top, near, far) {
-          return Mat4.scale (vec3 (1 / (right - left), 1 / (top - bottom), 1 / (far - near)))
-                     .times (Mat4.translation (vec3 (-left - right, -top - bottom, -near - far)))
-                     .times (Mat4.scale (vec3 (2, 2, -2)));
+          return Mat4.scale(1 / (right - left), 1 / (top - bottom), 1 / (far - near))
+              .times(Mat4.translation(-left - right, -top - bottom, -near - far))
+              .times(Mat4.scale(2, 2, -2));
       }
       static perspective (fov_y, aspect, near, far) {
           const f = 1 / Math.tan (fov_y / 2), d = far - near;

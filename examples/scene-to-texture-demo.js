@@ -40,7 +40,7 @@ export class Scene_To_Texture_Demo extends Component
         this.cube_1 = Mat4.translation( -2,0,0 );
         this.cube_2 = Mat4.translation(  2,0,0 );
       }
-    make_control_panel()
+    render_controls()
       { this.key_triggered_button( "Cube rotation",  [ "c" ], () => this.spin ^= 1 );
 
         this.live_string( box => { box.textContent = this.spin } );  this.new_line();
