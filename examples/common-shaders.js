@@ -239,7 +239,7 @@ const Textured_Phong = defs.Textured_Phong =
               // Select texture unit 0 for the fragment shader Sampler2D uniform called "texture":
               context.uniform1i (gpu_addresses.texture, 0);
               // For this draw, use the texture image from correct the GPU buffer:
-              material.texture.activate (context);
+              material.texture.activate (context, 0);
           }
       }
   };
