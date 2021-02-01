@@ -1,13 +1,12 @@
 # tiny-graphics.js
 
-The tiny-graphics-js library refactors common WebGL steps, demonstrating how to organize a complex graphics program.  
+The tiny-graphics-js library refactors common WebGL steps, demonstrating how to organize a complex graphics program.
 
-Use this library to learn graphics and WebGL.  You will reduce the clutter and repetition that tends to plague beginner 
-WebGL projects.
+Use this library to learn graphics and WebGL.  You will reduce the clutter and repetition that tends to plague beginner WebGL projects.
 
 The tiny-graphics-js library mainly excels in an educational setting by showing a compact but effective usage of WebGL commands. This project bridges the difficult gap that occurs once you've learned WebGL commands but still struggle with excessive setup code between steps. Tiny-graphics shows how to organize WebGL calls into a flexible program with reusable parts. With setup code out of the way, you can see your math more clearly, and focus on creativity.
 
-This library is object oriented.  The important code is in a single small file of around 500 lines.  The other files 
+This library is object oriented.  The important code is in a single small file of around 500 lines.  The other files
 supply utilities for common math operations in graphics, useful GUI tools, and demos.
 
 Currently, the main limitations of tiny-graphics-js to be aware of are:
@@ -16,8 +15,8 @@ Currently, the main limitations of tiny-graphics-js to be aware of are:
 effects. Not all tiny-graphics-js demos are updated or in the latest build (such as for ray tracing).
 - Parts of tiny-graphics are inspired by React, a popular JavaScript framework. Both feature a tree of `Component` objects
 that design a document. In tiny-graphics the `Component` tree nodes also do double duty for 3D graphics creation, which is
-extremely powerful. However, unlike React, tiny-graphics is not intended for creating high-performance all-purpose 
-documents. Our engine is simpler, so expect to follow a more fixed document layout that isn't made to track/sync complex 
+extremely powerful. However, unlike React, tiny-graphics is not intended for creating high-performance all-purpose
+documents. Our engine is simpler, so expect to follow a more fixed document layout that isn't made to track/sync complex
 UI changes.
 - tiny-graphics uses a `draw()` function to draw a single shape. Modern graphics frameworks, however, handle shapes and
 materials a better way. To reduce the total number of calls to the GPU, they draw as much of the scene at once as
@@ -108,4 +107,4 @@ The tiny-graphics.js software library by Garett Ridge has accompanied UCLA Compu
 
 https://github.com/encyclopedia-of-code/tiny-graphics-assignments
 
-This code library accompanies and supports a web project by the same author called "The Encyclopedia of Code", a crowd-sourced repository of WebGL demos and educational tutorials that uses an online editor.  
+This code library accompanies and supports a web project by the same author called "The Encyclopedia of Code", a crowd-sourced repository of WebGL demos and educational tutorials that uses an online editor.
