@@ -8,18 +8,14 @@ export class Particle_Demo extends Simulation {
         super.init ();
         this.num_particles = 1000;
 
-        this.particles = Array (this.num_particles).fill (0).map (() => new Particle ());
-        for (let p of this.particles) {
-            p.reset (999, 999, 999, 0, 0, 0);
-        }
+        const random_vecs  = Array (this.num_particles).fill (0).map (x => vec3 (0, 0, 0).randomized (10));
 
-
-        this.shapes   = {particles: new Particle_Cloud (this.particles.map (x => x.position.copy ()))};
+        this.shapes   = {particles: new Particle_Cloud (random_vecs)};
         this.material = {shader: new Particle_Shader (), color: color (.4, .8, .4, 1), ambient: .4};
     }
     update_state (dt) {
         const s           = this.shapes.particles.arrays;
-        const random_vecs = Array (this.num_particles).fill (0).map (x => vec3 (0, .01, 0).randomized (.05));
+        const random_vecs = Array (this.num_particles).fill (0).map (x => vec3 (0, .01, 0).randomized (.02));
         s.offset          = s.offset.map ((x, i) => x.plus (random_vecs[ ~~(i / 4) ]));
     }
     render_explanation () {
@@ -71,9 +67,16 @@ const Particle_Shader = defs.Particle_Shader =
         uniform vec2 particle_square_size;
 
         void main() {
+
+            float particle_scale_factor = .4;
             vec4 square_point = vec4( position, 1.0);
-            square_point.xy *= particle_square_size;
-            gl_Position = projection_camera_model_transform * vec4( offset, 1.0 ) + square_point;     // Move vertex to final space.\
+            square_point.xy *= particle_square_size * particle_scale_factor;
+
+            vec3 temp = offset;
+            temp[1] = mod( temp[1]+3.0,6.0)-3.0;    // Keep particles from rising too high.
+
+                                              // Move vertex to final space:
+            gl_Position = projection_camera_model_transform * vec4( temp, 1.0 ) + square_point;
                                               // The final normal vector in screen space.
             N = normalize( mat3( model_transform ) * normal / squared_scale);
 
@@ -90,21 +93,19 @@ const Particle_Shader = defs.Particle_Shader =
 
         void main() {
             float from_center = distance( f_tex_coord, vec2( .5,.5) )   ;
-            vec4 tex_color = vec4( .013/( from_center - 0.1) - .4);
+            vec4 tex_color = vec4( .01/( from_center - 0.05) - .4);
             tex_color.xyz *= f_normal * f_normal / 10.0;
             if( tex_color.w < .01 ) discard;
                                                                      // Compute an initial (ambient) color:
             gl_FragColor = vec4( ( tex_color.xyz + shape_color.xyz ) * ambient, shape_color.w * tex_color.w );
                                                                      // Compute the final color with contributions from lights:
             gl_FragColor.xyz += phong_model_lights( normalize( N ), vertex_worldspace );
-
-        //    gl_FragColor.xyz = gl_FragCoord.xyz * vec3( 1./1080.5, 1./600.5, 0. );
           } `;
       }
       send_uniforms (gl, gpu, uniforms, model_transform) {
           super.send_uniforms (gl, gpu, uniforms, model_transform);
 
-          const particle_square_size = [uniforms.projection_transform[ 0 ][ 0 ],
+          const particle_square_size =  [uniforms.projection_transform[ 0 ][ 0 ],
                                         uniforms.projection_transform[ 1 ][ 1 ]];
 
           gl.uniform2fv (gpu.particle_square_size, particle_square_size);
