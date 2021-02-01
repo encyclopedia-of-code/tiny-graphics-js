@@ -21,6 +21,8 @@ import {Obj_File_Demo}
                     from "./examples/obj-file-demo.js";
 import {Parametric_Surfaces}
                     from "./examples/parametric-surfaces.js";
+import {Particle_Demo}
+                    from "./examples/particle-demo.js";
 import {Scene_To_Texture_Demo}
                     from "./examples/scene-to-texture-demo.js";
 import {Text_Demo}
@@ -36,6 +38,7 @@ Object.assign (defs,
                {Many_Lights_Demo},
                {Obj_File_Demo},
                {Parametric_Surfaces},
+               {Particle_Demo},
                {Scene_To_Texture_Demo},
                {Text_Demo},
                {Transforms_Sandbox_Base, Transforms_Sandbox}
@@ -43,7 +46,7 @@ Object.assign (defs,
 
 // ******************** SELECT THE DEMO TO DISPLAY:
 
-const main_scene        = Parametric_Surfaces;
+const main_scene        = Particle_Demo;
 const additional_scenes = [];
 
 export {main_scene, additional_scenes, defs};
