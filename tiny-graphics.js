@@ -147,11 +147,11 @@ const test_rookie_mistake = function () {
     test_rookie_mistake.counter |= 0;
     if (test_rookie_mistake.counter++ > 200)
         throw `Error: You are sending a lot of object definitions to the GPU, probably by mistake!  Many are likely
-        duplicates, which you don't want since sending each one is very slow.  TO FIX THIS: Avoid ever declaring a 
+        duplicates, which you don't want since sending each one is very slow.  TO FIX THIS: Avoid ever declaring a
         Shape, Shader, or Texture with "new" anywhere that's called repeatedly (such as inside render_animation()).
-        You don't want simple definitions to be re-created and re-transmitted every frame.  Your scene's constructor is 
+        You don't want simple definitions to be re-created and re-transmitted every frame.  Your scene's constructor is
         a better option; it's only called once.  Call "new" there instead, then keep the result as a class member.  If
-        you somehow have a deformable shape that must really be updated every frame, then refer to the documentation of 
+        you somehow have a deformable shape that must really be updated every frame, then refer to the documentation of
         copy_onto_graphics_card() -- you need a special call to it rather than calling new.`;
 };
 
