@@ -6,3 +6,8 @@
 *.bat
 *.command
 .vscode/launch.json
+node_modules
+eslintrc.json
+package-lock.json
+package.json
+.eslintrc.json
