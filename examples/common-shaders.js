@@ -27,14 +27,14 @@ const Basic_Shader = defs.Basic_Shader =
         attribute vec3 position;                            // Position is expressed in object coordinates.
         uniform mat4 projection_camera_model_transform;
 
-        void main() { 
+        void main() {
           gl_Position = projection_camera_model_transform * vec4( position, 1.0 );      // Move vertex to final space.
           VERTEX_COLOR = color;                                 // Use the hard-coded color of the vertex.
         }`;
       }
       fragment_glsl_code () {         // ********* FRAGMENT SHADER *********
           return this.shared_glsl_code () + `
-        void main() {                                                   
+        void main() {
           gl_FragColor = VERTEX_COLOR;    // Directly use per-vertex colors for interpolation.
         }`;
       }
@@ -69,11 +69,11 @@ const Funny_Shader = defs.Funny_Shader =
       fragment_glsl_code () {
           return this.shared_glsl_code () + `
         uniform float animation_time;
-        void main() { 
+        void main() {
           float a = animation_time, u = f_tex_coord.x, v = f_tex_coord.y;
-          
+
           // To color in all pixels, use an arbitrary math function based only on time and UV texture coordinates.
-          gl_FragColor = vec4(                                    
+          gl_FragColor = vec4(
             2.0 * u * sin(17.0 * u ) + 3.0 * v * sin(11.0 * v ) + 1.0 * sin(13.0 * a),
             3.0 * u * sin(18.0 * u ) + 4.0 * v * sin(12.0 * v ) + 2.0 * sin(14.0 * a),
             4.0 * u * sin(19.0 * u ) + 5.0 * v * sin(13.0 * v ) + 3.0 * sin(15.0 * a),
@@ -90,7 +90,7 @@ const Phong_Shader = defs.Phong_Shader =
           this.num_lights = num_lights;
       }
       shared_glsl_code () {          // ********* SHARED CODE, INCLUDED IN BOTH SHADERS *********
-          return ` 
+          return `
         precision mediump float;
         const int N_LIGHTS = ` + this.num_lights + `;
         uniform float ambient, diffusivity, specularity, smoothness;
@@ -111,7 +111,7 @@ const Phong_Shader = defs.Phong_Shader =
 
                 vec3 L = normalize( surface_to_light_vector );
                 vec3 H = normalize( L + E );
-                
+
                   // Compute diffuse and specular components of Phong Reflection Model.
                 float diffuse  =      max( dot( N, L ), 0.0 );
                 float specular = pow( max( dot( N, H ), 0.0 ), smoothness );     // Use Blinn's "halfway vector" method.
@@ -133,7 +133,7 @@ const Phong_Shader = defs.Phong_Shader =
         uniform mat4 model_transform;
         uniform mat4 projection_camera_model_transform;
 
-        void main() {                                                                
+        void main() {
             gl_Position = projection_camera_model_transform * vec4( position, 1.0 );     // Move vertex to final space.
                                             // The final normal vector in screen space.
             N = normalize( mat3( model_transform ) * normal / squared_scale);
@@ -143,7 +143,7 @@ const Phong_Shader = defs.Phong_Shader =
       }
       fragment_glsl_code () {          // ********* FRAGMENT SHADER *********
           return this.shared_glsl_code () + `
-        void main() {                          
+        void main() {
                                            // Compute an initial (ambient) color:
             gl_FragColor = vec4( shape_color.xyz * ambient, shape_color.w );
                                            // Compute the final color with contributions from lights:
@@ -252,10 +252,10 @@ const Fake_Bump_Map = defs.Fake_Bump_Map =
         varying vec2 f_tex_coord;
         uniform sampler2D texture;
 
-        void main()  {        
+        void main()  {
             vec4 tex_color = texture2D( texture, f_tex_coord );       // Sample texture image in the correct place.
             if( tex_color.w < .01 ) discard;
-                            
+
             // This time, slightly disturb normals based on sampling the same image that was used for texturing.
             vec3 bumped_N  = N + tex_color.rgb - .5*vec3(1,1,1);
             gl_FragColor = vec4( ( tex_color.xyz + shape_color.xyz ) * ambient, shape_color.w * tex_color.w );

@@ -301,7 +301,7 @@ const Mat4 = math.Mat4 =
       load_identity (target) {
           for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) this[ i ][ j ] = i === j ? 1 : 0;
       }
-      static identity () { return Matrix.of ([1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]); };
+      static identity () { return Matrix.of ([1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]); }
       static rotate_vec3 (target, angle, x, y, z) {
           const n         = Math.sqrt (x * x + y * y + z * z),
                 [i, j, k] = [x / n, y / n, z / n],
