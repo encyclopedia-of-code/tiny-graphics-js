@@ -12,8 +12,8 @@ supply utilities for common math operations in graphics, as well as useful GUI t
 
 Currently, the main limitations of tiny-graphics-js to be aware of are:
 
-- Compared to crowd-sourced frameworks like three.js, not as many examples exist yet of how to make various graphics
-effects. Not all tiny-graphics-js demos are updated or in the latest build (such as for ray tracing).
+- Crowd-sourced frameworks like three.js include a more comprehensive list of examples of how to make various graphics
+effects. The tiny-graphics-js example demos are undergoing an overhaul, so certain demos (such as for ray tracing) won't be included in the main branch until that build.
 - Parts of tiny-graphics are inspired by React, a popular JavaScript framework. Both feature a tree of `Component` objects
 that design a document. In tiny-graphics the `Component` tree nodes also do double duty for 3D graphics creation, which is
 extremely powerful. However, unlike React, tiny-graphics is not intended for creating high-performance all-purpose
