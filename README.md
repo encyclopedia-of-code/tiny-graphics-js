@@ -36,7 +36,7 @@ The main file (tiny-graphics.js) defines just four class definitions useful for 
 - **`Shape`**: Explains to the graphics card the layout of one type of 3D shape.
 - **`Shader`**: Loads a GLSL shader program onto your graphics card, ultimately converting raw shape data into a final 2D image.
 - **`Texture`**: Manages a 2D image on the GPU that can color (or exert other influence) along a shape's surface.
-- **`Component`**: Stores your overall program, defining how to draw some or all of your 3D scene and your web document.
+- **`Component`**: Stores a piece of your code for designing your 3D scene and your web document.
 
 In addition, tiny-graphics-js comes with a tiny math library (tiny-graphics-math.js) for common vector and matrix
 operations that are found in computer graphics. It also comes with a file full of helper objects (tiny-graphics-gui.js) for
