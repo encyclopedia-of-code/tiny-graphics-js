@@ -26,7 +26,7 @@ to minimize GPU state changes. It's possible to design such a framework in tiny-
 Components, but this scene graph functionality is not immediately built in.
 - Various still-pending fixes and API enhancements.
 
-## Overview
+## Overview and Usage
 
 ### tiny-graphics.js
 
