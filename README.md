@@ -8,7 +8,7 @@ WebGL projects.
 The tiny-graphics-js library mainly excels in an educational setting by showing a compact but effective usage of WebGL commands. This project bridges the difficult gap that occurs once you've learned WebGL commands but still struggle with excessive setup code between steps. Tiny-graphics shows how to organize WebGL programs to be flexible with reusable parts. With setup code out of the way, you can see your math more clearly, while free to focus on creativity.
 
 This library is object oriented.  The important code is in a single small file of around 500 lines.  The other files
-supply utilities for common math operations in graphics, useful GUI tools, and demos.
+supply utilities for common math operations in graphics, as well as useful GUI tools, and interactive demos of functionality.
 
 Currently, the main limitations of tiny-graphics-js to be aware of are:
 
