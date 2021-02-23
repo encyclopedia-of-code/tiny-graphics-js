@@ -50,7 +50,7 @@ A `Component` is one piece of your overall program. Each `Component` both repres
 web document may contain several 3D canvas drawing areas. Any graphics canvas area on the page can display the combined
 3D result of any number of `Component` objects, some of which might even be shared across multiple canvas drawing areas.
 
-For an example of how to use one `Component` to draw to several 3D WebGL canvas areas at once, see the demo in "parametric-surfaces.js".
+For an example of how to use one `Component` to draw to several 3D WebGL canvas areas at once, see the demo in "parametric-surfaces.js".  Observe how state information (such as camera position and shape rotation) stay synced across drawing areas.
 
 `Component` is the base class for any scene you might want to design. For simple 3D scenes, your small code snippet will go
 in a `Component`. To use, make your own subclass(es) of `Component` and override a few of the special functions that affect
