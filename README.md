@@ -34,7 +34,7 @@ The main file (tiny-graphics.js) defines just four class definitions useful for 
 `Texture`, and `Component`.
 
 - **`Shape`**: Explains to the graphics card the layout of one type of 3D shape.
-- **`Shader`**: Loads a GLSL shader program onto your graphics card, ultimately converting raw shape data into a final 2D image.
+- **`Shader`**: Loads a GLSL shader program onto your graphics card; when run, it ultimately converts raw shape data into a final 2D image.
 - **`Texture`**: Manages a 2D image on the GPU that can color (or exert other influence) along a shape's surface.
 - **`Component`**: Contains code responsible for designing your 3D scene and your web document.
 
