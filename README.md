@@ -46,9 +46,9 @@ several files containing useful code examples of possible `Shapes`, `Shaders`, a
 ### Components
 
 A `Component` is one piece of your overall program. Each `Component` both represents some (or all) of a 3D scene, plus some
-(or all) of the interactive HTML document surrounding the scene. Components nest inside one another in a hierarchy. Your
+(or all) of the interactive HTML document surrounding the scene. Components nest inside one another in a hierarchy. By creating several of them, your
 web document may contain several 3D canvas drawing areas. Any graphics canvas area on the page can display the combined
-3D result of any number of Components, some of which might even be shared across multiple canvas drawing areas.
+3D result of any number of `Component` objects, some of which might even be shared across multiple canvas drawing areas.
 
 For an example of how to use one `Component` to draw to several 3D WebGL canvas areas at once, see the demo in "parametric-surfaces.js".
 
