@@ -258,6 +258,7 @@ const Shader = tiny.Shader =
       }                           // Your custom Shader has to override the following functions:
       vertex_glsl_code () {}
       fragment_glsl_code () {}
+      update_GPU () {}
       static default_uniforms () {
           return {
               camera_inverse      : Mat4.identity (),
@@ -268,7 +269,6 @@ const Shader = tiny.Shader =
               animation_delta_time: 0
           };
       }
-      update_GPU () {}
       static assign_camera (camera_inverse, uniforms) {
           Object.assign (uniforms, {camera_inverse, camera_transform: Mat4.inverse (camera_inverse)});
       }
