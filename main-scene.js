@@ -46,7 +46,7 @@ Object.assign (defs,
 
 // ******************** SELECT THE DEMO TO DISPLAY:
 
-const main_scene        = Axes_Viewer_Test_Scene;
+const main_scene        = Transforms_Sandbox;
 const additional_scenes = [];
 
 export {main_scene, additional_scenes, defs};

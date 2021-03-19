@@ -90,7 +90,7 @@ const Phong_Shader = defs.Phong_Shader =
           this.num_lights = num_lights;
       }
       shared_glsl_code () {          // ********* SHARED CODE, INCLUDED IN BOTH SHADERS *********
-          return `
+          return "#version 300 es " + `
         precision mediump float;
         const int N_LIGHTS = ` + this.num_lights + `;
         uniform float ambient, diffusivity, specularity, smoothness;
@@ -99,7 +99,6 @@ const Phong_Shader = defs.Phong_Shader =
         uniform vec4 shape_color;
         uniform vec3 squared_scale, camera_center;
 
-        varying vec3 N, vertex_worldspace;
                                              // ***** PHONG SHADING HAPPENS HERE: *****
         vec3 phong_model_lights( vec3 N, vec3 vertex_worldspace ) {
             vec3 E = normalize( camera_center - vertex_worldspace );
@@ -128,7 +127,8 @@ const Phong_Shader = defs.Phong_Shader =
       }
       vertex_glsl_code () {           // ********* VERTEX SHADER *********
           return this.shared_glsl_code () + `
-        attribute vec3 position, normal;                            // Position is expressed in object coordinates.
+        in vec3 position, normal;                            // Position is expressed in object coordinates.
+        out vec3 N, vertex_worldspace;
 
         uniform mat4 model_transform;
         uniform mat4 projection_camera_model_transform;
@@ -143,11 +143,13 @@ const Phong_Shader = defs.Phong_Shader =
       }
       fragment_glsl_code () {          // ********* FRAGMENT SHADER *********
           return this.shared_glsl_code () + `
+        in vec3 N, vertex_worldspace;
+        out vec4 frag_color;
         void main() {
                                            // Compute an initial (ambient) color:
-            gl_FragColor = vec4( shape_color.xyz * ambient, shape_color.w );
+            frag_color = vec4( shape_color.xyz * ambient, shape_color.w );
                                            // Compute the final color with contributions from lights:
-            gl_FragColor.xyz += phong_model_lights( normalize( N ), vertex_worldspace );
+            frag_color.xyz += phong_model_lights( normalize( N ), vertex_worldspace );
           } `;
       }
       static light_source (position, color, size) {
