@@ -14,42 +14,59 @@ const {Vector3, vec3, color, Matrix, Mat4, Keyboard_Manager} = tiny;
 const Shape = tiny.Shape =
   class Shape {
       // See description at https://github.com/encyclopedia-of-code/tiny-graphics-js/wiki/tiny-graphics.js#shape
-      constructor (...array_names) {
-          [this.arrays, this.indices] = [{}, []];
+      constructor () {
+          [this.vertices, this.indices] = [{}, []];
           this.gpu_instances          = new Map ();      // Track which GPU contexts this object has copied itself onto.
-
-          // Initialize a blank array member of the Shape with each of the names provided:
-          for (let name of array_names) this.arrays[ name ] = [];
       }
-      copy_onto_graphics_card (context, selection_of_arrays = Object.keys (this.arrays), write_to_indices = true) {
-          // Define what this object should store in each new WebGL Context:
-          const defaults = {webGL_buffer_pointers: {}};
+      copy_onto_graphics_card (context, selection_of_arrays = Object.keys (this.vertices), write_to_indices = true) {
 
+          const gl = context;
           // When this Shape sees a new GPU context (in case of multiple drawing areas), copy the Shape to the GPU. If
           // it already was copied over, get a pointer to the existing instance.
           const existing_instance = this.gpu_instances.get (context);
           if ( !existing_instance) test_rookie_mistake ();
 
           // If this Shape was never used on this GPU context before, then prepare new buffer indices for this context.
-          const gpu_instance = existing_instance || this.gpu_instances.set (context, defaults).get (context);
-
-          const gl = context;
+          const gpu_instance = existing_instance || { VAO: gl.createVertexArray (), buffer: gl.createBuffer () };
+          gl.bindVertexArray( gpu_instance.VAO );
 
           const write = existing_instance ? (target, data) => gl.bufferSubData (target, 0, data)
                                           : (target, data) => gl.bufferData (target, data, gl.STATIC_DRAW);
+          if( !this.vertices[0])
+            return;
 
-          for (let name of selection_of_arrays) {
-              if ( !existing_instance)
-                  gpu_instance.webGL_buffer_pointers[ name ] = gl.createBuffer ();
-              gl.bindBuffer (gl.ARRAY_BUFFER, gpu_instance.webGL_buffer_pointers[ name ]);
-              write (gl.ARRAY_BUFFER, Matrix.flatten_2D_to_1D (this.arrays[ name ]));
-          }
+          let offset = 0;
+
+          // refactor two calls to Object?
+          const vertex_data = Object.values( this.vertices[0] );
+          const stride = vertex_data.reduce( (acc,x,i,a) => { return acc + (x.length || 1) }, 0 )
+
+          gl.bindBuffer (gl.ARRAY_BUFFER, gpu_instance.buffer );
+          write (gl.ARRAY_BUFFER, needsomethingelsehere.flatten_2D_to_1D (gpu_instance.buffer));
+
+          if( !existing_instance)
+            for( let name of Object.keys (this.vertices[0])) {
+
+              // can't do this, since shader program isn't initialized yet:
+              // const loc = gl.getAttribLocation(program, aName)
+
+              
+
+              // This assumes some stuff about the shader -- one or more floats for attributes only;
+              // not representing colors 0-255; vertex fields are interleaved.
+              gl.vertexAttribPointer(index, this.vertices[0][name].length, gl.FLOAT, false, stride, offset);
+              gl.enableVertexAttribArray (index);
+
+              offset += 4*(this.vertices[0][name].length || 1);
+            }
           if (this.indices.length && write_to_indices) {
               if ( !existing_instance)
                   gpu_instance.index_buffer = gl.createBuffer ();
               gl.bindBuffer (gl.ELEMENT_ARRAY_BUFFER, gpu_instance.index_buffer);
               write (gl.ELEMENT_ARRAY_BUFFER, new Uint32Array (this.indices));
           }
+
+          gl.bindVertexArray(null);
           return gpu_instance;
       }
       execute_shaders (gl, gpu_instance, type) {
@@ -61,8 +78,8 @@ const Shape = tiny.Shape =
       draw (webgl_manager, uniforms, model_transform, material, type = "TRIANGLES") {
           const gpu_instance = this.gpu_instances.get (webgl_manager.context) ||
                                this.copy_onto_graphics_card (webgl_manager.context);
-          material.shader.activate (webgl_manager.context, gpu_instance.webGL_buffer_pointers, uniforms,
-                                    model_transform, material);
+          gl.bindVertexArray( gpu_instance.VAO );
+          material.shader.activate (webgl_manager.context, uniforms, model_transform, material);
           // Run the shaders to draw every triangle now:
           this.execute_shaders (webgl_manager.context, gpu_instance, type);
       }
@@ -229,7 +246,7 @@ const Shader = tiny.Shader =
                          {program, vertShdr, fragShdr, gpu_addresses: new Graphics_Addresses (program, gl)});
           return gpu_instance;
       }
-      activate (context, buffer_pointers, uniforms, model_transform, material) {
+      activate (context, uniforms, model_transform, material) {
           // Track which GPU contexts this object has copied itself onto:
           if ( !this.gpu_instances) this.gpu_instances = new Map ();
           const gpu_instance = this.gpu_instances.get (context) || this.copy_onto_graphics_card (context);
@@ -238,23 +255,6 @@ const Shader = tiny.Shader =
 
           // --- Send over all the values needed by this particular shader to the GPU: ---
           this.update_GPU (context, gpu_instance.gpu_addresses, uniforms, model_transform, material);
-
-          // --- Turn on all the correct attributes and make sure they're pointing to the correct ranges in GPU
-          // memory. ---
-          for (let [attr_name, attribute] of Object.entries (gpu_instance.gpu_addresses.shader_attributes)) {
-              if ( !attribute.enabled) {
-                  if (attribute.index >= 0) context.disableVertexAttribArray (attribute.index);
-                  continue;
-              }
-              context.enableVertexAttribArray (attribute.index);
-              context.bindBuffer (context.ARRAY_BUFFER, buffer_pointers[ attr_name ]);    // Activate the correct
-                                                                                          // buffer.
-              context.vertexAttribPointer (attribute.index, attribute.size, attribute.type,            // Populate each attribute
-                                           attribute.normalized, attribute.stride, attribute.pointer);       // from
-                                                                                                             // the
-                                                                                                             // active
-                                                                                                             // buffer.
-          }
       }                           // Your custom Shader has to override the following functions:
       vertex_glsl_code () {}
       fragment_glsl_code () {}
