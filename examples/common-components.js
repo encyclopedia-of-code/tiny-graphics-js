@@ -3,6 +3,8 @@ import {tiny} from '../tiny-graphics.js';
 const {Vector, Vector3, vec, vec3, vec4, color, Matrix, Mat4, Shape, Shader, Component} = tiny;
 
 const defs = {};
+import {defs as shapes} from './common-shapes.js';
+import {defs as shaders} from './common-shaders.js';
 
 export {tiny, defs};
 
@@ -10,8 +12,8 @@ const Minimal_Webgl_Demo = defs.Minimal_Webgl_Demo =
   class Minimal_Webgl_Demo extends Component {
       init () {
           this.widget_options = {make_controls: false};    // This demo is too minimal to have controls
-          this.shapes         = {triangle: new defs.Minimal_Shape ()};
-          this.shader         = new defs.Basic_Shader ();
+          this.shapes         = {triangle: new shapes.Minimal_Shape ()};
+          this.shader         = new shaders.Basic_Shader ();
       }
       render_animation (caller) {
           this.shapes.triangle.draw (caller, this.uniforms, Mat4.identity (), {shader: this.shader});

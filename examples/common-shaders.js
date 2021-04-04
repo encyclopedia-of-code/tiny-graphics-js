@@ -17,14 +17,15 @@ const Basic_Shader = defs.Basic_Shader =
                                     Matrix.flatten_2D_to_1D (PCM.transposed ()));
       }
       shared_glsl_code () {           // ********* SHARED CODE, INCLUDED IN BOTH SHADERS *********
-          return `precision mediump float;
-                  varying vec4 VERTEX_COLOR;
+          return "#version 300 es " + `
+                  precision mediump float;
       `;
       }
       vertex_glsl_code () {          // ********* VERTEX SHADER *********
           return this.shared_glsl_code () + `
-        attribute vec4 color;
-        attribute vec3 position;                            // Position is expressed in object coordinates.
+        in vec4 color;
+        in vec3 position;                            // Position is expressed in object coordinates.
+        out vec4 VERTEX_COLOR;
         uniform mat4 projection_camera_model_transform;
 
         void main() {
@@ -34,8 +35,10 @@ const Basic_Shader = defs.Basic_Shader =
       }
       fragment_glsl_code () {         // ********* FRAGMENT SHADER *********
           return this.shared_glsl_code () + `
+        in vec4 VERTEX_COLOR;
+        out vec4 frag_color;
         void main() {
-          gl_FragColor = VERTEX_COLOR;    // Directly use per-vertex colors for interpolation.
+          frag_color = VERTEX_COLOR;    // Directly use per-vertex colors for interpolation.
         }`;
       }
   };
