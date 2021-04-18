@@ -15,57 +15,99 @@ const Shape = tiny.Shape =
   class Shape {
       // See description at https://github.com/encyclopedia-of-code/tiny-graphics-js/wiki/tiny-graphics.js#shape
       constructor () {
-          [this.vertices, this.indices] = [{}, []];
-          this.gpu_instances          = new Map ();      // Track which GPU contexts this object has copied itself onto.
+          [this.vertices, this.indices, this.local_buffers] = [{}, [], []];
+          this.gpu_instances = new Map ();      // Track which GPU contexts this object has copied itself onto.
       }
-      copy_onto_graphics_card (context, selection_of_arrays = Object.keys (this.vertices), write_to_indices = true) {
+      fill_buffer( selection_of_attributes, buffer_hint = "STATIC_DRAW", divisor = null ) {
+        if( !this.vertices[0])
+          return;
 
+        // Check if this is a new call, a repeat call, or an invalid call.
+        let buffer_to_overwrite = null;
+        for( let index of this.local_buffers.keys() ) {
+          if( buffer_info.attributes[0] != selection_of_attributes[0] )
+            continue;
+          if( !buffer_info.attributes.every( (x,i) => x == selection_of_attributes[i] ) )
+            throw "A call to fill_buffer() has been made that did not match the grouping of attributes used in previous calls.";
+          buffer_to_overwrite = index;
+        }
+
+        // Visit the first vertex to note down how big the type of each fields/attribute is.  Assume all others will match.
+        // This assumes some stuff about the shader -- attributes only use float type (1 to 4 of them);
+        let attribute_sizes = new Map();
+        selection_of_attributes.forEach ( a => attribute_sizes.set( a, this.vertices[0][a].length || 1 ) );
+
+        // When a new buffer is requested by using a group of attributes not seen before, make a buffer.
+        if( !buffer_to_overwrite ) {
+          const stride = attribute_sizes.reduce( (acc,x) => acc + x, 0 )
+
+          const offsets = [];
+          let offset = 0;
+          for( let index = 0; index < selection_of_attributes.length; index++ ) {
+              offsets[index] = offset;
+              offset += 4*attribute_sizes[index];
+          }
+          buffer_to_overwrite = this.local_buffers.push(
+            {attributes:  [ ...selection_of_attributes ], sizes: attribute_sizes,
+               offsets, stride, buffer_hint, divisor, data: [] });
+        }
+
+        // Fill in the selected buffer locally with the user's updated values from each vertex field.
+        let pos = 0;
+        for( let v of this.vertices )
+          for( let a of selection_of_attributes ) {
+            if( this.local_buffers[buffer_to_overwrite].data[pos] != v[a] )
+              this.local_buffers[buffer_to_overwrite].dirty = true;
+            this.local_buffers[buffer_to_overwrite].data[pos] = v[a];
+            pos += attribute_sizes.get( a );
+          }
+      }
+      copy_onto_graphics_card (context, write_to_indices = true) {
+          if( !this.local_buffers.length)
+            return;
           const gl = context;
+
           // When this Shape sees a new GPU context (in case of multiple drawing areas), copy the Shape to the GPU. If
           // it already was copied over, get a pointer to the existing instance.
           const existing_instance = this.gpu_instances.get (context);
           if ( !existing_instance) test_rookie_mistake ();
 
           // If this Shape was never used on this GPU context before, then prepare new buffer indices for this context.
-          const gpu_instance = existing_instance || { VAO: gl.createVertexArray (), buffer: gl.createBuffer () };
+          const gpu_instance = existing_instance || { VAO: gl.createVertexArray () };
           gl.bindVertexArray( gpu_instance.VAO );
 
-          const write = existing_instance ? (target, data) => gl.bufferSubData (target, 0, data)
-                                          : (target, data) => gl.bufferData (target, data, gl.STATIC_DRAW);
-          if( !this.vertices[0])
-            return;
+          for( let index of this.local_buffers.keys() ) {
 
-          let offset = 0;
+            let buffer_info = this.local_buffers[index];
+            if( !buffer_info.dirty)
+              return;
+            buffer_info.dirty = false;
 
-          // refactor two calls to Object?
-          const vertex_data = Object.values( this.vertices[0] );
-          const stride = vertex_data.reduce( (acc,x,i,a) => { return acc + (x.length || 1) }, 0 )
+            let existing_pointer = buffer_info.gpu_pointer;
+            let buffer = existing_pointer || gl.createBuffer();
+            gl.bindBuffer (gl.ARRAY_BUFFER, buffer);
 
-          gl.bindBuffer (gl.ARRAY_BUFFER, gpu_instance.buffer );
-          write (gl.ARRAY_BUFFER, needsomethingelsehere.flatten_2D_to_1D (gpu_instance.buffer));
+            if (existing_pointer)
+              gl.bufferSubData (gl.ARRAY_BUFFER, 0, buffer_info.data)
+            else
+              gl.bufferData (gl.ARRAY_BUFFER, buffer_info.data, buffer_info.hint);
 
-          if( !existing_instance)
-            for( let name of Object.keys (this.vertices[0])) {
+            for( let i of buffer_info.attributes.keys()) {
 
-              // can't do this, since shader program isn't initialized yet:
-              // const loc = gl.getAttribLocation(program, aName)
-
-              
-
-              // This assumes some stuff about the shader -- one or more floats for attributes only;
-              // not representing colors 0-255; vertex fields are interleaved.
-              gl.vertexAttribPointer(index, this.vertices[0][name].length, gl.FLOAT, false, stride, offset);
-              gl.enableVertexAttribArray (index);
-
-              offset += 4*(this.vertices[0][name].length || 1);
+                // This assumes some stuff about the shader -- attributes only use float type (1 to 4 of them);
+                // no auto-normalizing colors 0-255; vertex fields are interleaved; vertex fields are in the same order
+                // that they'll appear in the shader (using offset keyword).
+                gl.vertexAttribPointer(i, buffer_info.sizes[i], gl.FLOAT, false, buffer_info.stride, buffer_info.offsets[i]);
+                gl.vertexAttribDivisor(i, attribute.divisor);
+                gl.enableVertexAttribArray (i);
             }
+          }
           if (this.indices.length && write_to_indices) {
               if ( !existing_instance)
                   gpu_instance.index_buffer = gl.createBuffer ();
               gl.bindBuffer (gl.ELEMENT_ARRAY_BUFFER, gpu_instance.index_buffer);
               write (gl.ELEMENT_ARRAY_BUFFER, new Uint32Array (this.indices));
           }
-
           gl.bindVertexArray(null);
           return gpu_instance;
       }
@@ -200,21 +242,21 @@ const Shader = tiny.Shader =
                       this[ u ] = gl.getUniformLocation (program, u);
                   }
 
-                  this.shader_attributes     = {};
-                  // Assume per-vertex attributes will each be a set of 1 to 4 floats:
-                  const type_to_size_mapping = {0x1406: 1, 0x8B50: 2, 0x8B51: 3, 0x8B52: 4};
-                  const numAttribs           = gl.getProgramParameter (program, gl.ACTIVE_ATTRIBUTES);
-                  // https://github.com/greggman/twgl.js/blob/master/dist/twgl-full.js for another example:
-                  for (let i = 0; i < numAttribs; i++) {
-                      const attribInfo                          = gl.getActiveAttrib (program, i);
-                      // Pointers to all shader attribute variables:
-                      this.shader_attributes[ attribInfo.name ] = {
-                          index     : gl.getAttribLocation (program, attribInfo.name),
-                          size      : type_to_size_mapping[ attribInfo.type ],
-                          enabled   : true, type: gl.FLOAT,
-                          normalized: false, stride: 0, pointer: 0
-                      };
-                  }
+                  // this.shader_attributes     = {};
+                  // // Assume per-vertex attributes will each be a set of 1 to 4 floats:
+                  // const type_to_size_mapping = {0x1406: 1, 0x8B50: 2, 0x8B51: 3, 0x8B52: 4};
+                  // const numAttribs           = gl.getProgramParameter (program, gl.ACTIVE_ATTRIBUTES);
+                  // // https://github.com/greggman/twgl.js/blob/master/dist/twgl-full.js for another example:
+                  // for (let i = 0; i < numAttribs; i++) {
+                  //     const attribInfo                          = gl.getActiveAttrib (program, i);
+                  //     // Pointers to all shader attribute variables:
+                  //     this.shader_attributes[ attribInfo.name ] = {
+                  //         index     : gl.getAttribLocation (program, attribInfo.name),
+                  //         size      : type_to_size_mapping[ attribInfo.type ],
+                  //         enabled   : true, type: gl.FLOAT,
+                  //         normalized: false, stride: 0, pointer: 0
+                  //     };
+                  // }
               }
           }
 
