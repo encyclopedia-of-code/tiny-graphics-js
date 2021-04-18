@@ -411,10 +411,12 @@ const Minimal_Shape = defs.Minimal_Shape =
   class Minimal_Shape extends tiny.Shape {
       // A truly minimal triangle, with three vertices each holding a 3D position and a color.
       constructor () {
-          super ("position", "color");
+          super();
           // Describe the where the points of a triangle are in space, and also describe their colors:
           this.vertices[0] = { position: vec3 (0, 0, 0), color: color (1, 0, 0, 1) };
           this.vertices[1] = { position: vec3 (1, 0, 0), color: color (0, 1, 0, 1) };
           this.vertices[2] = { position: vec3 (0, 1, 0), color: color (0, 0, 1, 1) };
+
+          this.fill_buffer( ["position", "color"] );
       }
   };
