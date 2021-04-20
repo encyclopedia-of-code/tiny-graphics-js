@@ -15,7 +15,7 @@ const Shape = tiny.Shape =
   class Shape {
       // See description at https://github.com/encyclopedia-of-code/tiny-graphics-js/wiki/tiny-graphics.js#shape
       constructor () {
-          [this.vertices, this.indices, this.local_buffers] = [{}, [], []];
+          [this.vertices, this.indices, this.local_buffers] = [[], [], []];
           this.gpu_instances = new Map ();      // Track which GPU contexts this object has copied itself onto.
       }
       fill_buffer( selection_of_attributes, buffer_hint = "STATIC_DRAW", divisor = null ) {
@@ -32,35 +32,36 @@ const Shape = tiny.Shape =
           buffer_to_overwrite = index;
         }
 
-        // Visit the first vertex to note down how big the type of each fields/attribute is.  Assume all others will match.
-        // This assumes some stuff about the shader -- attributes only use float type (1 to 4 of them);
-        let attribute_sizes = new Map();
-        selection_of_attributes.forEach ( a => attribute_sizes.set( a, this.vertices[0][a].length || 1 ) );
+        // Visit first vertex to note how big the type of each fields/attribute is.  Assume all others will match.
+        // TODO:  Allow mat2/mat3/mat4 attribute types as well.  Test single float attribute type.
+        let sizes = selection_of_attributes.map( a => this.vertices[0][a].length || 1 );
 
         // When a new buffer is requested by using a group of attributes not seen before, make a buffer.
         if( !buffer_to_overwrite ) {
-          const stride = attribute_sizes.reduce( (acc,x) => acc + x, 0 )
+          // TODO:  This part assumes a vertex type of FLOAT.  May need to override.
+          const stride = sizes.reduce( (acc,x) => acc + x * 4, 0 )
 
           const offsets = [];
           let offset = 0;
           for( let index = 0; index < selection_of_attributes.length; index++ ) {
               offsets[index] = offset;
-              offset += 4*attribute_sizes[index];
+              offset += 4*sizes[index];
           }
           buffer_to_overwrite = this.local_buffers.push(
-            {attributes:  [ ...selection_of_attributes ], sizes: attribute_sizes,
-               offsets, stride, buffer_hint, divisor, data: [] });
+            {attributes:  [ ...selection_of_attributes ],
+              sizes, offsets, stride, divisor, hint: buffer_hint, data: [] }) - 1;
         }
 
         // Fill in the selected buffer locally with the user's updated values from each vertex field.
         let pos = 0;
-        for( let v of this.vertices )
-          for( let a of selection_of_attributes ) {
-            if( this.local_buffers[buffer_to_overwrite].data[pos] != v[a] )
-              this.local_buffers[buffer_to_overwrite].dirty = true;
-            this.local_buffers[buffer_to_overwrite].data[pos] = v[a];
-            pos += attribute_sizes.get( a );
-          }
+        for (let v of this.vertices)
+          for (let a of selection_of_attributes)
+            for (let i=0; i < v[a].length; i++) {
+              if( this.local_buffers[buffer_to_overwrite].data[pos] != v[a][i] )
+                this.local_buffers[buffer_to_overwrite].dirty = true;
+              this.local_buffers[buffer_to_overwrite].data[pos] = v[a][i];
+              pos++;
+            }
       }
       copy_onto_graphics_card (context, write_to_indices = true) {
           if( !this.local_buffers.length)
@@ -73,7 +74,11 @@ const Shape = tiny.Shape =
           if ( !existing_instance) test_rookie_mistake ();
 
           // If this Shape was never used on this GPU context before, then prepare new buffer indices for this context.
-          const gpu_instance = existing_instance || { VAO: gl.createVertexArray () };
+          let gpu_instance = existing_instance;
+          if( !existing_instance) {
+            const defaults = { VAO: gl.createVertexArray () };
+            gpu_instance = this.gpu_instances.set (context, defaults).get (context);
+          }
           gl.bindVertexArray( gpu_instance.VAO );
 
           for( let index of this.local_buffers.keys() ) {
@@ -90,15 +95,15 @@ const Shape = tiny.Shape =
             if (existing_pointer)
               gl.bufferSubData (gl.ARRAY_BUFFER, 0, buffer_info.data)
             else
-              gl.bufferData (gl.ARRAY_BUFFER, buffer_info.data, buffer_info.hint);
+              gl.bufferData (gl.ARRAY_BUFFER, buffer_info.data, gl[buffer_info.hint]);
 
             for( let i of buffer_info.attributes.keys()) {
 
-                // This assumes some stuff about the shader -- attributes only use float type (1 to 4 of them);
+                // This assumes some stuff about the shader -- no matrix attributes for now (TODO);
                 // no auto-normalizing colors 0-255; vertex fields are interleaved; vertex fields are in the same order
                 // that they'll appear in the shader (using offset keyword).
                 gl.vertexAttribPointer(i, buffer_info.sizes[i], gl.FLOAT, false, buffer_info.stride, buffer_info.offsets[i]);
-                gl.vertexAttribDivisor(i, attribute.divisor);
+                gl.vertexAttribDivisor(i, buffer_info.divisor);
                 gl.enableVertexAttribArray (i);
             }
           }
@@ -115,12 +120,12 @@ const Shape = tiny.Shape =
           if (this.indices.length) {
               gl.bindBuffer (gl.ELEMENT_ARRAY_BUFFER, gpu_instance.index_buffer);
               gl.drawElements (gl[ type ], this.indices.length, gl.UNSIGNED_INT, 0);
-          } else gl.drawArrays (gl[ type ], 0, Object.values (this.arrays)[ 0 ].length);
+          } else gl.drawArrays (gl[ type ], 0, this.vertices.length);
       }
       draw (webgl_manager, uniforms, model_transform, material, type = "TRIANGLES") {
           const gpu_instance = this.gpu_instances.get (webgl_manager.context) ||
                                this.copy_onto_graphics_card (webgl_manager.context);
-          gl.bindVertexArray( gpu_instance.VAO );
+          webgl_manager.context.bindVertexArray( gpu_instance.VAO );
           material.shader.activate (webgl_manager.context, uniforms, model_transform, material);
           // Run the shaders to draw every triangle now:
           this.execute_shaders (webgl_manager.context, gpu_instance, type);
@@ -241,22 +246,6 @@ const Shader = tiny.Shader =
                       let u     = gl.getActiveUniform (program, i).name.split ('[')[ 0 ];
                       this[ u ] = gl.getUniformLocation (program, u);
                   }
-
-                  // this.shader_attributes     = {};
-                  // // Assume per-vertex attributes will each be a set of 1 to 4 floats:
-                  // const type_to_size_mapping = {0x1406: 1, 0x8B50: 2, 0x8B51: 3, 0x8B52: 4};
-                  // const numAttribs           = gl.getProgramParameter (program, gl.ACTIVE_ATTRIBUTES);
-                  // // https://github.com/greggman/twgl.js/blob/master/dist/twgl-full.js for another example:
-                  // for (let i = 0; i < numAttribs; i++) {
-                  //     const attribInfo                          = gl.getActiveAttrib (program, i);
-                  //     // Pointers to all shader attribute variables:
-                  //     this.shader_attributes[ attribInfo.name ] = {
-                  //         index     : gl.getAttribLocation (program, attribInfo.name),
-                  //         size      : type_to_size_mapping[ attribInfo.type ],
-                  //         enabled   : true, type: gl.FLOAT,
-                  //         normalized: false, stride: 0, pointer: 0
-                  //     };
-                  // }
               }
           }
 
@@ -290,11 +279,13 @@ const Shader = tiny.Shader =
       }
       activate (context, uniforms, model_transform, material) {
           // Track which GPU contexts this object has copied itself onto:
-          if ( !this.gpu_instances) this.gpu_instances = new Map ();
+          if ( !this.gpu_instances) this.gpu_instances =  new Map ();
           const gpu_instance = this.gpu_instances.get (context) || this.copy_onto_graphics_card (context);
 
+          // TODO:  Cache this
           context.useProgram (gpu_instance.program);
 
+          // TODO:  Use UBO instead:
           // --- Send over all the values needed by this particular shader to the GPU: ---
           this.update_GPU (context, gpu_instance.gpu_addresses, uniforms, model_transform, material);
       }                           // Your custom Shader has to override the following functions:
