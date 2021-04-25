@@ -16,9 +16,10 @@ const Shape = tiny.Shape =
       // See description at https://github.com/encyclopedia-of-code/tiny-graphics-js/wiki/tiny-graphics.js#shape
       constructor () {
           [this.vertices, this.indices, this.local_buffers] = [[], [], []];
+          this.attribute_counter = 0;
           this.gpu_instances = new Map ();      // Track which GPU contexts this object has copied itself onto.
       }
-      fill_buffer( selection_of_attributes, buffer_hint = "STATIC_DRAW", divisor = null ) {
+      fill_buffer( selection_of_attributes, buffer_hint = "STATIC_DRAW", divisor = 0 ) {
         if( !this.vertices[0])
           return;
 
@@ -89,22 +90,22 @@ const Shape = tiny.Shape =
             buffer_info.dirty = false;
 
             let existing_pointer = buffer_info.gpu_pointer;
-            let buffer = existing_pointer || gl.createBuffer();
-            gl.bindBuffer (gl.ARRAY_BUFFER, buffer);
+            buffer_info.gpu_pointer = buffer_info.gpu_pointer ?? gl.createBuffer();
+            gl.bindBuffer (gl.ARRAY_BUFFER, buffer_info.gpu_pointer);
 
-            if (existing_pointer)
+            if (existing_pointer !== undefined)
               gl.bufferSubData (gl.ARRAY_BUFFER, 0, buffer_info.data)
             else
               gl.bufferData (gl.ARRAY_BUFFER, buffer_info.data, gl[buffer_info.hint]);
 
             for( let i of buffer_info.attributes.keys()) {
-
+                const j = this.attribute_counter++;
                 // This assumes some stuff about the shader -- no matrix attributes for now (TODO);
                 // no auto-normalizing colors 0-255; vertex fields are interleaved; vertex fields are in the same order
                 // that they'll appear in the shader (using offset keyword).
-                gl.vertexAttribPointer(i, buffer_info.sizes[i], gl.FLOAT, false, buffer_info.stride, buffer_info.offsets[i]);
-                gl.vertexAttribDivisor(i, buffer_info.divisor);
-                gl.enableVertexAttribArray (i);
+                gl.vertexAttribPointer(j, buffer_info.sizes[i], gl.FLOAT, false, buffer_info.stride, buffer_info.offsets[i]);
+                gl.vertexAttribDivisor(j, buffer_info.divisor);
+                gl.enableVertexAttribArray (j);
             }
           }
           if (this.indices.length && write_to_indices) {
@@ -410,8 +411,6 @@ const Component = tiny.Component =
           this.set_canvas_size (dimensions);
           // Tell the GPU which color to clear the canvas with each frame.
           gl.clearColor.apply (gl, background_color);
-          // Load an extension to allow shapes with more than 65535 vertices.
-          gl.getExtension ("OES_element_index_uint");
           gl.enable (gl.DEPTH_TEST);                            // Enable Z-Buffering test.
           // Specify an interpolation method for blending "transparent" triangles over the existing pixels:
           gl.enable (gl.BLEND);

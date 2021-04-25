@@ -6,6 +6,34 @@ const defs = {};
 
 export {tiny, defs};
 
+
+
+const Basicer_Shader = defs.Basicer_Shader =
+  class Basicer_Shader extends Shader {
+      shared_glsl_code () {           // ********* SHARED CODE, INCLUDED IN BOTH SHADERS *********
+          return "#version 300 es " + `
+                  precision mediump float;
+      `;
+      }
+      vertex_glsl_code () {          // ********* VERTEX SHADER *********
+          return this.shared_glsl_code () + `
+        layout(location = 0) in vec3 position;
+        void main() {
+          gl_Position = vec4( position, 1.0 );
+        }`;
+      }
+      fragment_glsl_code () {         // ********* FRAGMENT SHADER *********
+          return this.shared_glsl_code () + `
+        out vec4 frag_color;
+        void main() {
+          frag_color = vec4(1.0, 0.0, 0.0, 1.0);
+        }`;
+      }
+  };
+
+
+
+
 const Basic_Shader = defs.Basic_Shader =
   class Basic_Shader extends Shader {
       // Basic_Shader is nearly the simplest way to subclass Shader, which stores and manages a GPU program.
@@ -23,8 +51,8 @@ const Basic_Shader = defs.Basic_Shader =
       }
       vertex_glsl_code () {          // ********* VERTEX SHADER *********
           return this.shared_glsl_code () + `
-        in vec4 color;
-        in vec3 position;                            // Position is expressed in object coordinates.
+        layout(location = 0) in vec3 position;                       // Position is expressed in object coordinates
+        layout(location = 1) in vec4 color;
         out vec4 VERTEX_COLOR;
         uniform mat4 projection_camera_model_transform;
 
