@@ -420,3 +420,16 @@ const Minimal_Shape = defs.Minimal_Shape =
           this.fill_buffer( ["position", "color"] );
       }
   };
+
+  const Minimaler_Shape = defs.Minimaler_Shape =
+  class Minimaler_Shape extends tiny.Shape {
+      constructor () {
+          super();
+          // Describe the where the points of a triangle are in space, and also describe their colors:
+          this.vertices[0] = { position: vec3 (0, 0, 0)};
+          this.vertices[1] = { position: vec3 (1, 0, 0)};
+          this.vertices[2] = { position: vec3 (0, 1, 0)};
+
+          this.fill_buffer( ["position"] );
+      }
+  };

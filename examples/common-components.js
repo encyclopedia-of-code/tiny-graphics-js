@@ -12,8 +12,8 @@ const Minimal_Webgl_Demo = defs.Minimal_Webgl_Demo =
   class Minimal_Webgl_Demo extends Component {
       init () {
           this.widget_options = {make_controls: false};    // This demo is too minimal to have controls
-          this.shapes         = {triangle: new shapes.Minimal_Shape ()};
-          this.shader         = new shaders.Basic_Shader ();
+          this.shapes         = {triangle: new shapes.Minimaler_Shape ()};
+          this.shader         = new shaders.Basicer_Shader ();
       }
       render_animation (caller) {
           this.shapes.triangle.draw (caller, this.uniforms, Mat4.identity (), {shader: this.shader});
