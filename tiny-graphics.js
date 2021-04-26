@@ -50,7 +50,8 @@ const Shape = tiny.Shape =
           }
           buffer_to_overwrite = this.local_buffers.push(
             {attributes:  [ ...selection_of_attributes ],
-              sizes, offsets, stride, divisor, hint: buffer_hint, data: [] }) - 1;
+              sizes, offsets, stride, divisor, hint: buffer_hint,
+              data: new Float32Array (stride * this.vertices.length) }) - 1;
         }
 
         // Fill in the selected buffer locally with the user's updated values from each vertex field.
@@ -120,8 +121,8 @@ const Shape = tiny.Shape =
       execute_shaders (gl, gpu_instance, type) {
           if (this.indices.length) {
               gl.bindBuffer (gl.ELEMENT_ARRAY_BUFFER, gpu_instance.index_buffer);
-              gl.drawElements (gl[ type ], this.indices.length, gl.UNSIGNED_INT, 0);
-          } else gl.drawArrays (gl[ type ], 0, this.vertices.length);
+              gl.drawElementsInstanced (gl[ type ], this.indices.length, gl.UNSIGNED_INT, 0, 1);
+          } else gl.drawArraysInstanced (gl[ type ], 0, this.vertices.length, 1);
       }
       draw (webgl_manager, uniforms, model_transform, material, type = "TRIANGLES") {
           const gpu_instance = this.gpu_instances.get (webgl_manager.context) ||
