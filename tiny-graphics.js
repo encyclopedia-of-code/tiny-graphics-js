@@ -131,8 +131,8 @@ const Shape = tiny.Shape =
             for( let i of buffer_info.attributes.keys()) {
 
               if( buffer_info.attribute_is_matrix[i] )
-                for( let i = 0; i < buffer_info.sizes[i]; i++ ) {
-                  gl.vertexAttribPointer(this.attribute_counter, buffer_info.sizes[i], gl.FLOAT, false, buffer_info.stride, buffer_info.offsets[i] + i * buffer_info.sizes[i] * 4);
+                for( let row = 0; row < buffer_info.sizes[i]; row++ ) {
+                  gl.vertexAttribPointer(this.attribute_counter, buffer_info.sizes[i], gl.FLOAT, false, buffer_info.stride, buffer_info.offsets[i] + row * buffer_info.sizes[i] * 4);
                   gl.vertexAttribDivisor(this.attribute_counter, buffer_info.divisor);
                   gl.enableVertexAttribArray (this.attribute_counter);
                   this.attribute_counter++;
