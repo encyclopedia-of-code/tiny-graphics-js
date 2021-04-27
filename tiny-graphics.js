@@ -17,15 +17,18 @@ const Shape = tiny.Shape =
       constructor () {
           [this.vertices, this.indices, this.local_buffers] = [[], [], []];
           this.attribute_counter = 0;
+          this.dirty = true;
           this.gpu_instances = new Map ();      // Track which GPU contexts this object has copied itself onto.
       }
       fill_buffer( selection_of_attributes, buffer_hint = "STATIC_DRAW", divisor = 0 ) {
         if( !this.vertices[0])
           return;
 
+        this.dirty = true;
         // Check if this is a new call, a repeat call, or an invalid call.
         let buffer_to_overwrite = null;
         for( let index of this.local_buffers.keys() ) {
+          const buffer_info = this.local_buffers[index];
           if( buffer_info.attributes[0] != selection_of_attributes[0] )
             continue;
           if( !buffer_info.attributes.every( (x,i) => x == selection_of_attributes[i] ) )
@@ -35,35 +38,60 @@ const Shape = tiny.Shape =
 
         // Visit first vertex to note how big the type of each fields/attribute is.  Assume all others will match.
         // TODO:  Allow mat2/mat3/mat4 attribute types as well.  Test single float attribute type.
-        let sizes = selection_of_attributes.map( a => this.vertices[0][a].length || 1 );
+        let attribute_sizes = selection_of_attributes.map( a => this.vertices[0][a].length || 1 );
+        const attribute_is_matrix = selection_of_attributes.map( a => this.vertices[0][a] instanceof Matrix );
+        let squared_sizes = attribute_sizes.map( (a,i) => Math.pow(a, 1 + attribute_is_matrix[i]) );
 
         // When a new buffer is requested by using a group of attributes not seen before, make a buffer.
         if( !buffer_to_overwrite ) {
           // TODO:  This part assumes a vertex type of FLOAT.  May need to override.
-          const stride = sizes.reduce( (acc,x) => acc + x * 4, 0 )
+          const stride = squared_sizes.reduce( (acc,x) => acc + x * 4, 0 )
 
           const offsets = [];
           let offset = 0;
           for( let index = 0; index < selection_of_attributes.length; index++ ) {
               offsets[index] = offset;
-              offset += 4*sizes[index];
+              offset += 4*squared_sizes[index];
           }
           buffer_to_overwrite = this.local_buffers.push(
             {attributes:  [ ...selection_of_attributes ],
-              sizes, offsets, stride, divisor, hint: buffer_hint,
-              data: new Float32Array (stride * this.vertices.length) }) - 1;
+              sizes: attribute_sizes, attribute_is_matrix, offsets, stride, divisor, hint: buffer_hint,
+              data: new Float32Array (stride/4 * this.vertices.length) }) - 1;
         }
+
+        const buffer = this.local_buffers[buffer_to_overwrite];
 
         // Fill in the selected buffer locally with the user's updated values from each vertex field.
         let pos = 0;
         for (let v of this.vertices)
-          for (let a of selection_of_attributes)
-            for (let i=0; i < v[a].length; i++) {
-              if( this.local_buffers[buffer_to_overwrite].data[pos] != v[a][i] )
-                this.local_buffers[buffer_to_overwrite].dirty = true;
-              this.local_buffers[buffer_to_overwrite].data[pos] = v[a][i];
+          for (let a of selection_of_attributes.keys()){
+
+            const attr = selection_of_attributes[a];
+
+            if(attribute_sizes[a] == 1) {
+              if( buffer.data[pos] != v[attr] )
+                buffer.dirty = true;
+              buffer.data[pos] = v[attr];
               pos++;
             }
+            else if( attribute_is_matrix[a] ) {
+              for (let i=0; i < v[attr].length; i++) {
+                for (let j=0; j < v[attr].length; j++) {
+                  if( buffer.data[pos] != v[attr][i][j] )
+                    buffer.dirty = true;
+                  buffer.data[pos] = v[attr][i][j];
+                  pos++;
+                }
+              }
+            }
+            else
+              for (let i=0; i < attribute_sizes[a]; i++) {
+                if( buffer.data[pos] != v[attr][i] )
+                  buffer.dirty = true;
+                buffer.data[pos] = v[attr][i];
+                pos++;
+              }
+          }
       }
       copy_onto_graphics_card (context, write_to_indices = true) {
           if( !this.local_buffers.length)
@@ -73,11 +101,11 @@ const Shape = tiny.Shape =
           // When this Shape sees a new GPU context (in case of multiple drawing areas), copy the Shape to the GPU. If
           // it already was copied over, get a pointer to the existing instance.
           const existing_instance = this.gpu_instances.get (context);
-          if ( !existing_instance) test_rookie_mistake ();
 
           // If this Shape was never used on this GPU context before, then prepare new buffer indices for this context.
           let gpu_instance = existing_instance;
-          if( !existing_instance) {
+          if(!existing_instance) {
+            test_rookie_mistake ();
             const defaults = { VAO: gl.createVertexArray () };
             gpu_instance = this.gpu_instances.set (context, defaults).get (context);
           }
@@ -86,8 +114,9 @@ const Shape = tiny.Shape =
           for( let index of this.local_buffers.keys() ) {
 
             let buffer_info = this.local_buffers[index];
+            // Only update the subset of buffers that have changed, from the selection provided.
             if( !buffer_info.dirty)
-              return;
+              continue;
             buffer_info.dirty = false;
 
             let existing_pointer = buffer_info.gpu_pointer;
@@ -100,13 +129,24 @@ const Shape = tiny.Shape =
               gl.bufferData (gl.ARRAY_BUFFER, buffer_info.data, gl[buffer_info.hint]);
 
             for( let i of buffer_info.attributes.keys()) {
-                const j = this.attribute_counter++;
-                // This assumes some stuff about the shader -- no matrix attributes for now (TODO);
-                // no auto-normalizing colors 0-255; vertex fields are interleaved; vertex fields are in the same order
-                // that they'll appear in the shader (using offset keyword).
-                gl.vertexAttribPointer(j, buffer_info.sizes[i], gl.FLOAT, false, buffer_info.stride, buffer_info.offsets[i]);
-                gl.vertexAttribDivisor(j, buffer_info.divisor);
-                gl.enableVertexAttribArray (j);
+
+              if( buffer_info.attribute_is_matrix[i] )
+                for( let i = 0; i < buffer_info.sizes[i]; i++ ) {
+                  gl.vertexAttribPointer(this.attribute_counter, buffer_info.sizes[i], gl.FLOAT, false, buffer_info.stride, buffer_info.offsets[i] + i * buffer_info.sizes[i] * 4);
+                  gl.vertexAttribDivisor(this.attribute_counter, buffer_info.divisor);
+                  gl.enableVertexAttribArray (this.attribute_counter);
+                  this.attribute_counter++;
+                }
+              else {
+
+                // TODO: Support normalization of attributes; allow the user to specify.
+                // This assumes some stuff about the shader: Vertex fields are interleaved; vertex fields are
+                // in the same order that they'll appear in the shader (using offset keyword).
+                gl.vertexAttribPointer(this.attribute_counter, buffer_info.sizes[i], gl.FLOAT, false, buffer_info.stride, buffer_info.offsets[i]);
+                gl.vertexAttribDivisor(this.attribute_counter, buffer_info.divisor);
+                gl.enableVertexAttribArray (this.attribute_counter);
+                this.attribute_counter++;
+              }
             }
           }
           if (this.indices.length && write_to_indices) {
@@ -116,21 +156,23 @@ const Shape = tiny.Shape =
               write (gl.ELEMENT_ARRAY_BUFFER, new Uint32Array (this.indices));
           }
           gl.bindVertexArray(null);
+          this.dirty = false;
           return gpu_instance;
       }
-      execute_shaders (gl, gpu_instance, type) {
+      execute_shaders (gl, gpu_instance, type, instances) {
           if (this.indices.length) {
               gl.bindBuffer (gl.ELEMENT_ARRAY_BUFFER, gpu_instance.index_buffer);
-              gl.drawElementsInstanced (gl[ type ], this.indices.length, gl.UNSIGNED_INT, 0, 1);
-          } else gl.drawArraysInstanced (gl[ type ], 0, this.vertices.length, 1);
+              gl.drawElementsInstanced (gl[ type ], this.indices.length, gl.UNSIGNED_INT, 0, instances);
+          } else gl.drawArraysInstanced (gl[ type ], 0, this.vertices.length, instances);
       }
-      draw (webgl_manager, uniforms, model_transform, material, type = "TRIANGLES") {
-          const gpu_instance = this.gpu_instances.get (webgl_manager.context) ||
-                               this.copy_onto_graphics_card (webgl_manager.context);
+      draw (webgl_manager, uniforms, model_transform, material, type = "TRIANGLES", instances) {
+          let gpu_instance = this.gpu_instances.get (webgl_manager.context);
+          if( !gpu_instance || this.dirty)
+            gpu_instance = this.copy_onto_graphics_card (webgl_manager.context);
           webgl_manager.context.bindVertexArray( gpu_instance.VAO );
           material.shader.activate (webgl_manager.context, uniforms, model_transform, material);
           // Run the shaders to draw every triangle now:
-          this.execute_shaders (webgl_manager.context, gpu_instance, type);
+          this.execute_shaders (webgl_manager.context, gpu_instance, type, instances);
       }
 
       // NOTE: All the below functions make a further assumption: that your vertex buffer includes fields called

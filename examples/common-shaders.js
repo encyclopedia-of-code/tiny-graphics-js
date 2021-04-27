@@ -71,6 +71,44 @@ const Basic_Shader = defs.Basic_Shader =
       }
   };
 
+  const Instanced_Shader = defs.Instanced_Shader =
+  class Instanced_Shader extends Shader {
+      // Basic_Shader is nearly the simplest way to subclass Shader, which stores and manages a GPU program.
+      update_GPU (context, gpu_addresses, uniforms, model_transform, material) {
+          // update_GPU():  Define how to synchronize our JavaScript's variables to the GPU's:
+          const [P, C, M] = [uniforms.projection_transform, uniforms.camera_inverse, model_transform],
+                PCM       = P.times (C).times (M);
+          context.uniformMatrix4fv (gpu_addresses.projection_camera_model_transform, false,
+                                    Matrix.flatten_2D_to_1D (PCM.transposed ()));
+      }
+      shared_glsl_code () {           // ********* SHARED CODE, INCLUDED IN BOTH SHADERS *********
+          return "#version 300 es " + `
+                  precision mediump float;
+      `;
+      }
+      vertex_glsl_code () {          // ********* VERTEX SHADER *********
+          return this.shared_glsl_code () + `
+        layout(location = 0) in vec3 position;                       // Position is expressed in object coordinates
+        layout(location = 1) in vec4 color;
+        layout(location = 2) in float offset;
+        out vec4 VERTEX_COLOR;
+        uniform mat4 projection_camera_model_transform;
+
+        void main() {
+          gl_Position = projection_camera_model_transform * vec4( position - vec3(offset), 1.0 );      // Move vertex to final space.
+          VERTEX_COLOR = color;                                 // Use the hard-coded color of the vertex.
+        }`;
+      }
+      fragment_glsl_code () {         // ********* FRAGMENT SHADER *********
+          return this.shared_glsl_code () + `
+        in vec4 VERTEX_COLOR;
+        out vec4 frag_color;
+        void main() {
+          frag_color = VERTEX_COLOR;    // Directly use per-vertex colors for interpolation.
+        }`;
+      }
+  };
+
 
 const Funny_Shader = defs.Funny_Shader =
   class Funny_Shader extends Shader {
