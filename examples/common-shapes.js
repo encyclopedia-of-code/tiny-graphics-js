@@ -419,9 +419,9 @@ const Instanced_Shape = defs.Instanced_Shape =
           this.fill_buffer( ["position", "color"] );
 
           this.single_triangle = this.vertices;
-          this.vertices = Array(10).fill(0).map( (x,i) => ({ offset: i/10 }) );
+          this.vertices = Array(10).fill(0).map( (x,i) => ({ offset: i/10, matrix: Mat4.rotation( i/10, 0,0,1) }) );
 
-          this.fill_buffer( ["offset"], undefined, 1)
+          this.fill_buffer( ["offset", "matrix"], undefined, 1)
       }
   };
 
