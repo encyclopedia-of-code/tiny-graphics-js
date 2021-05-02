@@ -73,6 +73,9 @@ const Basic_Shader = defs.Basic_Shader =
 
   const Instanced_Shader = defs.Instanced_Shader =
   class Instanced_Shader extends Shader {
+    update_GPU (context, gpu_addresses, uniforms, model_transform, material) {
+      context.uniformMatrix4fv (gpu_addresses.global_transform, false, Matrix.flatten_2D_to_1D (model_transform));
+    }
       // Basic_Shader is nearly the simplest way to subclass Shader, which stores and manages a GPU program.
       shared_glsl_code () {           // ********* SHARED CODE, INCLUDED IN BOTH SHADERS *********
           return "#version 300 es " + `
@@ -83,12 +86,14 @@ const Basic_Shader = defs.Basic_Shader =
           return this.shared_glsl_code () + `
         layout(location = 0) in vec3 position;                       // Position is expressed in object coordinates
         layout(location = 1) in vec4 color;
-        layout(location = 2) in float offset;
-        layout(location = 3) in mat4 matrix;
+        layout(location = 2) in mat4 matrix;
+
+        uniform mat4 global_transform;
+
         out vec4 VERTEX_COLOR;
 
         void main() {
-          gl_Position = matrix * vec4( position - vec3(offset), 1.0 );      // Move vertex to final space.
+          gl_Position =  vec4( position, 1.0 ) * global_transform * matrix;      // Move vertex to final space.
           VERTEX_COLOR = color;                                 // Use the hard-coded color of the vertex.
         }`;
       }
