@@ -2,17 +2,18 @@
 
 The tiny-graphics-js library refactors common WebGL steps, demonstrating how to organize a complex graphics program.
 
-Use this library to learn graphics and WebGL.  You will reduce the clutter and repetition that tends to plague beginner WebGL projects.
+Use this library to learn graphics and WebGL.  You will reduce the clutter and repetition that tends to plague beginner
+WebGL projects.
 
-The tiny-graphics-js library mainly excels in an educational setting by showing a compact but effective usage of WebGL commands. This project bridges the difficult gap that occurs once you've learned WebGL commands but still struggle with excessive setup code between steps. Tiny-graphics shows how to organize WebGL calls into a flexible program with reusable parts. With setup code out of the way, you can see your math more clearly, and focus on creativity.
+The tiny-graphics-js library mainly excels in an educational setting by showing a compact but effective usage of WebGL commands. This project bridges the difficult gap that occurs once you've learned WebGL commands but still struggle with excessive setup code between steps. Tiny-graphics shows how to organize WebGL programs to be flexible with reusable parts. With setup code out of the way, you can see your math more clearly, while free to focus on creativity.
 
 This library is object oriented.  The important code is in a single small file of around 500 lines.  The other files
-supply utilities for common math operations in graphics, useful GUI tools, and demos.
+supply utilities for common math operations in graphics, as well as useful GUI tools, and interactive demos of functionality.
 
 Currently, the main limitations of tiny-graphics-js to be aware of are:
 
-- Compared to crowd-sourced frameworks like three.js, not as many examples exist yet of how to make various graphics
-effects. Not all tiny-graphics-js demos are updated or in the latest build (such as for ray tracing).
+- Crowd-sourced frameworks like three.js include a more comprehensive list of examples of how to make various graphics
+effects. The tiny-graphics-js example demos are undergoing an overhaul, so certain demos (such as for ray tracing) won't be included in the main branch until that build.
 - Parts of tiny-graphics are inspired by React, a popular JavaScript framework. Both feature a tree of `Component` objects
 that design a document. In tiny-graphics the `Component` tree nodes also do double duty for 3D graphics creation, which is
 extremely powerful. However, unlike React, tiny-graphics is not intended for creating high-performance all-purpose
@@ -25,17 +26,17 @@ to minimize GPU state changes. It's possible to design such a framework in tiny-
 Components, but this scene graph functionality is not immediately built in.
 - Various still-pending fixes and API enhancements.
 
-## Overview
+## Overview and Usage
 
 ### tiny-graphics.js
 
 The main file (tiny-graphics.js) defines just four class definitions useful for a graphics program -- `Shape`, `Shader`,
 `Texture`, and `Component`.
 
-- **`Shape`**: Explains to the graphics card what the layout is of one type of 3D shape.
-- **`Shader`**: Loads a GLSL shader program onto your graphics card, ultimately converting raw shape data into a final 2D image.
+- **`Shape`**: Explains to the graphics card the layout of one type of 3D shape.
+- **`Shader`**: Loads a GLSL shader program onto your graphics card; when run, it ultimately converts raw shape data into a final 2D image.
 - **`Texture`**: Manages a 2D image on the GPU that can color (or exert other influence) along a shape's surface.
-- **`Component`**: One piece of your overall program.
+- **`Component`**: Contains code responsible for designing your 3D scene and your web document.
 
 In addition, tiny-graphics-js comes with a tiny math library (tiny-graphics-math.js) for common vector and matrix
 operations that are found in computer graphics. It also comes with a file full of helper objects (tiny-graphics-gui.js) for
@@ -45,11 +46,11 @@ several files containing useful code examples of possible `Shapes`, `Shaders`, a
 ### Components
 
 A `Component` is one piece of your overall program. Each `Component` both represents some (or all) of a 3D scene, plus some
-(or all) of the interactive HTML document surrounding the scene. Components nest inside one another in a hierarchy. Your
+(or all) of the interactive HTML document surrounding the scene. Components nest inside one another in a hierarchy. By creating several of them, your
 web document may contain several 3D canvas drawing areas. Any graphics canvas area on the page can display the combined
-3D result of any number of Components, some of which might even be shared across multiple canvas drawing areas.
+3D result of any number of `Component` objects, some of which might even be shared across multiple canvas drawing areas.
 
-For an example of how to use one `Component` to draw to several 3D WebGL canvas areas at once, see the demo in "parametric-surfaces.js".
+For an example of how to use one `Component` to draw to several 3D WebGL canvas areas at once, see the demo in "parametric-surfaces.js".  Observe how state information (such as camera position and shape rotation) stay synced across drawing areas.
 
 `Component` is the base class for any scene you might want to design. For simple 3D scenes, your small code snippet will go
 in a `Component`. To use, make your own subclass(es) of `Component` and override a few of the special functions that affect
