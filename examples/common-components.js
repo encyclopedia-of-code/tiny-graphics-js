@@ -75,14 +75,25 @@ const Minimal_Webgl_Demo = defs.Minimal_Webgl_Demo =
           this.materials = {};
           this.materials.base = { shader: this.shader };
           this.renderer       = new Renderer();
-          this.size = 15;
-          this.entities       =
-              {triangle_cluster: new Entity(this.shapes.triangle, Array(this.size).fill(0).map( (x,i) => Mat4.translation(((i%5) - 2)/5.0, Math.floor(i/5.0) - 1.0, 0.0)), this.materials.base)}
+          this.objects = 1;
+          this.size = 100000;
+          this.entities = [];
+          for (var obj = 0; obj < this.objects; obj++)
+          {
+            this.entities.push(
+                new Entity(new shapes.Instanced_Square_Index (), Array(this.size).fill(0).map( (x,i) =>
+                    Mat4.translation(Math.random() * 2.0 - 1.0, Math.random() * 2.0 - 1.0, 0.0)
+                    .times(Mat4.scale(0.05, 0.05, 1.0))), this.materials.base)
+            );
+          }
       }
       render_animation (caller) {
         this.time += 1;
-        this.entities.triangle_cluster.apply_transform(Mat4.rotation( this.time/100, 0,0,1));
-        this.renderer.submit(this.entities.triangle_cluster);
+        for (var obj = 0; obj < this.objects; obj++)
+        {
+          this.entities[obj].apply_transform(Mat4.rotation( this.time/100, 0,0,1));
+          this.renderer.submit(this.entities[obj]);
+        }
         this.renderer.flush(caller);
       }
   };
