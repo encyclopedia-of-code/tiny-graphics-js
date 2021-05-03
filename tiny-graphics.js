@@ -153,7 +153,10 @@ const Shape = tiny.Shape =
               if ( !existing_instance)
                   gpu_instance.index_buffer = gl.createBuffer ();
               gl.bindBuffer (gl.ELEMENT_ARRAY_BUFFER, gpu_instance.index_buffer);
-              write (gl.ELEMENT_ARRAY_BUFFER, new Uint32Array (this.indices));
+              if (existing_instance)
+                gl.bufferSubData (gl.ELEMENT_ARRAY_BUFFER, 0, new Uint32Array (this.indices))
+              else
+                gl.bufferData (gl.ELEMENT_ARRAY_BUFFER, new Uint32Array (this.indices), gl["STATIC_DRAW"]);
           }
           gl.bindVertexArray(null);
           this.dirty = false;
@@ -163,7 +166,7 @@ const Shape = tiny.Shape =
           if (this.indices.length) {
               gl.bindBuffer (gl.ELEMENT_ARRAY_BUFFER, gpu_instance.index_buffer);
               gl.drawElementsInstanced (gl[ type ], this.indices.length, gl.UNSIGNED_INT, 0, instances);
-          } else gl.drawArraysInstanced (gl[ type ], 0, this.vertices.length, instances);
+          } else gl.drawArraysInstanced (gl[ type ], 0, this.num_vertices, instances);
       }
       draw (webgl_manager, uniforms, model_transform, material, type = "TRIANGLES", instances) {
           let gpu_instance = this.gpu_instances.get (webgl_manager.context);
