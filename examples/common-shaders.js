@@ -6,6 +6,34 @@ const defs = {};
 
 export {tiny, defs};
 
+
+
+const Basicer_Shader = defs.Basicer_Shader =
+  class Basicer_Shader extends Shader {
+      shared_glsl_code () {           // ********* SHARED CODE, INCLUDED IN BOTH SHADERS *********
+          return "#version 300 es " + `
+                  precision mediump float;
+      `;
+      }
+      vertex_glsl_code () {          // ********* VERTEX SHADER *********
+          return this.shared_glsl_code () + `
+        layout(location = 0) in vec3 position;
+        void main() {
+          gl_Position = vec4( position, 1.0 );
+        }`;
+      }
+      fragment_glsl_code () {         // ********* FRAGMENT SHADER *********
+          return this.shared_glsl_code () + `
+        out vec4 frag_color;
+        void main() {
+          frag_color = vec4(1.0, 0.0, 0.0, 1.0);
+        }`;
+      }
+  };
+
+
+
+
 const Basic_Shader = defs.Basic_Shader =
   class Basic_Shader extends Shader {
       // Basic_Shader is nearly the simplest way to subclass Shader, which stores and manages a GPU program.
@@ -17,14 +45,15 @@ const Basic_Shader = defs.Basic_Shader =
                                     Matrix.flatten_2D_to_1D (PCM.transposed ()));
       }
       shared_glsl_code () {           // ********* SHARED CODE, INCLUDED IN BOTH SHADERS *********
-          return `precision mediump float;
-                  varying vec4 VERTEX_COLOR;
+          return "#version 300 es " + `
+                  precision mediump float;
       `;
       }
       vertex_glsl_code () {          // ********* VERTEX SHADER *********
           return this.shared_glsl_code () + `
-        attribute vec4 color;
-        attribute vec3 position;                            // Position is expressed in object coordinates.
+        layout(location = 0) in vec3 position;                       // Position is expressed in object coordinates
+        layout(location = 1) in vec4 color;
+        out vec4 VERTEX_COLOR;
         uniform mat4 projection_camera_model_transform;
 
         void main() {
@@ -34,8 +63,46 @@ const Basic_Shader = defs.Basic_Shader =
       }
       fragment_glsl_code () {         // ********* FRAGMENT SHADER *********
           return this.shared_glsl_code () + `
+        in vec4 VERTEX_COLOR;
+        out vec4 frag_color;
         void main() {
-          gl_FragColor = VERTEX_COLOR;    // Directly use per-vertex colors for interpolation.
+          frag_color = VERTEX_COLOR;    // Directly use per-vertex colors for interpolation.
+        }`;
+      }
+  };
+
+  const Instanced_Shader = defs.Instanced_Shader =
+  class Instanced_Shader extends Shader {
+    update_GPU (context, gpu_addresses, uniforms, model_transform, material) {
+      context.uniformMatrix4fv (gpu_addresses.global_transform, false, Matrix.flatten_2D_to_1D (model_transform));
+    }
+      // Basic_Shader is nearly the simplest way to subclass Shader, which stores and manages a GPU program.
+      shared_glsl_code () {           // ********* SHARED CODE, INCLUDED IN BOTH SHADERS *********
+          return "#version 300 es " + `
+                  precision mediump float;
+      `;
+      }
+      vertex_glsl_code () {          // ********* VERTEX SHADER *********
+          return this.shared_glsl_code () + `
+        layout(location = 0) in vec3 position;                       // Position is expressed in object coordinates
+        layout(location = 1) in vec4 color;
+        layout(location = 2) in mat4 matrix;
+
+        uniform mat4 global_transform;
+
+        out vec4 VERTEX_COLOR;
+
+        void main() {
+          gl_Position =  vec4( position, 1.0 ) * global_transform * matrix;      // Move vertex to final space.
+          VERTEX_COLOR = color;                                 // Use the hard-coded color of the vertex.
+        }`;
+      }
+      fragment_glsl_code () {         // ********* FRAGMENT SHADER *********
+          return this.shared_glsl_code () + `
+        in vec4 VERTEX_COLOR;
+        out vec4 frag_color;
+        void main() {
+          frag_color = VERTEX_COLOR;    // Directly use per-vertex colors for interpolation.
         }`;
       }
   };
@@ -90,7 +157,7 @@ const Phong_Shader = defs.Phong_Shader =
           this.num_lights = num_lights;
       }
       shared_glsl_code () {          // ********* SHARED CODE, INCLUDED IN BOTH SHADERS *********
-          return `
+          return "#version 300 es " + `
         precision mediump float;
         const int N_LIGHTS = ` + this.num_lights + `;
         uniform float ambient, diffusivity, specularity, smoothness;
@@ -99,7 +166,6 @@ const Phong_Shader = defs.Phong_Shader =
         uniform vec4 shape_color;
         uniform vec3 squared_scale, camera_center;
 
-        varying vec3 N, vertex_worldspace;
                                              // ***** PHONG SHADING HAPPENS HERE: *****
         vec3 phong_model_lights( vec3 N, vec3 vertex_worldspace ) {
             vec3 E = normalize( camera_center - vertex_worldspace );
@@ -128,7 +194,8 @@ const Phong_Shader = defs.Phong_Shader =
       }
       vertex_glsl_code () {           // ********* VERTEX SHADER *********
           return this.shared_glsl_code () + `
-        attribute vec3 position, normal;                            // Position is expressed in object coordinates.
+        in vec3 position, normal;                            // Position is expressed in object coordinates.
+        out vec3 N, vertex_worldspace;
 
         uniform mat4 model_transform;
         uniform mat4 projection_camera_model_transform;
@@ -143,11 +210,13 @@ const Phong_Shader = defs.Phong_Shader =
       }
       fragment_glsl_code () {          // ********* FRAGMENT SHADER *********
           return this.shared_glsl_code () + `
+        in vec3 N, vertex_worldspace;
+        out vec4 frag_color;
         void main() {
                                            // Compute an initial (ambient) color:
-            gl_FragColor = vec4( shape_color.xyz * ambient, shape_color.w );
+            frag_color = vec4( shape_color.xyz * ambient, shape_color.w );
                                            // Compute the final color with contributions from lights:
-            gl_FragColor.xyz += phong_model_lights( normalize( N ), vertex_worldspace );
+            frag_color.xyz += phong_model_lights( normalize( N ), vertex_worldspace );
           } `;
       }
       static light_source (position, color, size) {

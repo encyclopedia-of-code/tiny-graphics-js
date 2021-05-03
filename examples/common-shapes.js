@@ -406,14 +406,85 @@ const Axis_Arrows = defs.Axis_Arrows =
       }
   };
 
+const Instanced_Shape = defs.Instanced_Shape =
+  class Instanced_Shape extends tiny.Shape {
+      // A truly minimal triangle, with three vertices each holding a 3D position and a color.
+      constructor () {
+          super();
+          // Describe the where the points of a triangle are in space, and also describe their colors:
+          this.vertices[0] = { position: vec3 (0, 0, 0), color: color (1, 0, 0, 1) };
+          this.vertices[1] = { position: vec3 (1, 0, 0), color: color (0, 1, 0, 1) };
+          this.vertices[2] = { position: vec3 (0, 1, 0), color: color (0, 0, 1, 1) };
+
+          this.fill_buffer( ["position", "color"] );
+
+          this.single_triangle = this.vertices;
+      }
+  };
+
+  const Instanced_Square = defs.Instanced_Square =
+  class Instanced_Square extends tiny.Shape {
+      // A truly minimal Square, with six vertices each holding a 3D position and a color.
+      constructor () {
+          super();
+          // Describe the where the points of a triangle are in space, and also describe their colors:
+          this.vertices[0] = { position: vec3 (-0.5, -0.5, 0), color: color (1, 0, 0, 1) };
+          this.vertices[1] = { position: vec3 (0.5, -0.5, 0), color: color (0, 1, 0, 1) };
+          this.vertices[2] = { position: vec3 (-0.5, 0.5, 0), color: color (0, 0, 1, 1) };
+          this.vertices[3] = { position: vec3 (0.5, -0.5, 0), color: color (0, 1, 0, 1) };
+          this.vertices[4] = { position: vec3 (-0.5, 0.5, 0), color: color (0, 0, 1, 1) };
+          this.vertices[5] = { position: vec3 (0.5, 0.5, 0), color: color (0, 1, 1, 1) };
+          this.num_vertices = this.vertices.length
+
+          this.fill_buffer( ["position", "color"] );
+
+          this.single_triangle = this.vertices;
+      }
+  };
+
+  const Instanced_Square_Index = defs.Instanced_Square_Index =
+  class Instanced_Square_Index extends tiny.Shape {
+      // A truly minimal Square, with six vertices each holding a 3D position and a color.
+      constructor () {
+          super();
+          // Describe the where the points of a triangle are in space, and also describe their colors:
+          this.vertices[0] = { position: vec3 (-0.5, -0.5, 0), color: color (1, 0, 0, 1) };
+          this.vertices[1] = { position: vec3 (0.5, -0.5, 0), color: color (0, 1, 0, 1) };
+          this.vertices[2] = { position: vec3 (-0.5, 0.5, 0), color: color (0, 0, 1, 1) };
+          this.vertices[3] = { position: vec3 (0.5, 0.5, 0), color: color (0, 1, 1, 1) };
+
+          this.indices = [0, 1, 2, 1, 2, 3];
+
+          this.fill_buffer( ["position", "color"] );
+
+          this.single_triangle = this.vertices;
+      }
+  };
+
 
 const Minimal_Shape = defs.Minimal_Shape =
   class Minimal_Shape extends tiny.Shape {
       // A truly minimal triangle, with three vertices each holding a 3D position and a color.
       constructor () {
-          super ("position", "color");
+          super();
           // Describe the where the points of a triangle are in space, and also describe their colors:
-          this.arrays.position = [vec3 (0, 0, 0), vec3 (1, 0, 0), vec3 (0, 1, 0)];
-          this.arrays.color    = [color (1, 0, 0, 1), color (0, 1, 0, 1), color (0, 0, 1, 1)];
+          this.vertices[0] = { position: vec3 (0, 0, 0), color: color (1, 0, 0, 1) };
+          this.vertices[1] = { position: vec3 (1, 0, 0), color: color (0, 1, 0, 1) };
+          this.vertices[2] = { position: vec3 (0, 1, 0), color: color (0, 0, 1, 1) };
+
+          this.fill_buffer( ["position", "color"] );
+      }
+  };
+
+  const Minimaler_Shape = defs.Minimaler_Shape =
+  class Minimaler_Shape extends tiny.Shape {
+      constructor () {
+          super();
+          // Describe the where the points of a triangle are in space, and also describe their colors:
+          this.vertices[0] = { position: vec3 (0, 0, 0)};
+          this.vertices[1] = { position: vec3 (1, 0, 0)};
+          this.vertices[2] = { position: vec3 (0, 1, 0)};
+
+          this.fill_buffer( ["position"] );
       }
   };
