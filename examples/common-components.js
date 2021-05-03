@@ -3,18 +3,98 @@ import {tiny} from '../tiny-graphics.js';
 const {Vector, Vector3, vec, vec3, vec4, color, Matrix, Mat4, Shape, Shader, Component} = tiny;
 
 const defs = {};
+import {defs as shapes} from './common-shapes.js';
+import {defs as shaders} from './common-shaders.js';
 
 export {tiny, defs};
+
+const Entity = defs.Entity =
+  class Entity {
+    constructor(shape, transforms, material) {
+      this.dirty = true
+      this.shape = shape;
+      this.global_transform = Mat4.identity();
+      this.transforms = transforms;
+      this.material = material;
+    }
+    set_shape(shape) {
+      this.shape = shape;
+      this.dirty = true;
+    }
+    set_transforms(transforms) {
+      this.transforms = transforms;
+      this.dirty = true;
+    }
+    apply_transform(model_transform) {
+      this.global_transform = model_transform;
+    }
+    set_material(material) {
+      this.material = material;
+    }
+  };
+
+  const Renderer = defs.Renderer =
+  class Renderer {
+    constructor() {
+      this.entities = []
+    }
+    submit(entity){
+      this.entities.push(entity);
+    }
+    flush(context){
+      for(let entity of this.entities){
+        if( Array.isArray(entity.transforms) ) {
+          if (entity.dirty) {
+            entity.shape.vertices = Array(entity.transforms.length).fill(0).map( (x,i) => ({matrix: entity.transforms[i]}));
+            entity.shape.fill_buffer(["matrix"], undefined, 1);
+            entity.dirty = false;
+          }
+          entity.shape.draw(context, undefined, entity.global_transform, {shader: entity.material.shader}, undefined, entity.transforms.length)
+        }
+        else {
+          if (entity.dirty) {
+            entity.shape.vertices = [{matrix: entity.transforms}];
+            //Ideally use a shader with just a uniform matrix where you pass global.times(model)?
+            entity.shape.fill_buffer(["matrix"], undefined, 1);
+            entity.dirty = false;
+          }
+          entity.shape.draw(context, undefined, entity.global_transform, {shader: entity.material.shader}, undefined, 1)
+        }
+      }
+      this.entities = []
+    }
+  };
 
 const Minimal_Webgl_Demo = defs.Minimal_Webgl_Demo =
   class Minimal_Webgl_Demo extends Component {
       init () {
           this.widget_options = {make_controls: false};    // This demo is too minimal to have controls
-          this.shapes         = {triangle: new defs.Minimal_Shape ()};
-          this.shader         = new defs.Basic_Shader ();
+          this.time = 0.0;
+          this.shapes         = {triangle: new shapes.Instanced_Square_Index ()};
+          this.shader         = new shaders.Instanced_Shader ();
+          this.materials = {};
+          this.materials.base = { shader: this.shader };
+          this.renderer       = new Renderer();
+          this.objects = 1;
+          this.size = 100000;
+          this.entities = [];
+          for (var obj = 0; obj < this.objects; obj++)
+          {
+            this.entities.push(
+                new Entity(new shapes.Instanced_Square_Index (), Array(this.size).fill(0).map( (x,i) =>
+                    Mat4.translation(Math.random() * 2.0 - 1.0, Math.random() * 2.0 - 1.0, 0.0)
+                    .times(Mat4.scale(0.05, 0.05, 1.0))), this.materials.base)
+            );
+          }
       }
       render_animation (caller) {
-          this.shapes.triangle.draw (caller, this.uniforms, Mat4.identity (), {shader: this.shader});
+        this.time += 1;
+        for (var obj = 0; obj < this.objects; obj++)
+        {
+          this.entities[obj].apply_transform(Mat4.rotation( this.time/100, 0,0,1));
+          this.renderer.submit(this.entities[obj]);
+        }
+        this.renderer.flush(caller);
       }
   };
 
