@@ -6,8 +6,6 @@ const defs = {};
 
 export {tiny, defs};
 
-
-
 const Basicer_Shader = defs.Basicer_Shader =
   class Basicer_Shader extends Shader {
       shared_glsl_code () {           // ********* SHARED CODE, INCLUDED IN BOTH SHADERS *********
@@ -71,10 +69,10 @@ const Basic_Shader = defs.Basic_Shader =
       }
   };
 
-  const Instanced_Shader = defs.Instanced_Shader =
+const Instanced_Shader = defs.Instanced_Shader =
   class Instanced_Shader extends Shader {
     update_GPU (context, gpu_addresses, uniforms, model_transform, material) {
-      context.uniformMatrix4fv (gpu_addresses.global_transform, false, Matrix.flatten_2D_to_1D (model_transform));
+      context.uniformMatrix4fv (gpu_addresses.global_transform, true, Matrix.flatten_2D_to_1D (model_transform));
     }
       // Basic_Shader is nearly the simplest way to subclass Shader, which stores and manages a GPU program.
       shared_glsl_code () {           // ********* SHARED CODE, INCLUDED IN BOTH SHADERS *********
@@ -90,11 +88,22 @@ const Basic_Shader = defs.Basic_Shader =
 
         uniform mat4 global_transform;
 
+        layout (std140) uniform Camera
+        {
+          mat4 cam_view;
+          mat4 cam_projection;
+        };
+
+        layout (std140) uniform Material
+        {
+          vec4 mat_color;
+        };
+
         out vec4 VERTEX_COLOR;
 
         void main() {
-          gl_Position =  vec4( position, 1.0 ) * global_transform * matrix;      // Move vertex to final space.
-          VERTEX_COLOR = color;                                 // Use the hard-coded color of the vertex.
+          gl_Position =  cam_projection * cam_view * global_transform * transpose(matrix) * vec4( position, 1.0 );      // Move vertex to final space.
+          VERTEX_COLOR = mat_color;                                 // Use the hard-coded color of the vertex.
         }`;
       }
       fragment_glsl_code () {         // ********* FRAGMENT SHADER *********

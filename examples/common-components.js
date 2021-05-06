@@ -8,6 +8,201 @@ import {defs as shaders} from './common-shaders.js';
 
 export {tiny, defs};
 
+const UBO = defs.UBO =
+  class UBO  {
+    constructor (gl, buffer_name, binding_point, buffer_size, buffer_layout) {
+
+      this.items = [];
+      this.keys = [];
+
+      for (var i = 0; i < buffer_layout.length; i++) {
+        this.items[buffer_layout[i].name] = { offset: buffer_layout[i].offset,
+                                              data_length: buffer_layout[i].data_length,
+                                              chunk_length: buffer_layout[i].chunk_length };
+        this.keys[i] = buffer_layout[i].name;
+      }
+
+      this.gl = gl;
+      this.buffer_name = buffer_name;
+      this.binding_point = binding_point;
+
+      this.buffer = gl.createBuffer ();
+      gl.bindBuffer (gl.UNIFORM_BUFFER, this.buffer);
+      gl.bufferData (gl.UNIFORM_BUFFER, buffer_size, gl.DYNAMIC_DRAW);
+      gl.bindBuffer (gl.UNIFORM_BUFFER, null);
+      gl.bindBufferBase (gl.UNIFORM_BUFFER, binding_point, this.buffer);
+    }
+
+    bind (binding_point, buffer) {
+      this.gl.bindBufferBase (this.gl.UNIFORM_BUFFER, binding_point, buffer);
+    }
+
+    update (buffer_name, buffer_data) {
+      if (buffer_data instanceof Matrix)
+        buffer_data = Matrix.flatten_2D_to_1D(buffer_data.transposed());
+
+      //Force the data to be Float32Array
+      if (!(buffer_data instanceof Float32Array)) {
+        if ( Array.isArray(buffer_data))
+          buffer_data = new Float32Array(buffer_data);
+        else
+          buffer_data = new Float32Array([buffer_data]);
+      }
+
+      this.gl.bindBuffer(this.gl.UNIFORM_BUFFER, this.buffer);
+      this.gl.bufferSubData(this.gl.UNIFORM_BUFFER, this.items[buffer_name].offset, buffer_data, 0, null);
+      this.gl.bindBuffer(this.gl.UNIFORM_BUFFER, null);
+
+      return this;
+    }
+
+    static create (gl, block_name, binding_point, buffer_layout) {
+      var buffer_size = UBO.calculate(buffer_layout);
+      UBO.Cache[block_name] = new UBO(gl, block_name, binding_point, buffer_size, buffer_layout);
+    }
+
+    static get_size (type) { //[Alignment,Size]
+      switch (type) {
+        case "float":
+        case "int":
+        case "bool":
+          return [4,4];
+        case "Mat4":
+          return [64,64]; //16*4
+        case "Mat3":
+          return [48,48]; //16*3
+        case "vec2":
+          return [8,8];
+        case "vec3":
+          return [16,12]; //Special Case
+        case "vec4":
+          return [16,16];
+        default:
+          return [0,0];
+      }
+    }
+
+    static calculate(buffer_layout) {
+      var chunk = 16;	//Data size in Bytes, UBO using layout std140 needs to build out the struct in chunks of 16 bytes.
+			var temp_size = 0;	//Temp Size, How much of the chunk is available after removing the data size from it
+			var offset = 0;	//Offset in the buffer allocation
+			var size;		//Data Size of the current type
+
+      for (var i=0; i < buffer_layout.length; i++) {
+        //When dealing with arrays, Each element takes up 16 bytes regardless of type.
+        if (!buffer_layout[i].length || buffer_layout[i].length == 0)
+          size = UBO.get_size(buffer_layout[i].type);
+        else
+          size = [buffer_layout[i].length * 16, buffer_layout[i].length * 16];
+
+        temp_size = chunk - size[0];	//How much of the chunk exists after taking the size of the data.
+
+        //Chunk has been overdrawn when it already has some data resurved for it.
+        if (temp_size < 0 && chunk < 16) {
+          offset += chunk;						//Add Remaining Chunk to offset...
+          if (i > 0)
+            buffer_layout[i-1].chunk_length += chunk;	//So the remaining chunk can be used by the last variable
+          chunk = 16;								//Reset Chunk
+        }
+        else if (temp_size < 0 && chunk == 16) {
+          //Do nothing incase data length is >= to unused chunk size.
+          //Do not want to change the chunk size at all when this happens.
+        }
+        else if (temp_size == 0) { //If evenly closes out the chunk, reset
+
+          if(buffer_layout[i].type == "vec3" && chunk == 16)
+            chunk -= size[1];	//If Vec3 is the first var in the chunk, subtract size since size and alignment is different.
+          else
+            chunk = 16;
+        }
+        else
+          chunk -= size[1];	//Chunk isn't filled, just remove a piece
+
+        //Add some data of how the chunk will exist in the buffer.
+        buffer_layout[i].offset	= offset;
+        buffer_layout[i].chunk_length	= size[1];
+        buffer_layout[i].data_length = size[1];
+
+        offset += size[1];
+      }
+
+      return offset;
+    }
+
+  };
+
+UBO.Cache = [];
+
+const Camera = defs.Camera =
+  class Camera {
+    constructor(eye = vec3 (0.0, 0.0, 1.0), at = vec3 (0.0, 0.0, -1.0), up = vec3 (0.0, 1.0, 0.0),  fov_y = Math.PI/4, aspect = 1080/600, near = 0.01, far = 1024) {
+
+      this.position = eye;
+      this.front = at;
+      this.up = up;
+
+      this.view = Mat4.identity();
+      this.proj = Mat4.identity();
+
+      this.ubo_layout = [{name:"cam_view", type:"Mat4"},
+                         {name:"cam_projection", type:"Mat4"}];
+      this.is_initialized = false;
+    }
+    initialize(caller) {
+      if (!this.is_initialized) {
+        const mappings = Shader.mapping_UBO();
+        for (var i = 0; i < mappings.length; i++) {
+          if (mappings[i].buffer_name == "Camera") {
+            UBO.create(caller.context, "Camera", mappings[i].binding_point, this.ubo_layout);
+            UBO.bind(mappings[i].binding_point, UBO.Cache["Camera"]);
+            break;
+          }
+        }
+        this.is_initialized = true;
+      }
+
+      this.view = Mat4.look_at(this.position, this.position.plus(this.front), this.up);
+      this.proj = Mat4.perspective(Math.PI/2, caller.width/caller.height, 0.01, 1024);
+
+      UBO.Cache["Camera"].update("cam_view", this.view);
+      UBO.Cache["Camera"].update("cam_projection", this.proj);
+    }
+  };
+
+const Material = defs.Material =
+  class Material {
+    constructor(shader = undefined, name = "Void", col = vec4 (1.0, 0.0, 1.0, 1.0)) {
+
+      this.shader = shader;
+      this.name = name;
+      this.color = col;
+      this.binding_point = undefined;
+      this.ubo_layout = [{name:"mat_col", type:"vec4"}];
+      this.is_initialized = false;
+    }
+
+    initialize(caller) {
+      if (!this.is_initialized) {
+        const mappings = Shader.mapping_UBO();
+        for (var i = 0; i < mappings.length; i++) {
+          if (mappings[i].buffer_name == this.name) {
+            this.binding_point = mappings[i].binding_point;
+            UBO.create(caller.context, this.name, mappings[i].binding_point, this.ubo_layout);
+            UBO.bind(this.binding_point, UBO.Cache[this.name]);
+            UBO.Cache[this.name].update("mat_col", this.color);
+            break;
+          }
+        }
+        this.is_initialized = true;
+      }
+    }
+
+    activate() {
+      UBO.bind(this.binding_point, UBO.Cache[this.name]);
+    }
+
+  };
+
 const Entity = defs.Entity =
   class Entity {
     constructor(shape, transforms, material) {
@@ -30,6 +225,7 @@ const Entity = defs.Entity =
     }
     set_material(material) {
       this.material = material;
+      this.material.activate();
     }
   };
 
@@ -38,10 +234,10 @@ const Entity = defs.Entity =
     constructor() {
       this.entities = []
     }
-    submit(entity){
+    submit(entity) {
       this.entities.push(entity);
     }
-    flush(context){
+    flush(caller) {
       for(let entity of this.entities){
         if( Array.isArray(entity.transforms) ) {
           if (entity.dirty) {
@@ -49,7 +245,7 @@ const Entity = defs.Entity =
             entity.shape.fill_buffer(["matrix"], undefined, 1);
             entity.dirty = false;
           }
-          entity.shape.draw(context, undefined, entity.global_transform, {shader: entity.material.shader}, undefined, entity.transforms.length)
+          entity.shape.draw(caller, undefined, entity.global_transform, entity.material, undefined, entity.transforms.length)
         }
         else {
           if (entity.dirty) {
@@ -58,7 +254,7 @@ const Entity = defs.Entity =
             entity.shape.fill_buffer(["matrix"], undefined, 1);
             entity.dirty = false;
           }
-          entity.shape.draw(context, undefined, entity.global_transform, {shader: entity.material.shader}, undefined, 1)
+          entity.shape.draw(caller, undefined, entity.global_transform, entity.material, undefined, 1)
         }
       }
       this.entities = []
@@ -70,25 +266,38 @@ const Minimal_Webgl_Demo = defs.Minimal_Webgl_Demo =
       init () {
           this.widget_options = {make_controls: false};    // This demo is too minimal to have controls
           this.time = 0.0;
-          this.shapes         = {triangle: new shapes.Instanced_Square_Index ()};
-          this.shader         = new shaders.Instanced_Shader ();
-          this.materials = {};
-          this.materials.base = { shader: this.shader };
-          this.renderer       = new Renderer();
+          this.shapes = {triangle: new shapes.Instanced_Square_Index ()};
+          this.shader = new shaders.Instanced_Shader ();
+          this.fire = new Material(this.shader, "Fire", vec4(1.0, 0.0, 0.0, 1.0));
+          this.water = new Material(this.shader,"Water", vec4(0.0, 0.0, 1.0, 1.0));
+          this.renderer = new Renderer();
           this.objects = 1;
-          this.size = 100000;
+          this.size = 1000;
           this.entities = [];
           for (var obj = 0; obj < this.objects; obj++)
           {
             this.entities.push(
                 new Entity(new shapes.Instanced_Square_Index (), Array(this.size).fill(0).map( (x,i) =>
-                    Mat4.translation(Math.random() * 2.0 - 1.0, Math.random() * 2.0 - 1.0, 0.0)
-                    .times(Mat4.scale(0.05, 0.05, 1.0))), this.materials.base)
+                    Mat4.translation(... vec3(Math.random() * 2 - 1, Math.random() * 2 - 1, -5).times_pairwise(vec3(10, 10, 1)))), undefined)
             );
           }
+
+          this.camera = new Camera();
       }
       render_animation (caller) {
         this.time += 1;
+
+        this.camera.initialize(caller);
+        this.fire.initialize(caller);
+        this.water.initialize(caller);
+
+        if (this.time < 200)
+          this.entities[0].set_material(this.fire);
+        else if (this.time < 400)
+          this.entities[0].set_material(this.water);
+        else
+          this.time = 0;
+
         for (var obj = 0; obj < this.objects; obj++)
         {
           this.entities[obj].apply_transform(Mat4.rotation( this.time/100, 0,0,1));
