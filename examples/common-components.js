@@ -137,7 +137,7 @@ UBO.Cache = [];
 
 const Camera = defs.Camera =
   class Camera {
-    constructor(eye = vec3 (0.0, 1.0, 1.5), at = vec3 (0.0, 0.0, -1.0), up = vec3 (0.0, 1.0, 0.0),  fov_y = Math.PI/4, aspect = 1080/600, near = 0.01, far = 1024) {
+    constructor(eye = vec3 (0.0, 0.0, 0.0), at = vec3 (0.0, 0.0, -1.0), up = vec3 (0.0, 1.0, 0.0),  fov_y = Math.PI/4, aspect = 1080/600, near = 0.01, far = 1024) {
 
       this.position = eye;
       this.front = at;
@@ -177,7 +177,7 @@ const Camera = defs.Camera =
 
 const Light = defs.Light =
   class Light {
-    constructor(direction_or_position, color, ambient, diffuse, specular, attenuation_factor) {
+    constructor(direction_or_position = vec4 (0.0, 0.0, 0.0, 0.0), color = vec4 (1.0, 1.0, 1.0, 1.0), ambient = 1.0, diffuse = 1.0, specular = 1.0, attenuation_factor = 0.0) {
 
       this.direction_or_position = direction_or_position;
       this.color = color;
@@ -329,18 +329,18 @@ const Minimal_Webgl_Demo = defs.Minimal_Webgl_Demo =
           this.water = new Material("Water", this.shader, vec4(0.0, 0.0, 1.0, 1.0));
           this.renderer = new Renderer();
           this.objects = 1;
-          this.size = 1;
+          this.size = 1000;
           this.entities = [];
           for (var obj = 0; obj < this.objects; obj++)
           {
             this.entities.push(
                 new Entity(new shapes.Instanced_Cube_Index (), Array(this.size).fill(0).map( (x,i) =>
-                    Mat4.translation(... vec3(Math.random() * 2 - 1, Math.random() * 2 - 1, -5).times_pairwise(vec3(0, 0, 0)))), undefined)
+                    Mat4.translation(... vec3(Math.random()* 2 - 1, Math.random(),  Math.random()*2 - 1).times_pairwise(vec3(20, 2, 20)))), undefined)
             );
           }
 
-          this.camera = new Camera();
-          this.sun = new Light(vec4(0.0, 1.0, -2.0, 0.0), vec3(1.0, 1.0, 1.0), 1.0, 0.4, 0.6, 0.05);
+          this.camera = new Camera(vec3(0.0, 5.0, 20.0));
+          this.sun = new Light(vec4(0.0, 1.0, -2.0, 0.0), vec3(1.0, 1.0, 1.0), 0.2, 1.0, 0.7, 0.001);
       }
       render_animation (caller) {
         this.time += 1;

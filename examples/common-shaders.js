@@ -123,7 +123,7 @@ const Instanced_Shader = defs.Instanced_Shader =
           vec3 light_color;
           float light_ambient;
           float light_diffuse;
-          float light_specula;
+          float light_specular;
           float light_attenuation_factor;
         };
 
@@ -161,8 +161,8 @@ const Instanced_Shader = defs.Instanced_Shader =
                 float attenuation = 1.0 / (1.0 + light_attenuation_factor * distance_to_light * distance_to_light );
 
 
-                vec3 light_contribution = mat_color.xyz * light_color.xyz * mat_diffuse * diffuse
-                                                          + light_color.xyz * mat_specular * specular;
+                vec3 light_contribution = mat_color.xyz * light_color.xyz * mat_diffuse * light_diffuse * diffuse
+                                                          + light_color.xyz * mat_specular * light_specular * specular;
 
                 result += attenuation * light_contribution;
               }
