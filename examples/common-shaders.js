@@ -82,9 +82,10 @@ const Instanced_Shader = defs.Instanced_Shader =
       }
       vertex_glsl_code () {          // ********* VERTEX SHADER *********
           return this.shared_glsl_code () + `
-        layout(location = 0) in vec3 position;                       // Position is expressed in object coordinates
-        layout(location = 1) in vec4 color;
-        layout(location = 2) in mat4 matrix;
+        layout(location = 0) in vec3 position; // Position is expressed in object coordinates
+        layout(location = 1) in vec3 normal;
+        layout(location = 2) in vec2 texture_coord;
+        layout(location = 3) in mat4 matrix;
 
         uniform mat4 global_transform;
 
@@ -92,26 +93,87 @@ const Instanced_Shader = defs.Instanced_Shader =
         {
           mat4 cam_view;
           mat4 cam_projection;
+          vec3 cam_pos;
+        };
+
+        out vec3 VERTEX_POS;
+        out vec3 VERTEX_NORMAL;
+        out vec2 VERTEX_TEXCOORD;
+
+        void main() {
+          gl_Position =  cam_projection * cam_view * global_transform * transpose(matrix) * vec4( position, 1.0 );
+          VERTEX_POS = vec3(global_transform * transpose(matrix) * vec4( position, 1.0 ));
+          VERTEX_NORMAL = mat3(transpose(inverse(global_transform * transpose(matrix)))) * normal;
+          VERTEX_TEXCOORD = texture_coord;
+        }`;
+      }
+      fragment_glsl_code () {         // ********* FRAGMENT SHADER *********
+          return this.shared_glsl_code () + `
+
+        layout (std140) uniform Camera
+        {
+          mat4 cam_view;
+          mat4 cam_projection;
+          vec3 cam_pos;
+        };
+
+        layout (std140) uniform Light
+        {
+          vec4 light_direction_or_position;
+          vec3 light_color;
+          float light_ambient;
+          float light_diffuse;
+          float light_specula;
+          float light_attenuation_factor;
         };
 
         layout (std140) uniform Material
         {
           vec4 mat_color;
+          vec3 mat_diffuse;
+          vec3 mat_specular;
+          float mat_smoothness;
         };
 
-        out vec4 VERTEX_COLOR;
+        in vec3 VERTEX_POS;
+        in vec3 VERTEX_NORMAL;
+        in vec2 VERTEX_TEXCOORD;
+
+        out vec4 frag_color;
+
+        int N_LIGHTS = 1;
+
+        // ***** PHONG SHADING HAPPENS HERE: *****
+        vec3 phong_model_lights( vec3 N, vec3 vertex_worldspace ) {
+            vec3 E = normalize( cam_pos - vertex_worldspace );
+            vec3 result = vec3( 0.0 );
+            for(int i = 0; i < N_LIGHTS; i++) {
+                vec3 surface_to_light_vector = light_direction_or_position.xyz -
+                                               light_direction_or_position.w * vertex_worldspace;
+                float distance_to_light = length( surface_to_light_vector );
+
+                vec3 L = normalize( surface_to_light_vector );
+                vec3 H = normalize( L + E );
+
+                  // Compute diffuse and specular components of Phong Reflection Model.
+                float diffuse  =      max( dot( N, L ), 0.0 );
+                float specular = pow( max( dot( N, H ), 0.0 ), mat_smoothness );     // Use Blinn's "halfway vector" method.
+                float attenuation = 1.0 / (1.0 + light_attenuation_factor * distance_to_light * distance_to_light );
+
+
+                vec3 light_contribution = mat_color.xyz * light_color.xyz * mat_diffuse * diffuse
+                                                          + light_color.xyz * mat_specular * specular;
+
+                result += attenuation * light_contribution;
+              }
+            return result;
+          }
 
         void main() {
-          gl_Position =  cam_projection * cam_view * global_transform * transpose(matrix) * vec4( position, 1.0 );      // Move vertex to final space.
-          VERTEX_COLOR = mat_color;                                 // Use the hard-coded color of the vertex.
-        }`;
-      }
-      fragment_glsl_code () {         // ********* FRAGMENT SHADER *********
-          return this.shared_glsl_code () + `
-        in vec4 VERTEX_COLOR;
-        out vec4 frag_color;
-        void main() {
-          frag_color = VERTEX_COLOR;    // Directly use per-vertex colors for interpolation.
+          // Compute an initial (ambient) color:
+          frag_color = vec4( mat_color.xyz * light_ambient, mat_color.w );
+          // Compute the final color with contributions from lights:
+          frag_color.xyz += phong_model_lights( normalize( VERTEX_NORMAL ), VERTEX_POS );
         }`;
       }
   };

@@ -373,8 +373,9 @@ const Shader = tiny.Shader =
       static mapping_UBO () {
         return [
           {shader_name: "Camera", buffer_name: "Camera", binding_point: 0},
-          {shader_name: "Material", buffer_name: "Fire", binding_point: 1},
-          {shader_name: "Material", buffer_name: "Water", binding_point: 2},
+          {shader_name: "Light", buffer_name: "Light", binding_point: 1},
+          {shader_name: "Material", buffer_name: "Fire", binding_point: 2},
+          {shader_name: "Material", buffer_name: "Water", binding_point: 3},
         ];
       }
       static assign_camera (camera_inverse, uniforms) {

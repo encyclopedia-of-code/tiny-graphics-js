@@ -103,6 +103,8 @@ const UBO = defs.UBO =
           if (i > 0)
             buffer_layout[i-1].chunk_length += chunk;	//So the remaining chunk can be used by the last variable
           chunk = 16;								//Reset Chunk
+          if(buffer_layout[i].type == "vec3")
+            chunk -= size[1];	//If Vec3 is the first var in the chunk, subtract size since size and alignment is different.
         }
         else if (temp_size < 0 && chunk == 16) {
           //Do nothing incase data length is >= to unused chunk size.
@@ -135,7 +137,7 @@ UBO.Cache = [];
 
 const Camera = defs.Camera =
   class Camera {
-    constructor(eye = vec3 (0.0, 0.0, 1.0), at = vec3 (0.0, 0.0, -1.0), up = vec3 (0.0, 1.0, 0.0),  fov_y = Math.PI/4, aspect = 1080/600, near = 0.01, far = 1024) {
+    constructor(eye = vec3 (0.0, 1.0, 1.5), at = vec3 (0.0, 0.0, -1.0), up = vec3 (0.0, 1.0, 0.0),  fov_y = Math.PI/4, aspect = 1080/600, near = 0.01, far = 1024) {
 
       this.position = eye;
       this.front = at;
@@ -145,7 +147,9 @@ const Camera = defs.Camera =
       this.proj = Mat4.identity();
 
       this.ubo_layout = [{name:"cam_view", type:"Mat4"},
-                         {name:"cam_projection", type:"Mat4"}];
+                         {name:"cam_projection", type:"Mat4"},
+                         {name:"cam_pos", type:"vec3"},
+                        ];
       this.is_initialized = false;
     }
     initialize(caller) {
@@ -161,23 +165,73 @@ const Camera = defs.Camera =
         this.is_initialized = true;
       }
 
-      this.view = Mat4.look_at(this.position, this.position.plus(this.front), this.up);
+      //this.view = Mat4.look_at(this.position, this.position.plus(this.front), this.up);
+      this.view = Mat4.look_at(this.position, this.front, this.up);
       this.proj = Mat4.perspective(Math.PI/2, caller.width/caller.height, 0.01, 1024);
 
       UBO.Cache["Camera"].update("cam_view", this.view);
       UBO.Cache["Camera"].update("cam_projection", this.proj);
+      UBO.Cache["Camera"].update("cam_pos", this.position);
+    }
+  };
+
+const Light = defs.Light =
+  class Light {
+    constructor(direction_or_position, color, ambient, diffuse, specular, attenuation_factor) {
+
+      this.direction_or_position = direction_or_position;
+      this.color = color;
+      this.ambient = ambient;
+      this.diffuse = diffuse;
+      this.specular = specular;
+      this.attenuation_factor = attenuation_factor;
+
+      this.ubo_layout = [{name:"light_direction_or_position", type:"vec4"},
+                         {name:"light_color", type:"vec3"},
+                         {name:"light_ambient", type:"float"},
+                         {name:"light_diffuse", type:"float"},
+                         {name:"light_specular", type:"float"},
+                         {name:"light_attenuation_factor", type:"float"},
+                        ];
+      this.is_initialized = false;
+    }
+    initialize(caller) {
+      if (!this.is_initialized) {
+        const mappings = Shader.mapping_UBO();
+        for (var i = 0; i < mappings.length; i++) {
+          if (mappings[i].buffer_name == "Light") {
+            UBO.create(caller.context, "Light", mappings[i].binding_point, this.ubo_layout);
+            UBO.bind(mappings[i].binding_point, UBO.Cache["Light"]);
+            UBO.Cache["Light"].update("light_direction_or_position", this.direction_or_position);
+            UBO.Cache["Light"].update("light_color", this.color);
+            UBO.Cache["Light"].update("light_ambient", this.ambient);
+            UBO.Cache["Light"].update("light_diffuse", this.diffuse);
+            UBO.Cache["Light"].update("light_specular", this.specular);
+            UBO.Cache["Light"].update("light_attenuation_factor", this.attenuation_factor);
+            break;
+          }
+        }
+        this.is_initialized = true;
+      }
     }
   };
 
 const Material = defs.Material =
   class Material {
-    constructor(shader = undefined, name = "Void", col = vec4 (1.0, 0.0, 1.0, 1.0)) {
+    constructor(name = "None", shader = undefined, color = vec4 (1.0, 1.0, 1.0, 1.0), diffuse = vec3(color[0], color[1], color[2]), specular = vec3 (1.0, 1.0, 1.0), smoothness = 32.0) {
 
-      this.shader = shader;
       this.name = name;
-      this.color = col;
+      this.shader = shader;
+      this.color = color;
+      this.diffuse = diffuse;
+      this.specular = specular;
+      this.smoothness = smoothness;
       this.binding_point = undefined;
-      this.ubo_layout = [{name:"mat_col", type:"vec4"}];
+      this.ubo_layout = [{name:"mat_color", type:"vec4"},
+                         {name:"mat_diffuse", type:"vec3"},
+                         {name:"mat_specular", type:"vec3"},
+                         {name:"mat_smoothness", type:"float"}
+                        ];
       this.is_initialized = false;
     }
 
@@ -189,7 +243,10 @@ const Material = defs.Material =
             this.binding_point = mappings[i].binding_point;
             UBO.create(caller.context, this.name, mappings[i].binding_point, this.ubo_layout);
             UBO.bind(this.binding_point, UBO.Cache[this.name]);
-            UBO.Cache[this.name].update("mat_col", this.color);
+            UBO.Cache[this.name].update("mat_color", this.color);
+            UBO.Cache[this.name].update("mat_diffuse", this.diffuse);
+            UBO.Cache[this.name].update("mat_specular", this.specular);
+            UBO.Cache[this.name].update("mat_smoothness", this.smoothness);
             break;
           }
         }
@@ -234,10 +291,10 @@ const Entity = defs.Entity =
     constructor() {
       this.entities = []
     }
-    submit(entity) {
+    submit (entity) {
       this.entities.push(entity);
     }
-    flush(caller) {
+    flush (caller) {
       for(let entity of this.entities){
         if( Array.isArray(entity.transforms) ) {
           if (entity.dirty) {
@@ -268,26 +325,28 @@ const Minimal_Webgl_Demo = defs.Minimal_Webgl_Demo =
           this.time = 0.0;
           this.shapes = {triangle: new shapes.Instanced_Square_Index ()};
           this.shader = new shaders.Instanced_Shader ();
-          this.fire = new Material(this.shader, "Fire", vec4(1.0, 0.0, 0.0, 1.0));
-          this.water = new Material(this.shader,"Water", vec4(0.0, 0.0, 1.0, 1.0));
+          this.fire = new Material("Fire", this.shader, vec4(1.0, 0.0, 0.0, 1.0));
+          this.water = new Material("Water", this.shader, vec4(0.0, 0.0, 1.0, 1.0));
           this.renderer = new Renderer();
           this.objects = 1;
-          this.size = 1000;
+          this.size = 1;
           this.entities = [];
           for (var obj = 0; obj < this.objects; obj++)
           {
             this.entities.push(
-                new Entity(new shapes.Instanced_Square_Index (), Array(this.size).fill(0).map( (x,i) =>
-                    Mat4.translation(... vec3(Math.random() * 2 - 1, Math.random() * 2 - 1, -5).times_pairwise(vec3(10, 10, 1)))), undefined)
+                new Entity(new shapes.Instanced_Cube_Index (), Array(this.size).fill(0).map( (x,i) =>
+                    Mat4.translation(... vec3(Math.random() * 2 - 1, Math.random() * 2 - 1, -5).times_pairwise(vec3(0, 0, 0)))), undefined)
             );
           }
 
           this.camera = new Camera();
+          this.sun = new Light(vec4(0.0, 1.0, -2.0, 0.0), vec3(1.0, 1.0, 1.0), 1.0, 0.4, 0.6, 0.05);
       }
       render_animation (caller) {
         this.time += 1;
 
         this.camera.initialize(caller);
+        this.sun.initialize(caller);
         this.fire.initialize(caller);
         this.water.initialize(caller);
 
@@ -300,7 +359,7 @@ const Minimal_Webgl_Demo = defs.Minimal_Webgl_Demo =
 
         for (var obj = 0; obj < this.objects; obj++)
         {
-          this.entities[obj].apply_transform(Mat4.rotation( this.time/100, 0,0,1));
+          this.entities[obj].apply_transform(Mat4.rotation( 0/100, 0,0,1));
           this.renderer.submit(this.entities[obj]);
         }
         this.renderer.flush(caller);
