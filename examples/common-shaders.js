@@ -71,9 +71,13 @@ const Basic_Shader = defs.Basic_Shader =
 
 const Instanced_Shader = defs.Instanced_Shader =
   class Instanced_Shader extends Shader {
-    update_GPU (context, gpu_addresses, uniforms, model_transform, material) {
-      context.uniformMatrix4fv (gpu_addresses.global_transform, true, Matrix.flatten_2D_to_1D (model_transform));
-    }
+      constructor (num_lights = 2) {
+        super ();
+        this.num_lights = num_lights;
+      }
+      update_GPU (context, gpu_addresses, uniforms, model_transform, material) {
+        context.uniformMatrix4fv (gpu_addresses.global_transform, true, Matrix.flatten_2D_to_1D (model_transform));
+      }
       // Basic_Shader is nearly the simplest way to subclass Shader, which stores and manages a GPU program.
       shared_glsl_code () {           // ********* SHARED CODE, INCLUDED IN BOTH SHADERS *********
           return "#version 300 es " + `
@@ -117,14 +121,21 @@ const Instanced_Shader = defs.Instanced_Shader =
           vec3 cam_pos;
         };
 
-        layout (std140) uniform Light
+        struct Light
         {
           vec4 light_direction_or_position;
           vec3 light_color;
-          float light_ambient;
           float light_diffuse;
           float light_specular;
           float light_attenuation_factor;
+        };
+
+        const int N_LIGHTS = ` + this.num_lights + `;
+
+        layout (std140) uniform Lights
+        {
+          float light_ambient;
+          Light lights[N_LIGHTS];
         };
 
         layout (std140) uniform Material
@@ -141,15 +152,14 @@ const Instanced_Shader = defs.Instanced_Shader =
 
         out vec4 frag_color;
 
-        int N_LIGHTS = 1;
 
         // ***** PHONG SHADING HAPPENS HERE: *****
         vec3 phong_model_lights( vec3 N, vec3 vertex_worldspace ) {
             vec3 E = normalize( cam_pos - vertex_worldspace );
             vec3 result = vec3( 0.0 );
             for(int i = 0; i < N_LIGHTS; i++) {
-                vec3 surface_to_light_vector = light_direction_or_position.xyz -
-                                               light_direction_or_position.w * vertex_worldspace;
+                vec3 surface_to_light_vector = lights[i].light_direction_or_position.xyz -
+                                               lights[i].light_direction_or_position.w * vertex_worldspace;
                 float distance_to_light = length( surface_to_light_vector );
 
                 vec3 L = normalize( surface_to_light_vector );
@@ -158,11 +168,11 @@ const Instanced_Shader = defs.Instanced_Shader =
                   // Compute diffuse and specular components of Phong Reflection Model.
                 float diffuse  =      max( dot( N, L ), 0.0 );
                 float specular = pow( max( dot( N, H ), 0.0 ), mat_smoothness );     // Use Blinn's "halfway vector" method.
-                float attenuation = 1.0 / (1.0 + light_attenuation_factor * distance_to_light * distance_to_light );
+                float attenuation = 1.0 / (1.0 + lights[i].light_attenuation_factor * distance_to_light * distance_to_light );
 
 
-                vec3 light_contribution = mat_color.xyz * light_color.xyz * mat_diffuse * light_diffuse * diffuse
-                                                          + light_color.xyz * mat_specular * light_specular * specular;
+                vec3 light_contribution = mat_color.xyz * lights[i].light_color.xyz * mat_diffuse * lights[i].light_diffuse * diffuse
+                                                          + lights[i].light_color.xyz * mat_specular * lights[i].light_specular * specular;
 
                 result += attenuation * light_contribution;
               }
