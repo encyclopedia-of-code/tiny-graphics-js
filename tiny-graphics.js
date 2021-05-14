@@ -21,7 +21,7 @@ const Shape = tiny.Shape =
           this.gpu_instances = new Map ();      // Track which GPU contexts this object has copied itself onto.
       }
       fill_buffer( selection_of_attributes, buffer_hint = "STATIC_DRAW", divisor = 0 ) {
-        if( !this.vertices[0])
+        if( !this.vertices[0] )
           return;
 
         this.dirty = true;
@@ -320,6 +320,8 @@ const Shader = tiny.Shader =
           if ( !gl.getProgramParameter (program, gl.LINK_STATUS))
               throw "Shader linker error: " + gl.getProgramInfoLog (this.program);
 
+          this.init_UBO(gl, program);
+
           Object.assign (gpu_instance,
                          {program, vertShdr, fragShdr, gpu_addresses: new Graphics_Addresses (program, gl)});
           return gpu_instance;
@@ -332,10 +334,28 @@ const Shader = tiny.Shader =
           // TODO:  Cache this
           context.useProgram (gpu_instance.program);
 
+          this.bind_UBO (context, gpu_instance.program, "Material", material.binding_point);
+
           // TODO:  Use UBO instead:
           // --- Send over all the values needed by this particular shader to the GPU: ---
           this.update_GPU (context, gpu_instance.gpu_addresses, uniforms, model_transform, material);
-      }                           // Your custom Shader has to override the following functions:
+      }
+      init_UBO (gl, program) {
+        const mappings = Shader.mapping_UBO();
+        var ubo_index = 0;
+
+        for (var i = 0; i < mappings.length; i++) {
+          ubo_index = gl.getUniformBlockIndex(program, mappings[i].shader_name);
+          gl.uniformBlockBinding(program, ubo_index, mappings[i].binding_point);
+        }
+      }
+
+      bind_UBO (gl, program, shader_name, binding_point) {
+        var ubo_index = gl.getUniformBlockIndex(program, shader_name);
+        gl.uniformBlockBinding(program, ubo_index, binding_point);
+      }
+
+      // Your custom Shader has to override the following functions:
       vertex_glsl_code () {}
       fragment_glsl_code () {}
       update_GPU () {}
@@ -348,6 +368,15 @@ const Shader = tiny.Shader =
               animation_time      : 0,
               animation_delta_time: 0
           };
+
+      }
+      static mapping_UBO () {
+        return [
+          {shader_name: "Camera", buffer_name: "Camera", binding_point: 0},
+          {shader_name: "Lights", buffer_name: "Lights", binding_point: 1},
+          {shader_name: "Material", buffer_name: "Fire", binding_point: 2},
+          {shader_name: "Material", buffer_name: "Water", binding_point: 3},
+        ];
       }
       static assign_camera (camera_inverse, uniforms) {
           Object.assign (uniforms, {camera_inverse, camera_transform: Mat4.inverse (camera_inverse)});
