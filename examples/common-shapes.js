@@ -1,6 +1,6 @@
 import {tiny} from '../tiny-graphics.js';
 // Pull these names into this module's scope for convenience:
-const {Vector, Vector3, vec, vec3, vec4, color, Matrix, Mat4, Shape, Shader, Component} = tiny;
+const {Vector, Vector3, vec, vec2, vec3, vec4, color, Matrix, Mat4, Shape, Shader, Component} = tiny;
 
 const defs = {};
 
@@ -8,34 +8,32 @@ export {tiny, defs};
 
 const Triangle = defs.Triangle =
   class Triangle extends Shape {
-      // **Triangle** The simplest possible 2D Shape – one triangle.  It stores 3 vertices,
-      // each having their own 3D position, normal vector, and texture-space coordinate.
+      // **Triangle** The simplest possible 2D Shape – one triangle.  It stores 3 corner vertices, each with sufficient data to shade them.
 
       constructor () {
           super ();
 
+          // Multiple data fields live at our triangle's corner points, besides just a position.  We will describe one "vertex" as the combination of a position, a normal vector, and lastly a coordinate in texture image space in case a texture image is applied.
+
+          // Vertex positions: the three point locations of an imaginary triangle.
+          // "Normal" vectors:  Vectors that point away from the triangle face.  They're needed so the graphics engine can know if the shape is pointed at light or not, and then color it accordingly.
+          // Texture coordinates: Points in the seperate 2D X/Y pixel space belonging to any 2D images we might like to paint the shape with.
           this.vertices[0] = { position: vec3 (0, 0, 0),
                                normal: vec3 (0, 0, 1),
-                               texture_coord: Vector.of (0, 0) }
+                               texture_coord: vec2 (0, 0) };
 
-          // First, specify the vertex positions -- the three point locations of an imaginary triangle:
-          this.arrays.position = [vec3 (0, 0, 0), vec3 (1, 0, 0), vec3 (0, 1, 0)];
+          this.vertices[1] = { position: vec3 (1, 0, 0),
+                               normal: vec3 (0, 0, 1),
+                               texture_coord: vec2 (1, 0) };
 
-          // Next, supply vectors that point away from the triangle face.  They should match up with
-          // the points in the above list.  Normal vectors are needed so the graphics engine can
-          // know if the shape is pointed at light or not, and color it accordingly.
-          this.arrays.normal = [vec3 (0, 0, 1), vec3 (0, 0, 1), vec3 (0, 0, 1)];
+          this.vertices[2] = { position: vec3 (0, 1, 0),
+                               normal: vec3 (0, 0, 1),
+                               texture_coord: vec2 (0, 1) };
 
-          //  Lastly, each point also simultaneously exists somewhere in texture space (the
-          //  X/Y pixel space belonging to any 2D images we might like to paint the shape with):
-          this.arrays.texture_coord = [Vector.of (0, 0), Vector.of (1, 0), Vector.of (0, 1)];
-
-          // Index into our vertices to connect them into a whole triangle:
+          // Next, describe how to connect whole triangles out of individual vertices.  Say a list of indices of vertex entries in your desired order. Every three indices in "this.indices" traces out one triangle.
           this.indices              = [0, 1, 2];
-          // A position, normal, and texture coord fully describes one "vertex".  What's the "i"th vertex?  Simply
-          // the combined data you get if you look up index "i" of those lists above -- a position, normal vector,
-          // and texture coordinate together.  Lastly we told it how to connect vertex entries into triangles.
-          // Every three indices in "this.indices" traces out one triangle.
+
+          this.fill_buffer ("position", "normal", "texture_coord")
       }
   };
 

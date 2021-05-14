@@ -108,46 +108,46 @@ const Basic_Shader = defs.Basic_Shader =
   };
 
 
-const Funny_Shader = defs.Funny_Shader =
-  class Funny_Shader extends Shader {
-      update_GPU (context, gpu_addresses, uniforms, model_transform, material) {
-          const [P, C, M] = [uniforms.projection_transform, uniforms.camera_inverse, model_transform],
-                PCM       = P.times (C).times (M);
-          context.uniformMatrix4fv (gpu_addresses.projection_camera_model_transform, false,
-                                    Matrix.flatten_2D_to_1D (PCM.transposed ()));
-          context.uniform1f (gpu_addresses.animation_time, uniforms.animation_time / 1000);
-      }
-      shared_glsl_code () {
-          return `precision mediump float;
-                  varying vec2 f_tex_coord;
-      `;
-      }
-      vertex_glsl_code () {
-          return this.shared_glsl_code () + `
-        attribute vec3 position;                            // Position is expressed in object coordinates.
-        attribute vec2 texture_coord;
-        uniform mat4 projection_camera_model_transform;
+// const Funny_Shader = defs.Funny_Shader =
+//   class Funny_Shader extends Shader {
+//       update_GPU (context, gpu_addresses, uniforms, model_transform, material) {
+//           const [P, C, M] = [uniforms.projection_transform, uniforms.camera_inverse, model_transform],
+//                 PCM       = P.times (C).times (M);
+//           context.uniformMatrix4fv (gpu_addresses.projection_camera_model_transform, false,
+//                                     Matrix.flatten_2D_to_1D (PCM.transposed ()));
+//           context.uniform1f (gpu_addresses.animation_time, uniforms.animation_time / 1000);
+//       }
+//       shared_glsl_code () {
+//           return `precision mediump float;
+//                   varying vec2 f_tex_coord;
+//       `;
+//       }
+//       vertex_glsl_code () {
+//           return this.shared_glsl_code () + `
+//         attribute vec3 position;                            // Position is expressed in object coordinates.
+//         attribute vec2 texture_coord;
+//         uniform mat4 projection_camera_model_transform;
 
-        void main() {
-          gl_Position = projection_camera_model_transform * vec4( position, 1.0 );  // Move vertex to final space
-          f_tex_coord = texture_coord;                 // Supply the original texture coords for interpolation.
-        }`;
-      }
-      fragment_glsl_code () {
-          return this.shared_glsl_code () + `
-        uniform float animation_time;
-        void main() {
-          float a = animation_time, u = f_tex_coord.x, v = f_tex_coord.y;
+//         void main() {
+//           gl_Position = projection_camera_model_transform * vec4( position, 1.0 );  // Move vertex to final space
+//           f_tex_coord = texture_coord;                 // Supply the original texture coords for interpolation.
+//         }`;
+//       }
+//       fragment_glsl_code () {
+//           return this.shared_glsl_code () + `
+//         uniform float animation_time;
+//         void main() {
+//           float a = animation_time, u = f_tex_coord.x, v = f_tex_coord.y;
 
-          // To color in all pixels, use an arbitrary math function based only on time and UV texture coordinates.
-          gl_FragColor = vec4(
-            2.0 * u * sin(17.0 * u ) + 3.0 * v * sin(11.0 * v ) + 1.0 * sin(13.0 * a),
-            3.0 * u * sin(18.0 * u ) + 4.0 * v * sin(12.0 * v ) + 2.0 * sin(14.0 * a),
-            4.0 * u * sin(19.0 * u ) + 5.0 * v * sin(13.0 * v ) + 3.0 * sin(15.0 * a),
-            5.0 * u * sin(20.0 * u ) + 6.0 * v * sin(14.0 * v ) + 4.0 * sin(16.0 * a));
-        }`;
-      }
-  };
+//           // To color in all pixels, use an arbitrary math function based only on time and UV texture coordinates.
+//           gl_FragColor = vec4(
+//             2.0 * u * sin(17.0 * u ) + 3.0 * v * sin(11.0 * v ) + 1.0 * sin(13.0 * a),
+//             3.0 * u * sin(18.0 * u ) + 4.0 * v * sin(12.0 * v ) + 2.0 * sin(14.0 * a),
+//             4.0 * u * sin(19.0 * u ) + 5.0 * v * sin(13.0 * v ) + 3.0 * sin(15.0 * a),
+//             5.0 * u * sin(20.0 * u ) + 6.0 * v * sin(14.0 * v ) + 4.0 * sin(16.0 * a));
+//         }`;
+//       }
+//   };
 
 
 const Phong_Shader = defs.Phong_Shader =
@@ -194,14 +194,24 @@ const Phong_Shader = defs.Phong_Shader =
       }
       vertex_glsl_code () {           // ********* VERTEX SHADER *********
           return this.shared_glsl_code () + `
-        in vec3 position, normal;                            // Position is expressed in object coordinates.
+
+
+
+          void main() {
+            gl_Position =  vec4( position, 1.0 ) * global_transform * matrix;      // Move vertex to final space.
+            VERTEX_COLOR = color;                                 // Use the hard-coded color of the vertex.
+
+
+
+        layout(location = 0) in vec3 position;                       // Position is expressed in object coordinates
+        layout(location = 1) in vec3 normal;
+        layout(location = 2) in mat4 matrix;
         out vec3 N, vertex_worldspace;
 
-        uniform mat4 model_transform;
-        uniform mat4 projection_camera_model_transform;
+        uniform mat4 model_transform, global_transform, projection_camera_model_transform;
 
         void main() {
-            gl_Position = projection_camera_model_transform * vec4( position, 1.0 );     // Move vertex to final space.
+            gl_Position = projection_camera_model_transform * global_transform * vec4( position, 1.0 );     // Move vertex to final space.
                                             // The final normal vector in screen space.
             N = normalize( mat3( model_transform ) * normal / squared_scale);
 
