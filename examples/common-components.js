@@ -65,8 +65,8 @@ const Entity = defs.Entity =
     }
   };
 
-const Minimal_Webgl_Demo = defs.Minimal_Webgl_Demo =
-  class Minimal_Webgl_Demo extends Component {
+const Instanced_Squares_Demo = defs.Instanced_Squares_Demo =
+  class Instanced_Squares_Demo extends Component {
       init () {
           this.widget_options = {make_controls: false};    // This demo is too minimal to have controls
           this.time = 0.0;
