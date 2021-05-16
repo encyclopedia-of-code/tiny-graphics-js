@@ -1,6 +1,6 @@
 import {tiny} from '../tiny-graphics.js';
 // Pull these names into this module's scope for convenience:
-const {Vector, Vector3, vec, vec3, vec4, color, Matrix, Mat4, Shape, Shader, Component} = tiny;
+const {Vector, Vector3, vec, vec3, vec4, color, Matrix, Mat4, Shape, Shader, Component, Texture} = tiny;
 
 const defs = {};
 import {defs as shapes} from './common-shapes.js';
@@ -209,15 +209,12 @@ const Light = defs.Light =
 
     static NUM_LIGHTS = 2;
     static global_index = 0;
-    static global_ambient = 0.1;
+    static global_ambient = 0.3;
 
-    constructor(direction_or_position = vec4 (0.0, 0.0, 0.0, 0.0), color = vec4 (1.0, 1.0, 1.0, 1.0), diffuse = 1.0, specular = 1.0, attenuation_factor = 0.0) {
+    constructor(data) {
 
-      this.direction_or_position = direction_or_position;
-      this.color = color;
-      this.diffuse = diffuse;
-      this.specular = specular;
-      this.attenuation_factor = attenuation_factor;
+      const defaults = Light.default_values();
+      Object.assign(this, defaults, data);
 
       this.index = Light.global_index;
       Light.global_index++;
@@ -234,6 +231,15 @@ const Light = defs.Light =
                          },
                         ];
       this.is_initialized = false;
+    }
+    static default_values () {
+      return {
+                direction_or_position: vec4 (0.0, 0.0, 0.0, 0.0),
+                color: vec3 (1.0, 1.0, 1.0, 1.0),
+                diffuse: 1.0,
+                specular: 1.0,
+                attenuation_factor: 0.0,
+              };
     }
     initialize(caller) {
       if (!this.is_initialized) {
@@ -261,11 +267,12 @@ const Light = defs.Light =
 
 const Material = defs.Material =
   class Material {
-    constructor(name = "None", shader = undefined, data) {
+    constructor(name = "None", shader = undefined, data, samplers) {
       this.name = name;
       this.shader = shader;
       const defaults = shader.constructor.default_values();
       Object.assign(this, defaults, data);
+      this.samplers = samplers;
       this.is_initialized = false;
     }
 
@@ -278,7 +285,25 @@ const Material = defs.Material =
     }
 
     bind(binding_point) {
+      //Bind Material Data
       UBO.Cache[this.name].bind(binding_point);
+
+      if ( this.samplers == undefined )
+        return;
+
+      //Bind Material Samplers
+      const gl = UBO.Cache[this.name].gl;
+      var offset = 0;
+      for (const [name, sampler] of Object.entries(this.samplers)) {
+        if (sampler && sampler.ready) {
+          // Select texture unit offset for the fragment shader Sampler2D uniform called "samplers.name":
+          gl.uniform1i (this.shader.gpu_instances.get(gl).gpu_addresses.name, offset);
+          // For this draw, use the texture image from correct the GPU buffer:
+          sampler.activate (gl, offset);
+          offset++;
+        }
+      }
+
     }
 };
 
@@ -346,8 +371,9 @@ const Minimal_Webgl_Demo = defs.Minimal_Webgl_Demo =
           this.time = 0.0;
           this.shapes = {triangle: new shapes.Instanced_Square_Index ()};
           this.shader = new shaders.Instanced_Shader (Light.NUM_LIGHTS);
+          this.textured_shader = new shaders.Textured_Instanced_Shader (Light.NUM_LIGHTS);
 
-          this.fire = new Material("Fire", this.shader, { color: vec4(1.0, 1.0, 1.0, 1.0) });
+          this.fire = new Material("Fire", this.textured_shader, { color: vec4(0.1, 0.1, 0.1, 1.0) }, { diffuse_texture: new Texture( "assets/rgb.jpg" ) });
           this.water = new Material("Water", this.shader, { color: vec4(0.0, 0.5, 0.5, 1.0) });
           this.renderer = new Renderer();
 
@@ -363,8 +389,8 @@ const Minimal_Webgl_Demo = defs.Minimal_Webgl_Demo =
           }
 
           this.camera = new Camera(vec3(0.0, 5.0, 20.0));
-          this.sun = new Light(vec4(0.0, 10.0, 0.0, 1.0), vec3(1.0, 0.0, 0.0), 0.5, 1.0, 0.001);
-          this.sun2 = new Light(vec4(0.0, 10.0, 0.0, 0.0), vec3(1.0, 1.0, 1.0), 1.0, 1.0, 0.001);
+          this.sun = new Light({direction_or_position: vec4(0.0, 10.0, 0.0, 1.0), color: vec3(1.0, 0.0, 0.0), diffuse: 0.5, specular: 1.0, attenuation_factor: 0.001});
+          this.sun2 = new Light({direction_or_position: vec4(5.0, 10.0, 0.0, 0.0), color: vec3(1.0, 1.0, 1.0), diffuse: 0.5, specular: 1.0, attenuation_factor: 0.001});
       }
       render_animation (caller) {
         this.time += 1;

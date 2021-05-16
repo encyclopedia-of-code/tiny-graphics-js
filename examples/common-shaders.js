@@ -218,6 +218,109 @@ const Instanced_Shader = defs.Instanced_Shader =
       }
   };
 
+  const Textured_Instanced_Shader = defs.Textured_Instanced_Shader =
+  class Textured_Instanced_Shader extends Instanced_Shader {
+      constructor (num_lights = 2) {
+        super ();
+        this.num_lights = num_lights;
+
+        this.ubo_binding = [
+          {shader_name: "Material",  binding_point: 2},
+        ];
+
+        this.ubo_layout = [
+          {num_instances: 1,
+           data_layout:[{name:"color", type:"vec4"},
+                        {name:"diffuse", type:"vec3"},
+                        {name:"specular", type:"vec3"},
+                        {name:"smoothness", type:"float"}]
+          }
+         ];
+      }
+      update_GPU (context, gpu_addresses, uniforms, model_transform, material) {
+        material.initialize(context, this.ubo_layout);
+        material.bind(this.ubo_binding[0].binding_point);
+        context.uniformMatrix4fv (gpu_addresses.global_transform, true, Matrix.flatten_2D_to_1D (model_transform));
+      }
+      fragment_glsl_code () {         // ********* FRAGMENT SHADER *********
+          return this.shared_glsl_code () + `
+
+        layout (std140) uniform Camera
+        {
+          mat4 view;
+          mat4 projection;
+          vec3 camera_position;
+        };
+
+        struct Light
+        {
+          vec4 direction_or_position;
+          vec3 color;
+          float diffuse;
+          float specular;
+          float attenuation_factor;
+        };
+
+        const int N_LIGHTS = ` + this.num_lights + `;
+
+        layout (std140) uniform Lights
+        {
+          float ambient;
+          Light lights[N_LIGHTS];
+        };
+
+        layout (std140) uniform Material
+        {
+          vec4 color;
+          vec3 diffuse;
+          vec3 specular;
+          float smoothness;
+        };
+
+        uniform sampler2D diffuse_texture;
+
+        in vec3 VERTEX_POS;
+        in vec3 VERTEX_NORMAL;
+        in vec2 VERTEX_TEXCOORD;
+
+        out vec4 frag_color;
+
+
+        // ***** PHONG SHADING HAPPENS HERE: *****
+        vec3 phong_model_lights( vec3 N, vec3 vertex_worldspace ) {
+            vec3 E = normalize( camera_position - vertex_worldspace );
+            vec3 result = vec3( 0.0 );
+            for(int i = 0; i < N_LIGHTS; i++) {
+                vec3 surface_to_light_vector = lights[i].direction_or_position.xyz -
+                                               lights[i].direction_or_position.w * vertex_worldspace;
+                float distance_to_light = length( surface_to_light_vector );
+
+                vec3 L = normalize( surface_to_light_vector );
+                vec3 H = normalize( L + E );
+
+                  // Compute diffuse and specular components of Phong Reflection Model.
+                float diffuse  =      max( dot( N, L ), 0.0 );
+                float specular = pow( max( dot( N, H ), 0.0 ), smoothness );     // Use Blinn's "halfway vector" method.
+                float attenuation = 1.0 / (1.0 + lights[i].attenuation_factor * distance_to_light * distance_to_light );
+
+                //vec4 color = texture( diffuse_texture, VERTEX_TEXCOORD );
+                vec3 light_contribution = color.xyz * lights[i].color.xyz * diffuse * lights[i].diffuse * diffuse
+                                                          + lights[i].color.xyz * specular * lights[i].specular * specular;
+
+                result += attenuation * light_contribution;
+              }
+            return result;
+          }
+
+        void main() {
+          // Compute an initial (ambient) color:
+          vec4 tex_color = texture( diffuse_texture, VERTEX_TEXCOORD );
+          frag_color = vec4( ( tex_color.xyz + color.xyz ) * ambient, color.w * tex_color.w );
+          // Compute the final color with contributions from lights:
+          frag_color.xyz += phong_model_lights( normalize( VERTEX_NORMAL ), VERTEX_POS );
+        }`;
+      }
+  };
 
 const Funny_Shader = defs.Funny_Shader =
   class Funny_Shader extends Shader {
