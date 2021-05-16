@@ -318,9 +318,10 @@ const Shader = tiny.Shader =
           gl.attachShader (program, fragShdr);
           gl.linkProgram (program);
           if ( !gl.getProgramParameter (program, gl.LINK_STATUS))
-              throw "Shader linker error: " + gl.getProgramInfoLog (this.program);
+              throw "Shader linker error: " + gl.getProgramInfoLog (program);
 
-          this.init_UBO(gl, program);
+          //Init UBO for the Camera and Lights
+          this.init_UBO(gl, program, Shader.mapping_UBO());
 
           Object.assign (gpu_instance,
                          {program, vertShdr, fragShdr, gpu_addresses: new Graphics_Addresses (program, gl)});
@@ -334,19 +335,16 @@ const Shader = tiny.Shader =
           // TODO:  Cache this
           context.useProgram (gpu_instance.program);
 
-          this.bind_UBO (context, gpu_instance.program, "Material", material.binding_point);
-
           // TODO:  Use UBO instead:
           // --- Send over all the values needed by this particular shader to the GPU: ---
           this.update_GPU (context, gpu_instance.gpu_addresses, uniforms, model_transform, material);
       }
-      init_UBO (gl, program) {
-        const mappings = Shader.mapping_UBO();
-        var ubo_index = 0;
 
-        for (var i = 0; i < mappings.length; i++) {
-          ubo_index = gl.getUniformBlockIndex(program, mappings[i].shader_name);
-          gl.uniformBlockBinding(program, ubo_index, mappings[i].binding_point);
+      init_UBO (gl, program, ubo_binding) {
+        var ubo_index = 0;
+        for (var i = 0; i < ubo_binding.length; i++) {
+          ubo_index = gl.getUniformBlockIndex(program, ubo_binding[i].shader_name);
+          gl.uniformBlockBinding(program, ubo_index, ubo_binding[i].binding_point);
         }
       }
 
@@ -359,6 +357,7 @@ const Shader = tiny.Shader =
       vertex_glsl_code () {}
       fragment_glsl_code () {}
       update_GPU () {}
+      static default_values () {}
       static default_uniforms () {
           return {
               camera_inverse      : Mat4.identity (),
@@ -372,10 +371,8 @@ const Shader = tiny.Shader =
       }
       static mapping_UBO () {
         return [
-          {shader_name: "Camera", buffer_name: "Camera", binding_point: 0},
-          {shader_name: "Lights", buffer_name: "Lights", binding_point: 1},
-          {shader_name: "Material", buffer_name: "Fire", binding_point: 2},
-          {shader_name: "Material", buffer_name: "Water", binding_point: 3},
+          {shader_name: "Camera", binding_point: 0},
+          {shader_name: "Lights", binding_point: 1},
         ];
       }
       static assign_camera (camera_inverse, uniforms) {
