@@ -74,9 +74,39 @@ const Instanced_Shader = defs.Instanced_Shader =
       constructor (num_lights = 2) {
         super ();
         this.num_lights = num_lights;
+
+        this.ubo_binding = [
+          {shader_name: "Material",  binding_point: 2},
+        ];
+
+        this.ubo_layout = [
+          {num_instances: 1,
+           data_layout:[{name:"color", type:"vec4"},
+                        {name:"diffuse", type:"vec3"},
+                        {name:"specular", type:"vec3"},
+                        {name:"smoothness", type:"float"}]
+          }
+         ];
+      }
+
+      copy_onto_graphics_card (context) {
+        const instance = super.copy_onto_graphics_card (context);
+        this.init_UBO (context, this.gpu_instances.get(context).program, this.ubo_binding);
+        return instance;
       }
       update_GPU (context, gpu_addresses, uniforms, model_transform, material) {
+        material.initialize(context, this.ubo_layout);
+        material.bind(this.ubo_binding[0].binding_point);
         context.uniformMatrix4fv (gpu_addresses.global_transform, true, Matrix.flatten_2D_to_1D (model_transform));
+      }
+      static default_values () {
+        return {
+                color: vec4 (1.0, 1.0, 1.0, 1.0),
+                ambient: 1.0,
+                diffuse: vec3(1.0, 1.0, 1.0),
+                specular: vec3 (1.0, 1.0, 1.0),
+                smoothness: 32.0
+              };
       }
       // Basic_Shader is nearly the simplest way to subclass Shader, which stores and manages a GPU program.
       shared_glsl_code () {           // ********* SHARED CODE, INCLUDED IN BOTH SHADERS *********
@@ -95,9 +125,9 @@ const Instanced_Shader = defs.Instanced_Shader =
 
         layout (std140) uniform Camera
         {
-          mat4 cam_view;
-          mat4 cam_projection;
-          vec3 cam_pos;
+          mat4 view;
+          mat4 projection;
+          vec3 camera_position;
         };
 
         out vec3 VERTEX_POS;
@@ -105,7 +135,7 @@ const Instanced_Shader = defs.Instanced_Shader =
         out vec2 VERTEX_TEXCOORD;
 
         void main() {
-          gl_Position =  cam_projection * cam_view * global_transform * transpose(matrix) * vec4( position, 1.0 );
+          gl_Position =  projection * view * global_transform * transpose(matrix) * vec4( position, 1.0 );
           VERTEX_POS = vec3(global_transform * transpose(matrix) * vec4( position, 1.0 ));
           VERTEX_NORMAL = mat3(transpose(inverse(global_transform * transpose(matrix)))) * normal;
           VERTEX_TEXCOORD = texture_coord;
@@ -116,34 +146,34 @@ const Instanced_Shader = defs.Instanced_Shader =
 
         layout (std140) uniform Camera
         {
-          mat4 cam_view;
-          mat4 cam_projection;
-          vec3 cam_pos;
+          mat4 view;
+          mat4 projection;
+          vec3 camera_position;
         };
 
         struct Light
         {
-          vec4 light_direction_or_position;
-          vec3 light_color;
-          float light_diffuse;
-          float light_specular;
-          float light_attenuation_factor;
+          vec4 direction_or_position;
+          vec3 color;
+          float diffuse;
+          float specular;
+          float attenuation_factor;
         };
 
         const int N_LIGHTS = ` + this.num_lights + `;
 
         layout (std140) uniform Lights
         {
-          float light_ambient;
+          float ambient;
           Light lights[N_LIGHTS];
         };
 
         layout (std140) uniform Material
         {
-          vec4 mat_color;
-          vec3 mat_diffuse;
-          vec3 mat_specular;
-          float mat_smoothness;
+          vec4 color;
+          vec3 diffuse;
+          vec3 specular;
+          float smoothness;
         };
 
         in vec3 VERTEX_POS;
@@ -155,11 +185,11 @@ const Instanced_Shader = defs.Instanced_Shader =
 
         // ***** PHONG SHADING HAPPENS HERE: *****
         vec3 phong_model_lights( vec3 N, vec3 vertex_worldspace ) {
-            vec3 E = normalize( cam_pos - vertex_worldspace );
+            vec3 E = normalize( camera_position - vertex_worldspace );
             vec3 result = vec3( 0.0 );
             for(int i = 0; i < N_LIGHTS; i++) {
-                vec3 surface_to_light_vector = lights[i].light_direction_or_position.xyz -
-                                               lights[i].light_direction_or_position.w * vertex_worldspace;
+                vec3 surface_to_light_vector = lights[i].direction_or_position.xyz -
+                                               lights[i].direction_or_position.w * vertex_worldspace;
                 float distance_to_light = length( surface_to_light_vector );
 
                 vec3 L = normalize( surface_to_light_vector );
@@ -167,12 +197,12 @@ const Instanced_Shader = defs.Instanced_Shader =
 
                   // Compute diffuse and specular components of Phong Reflection Model.
                 float diffuse  =      max( dot( N, L ), 0.0 );
-                float specular = pow( max( dot( N, H ), 0.0 ), mat_smoothness );     // Use Blinn's "halfway vector" method.
-                float attenuation = 1.0 / (1.0 + lights[i].light_attenuation_factor * distance_to_light * distance_to_light );
+                float specular = pow( max( dot( N, H ), 0.0 ), smoothness );     // Use Blinn's "halfway vector" method.
+                float attenuation = 1.0 / (1.0 + lights[i].attenuation_factor * distance_to_light * distance_to_light );
 
 
-                vec3 light_contribution = mat_color.xyz * lights[i].light_color.xyz * mat_diffuse * lights[i].light_diffuse * diffuse
-                                                          + lights[i].light_color.xyz * mat_specular * lights[i].light_specular * specular;
+                vec3 light_contribution = color.xyz * lights[i].color.xyz * diffuse * lights[i].diffuse * diffuse
+                                                          + lights[i].color.xyz * specular * lights[i].specular * specular;
 
                 result += attenuation * light_contribution;
               }
@@ -181,7 +211,7 @@ const Instanced_Shader = defs.Instanced_Shader =
 
         void main() {
           // Compute an initial (ambient) color:
-          frag_color = vec4( mat_color.xyz * light_ambient, mat_color.w );
+          frag_color = vec4( color.xyz * ambient, color.w );
           // Compute the final color with contributions from lights:
           frag_color.xyz += phong_model_lights( normalize( VERTEX_NORMAL ), VERTEX_POS );
         }`;
