@@ -3,6 +3,7 @@
 *.png
 *.jpg
 *.obj
+*.mtl
 *.bat
 *.command
 node_modules
