@@ -275,24 +275,13 @@ const Phong_Shader = defs.Phong_Shader =
       }
       vertex_glsl_code () {           // ********* VERTEX SHADER *********
           return this.shared_glsl_code () + `
-
-
-
-          void main() {
-            gl_Position =  vec4( position, 1.0 ) * global_transform * matrix;      // Move vertex to final space.
-            VERTEX_COLOR = color;                                 // Use the hard-coded color of the vertex.
-
-
-
-        layout(location = 0) in vec3 position;                       // Position is expressed in object coordinates
-        layout(location = 1) in vec3 normal;
-        layout(location = 2) in mat4 matrix;
+        in vec3 position, normal;                            // Position is expressed in object coordinates.
         out vec3 N, vertex_worldspace;
 
-        uniform mat4 model_transform, global_transform, projection_camera_model_transform;
+        uniform mat4 model_transform, projection_camera_model_transform;
 
         void main() {
-            gl_Position = projection_camera_model_transform * global_transform * vec4( position, 1.0 );     // Move vertex to final space.
+            gl_Position = projection_camera_model_transform * vec4( position, 1.0 );     // Move vertex to final space.
                                             // The final normal vector in screen space.
             N = normalize( mat3( model_transform ) * normal / squared_scale);
 
