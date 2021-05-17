@@ -620,3 +620,159 @@ const Component = tiny.Component =
       render_explanation () {}
       render_controls () {}     // render_controls(): Called by Controls_Widget for generating interactive UI.
   };
+
+
+
+const UBO = tiny.UBO =
+class UBO  {
+  constructor (gl, buffer_name, buffer_size, buffer_layout) {
+
+    this.items = {};
+
+    for (var i = 0; i < buffer_layout.length; i++) {
+      for ( var j = 0; j < buffer_layout[i].data_layout.length; j++) {
+        this.items[buffer_layout[i].data_layout[j].name] = { //offset of the whole data_layout in the whole ubo buffer
+                                                             data_layout_offset: buffer_layout[i].data_offset,
+                                                             //length of the data_layout
+                                                             data_layout_length: buffer_layout[i].data_length,
+                                                             //offset of the item within the data_layout
+                                                             offset: buffer_layout[i].data_layout[j].offset,
+                                                             data_length: buffer_layout[i].data_layout[j].data_length,
+                                                             chunk_length: buffer_layout[i].data_layout[j].chunk_length,
+                                                            };
+      }
+    }
+
+    this.gl = gl;
+    this.buffer_name = buffer_name;
+
+    this.buffer = gl.createBuffer ();
+    gl.bindBuffer (gl.UNIFORM_BUFFER, this.buffer);
+    gl.bufferData (gl.UNIFORM_BUFFER, buffer_size, gl.DYNAMIC_DRAW);
+    gl.bindBuffer (gl.UNIFORM_BUFFER, null);
+  }
+
+  bind (binding_point) {
+    this.binding_point = binding_point;
+    this.gl.bindBufferBase (this.gl.UNIFORM_BUFFER, binding_point, this.buffer);
+  }
+
+  update (buffer_name, buffer_data, num_instance = 0) {
+    if (buffer_data instanceof Matrix)
+      buffer_data = Matrix.flatten_2D_to_1D(buffer_data.transposed());
+
+    //Force the data to be Float32Array
+    if (!(buffer_data instanceof Float32Array)) {
+      if ( Array.isArray(buffer_data))
+        buffer_data = new Float32Array(buffer_data);
+      else
+        buffer_data = new Float32Array([buffer_data]);
+    }
+
+    var ref = this.items[buffer_name];
+    var buffer_offset = ref.data_layout_offset + ref.data_layout_length * num_instance + ref.offset;
+
+    this.gl.bindBuffer(this.gl.UNIFORM_BUFFER, this.buffer);
+    this.gl.bufferSubData(this.gl.UNIFORM_BUFFER, buffer_offset, buffer_data, 0, null);
+    this.gl.bindBuffer(this.gl.UNIFORM_BUFFER, null);
+
+    return this;
+  }
+
+  static create (gl, block_name, buffer_layout) {
+
+    var buffer_size = 0;
+
+    for ( var i = 0; i < buffer_layout.length; i++ ) {
+      var data_size = UBO.calculate(buffer_layout[i].data_layout); //size occupied by a single instance, 16b aligned
+      buffer_layout[i].data_length = data_size;
+      buffer_size += data_size * buffer_layout[i].num_instances;
+
+      if (i > 0)
+        buffer_layout[i].data_offset = buffer_layout[i-1].data_offset + buffer_layout[i-1].num_instances * buffer_layout[i-1].data_length;
+      else
+        buffer_layout[i].data_offset = 0;
+
+    }
+    UBO.Cache[block_name] = new UBO(gl, block_name, buffer_size, buffer_layout);
+  }
+
+  static get_size (type) { //[Alignment,Size]
+    switch (type) {
+      case "float":
+      case "int":
+      case "bool":
+        return [4,4];
+      case "Mat4":
+        return [64,64]; //16*4
+      case "Mat3":
+        return [48,48]; //16*3
+      case "vec2":
+        return [8,8];
+      case "vec3":
+        return [16,12]; //Special Case
+      case "vec4":
+        return [16,16];
+      default:
+        return [0,0];
+    }
+  }
+
+  static calculate(buffer_layout) {
+    var chunk = 16;	//Data size in Bytes, UBO using layout std140 needs to build out the struct in chunks of 16 bytes.
+    var temp_size = 0;	//Temp Size, How much of the chunk is available after removing the data size from it
+    var offset = 0;	//Offset in the buffer allocation
+    var size;		//Data Size of the current type
+
+    for (var i=0; i < buffer_layout.length; i++) {
+      //When dealing with arrays, Each element takes up 16 bytes regardless of type.
+      if (!buffer_layout[i].length || buffer_layout[i].length == 0)
+        size = UBO.get_size(buffer_layout[i].type);
+      else
+        size = [buffer_layout[i].length * 16, buffer_layout[i].length * 16];
+
+      temp_size = chunk - size[0];	//How much of the chunk exists after taking the size of the data.
+
+      //Chunk has been overdrawn when it already has some data resurved for it.
+      if (temp_size < 0 && chunk < 16) {
+        offset += chunk;						//Add Remaining Chunk to offset...
+        if (i > 0)
+          buffer_layout[i-1].chunk_length += chunk;	//So the remaining chunk can be used by the last variable
+        chunk = 16;								//Reset Chunk
+        if(buffer_layout[i].type == "vec3")
+          chunk -= size[1];	//If Vec3 is the first var in the chunk, subtract size since size and alignment is different.
+      }
+      else if (temp_size < 0 && chunk == 16) {
+        //Do nothing incase data length is >= to unused chunk size.
+        //Do not want to change the chunk size at all when this happens.
+      }
+      else if (temp_size == 0) { //If evenly closes out the chunk, reset
+
+        if(buffer_layout[i].type == "vec3" && chunk == 16)
+          chunk -= size[1];	//If Vec3 is the first var in the chunk, subtract size since size and alignment is different.
+        else
+          chunk = 16;
+      }
+      else
+        chunk -= size[1];	//Chunk isn't filled, just remove a piece
+
+      //Add some data of how the chunk will exist in the buffer.
+      buffer_layout[i].offset	= offset;
+      buffer_layout[i].chunk_length	= size[1];
+      buffer_layout[i].data_length = size[1];
+
+      offset += size[1];
+    }
+
+    //Check if the final offset is divisiable by 16, if not add remaining chunk space to last element.
+    if (offset % 16 != 0) {
+      buffer_layout[buffer_layout.length-1].chunk_length += 16 - offset % 16;
+      offset += 16 - offset % 16;
+    }
+
+    return offset;
+  }
+
+};
+
+UBO.Cache = []; //To be on the gl object!!!

@@ -16,7 +16,7 @@ import {Demonstration}
 import {Inertia_Demo, Collision_Demo}
                     from "./examples/collisions-demo.js";
 import {Instanced_Cubes_Demo}
-                    from "./examples/instanced-squares-demo.js";
+                    from "./examples/instancing_demos.js";
 import {Many_Lights_Demo}
                     from "./examples/many-lights-demo.js";
 import {Obj_File_Demo}
