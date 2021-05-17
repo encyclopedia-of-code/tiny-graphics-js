@@ -217,6 +217,7 @@ const Vector4 = math.Vector4 =
 
 // See description at https://github.com/encyclopedia-of-code/tiny-graphics-js/wiki/tiny-graphics-math.js#shorthand
 const vec     = math.vec = Vector.create;
+const vec2    = math.vec = Vector.create;
 const vec3    = math.vec3 = Vector3.create;
 const vec4    = math.vec4 = Vector4.create;
 const unsafe3 = math.unsafe3 = Vector3.unsafe;
