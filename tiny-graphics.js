@@ -18,6 +18,7 @@ const Shape = tiny.Shape =
           [this.vertices, this.indices, this.local_buffers] = [[], [], []];
           this.attribute_counter = 0;
           this.dirty = true;
+          this.ready = true; //Since 3d models can be not ready
           this.gpu_instances = new Map ();      // Track which GPU contexts this object has copied itself onto.
       }
       fill_buffer( selection_of_attributes, buffer_hint = "STATIC_DRAW", divisor = 0 ) {
@@ -240,17 +241,21 @@ const Shape = tiny.Shape =
           }
       }
       normalize_positions (keep_aspect_ratios = true) {
-          let p_arr              = this.arrays.position;
+          let p_arr              = this.vertices.map(item => item.position);
           const average_position = p_arr.reduce ((acc, p) => acc.plus (p.times (1 / p_arr.length)), vec3 (0, 0, 0));
           p_arr                  = p_arr.map (p => p.minus (average_position));           // Center the point cloud on
                                                                                           // the origin.
           const average_lengths = p_arr.reduce ((acc, p) =>
                                                   acc.plus (p.map (x => Math.abs (x)).times (1 / p_arr.length)),
                                                 vec3 (0, 0, 0));
+          let final_positions = [];
           if (keep_aspect_ratios)                            // Divide each axis by its average distance from the origin.
-              this.arrays.position = p_arr.map (p => p.map ((x, i) => x / average_lengths[ i ]));
+              final_positions = p_arr.map (p => p.map ((x, i) => x / average_lengths[ i ]));
           else
-              this.arrays.position = p_arr.map (p => p.times (1 / average_lengths.norm ()));
+              final_positions = p_arr.map (p => p.times (1 / average_lengths.norm ()));
+
+          for (var i = 0; i < final_positions.length; i++)
+            this.vertices[i].position = final_positions[i];
       }
   };
 

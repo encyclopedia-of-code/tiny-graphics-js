@@ -343,7 +343,7 @@ const Entity = defs.Entity =
     flush (caller) {
       for(let entity of this.entities){
         if( Array.isArray(entity.transforms) ) {
-          if (entity.dirty) {
+          if (entity.dirty && entity.shape.ready) { //need check if shape is ready, aka finishes loading asynchonously and write pos/norm/tex to VBO
             entity.shape.vertices = Array(entity.transforms.length).fill(0).map( (x,i) => ({matrix: entity.transforms[i]}));
             entity.shape.fill_buffer(["matrix"], undefined, 1);
             entity.dirty = false;
@@ -351,7 +351,7 @@ const Entity = defs.Entity =
           entity.shape.draw(caller, undefined, entity.global_transform, entity.material, undefined, entity.transforms.length)
         }
         else {
-          if (entity.dirty) {
+          if (entity.dirty && entity.shape.ready) {
             entity.shape.vertices = [{matrix: entity.transforms}];
             //Ideally use a shader with just a uniform matrix where you pass global.times(model)?
             entity.shape.fill_buffer(["matrix"], undefined, 1);
@@ -370,6 +370,7 @@ const Minimal_Webgl_Demo = defs.Minimal_Webgl_Demo =
           this.widget_options = {make_controls: false};    // This demo is too minimal to have controls
           this.time = 0.0;
           this.shapes = {triangle: new shapes.Instanced_Square_Index ()};
+          //this.model = { teapot: new shapes.Shape_From_File( "assets/teapot.obj" ) };
           this.shader = new shaders.Instanced_Shader (Light.NUM_LIGHTS);
           this.textured_shader = new shaders.Textured_Instanced_Shader (Light.NUM_LIGHTS);
 
@@ -383,12 +384,14 @@ const Minimal_Webgl_Demo = defs.Minimal_Webgl_Demo =
           for (var obj = 0; obj < this.objects; obj++)
           {
             this.entities.push(
-                new Entity(new shapes.Instanced_Cube_Index (), Array(this.size).fill(0).map( (x,i) =>
-                    Mat4.translation(... vec3(Math.random()* 2 - 1, Math.random(),  Math.random()*2 - 1).times_pairwise(vec3(20, 2, 20)))), undefined)
+                new Entity(new shapes.Shape_From_File( "assets/teapot.obj" ),
+                Array(this.size).fill(0).map( (x,i) =>
+                          Mat4.translation(... vec3(Math.random()* 2 - 1, Math.random(),  Math.random()*2 - 1).times_pairwise(vec3(20, 2, 20)))),
+                undefined)
             );
           }
 
-          this.camera = new Camera(vec3(0.0, 5.0, 20.0));
+          this.camera = new Camera(vec3(0.0, 10.0, 20.0));
           this.sun = new Light({direction_or_position: vec4(0.0, 10.0, 0.0, 1.0), color: vec3(1.0, 0.0, 0.0), diffuse: 0.5, specular: 1.0, attenuation_factor: 0.001});
           this.sun2 = new Light({direction_or_position: vec4(5.0, 10.0, 0.0, 0.0), color: vec3(1.0, 1.0, 1.0), diffuse: 0.5, specular: 1.0, attenuation_factor: 0.001});
       }
