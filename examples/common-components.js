@@ -366,58 +366,6 @@ const Entity = defs.Entity =
     }
   };
 
-const Instanced_Squares_Demo = defs.Instanced_Squares_Demo =
-  class Instanced_Squares_Demo extends Component {
-      init () {
-          this.widget_options = {make_controls: false};    // This demo is too minimal to have controls
-          this.time = 0.0;
-          this.shapes = {triangle: new shapes.Instanced_Square_Index ()};
-          this.shader = new shaders.Instanced_Shader (Light.NUM_LIGHTS);
-
-          this.fire = new Material("Fire", this.shader, vec4(1.0, 1.0, 1.0, 1.0));
-          this.water = new Material("Water", this.shader, vec4(0.0, 0.5, 0.5, 1.0));
-          this.renderer = new Renderer();
-
-          this.objects = 1;
-          this.size = 1000;
-          this.entities = [];
-          for (var obj = 0; obj < this.objects; obj++)
-          {
-            this.entities.push(
-                new Entity(new shapes.Instanced_Cube_Index (), Array(this.size).fill(0).map( (x,i) =>
-                    Mat4.translation(... vec3(Math.random()* 2 - 1, Math.random(),  Math.random()*2 - 1).times_pairwise(vec3(20, 2, 20)))), undefined)
-            );
-          }
-
-          this.camera = new Camera(vec3(0.0, 5.0, 20.0));
-          this.sun = new Light(vec4(0.0, 10.0, 0.0, 1.0), vec3(1.0, 0.0, 0.0), 0.5, 1.0, 0.001);
-          this.sun2 = new Light(vec4(0.0, 10.0, 0.0, 0.0), vec3(1.0, 1.0, 1.0), 1.0, 1.0, 0.001);
-      }
-      render_animation (caller) {
-        this.time += 1;
-
-        this.camera.initialize(caller);
-        this.sun.initialize(caller);
-        this.sun2.initialize(caller);
-        this.fire.initialize(caller);
-        this.water.initialize(caller);
-
-        if (this.time < 200)
-          this.entities[0].set_material(this.fire);
-        else if (this.time < 400)
-          this.entities[0].set_material(this.water);
-        else
-          this.time = 0;
-
-        for (var obj = 0; obj < this.objects; obj++)
-        {
-          this.entities[obj].apply_transform(Mat4.rotation( 0/100, 0,0,1));
-          this.renderer.submit(this.entities[obj]);
-        }
-        this.renderer.flush(caller);
-      }
-  };
-
 const Movement_Controls = defs.Movement_Controls =
   class Movement_Controls extends Component {
       roll                    = 0;
