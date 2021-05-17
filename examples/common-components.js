@@ -1,6 +1,6 @@
 import {tiny} from '../tiny-graphics.js';
 // Pull these names into this module's scope for convenience:
-const {Vector, Vector3, vec, vec3, vec4, color, Matrix, Mat4, Shape, Shader, Component} = tiny;
+const {Vector, Vector3, vec, vec3, vec4, color, Matrix, Mat4, Shape, Shader, Component, Texture} = tiny;
 
 const defs = {};
 import {defs as shapes} from './common-shapes.js';
@@ -10,10 +10,9 @@ export {tiny, defs};
 
 const UBO = defs.UBO =
   class UBO  {
-    constructor (gl, buffer_name, binding_point, buffer_size, buffer_layout) {
+    constructor (gl, buffer_name, buffer_size, buffer_layout) {
 
-      this.items = [];
-      this.keys = [];
+      this.items = {};
 
       for (var i = 0; i < buffer_layout.length; i++) {
         for ( var j = 0; j < buffer_layout[i].data_layout.length; j++) {
@@ -26,23 +25,21 @@ const UBO = defs.UBO =
                                                                data_length: buffer_layout[i].data_layout[j].data_length,
                                                                chunk_length: buffer_layout[i].data_layout[j].chunk_length,
                                                               };
-          this.keys[i] = buffer_layout[i].data_layout[j].name;
         }
       }
 
       this.gl = gl;
       this.buffer_name = buffer_name;
-      this.binding_point = binding_point;
 
       this.buffer = gl.createBuffer ();
       gl.bindBuffer (gl.UNIFORM_BUFFER, this.buffer);
       gl.bufferData (gl.UNIFORM_BUFFER, buffer_size, gl.DYNAMIC_DRAW);
       gl.bindBuffer (gl.UNIFORM_BUFFER, null);
-      gl.bindBufferBase (gl.UNIFORM_BUFFER, binding_point, this.buffer);
     }
 
-    bind (binding_point, buffer) {
-      this.gl.bindBufferBase (this.gl.UNIFORM_BUFFER, binding_point, buffer);
+    bind (binding_point) {
+      this.binding_point = binding_point;
+      this.gl.bindBufferBase (this.gl.UNIFORM_BUFFER, binding_point, this.buffer);
     }
 
     update (buffer_name, buffer_data, num_instance = 0) {
@@ -67,7 +64,7 @@ const UBO = defs.UBO =
       return this;
     }
 
-    static create (gl, block_name, binding_point, buffer_layout) {
+    static create (gl, block_name, buffer_layout) {
 
       var buffer_size = 0;
 
@@ -82,7 +79,7 @@ const UBO = defs.UBO =
           buffer_layout[i].data_offset = 0;
 
       }
-      UBO.Cache[block_name] = new UBO(gl, block_name, binding_point, buffer_size, buffer_layout);
+      UBO.Cache[block_name] = new UBO(gl, block_name, buffer_size, buffer_layout);
     }
 
     static get_size (type) { //[Alignment,Size]
@@ -163,7 +160,7 @@ const UBO = defs.UBO =
 
   };
 
-UBO.Cache = [];
+UBO.Cache = []; //To be on the gl object!!!
 
 const Camera = defs.Camera =
   class Camera {
@@ -177,9 +174,9 @@ const Camera = defs.Camera =
       this.proj = Mat4.identity();
 
       this.ubo_layout = [{num_instances: 1,
-                          data_layout:[{name:"cam_view", type:"Mat4"},
-                                       {name:"cam_projection", type:"Mat4"},
-                                       {name:"cam_pos", type:"vec3"}]
+                          data_layout:[{name:"view", type:"Mat4"},
+                                       {name:"projection", type:"Mat4"},
+                                       {name:"camera_position", type:"vec3"}]
                          }
                         ];
       this.is_initialized = false;
@@ -188,9 +185,9 @@ const Camera = defs.Camera =
       if (!this.is_initialized) {
         const mappings = Shader.mapping_UBO();
         for (var i = 0; i < mappings.length; i++) {
-          if (mappings[i].buffer_name == "Camera") {
-            UBO.create(caller.context, "Camera", mappings[i].binding_point, this.ubo_layout);
-            UBO.bind(mappings[i].binding_point, UBO.Cache["Camera"]);
+          if (mappings[i].shader_name == "Camera") {
+            UBO.create(caller.context, "Camera", this.ubo_layout);
+            UBO.Cache["Camera"].bind(mappings[i].binding_point);
             break;
           }
         }
@@ -201,9 +198,9 @@ const Camera = defs.Camera =
       this.view = Mat4.look_at(this.position, this.front, this.up);
       this.proj = Mat4.perspective(Math.PI/2, caller.width/caller.height, 0.01, 1024);
 
-      UBO.Cache["Camera"].update("cam_view", this.view);
-      UBO.Cache["Camera"].update("cam_projection", this.proj);
-      UBO.Cache["Camera"].update("cam_pos", this.position);
+      UBO.Cache["Camera"].update("view", this.view);
+      UBO.Cache["Camera"].update("projection", this.proj);
+      UBO.Cache["Camera"].update("camera_position", this.position);
     }
   };
 
@@ -212,48 +209,54 @@ const Light = defs.Light =
 
     static NUM_LIGHTS = 2;
     static global_index = 0;
-    static global_ambient = 0.1;
+    static global_ambient = 0.3;
 
-    constructor(direction_or_position = vec4 (0.0, 0.0, 0.0, 0.0), color = vec4 (1.0, 1.0, 1.0, 1.0), diffuse = 1.0, specular = 1.0, attenuation_factor = 0.0) {
+    constructor(data) {
 
-      this.direction_or_position = direction_or_position;
-      this.color = color;
-      this.diffuse = diffuse;
-      this.specular = specular;
-      this.attenuation_factor = attenuation_factor;
+      const defaults = Light.default_values();
+      Object.assign(this, defaults, data);
 
       this.index = Light.global_index;
       Light.global_index++;
 
       this.ubo_layout = [{num_instances: 1,
-                          data_layout: [{name:"light_ambient", type:"float"}]
+                          data_layout: [{name:"ambient", type:"float"}]
                          },
                          {num_instances: Light.NUM_LIGHTS,
-                          data_layout: [{name:"light_direction_or_position", type:"vec4"},
-                                        {name:"light_color", type:"vec3"},
-                                        {name:"light_diffuse", type:"float"},
-                                        {name:"light_specular", type:"float"},
-                                        {name:"light_attenuation_factor", type:"float"}]
+                          data_layout: [{name:"direction_or_position", type:"vec4"},
+                                        {name:"color", type:"vec3"},
+                                        {name:"diffuse", type:"float"},
+                                        {name:"specular", type:"float"},
+                                        {name:"attenuation_factor", type:"float"}]
                          },
                         ];
       this.is_initialized = false;
+    }
+    static default_values () {
+      return {
+                direction_or_position: vec4 (0.0, 0.0, 0.0, 0.0),
+                color: vec3 (1.0, 1.0, 1.0, 1.0),
+                diffuse: 1.0,
+                specular: 1.0,
+                attenuation_factor: 0.0,
+              };
     }
     initialize(caller) {
       if (!this.is_initialized) {
         const mappings = Shader.mapping_UBO();
         for (var i = 0; i < mappings.length; i++) {
-          if (mappings[i].buffer_name == "Lights") {
+          if (mappings[i].shader_name == "Lights") {
             if (this.index == 0) {
               //Only one UBO shared amongst all of the lights, have ID 0 cretate it
-              UBO.create(caller.context, "Lights", mappings[i].binding_point, this.ubo_layout);
-              UBO.bind(mappings[i].binding_point, UBO.Cache["Lights"]);
-              UBO.Cache["Lights"].update("light_ambient", Light.global_ambient);
+              UBO.create(caller.context, "Lights", this.ubo_layout);
+              UBO.Cache["Lights"].bind(mappings[i].binding_point);
+              UBO.Cache["Lights"].update("ambient", Light.global_ambient);
             }
-            UBO.Cache["Lights"].update("light_direction_or_position", this.direction_or_position, this.index);
-            UBO.Cache["Lights"].update("light_color", this.color, this.index);
-            UBO.Cache["Lights"].update("light_diffuse", this.diffuse, this.index);
-            UBO.Cache["Lights"].update("light_specular", this.specular, this.index);
-            UBO.Cache["Lights"].update("light_attenuation_factor", this.attenuation_factor, this.index);
+            UBO.Cache["Lights"].update("direction_or_position", this.direction_or_position, this.index);
+            UBO.Cache["Lights"].update("color", this.color, this.index);
+            UBO.Cache["Lights"].update("diffuse", this.diffuse, this.index);
+            UBO.Cache["Lights"].update("specular", this.specular, this.index);
+            UBO.Cache["Lights"].update("attenuation_factor", this.attenuation_factor, this.index);
             break;
           }
         }
@@ -264,49 +267,45 @@ const Light = defs.Light =
 
 const Material = defs.Material =
   class Material {
-    constructor(name = "None", shader = undefined, color = vec4 (1.0, 1.0, 1.0, 1.0), diffuse = vec3(color[0], color[1], color[2]), specular = vec3 (1.0, 1.0, 1.0), smoothness = 32.0) {
-
+    constructor(name = "None", shader = undefined, data, samplers) {
       this.name = name;
       this.shader = shader;
-      this.color = color;
-      this.diffuse = diffuse;
-      this.specular = specular;
-      this.smoothness = smoothness;
-      this.binding_point = undefined;
-      this.ubo_layout = [{num_instances: 1,
-                          data_layout:[{name:"mat_color", type:"vec4"},
-                                       {name:"mat_diffuse", type:"vec3"},
-                                       {name:"mat_specular", type:"vec3"},
-                                       {name:"mat_smoothness", type:"float"}]
-                         }
-                        ];
+      const defaults = shader.constructor.default_values();
+      Object.assign(this, defaults, data);
+      this.samplers = samplers;
       this.is_initialized = false;
     }
 
-    initialize(caller) {
+    initialize(gl, ubo_layout) {
       if (!this.is_initialized) {
-        const mappings = Shader.mapping_UBO();
-        for (var i = 0; i < mappings.length; i++) {
-          if (mappings[i].buffer_name == this.name) {
-            this.binding_point = mappings[i].binding_point;
-            UBO.create(caller.context, this.name, mappings[i].binding_point, this.ubo_layout);
-            UBO.bind(this.binding_point, UBO.Cache[this.name]);
-            UBO.Cache[this.name].update("mat_color", this.color);
-            UBO.Cache[this.name].update("mat_diffuse", this.diffuse);
-            UBO.Cache[this.name].update("mat_specular", this.specular);
-            UBO.Cache[this.name].update("mat_smoothness", this.smoothness);
-            break;
-          }
-        }
+        UBO.create(gl, this.name, ubo_layout);
+        ubo_layout[0].data_layout.forEach(x => UBO.Cache[this.name].update(x.name, this[x.name]));
         this.is_initialized = true;
       }
     }
 
-    activate() {
-      UBO.bind(this.binding_point, UBO.Cache[this.name]);
-    }
+    bind(binding_point) {
+      //Bind Material Data
+      UBO.Cache[this.name].bind(binding_point);
 
-  };
+      if ( this.samplers == undefined )
+        return;
+
+      //Bind Material Samplers
+      const gl = UBO.Cache[this.name].gl;
+      var offset = 0;
+      for (const [name, sampler] of Object.entries(this.samplers)) {
+        if (sampler && sampler.ready) {
+          // Select texture unit offset for the fragment shader Sampler2D uniform called "samplers.name":
+          gl.uniform1i (this.shader.gpu_instances.get(gl).gpu_addresses.name, offset);
+          // For this draw, use the texture image from correct the GPU buffer:
+          sampler.activate (gl, offset);
+          offset++;
+        }
+      }
+
+    }
+};
 
 const Entity = defs.Entity =
   class Entity {
@@ -330,7 +329,6 @@ const Entity = defs.Entity =
     }
     set_material(material) {
       this.material = material;
-      this.material.activate();
     }
   };
 
@@ -364,6 +362,57 @@ const Entity = defs.Entity =
       }
       this.entities = []
     }
+  };
+
+const Minimal_Webgl_Demo = defs.Minimal_Webgl_Demo =
+  class Minimal_Webgl_Demo extends Component {
+      init () {
+          this.widget_options = {make_controls: false};    // This demo is too minimal to have controls
+          this.time = 0.0;
+          this.shapes = {triangle: new shapes.Instanced_Square_Index ()};
+          this.shader = new shaders.Instanced_Shader (Light.NUM_LIGHTS);
+          this.textured_shader = new shaders.Textured_Instanced_Shader (Light.NUM_LIGHTS);
+
+          this.fire = new Material("Fire", this.textured_shader, { color: vec4(0.1, 0.1, 0.1, 1.0) }, { diffuse_texture: new Texture( "assets/rgb.jpg" ) });
+          this.water = new Material("Water", this.shader, { color: vec4(0.0, 0.5, 0.5, 1.0) });
+          this.renderer = new Renderer();
+
+          this.objects = 1;
+          this.size = 1000;
+          this.entities = [];
+          for (var obj = 0; obj < this.objects; obj++)
+          {
+            this.entities.push(
+                new Entity(new shapes.Instanced_Cube_Index (), Array(this.size).fill(0).map( (x,i) =>
+                    Mat4.translation(... vec3(Math.random()* 2 - 1, Math.random(),  Math.random()*2 - 1).times_pairwise(vec3(20, 2, 20)))), undefined)
+            );
+          }
+
+          this.camera = new Camera(vec3(0.0, 5.0, 20.0));
+          this.sun = new Light({direction_or_position: vec4(0.0, 10.0, 0.0, 1.0), color: vec3(1.0, 0.0, 0.0), diffuse: 0.5, specular: 1.0, attenuation_factor: 0.001});
+          this.sun2 = new Light({direction_or_position: vec4(5.0, 10.0, 0.0, 0.0), color: vec3(1.0, 1.0, 1.0), diffuse: 0.5, specular: 1.0, attenuation_factor: 0.001});
+      }
+      render_animation (caller) {
+        this.time += 1;
+
+        this.camera.initialize(caller);
+        this.sun.initialize(caller);
+        this.sun2.initialize(caller);
+
+        if (this.time < 200)
+          this.entities[0].set_material(this.fire);
+        else if (this.time < 400)
+          this.entities[0].set_material(this.water);
+        else
+          this.time = 0;
+
+        for (var obj = 0; obj < this.objects; obj++)
+        {
+          this.entities[obj].apply_transform(Mat4.rotation( 0/100, 0,0,1));
+          this.renderer.submit(this.entities[obj]);
+        }
+        this.renderer.flush(caller);
+      }
   };
 
 const Movement_Controls = defs.Movement_Controls =
