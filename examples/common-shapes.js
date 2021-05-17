@@ -50,7 +50,7 @@ const Square = defs.Square =
           this.arrays.position      = Vector3.cast ([-1, -1, 0], [1, -1, 0], [-1, 1, 0], [1, 1, 0]);
           this.arrays.normal        = Vector3.cast ([0, 0, 1], [0, 0, 1], [0, 0, 1], [0, 0, 1]);
           // Arrange the vertices into a square shape in texture space too:
-          this.arrays.texture_coord = Vector.cast ([0, 0], [1, 0], [0, 1], [1, 1]);
+          this.arrays.texture_coord = Vector.create ([0, 0], [1, 0], [0, 1], [1, 1]);
           // Use two triangles this time, indexing into four distinct vertices:
           this.indices.push (0, 1, 2, 1, 3, 2);
       }
@@ -70,22 +70,22 @@ const Tetrahedron = defs.Tetrahedron =
           if ( !using_flat_shading) {
               // Method 1:  A tetrahedron with shared vertices.  Compact, performs better,
               // but can't produce flat shading or discontinuous seams in textures.
-              this.arrays.position      = Vector.cast ([0, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, 1]);
-              this.arrays.normal        = Vector.cast ([-a, -a, -a], [1, 0, 0], [0, 1, 0], [0, 0, 1]);
-              this.arrays.texture_coord = Vector.cast ([0, 0], [1, 0], [0, 1], [1, 1]);
+              this.arrays.position      = Vector.create ([0, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, 1]);
+              this.arrays.normal        = Vector.create ([-a, -a, -a], [1, 0, 0], [0, 1, 0], [0, 0, 1]);
+              this.arrays.texture_coord = Vector.create ([0, 0], [1, 0], [0, 1], [1, 1]);
               // Notice the repeats in the index list.  Vertices are shared
               // and appear in multiple triangles with this method.
               this.indices.push (0, 1, 2, 0, 1, 3, 0, 2, 3, 1, 2, 3);
           } else {
               // Method 2:  A tetrahedron with four independent triangles.
-              this.arrays.position = Vector.cast ([0, 0, 0], [1, 0, 0], [0, 1, 0],
+              this.arrays.position = Vector.create ([0, 0, 0], [1, 0, 0], [0, 1, 0],
                                                   [0, 0, 0], [1, 0, 0], [0, 0, 1],
                                                   [0, 0, 0], [0, 1, 0], [0, 0, 1],
                                                   [0, 0, 1], [1, 0, 0], [0, 1, 0]);
 
               // The essence of flat shading:  This time, values of normal vectors can
               // be constant per whole triangle.  Repeat them for all three vertices.
-              this.arrays.normal = Vector.cast ([0, 0, -1], [0, 0, -1], [0, 0, -1],
+              this.arrays.normal = Vector.create ([0, 0, -1], [0, 0, -1], [0, 0, -1],
                                                 [0, -1, 0], [0, -1, 0], [0, -1, 0],
                                                 [-1, 0, 0], [-1, 0, 0], [-1, 0, 0],
                                                 [a, a, a], [a, a, a], [a, a, a]);
@@ -94,7 +94,7 @@ const Tetrahedron = defs.Tetrahedron =
               // image is mapped onto each face).  We couldn't do this with shared
               // vertices since this features abrupt transitions when approaching the
               // same point from different directions.
-              this.arrays.texture_coord = Vector.cast ([0, 0], [1, 0], [1, 1],
+              this.arrays.texture_coord = Vector.create ([0, 0], [1, 0], [1, 1],
                                                        [0, 0], [1, 0], [1, 1],
                                                        [0, 0], [1, 0], [1, 1],
                                                        [0, 0], [1, 0], [1, 1]);
@@ -128,7 +128,7 @@ const Windmill = defs.Windmill =
               var newNormal = spin.times (vec4 (0, 0, 1, 0)).to3 ();
               // Propagate the same normal to all three vertices:
               this.arrays.normal.push (newNormal, newNormal, newNormal);
-              this.arrays.texture_coord.push (...Vector.cast ([0, 0], [0, 1], [1, 0]));
+              this.arrays.texture_coord.push (...Vector.create ([0, 0], [0, 1], [1, 0]));
               // Procedurally connect the 3 new vertices into triangles:
               this.indices.push (3 * i, 3 * i + 1, 3 * i + 2);
           }
@@ -473,47 +473,47 @@ const Instanced_Cube_Index = defs.Instanced_Cube_Index =
       constructor () {
           super();
           // Describe the where the points of a triangle are in space, and also describe their colors:
-          this.vertices[0] = { position: vec3 (-0.5, -0.5, -0.5), normal: vec3( 0.0, 0.0, -1.0), texture_coord: Vector.cast ([0.0, 0.0]) }
-          this.vertices[1] = { position: vec3 (0.5, -0.5, -0.5),  normal: vec3(0.0, 0.0, -1.0 ), texture_coord: Vector.cast ([1.0, 0.0]) }
-          this.vertices[2] = { position: vec3 (0.5,  0.5, -0.5),  normal: vec3(0.0, 0.0, -1.0 ), texture_coord: Vector.cast ([ 1.0, 1.0]) }
-          this.vertices[3] = { position: vec3 (0.5,  0.5, -0.5),  normal: vec3(0.0, 0.0, -1.0 ), texture_coord: Vector.cast ([ 1.0, 1.0]) }
-          this.vertices[4] = { position: vec3 (-0.5,  0.5, -0.5), normal: vec3( 0.0, 0.0, -1.0), texture_coord: Vector.cast ([ 0.0, 1.0]) }
-          this.vertices[5] = { position: vec3 (-0.5, -0.5, -0.5), normal: vec3( 0.0, 0.0, -1.0), texture_coord: Vector.cast ([ 0.0, 0.0]) }
+          this.vertices[0] = { position: vec3 (-0.5, -0.5, -0.5), normal: vec3( 0.0, 0.0, -1.0), texture_coord: Vector.create (0.0, 0.0) }
+          this.vertices[1] = { position: vec3 (0.5, -0.5, -0.5),  normal: vec3(0.0, 0.0, -1.0 ), texture_coord: Vector.create (1.0, 0.0) }
+          this.vertices[2] = { position: vec3 (0.5,  0.5, -0.5),  normal: vec3(0.0, 0.0, -1.0 ), texture_coord: Vector.create ( 1.0, 1.0) }
+          this.vertices[3] = { position: vec3 (0.5,  0.5, -0.5),  normal: vec3(0.0, 0.0, -1.0 ), texture_coord: Vector.create ( 1.0, 1.0) }
+          this.vertices[4] = { position: vec3 (-0.5,  0.5, -0.5), normal: vec3( 0.0, 0.0, -1.0), texture_coord: Vector.create ( 0.0, 1.0) }
+          this.vertices[5] = { position: vec3 (-0.5, -0.5, -0.5), normal: vec3( 0.0, 0.0, -1.0), texture_coord: Vector.create ( 0.0, 0.0) }
 
-          this.vertices[6] = { position: vec3 (-0.5, -0.5,  0.5), normal: vec3( 0.0, 0.0, 1.0), texture_coord: Vector.cast ([ 0.0, 0.0]) }
-          this.vertices[7] = { position: vec3 (0.5, -0.5,  0.5 ), normal: vec3( 0.0, 0.0, 1.0), texture_coord: Vector.cast ([ 1.0, 0.0]) }
-          this.vertices[8] = { position: vec3 (0.5,  0.5,  0.5 ), normal: vec3( 0.0, 0.0, 1.0), texture_coord: Vector.cast ([ 1.0, 1.0]) }
-          this.vertices[9] = { position: vec3 (0.5,  0.5,  0.5 ), normal: vec3( 0.0, 0.0, 1.0), texture_coord: Vector.cast ([ 1.0, 1.0]) }
-          this.vertices[10] = { position: vec3 (-0.5,  0.5,  0.5), normal: vec3( 0.0, 0.0, 1.0), texture_coord: Vector.cast ([ 0.0, 1.0]) }
-          this.vertices[11] = { position: vec3 (-0.5, -0.5,  0.5), normal: vec3( 0.0, 0.0, 1.0), texture_coord: Vector.cast ([ 0.0, 0.0]) }
+          this.vertices[6] = { position: vec3 (-0.5, -0.5,  0.5), normal: vec3( 0.0, 0.0, 1.0), texture_coord: Vector.create ( 0.0, 0.0) }
+          this.vertices[7] = { position: vec3 (0.5, -0.5,  0.5 ), normal: vec3( 0.0, 0.0, 1.0), texture_coord: Vector.create ( 1.0, 0.0) }
+          this.vertices[8] = { position: vec3 (0.5,  0.5,  0.5 ), normal: vec3( 0.0, 0.0, 1.0), texture_coord: Vector.create ( 1.0, 1.0) }
+          this.vertices[9] = { position: vec3 (0.5,  0.5,  0.5 ), normal: vec3( 0.0, 0.0, 1.0), texture_coord: Vector.create ( 1.0, 1.0) }
+          this.vertices[10] = { position: vec3 (-0.5,  0.5,  0.5), normal: vec3( 0.0, 0.0, 1.0), texture_coord: Vector.create ( 0.0, 1.0) }
+          this.vertices[11] = { position: vec3 (-0.5, -0.5,  0.5), normal: vec3( 0.0, 0.0, 1.0), texture_coord: Vector.create ( 0.0, 0.0) }
 
-          this.vertices[12] = { position: vec3 (-0.5,  0.5,  0.5), normal: vec3( -1.0, 0.0, 0.0), texture_coord: Vector.cast ([ 1.0, 0.0]) }
-          this.vertices[13] = { position: vec3 (-0.5,  0.5, -0.5), normal: vec3( -1.0, 0.0, 0.0), texture_coord: Vector.cast ([ 1.0, 1.0]) }
-          this.vertices[14] = { position: vec3 (-0.5, -0.5, -0.5), normal: vec3( -1.0, 0.0, 0.0), texture_coord: Vector.cast ([ 0.0, 1.0]) }
-          this.vertices[15] = { position: vec3 (-0.5, -0.5, -0.5), normal: vec3( -1.0, 0.0, 0.0), texture_coord: Vector.cast ([ 0.0, 1.0]) }
-          this.vertices[16] = { position: vec3 (-0.5, -0.5,  0.5), normal: vec3( -1.0, 0.0, 0.0), texture_coord: Vector.cast ([ 0.0, 0.0]) }
-          this.vertices[17] = { position: vec3 (-0.5,  0.5,  0.5), normal: vec3( -1.0, 0.0, 0.0), texture_coord: Vector.cast ([ 1.0, 0.0]) }
+          this.vertices[12] = { position: vec3 (-0.5,  0.5,  0.5), normal: vec3( -1.0, 0.0, 0.0), texture_coord: Vector.create ( 1.0, 0.0) }
+          this.vertices[13] = { position: vec3 (-0.5,  0.5, -0.5), normal: vec3( -1.0, 0.0, 0.0), texture_coord: Vector.create ( 1.0, 1.0) }
+          this.vertices[14] = { position: vec3 (-0.5, -0.5, -0.5), normal: vec3( -1.0, 0.0, 0.0), texture_coord: Vector.create ( 0.0, 1.0) }
+          this.vertices[15] = { position: vec3 (-0.5, -0.5, -0.5), normal: vec3( -1.0, 0.0, 0.0), texture_coord: Vector.create ( 0.0, 1.0) }
+          this.vertices[16] = { position: vec3 (-0.5, -0.5,  0.5), normal: vec3( -1.0, 0.0, 0.0), texture_coord: Vector.create ( 0.0, 0.0) }
+          this.vertices[17] = { position: vec3 (-0.5,  0.5,  0.5), normal: vec3( -1.0, 0.0, 0.0), texture_coord: Vector.create ( 1.0, 0.0) }
 
-          this.vertices[18] = { position: vec3 (0.5,  0.5,  0.5), normal: vec3( 1.0, 0.0, 0.0), texture_coord: Vector.cast ([ 1.0, 0.0]) }
-          this.vertices[19] = { position: vec3 (0.5,  0.5, -0.5), normal: vec3( 1.0, 0.0, 0.0), texture_coord: Vector.cast ([ 1.0, 1.0]) }
-          this.vertices[20] = { position: vec3 (0.5, -0.5, -0.5), normal: vec3( 1.0, 0.0, 0.0), texture_coord: Vector.cast ([ 0.0, 1.0]) }
-          this.vertices[21] = { position: vec3 (0.5, -0.5, -0.5), normal: vec3( 1.0, 0.0, 0.0), texture_coord: Vector.cast ([ 0.0, 1.0]) }
-          this.vertices[22] = { position: vec3 (0.5, -0.5,  0.5), normal: vec3( 1.0, 0.0, 0.0), texture_coord: Vector.cast ([ 0.0, 0.0]) }
-          this.vertices[23] = { position: vec3 (0.5,  0.5,  0.5), normal: vec3( 1.0, 0.0, 0.0), texture_coord: Vector.cast ([ 1.0, 0.0]) }
+          this.vertices[18] = { position: vec3 (0.5,  0.5,  0.5), normal: vec3( 1.0, 0.0, 0.0), texture_coord: Vector.create ( 1.0, 0.0) }
+          this.vertices[19] = { position: vec3 (0.5,  0.5, -0.5), normal: vec3( 1.0, 0.0, 0.0), texture_coord: Vector.create ( 1.0, 1.0) }
+          this.vertices[20] = { position: vec3 (0.5, -0.5, -0.5), normal: vec3( 1.0, 0.0, 0.0), texture_coord: Vector.create ( 0.0, 1.0) }
+          this.vertices[21] = { position: vec3 (0.5, -0.5, -0.5), normal: vec3( 1.0, 0.0, 0.0), texture_coord: Vector.create ( 0.0, 1.0) }
+          this.vertices[22] = { position: vec3 (0.5, -0.5,  0.5), normal: vec3( 1.0, 0.0, 0.0), texture_coord: Vector.create ( 0.0, 0.0) }
+          this.vertices[23] = { position: vec3 (0.5,  0.5,  0.5), normal: vec3( 1.0, 0.0, 0.0), texture_coord: Vector.create ( 1.0, 0.0) }
 
-          this.vertices[24] = { position: vec3 (-0.5, -0.5, -0.5), normal: vec3( 0.0, -1.0, 0.0), texture_coord: Vector.cast ([ 0.0, 1.0]) }
-          this.vertices[25] = { position: vec3 (0.5, -0.5, -0.5),  normal: vec3(0.0, -1.0, 0.0 ), texture_coord: Vector.cast ([1.0, 1.0]) }
-          this.vertices[26] = { position: vec3 (0.5, -0.5,  0.5),  normal: vec3(0.0, -1.0, 0.0 ), texture_coord: Vector.cast ([1.0, 0.0]) }
-          this.vertices[27] = { position: vec3 (0.5, -0.5,  0.5),  normal: vec3(0.0, -1.0, 0.0 ), texture_coord: Vector.cast ([1.0, 0.0]) }
-          this.vertices[28] = { position: vec3 (-0.5, -0.5,  0.5), normal: vec3( 0.0, -1.0, 0.0), texture_coord: Vector.cast ([ 0.0, 0.0]) }
-          this.vertices[29] = { position: vec3 (-0.5, -0.5, -0.5), normal: vec3( 0.0, -1.0, 0.0), texture_coord: Vector.cast ([ 0.0, 1.0]) }
+          this.vertices[24] = { position: vec3 (-0.5, -0.5, -0.5), normal: vec3( 0.0, -1.0, 0.0), texture_coord: Vector.create ( 0.0, 1.0) }
+          this.vertices[25] = { position: vec3 (0.5, -0.5, -0.5),  normal: vec3(0.0, -1.0, 0.0 ), texture_coord: Vector.create (1.0, 1.0) }
+          this.vertices[26] = { position: vec3 (0.5, -0.5,  0.5),  normal: vec3(0.0, -1.0, 0.0 ), texture_coord: Vector.create (1.0, 0.0) }
+          this.vertices[27] = { position: vec3 (0.5, -0.5,  0.5),  normal: vec3(0.0, -1.0, 0.0 ), texture_coord: Vector.create (1.0, 0.0) }
+          this.vertices[28] = { position: vec3 (-0.5, -0.5,  0.5), normal: vec3( 0.0, -1.0, 0.0), texture_coord: Vector.create ( 0.0, 0.0) }
+          this.vertices[29] = { position: vec3 (-0.5, -0.5, -0.5), normal: vec3( 0.0, -1.0, 0.0), texture_coord: Vector.create ( 0.0, 1.0) }
 
-          this.vertices[30] = { position: vec3 (-0.5,  0.5, -0.5), normal: vec3( 0.0, 1.0, 0.0), texture_coord: Vector.cast ([ 0.0, 1.0]) }
-          this.vertices[31] = { position: vec3 (0.5,  0.5, -0.5), normal: vec3( 0.0, 1.0, 0.0), texture_coord: Vector.cast ([ 1.0, 1.0]) }
-          this.vertices[32] = { position: vec3 (0.5,  0.5,  0.5), normal: vec3( 0.0, 1.0, 0.0), texture_coord: Vector.cast ([ 1.0, 0.0]) }
-          this.vertices[33] = { position: vec3 (0.5,  0.5,  0.5), normal: vec3( 0.0, 1.0, 0.0), texture_coord: Vector.cast ([ 1.0, 0.0]) }
-          this.vertices[34] = { position: vec3 (-0.5,  0.5,  0.5), normal: vec3( 0.0, 1.0, 0.0), texture_coord: Vector.cast ([ 0.0, 0.0]) }
-          this.vertices[35] = { position: vec3 (-0.5,  0.5, -0.5), normal: vec3( 0.0, 1.0, 0.0), texture_coord: Vector.cast ([ 0.0, 1.0]) }
+          this.vertices[30] = { position: vec3 (-0.5,  0.5, -0.5), normal: vec3( 0.0, 1.0, 0.0), texture_coord: Vector.create ( 0.0, 1.0) }
+          this.vertices[31] = { position: vec3 (0.5,  0.5, -0.5), normal: vec3( 0.0, 1.0, 0.0), texture_coord: Vector.create ( 1.0, 1.0) }
+          this.vertices[32] = { position: vec3 (0.5,  0.5,  0.5), normal: vec3( 0.0, 1.0, 0.0), texture_coord: Vector.create ( 1.0, 0.0) }
+          this.vertices[33] = { position: vec3 (0.5,  0.5,  0.5), normal: vec3( 0.0, 1.0, 0.0), texture_coord: Vector.create ( 1.0, 0.0) }
+          this.vertices[34] = { position: vec3 (-0.5,  0.5,  0.5), normal: vec3( 0.0, 1.0, 0.0), texture_coord: Vector.create ( 0.0, 0.0) }
+          this.vertices[35] = { position: vec3 (-0.5,  0.5, -0.5), normal: vec3( 0.0, 1.0, 0.0), texture_coord: Vector.create ( 0.0, 1.0) }
 
           this.indices = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
                           10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
