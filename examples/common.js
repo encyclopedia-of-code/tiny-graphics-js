@@ -189,7 +189,7 @@ const Entity = defs.Entity =
     flush (caller) {
       for(let entity of this.entities){
         if( Array.isArray(entity.transforms) ) {
-          if (entity.dirty) {
+          if (entity.dirty && entity.shape.ready) {
             entity.shape.vertices = Array(entity.transforms.length).fill(0).map( (x,i) => ({matrix: entity.transforms[i]}));
             entity.shape.fill_buffer(["matrix"], undefined, 1);
             entity.dirty = false;
@@ -197,7 +197,7 @@ const Entity = defs.Entity =
           entity.shape.draw(caller, undefined, entity.global_transform, entity.material, undefined, entity.transforms.length)
         }
         else {
-          if (entity.dirty) {
+          if (entity.dirty && entity.shape.ready) {
             entity.shape.vertices = [{matrix: entity.transforms}];
             //Ideally use a shader with just a uniform matrix where you pass global.times(model)?
             entity.shape.fill_buffer(["matrix"], undefined, 1);
