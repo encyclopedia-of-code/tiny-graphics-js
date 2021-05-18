@@ -10,9 +10,10 @@ export {tiny, defs};
 
 const Movement_Controls = defs.Movement_Controls =
   class Movement_Controls extends Component {
-    constructor(props, matrix_closure, inverse_closure, update_callback)
+    constructor(props, update_callback = () => {})
       {
         super(props);
+        this.reset();
         const defaults = {
           roll                    : 0,
           look_around_locked      : true,
@@ -26,7 +27,6 @@ const Movement_Controls = defs.Movement_Controls =
           will_take_over_uniforms : true,
           };
         Object.assign( this, defaults, { update_callback });
-        this.set_recipient( matrix_closure, inverse_closure);
       }
       set_recipient (matrix_closure, inverse_closure) {
           this.matrix  = matrix_closure;
@@ -164,24 +164,25 @@ const Movement_Controls = defs.Movement_Controls =
           this.matrix ().post_multiply (Mat4.translation (0, 0, +25));
           this.inverse ().pre_multiply (Mat4.translation (0, 0, -25));
       }
-      render_animation (context) {
+      render_animation (caller) {
           const m  = this.speed_multiplier * this.meters_per_frame,
                 r  = this.speed_multiplier * this.radians_per_frame,
                 dt = this.uniforms.animation_delta_time / 1000;
 
           // TODO:  Once there is a way to test it, remove the below, because uniforms are no longer inaccessible
           // outside this function, so we could just tell this class to take over the uniforms' matrix anytime.
-          if (this.will_take_over_uniforms) {
-              this.reset ();
-              this.will_take_over_uniforms = false;
-          }
+                // if (this.will_take_over_uniforms) {
+                //     this.reset ();
+                //     this.will_take_over_uniforms = false;
+                // }
+
           // Move in first-person.  Scale the normal camera aiming speed by dt for smoothness:
           this.first_person_flyaround (dt * r, dt * m);
           // Al so apply third-person "arcball" camera mode if a mouse drag is occurring:
           if (this.mouse.anchor)
               this.third_person_arcball (dt * r);
 
-        //  this.update_callback();
+          this.update_callback();
 
           // Log some values:
           this.pos    = this.inverse ().times (vec4 (0, 0, 0, 1));
