@@ -558,9 +558,11 @@ const Minimal_Shape = defs.Minimal_Shape =
   class Shape_From_File extends tiny.Shape
   {                                   // **Shape_From_File** is a versatile standalone Shape that imports
                                       // all its arrays' data from an .obj 3D model file.
-    constructor( filename )
+    constructor( filename, uses_3d_texture = false )
       { super( "position", "normal", "texture_coord" );
       this.ready = false;
+      //if uses_3d texture is false, means we are using 2d texture!
+      this.uses_3d_texture = uses_3d_texture;
                                       // Begin downloading the mesh. Once that completes, return
                                       // control to our parse_into_mesh function.
         this.load_file( filename );
@@ -594,7 +596,12 @@ const Minimal_Shape = defs.Minimal_Shape =
 
           if      (VERTEX_RE.test(line))   verts.push.apply(verts, elements);
           else if (NORMAL_RE.test(line))   vertNormals.push.apply(vertNormals, elements);
-          else if (TEXTURE_RE.test(line))  textures.push.apply(textures, elements);
+          else if (TEXTURE_RE.test(line)) {
+            if (this.uses_3d_texture)
+              textures.push.apply(textures, elements);
+            else //use 2d texture coordinates, even though texture coord can be 3d in obj file
+              textures.push.apply(textures, elements.slice(0,2));
+          }
           else if (FACE_RE.test(line)) {
             var quad = false;
             for (var j = 0, eleLen = elements.length; j < eleLen; j++)
@@ -611,12 +618,21 @@ const Minimal_Shape = defs.Minimal_Shape =
                     unpacked.verts.push(+verts[(vertex[0] - 1) * 3 + 2]);
 
                     if (textures.length)
-                      {   unpacked.textures.push(+textures[( (vertex[1] - 1)||vertex[0]) * 2 + 0]);
-                          unpacked.textures.push(+textures[( (vertex[1] - 1)||vertex[0]) * 2 + 1]);  }
+                    {
+                        if (this.uses_3d_texture) {
+                          unpacked.textures.push(+textures[(vertex[1] - 1) * 2 + 0]);
+                          unpacked.textures.push(+textures[(vertex[1] - 1) * 2 + 1]);
+                          unpacked.textures.push(+textures[(vertex[1] - 1) * 2 + 2]);
+                        }
+                        else {
+                          unpacked.textures.push(+textures[(vertex[1] - 1) * 2 + 0]);
+                          unpacked.textures.push(+textures[(vertex[1] - 1) * 2 + 1]);
+                        }
+                    }
 
-                    unpacked.norms.push(+vertNormals[( (vertex[2] - 1)||vertex[0]) * 3 + 0]);
-                    unpacked.norms.push(+vertNormals[( (vertex[2] - 1)||vertex[0]) * 3 + 1]);
-                    unpacked.norms.push(+vertNormals[( (vertex[2] - 1)||vertex[0]) * 3 + 2]);
+                    unpacked.norms.push(+vertNormals[(vertex[2] - 1) * 3 + 0]);
+                    unpacked.norms.push(+vertNormals[(vertex[2] - 1) * 3 + 1]);
+                    unpacked.norms.push(+vertNormals[(vertex[2] - 1) * 3 + 2]);
 
                     unpacked.hashindices[elements[j]] = unpacked.index;
                     unpacked.indices.push(unpacked.index);
@@ -630,6 +646,9 @@ const Minimal_Shape = defs.Minimal_Shape =
           const { verts, norms, textures } = unpacked;
           var selection_of_attributes = [];
 
+          for( var j = 0; j < verts.length/3; j++ )
+              this.vertices[j] = {};
+
           if (verts != [])
           {
             selection_of_attributes.push("position");
@@ -640,15 +659,21 @@ const Minimal_Shape = defs.Minimal_Shape =
           if (norms != [])
           {
             selection_of_attributes.push("normal");
-            for( var j = 0; j < verts.length/3; j++ )
-              this.vertices[j].normal = vec3( verts[ 3*j ], verts[ 3*j + 1 ], verts[ 3*j + 2 ] );
+            for( var j = 0; j < norms.length/3; j++ )
+              this.vertices[j].normal = vec3( norms[ 3*j ], norms[ 3*j + 1 ], norms[ 3*j + 2 ] );
           }
 
           if (textures != [])
           {
             selection_of_attributes.push("texture_coord");
-            for( var j = 0; j < verts.length/3; j++ )
-              this.vertices[j].texture_coord = vec( textures[ 2*j ], textures[ 2*j + 1 ] );
+            if (this.uses_3d_texture) {
+              for( var j = 0; j < textures.length/3; j++ )
+                this.vertices[j].texture_coord = vec3( textures[ 3*j ], textures[ 3*j + 1 ], textures[ 3*j + 2 ] );
+            }
+            else { //use 2d texture coordinates
+              for( var j = 0; j < textures.length/2; j++ )
+                this.vertices[j].texture_coord = vec( textures[ 2*j ], textures[ 2*j + 1 ] );
+            }
           }
 
           this.indices = unpacked.indices;
