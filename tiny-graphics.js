@@ -363,17 +363,6 @@ const Shader = tiny.Shader =
       fragment_glsl_code () {}
       update_GPU () {}
       static default_values () {}
-      static default_uniforms () {
-          return {
-              camera_inverse      : Mat4.identity (),
-              camera_transform    : Mat4.identity (),
-              projection_transform: Mat4.identity (),
-              animate             : true,
-              animation_time      : 0,
-              animation_delta_time: 0
-          };
-
-      }
       static mapping_UBO () {
         return [
           {shader_name: "Camera", binding_point: 0},
@@ -444,7 +433,6 @@ const Texture = tiny.Texture =
 const Component = tiny.Component =
   class Component {
       // See description at https://github.com/encyclopedia-of-code/tiny-graphics-js/wiki/tiny-graphics.js#component
-      uniforms = Shader.default_uniforms ();
       constructor (props = {}) {
           const rules = [
               `.documentation_treenode { }`,
@@ -455,6 +443,7 @@ const Component = tiny.Component =
 
           this.props = props;
           if (this.props.uniforms) this.uniforms = this.props.uniforms;
+          else this.uniforms = Component.default_uniforms ();
 
           this.animated_children  = [];
           this.document_children  = [];
@@ -471,6 +460,16 @@ const Component = tiny.Component =
           this.init ();
       }
       static types_used_before = new Set ();
+      static default_uniforms () {
+          return {
+              camera_inverse      : Mat4.identity (),
+              camera_transform    : Mat4.identity (),
+              projection_transform: Mat4.identity (),
+              animate             : true,
+              animation_time      : 0,
+              animation_delta_time: 0
+          };
+      }
       static initialize_CSS (classType, rules) {
           if (Component.types_used_before.has (classType))
               return;

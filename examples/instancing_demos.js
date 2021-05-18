@@ -8,7 +8,6 @@ export
 const Instanced_Cubes_Demo = defs.Instanced_Cubes_Demo =
 class Instanced_Cubes_Demo extends Component {
   init () {
-    this.widget_options = {make_controls: false};    // This demo is too minimal to have controls
     this.shapes = {triangle: new defs.Instanced_Square_Index ()};
     this.shader = new defs.Instanced_Shader (Light.NUM_LIGHTS);
     this.textured_shader = new defs.Textured_Instanced_Shader (Light.NUM_LIGHTS);
@@ -37,7 +36,11 @@ class Instanced_Cubes_Demo extends Component {
 
     if( !caller.controls )
     {
-      this.animated_children.push( caller.controls = new defs.Movement_Controls( { uniforms: this.uniforms } ) );
+      this.uniforms.camera_inverse = this.camera.view;
+      this.animated_children.push( caller.controls = new defs.Movement_Controls(
+              { uniforms: this.uniforms },
+              () => {this.camera.initialize(caller)}
+              ) );
       caller.controls.add_mouse_controls( caller.canvas );
 
       this.camera.initialize(caller);
@@ -45,7 +48,6 @@ class Instanced_Cubes_Demo extends Component {
 
     this.sun.initialize(caller);
     this.sun2.initialize(caller);
-
 
     if (this.uniforms.animation_time/500 % 2 < 1)
       this.entities[0].set_material(this.fire);
