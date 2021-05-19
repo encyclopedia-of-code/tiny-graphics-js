@@ -560,9 +560,9 @@ const Minimal_Shape = defs.Minimal_Shape =
                                       // all its arrays' data from an .obj 3D model file.
     constructor( filename, uses_3d_texture = false )
       { super( "position", "normal", "texture_coord" );
-      this.ready = false;
-      //if uses_3d texture is false, means we are using 2d texture!
-      this.uses_3d_texture = uses_3d_texture;
+        this.ready = false;
+        //if uses_3d texture is false, means we are using 2d texture!
+        this.uses_3d_texture = uses_3d_texture;
                                       // Begin downloading the mesh. Once that completes, return
                                       // control to our parse_into_mesh function.
         this.load_file( filename );
