@@ -17,8 +17,7 @@ const Camera = defs.Camera =
       this.at = at;
       this.up = up;
 
-      this.view = Mat4.identity();
-      this.proj = Mat4.identity();
+      this.view = Mat4.look_at(this.position, this.at, this.up);
 
       this.ubo_layout = [{num_instances: 1,
                           data_layout:[{name:"view", type:"Mat4"},
@@ -30,6 +29,8 @@ const Camera = defs.Camera =
     }
     initialize(caller) {
       if (!this.is_initialized) {
+        this.proj = Mat4.perspective(Math.PI/2, caller.width/caller.height, 0.01, 1024);
+
         const mappings = Shader.mapping_UBO();
         for (var i = 0; i < mappings.length; i++) {
           if (mappings[i].shader_name == "Camera") {
@@ -40,9 +41,6 @@ const Camera = defs.Camera =
         }
         this.is_initialized = true;
       }
-
-      this.view = Mat4.look_at(this.position, this.at, this.up);
-      this.proj = Mat4.perspective(Math.PI/2, caller.width/caller.height, 0.01, 1024);
 
       UBO.Cache["Camera"].update("view", this.view);
       UBO.Cache["Camera"].update("projection", this.proj);
