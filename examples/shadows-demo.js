@@ -34,8 +34,8 @@ class Shadows_Demo extends Component {
                        this.sand));
 
     this.camera = new Camera(vec3(0.0, 0.0, 2.0));
-    this.sun = new Light({direction_or_position: vec4(2.0, 5.0, 0.0, 1.0), color: vec3(1.0, 1.0, 1.0), diffuse: 0.6, specular: 1.0, attenuation_factor: 0.001,
-                          casts_shadow: true, shadow_map_shader: });
+    this.sun = new Light({direction_or_position: vec4(2.0, 5.0, 0.0, 1.0), color: vec3(1.0, 1.0, 1.0), diffuse: 0.6, specular: 0.2, attenuation_factor: 0.001,
+                          casts_shadow: true});
     //this.sun2 = new Light({direction_or_position: vec4(5.0, 10.0, 0.0, 0.0), color: vec3(1.0, 1.0, 1.0), diffuse: 0.5, specular: 1.0, attenuation_factor: 0.001});
   }
   render_animation (caller) {
