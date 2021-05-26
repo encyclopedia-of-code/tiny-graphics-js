@@ -53,7 +53,7 @@ const Light = defs.Light =
 
     static NUM_LIGHTS = 2;
     static global_index = 0;
-    static global_ambient = 0.3;
+    static global_ambient = 0.4;
 
     constructor(data) {
 
@@ -74,6 +74,7 @@ const Light = defs.Light =
                                         {name:"attenuation_factor", type:"float"}]
                          },
                         ];
+      this.shadow_map_texture = new tiny.Shadow_Map(this.shadow_map_width, this.shadow_map_height);
       this.is_initialized = false;
     }
     static default_values () {
@@ -83,6 +84,11 @@ const Light = defs.Light =
                 diffuse: 1.0,
                 specular: 1.0,
                 attenuation_factor: 0.0,
+                casts_shadow = false,
+                shadow_map_width = 128,
+                shadow_map_height = 128,
+                shadow_map_shader = null,
+                shadow_map_texture = null,
               };
     }
     initialize(caller) {
@@ -106,6 +112,16 @@ const Light = defs.Light =
         }
         this.is_initialized = true;
       }
+    }
+    generate_shadow_map(caller) {
+      if (!this.casts_shadow)
+        return;
+
+      if (this.shadow_map_texture == null) {
+        //create
+      }
+
+      //clear
     }
   };
 
@@ -302,21 +318,16 @@ const Entity = defs.Entity =
   class Renderer {
     constructor() {
       this.entities = []
+      this.lights = []
     }
-    submit (entity) {
-      this.entities.push(entity);
+    submit (object) {
+      if (object instanceof Entity)
+        this.entities.push(entity);
     }
+    submit_light_shadow (object)
     flush (caller) {
       for(let entity of this.entities){
-        if( Array.isArray(entity.transforms) ) {
-          if (entity.dirty && entity.shape.ready) {
-            entity.shape.vertices = Array(entity.transforms.length).fill(0).map( (x,i) => ({matrix: entity.transforms[i]}));
-            entity.shape.fill_buffer(["matrix"], undefined, 1);
-            entity.dirty = false;
-          }
-          entity.shape.draw(caller, undefined, entity.global_transform, entity.material, undefined, entity.transforms.length)
-        }
-        else {
+        if( entity.transforms instanceof tiny.Matrix ) {
           if (entity.dirty && entity.shape.ready) {
             entity.shape.vertices = [{matrix: entity.transforms}];
             //Ideally use a shader with just a uniform matrix where you pass global.times(model)?
@@ -324,6 +335,14 @@ const Entity = defs.Entity =
             entity.dirty = false;
           }
           entity.shape.draw(caller, undefined, entity.global_transform, entity.material, undefined, 1)
+        }
+        else {
+          if (entity.dirty && entity.shape.ready) {
+            entity.shape.vertices = Array(entity.transforms.length).fill(0).map( (x,i) => ({matrix: entity.transforms[i]}));
+            entity.shape.fill_buffer(["matrix"], undefined, 1);
+            entity.dirty = false;
+          }
+          entity.shape.draw(caller, undefined, entity.global_transform, entity.material, undefined, entity.transforms.length)
         }
       }
       this.entities = []

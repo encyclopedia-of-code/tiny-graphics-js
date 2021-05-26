@@ -429,6 +429,59 @@ const Texture = tiny.Texture =
       }
   };
 
+  const Shadow_Map = tiny.Shadow_Map =
+  class Shadow_Map {
+      constructor (width, height, min_filter = "NEAREST", mag_filter = "NEAREST") {
+          Object.assign (this, {width, height, min_filter, mag_filter});
+
+          if ( !this.gpu_instances) this.gpu_instances = new Map ();     // Track which GPU contexts this object has
+                                                                         // copied itself onto.
+      }
+      copy_onto_graphics_card (context, need_initial_settings = true) {
+
+          const existing_instance = this.gpu_instances.get (context);
+          if ( !existing_instance) test_rookie_mistake ();
+
+          // If this Texture was never used on this GPU context before, then prepare new buffer indices for this
+          // context.
+          const gpu_instance = existing_instance || this.gpu_instances.set (context, defaults).get (context);
+
+          if ( !gpu_instance.fbo_pointer) gpu_instance.fbo_pointer = context.createFramebuffer ();
+          if ( !gpu_instance.texture_buffer_pointer) gpu_instance.texture_buffer_pointer = context.createTexture ();
+
+          const gl = context;
+          gl.bindTexture (gl.TEXTURE_2D, gpu_instance.texture_buffer_pointer);
+          gl.bindFramebuffer(gl.FRAMEBUFFER, gpu_instance.fbo_pointer);
+
+          if (need_initial_settings) {
+              gl.pixelStorei (gl.UNPACK_FLIP_Y_WEBGL, true);
+              // Always use bi-linear sampling when zoomed out.
+              gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl[ this.mag_filter ]);
+              // Apply user-defined sampling method when zoomed in.
+              gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl[ this.min_filter ]);
+              gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl[ "CLAMP_TO_BORDER" ]);
+              gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl[ "CLAMP_TO_BORDER" ]);
+              gl.texParameterfv (gl.TEXTURE_2D, gl.TEXTURE_BORDER_COLOR, [1.0, 1.0, 1.0, 1.0]);
+
+              //onto the fbo
+              gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, gpu_instance.texture_buffer_pointer, 0);
+              gl.drawBuffers (gl.NONE);
+              gl.readBuffers (gl.NONE);
+
+          }
+
+          gl.bindFramebuffer(gl.FRAMEBUFFER, 0);
+
+          return gpu_instance;
+      }
+      activate (context, texture_unit = 0) {
+          if ( !this.ready)
+              return;          // Terminate draw requests until the image file is actually loaded over the network.
+          const gpu_instance = this.gpu_instances.get (context) || this.copy_onto_graphics_card (context);
+          context.activeTexture (context[ "TEXTURE" + texture_unit ]);
+          context.bindTexture (context.TEXTURE_2D, gpu_instance.texture_buffer_pointer);
+      }
+  };
 
 const Component = tiny.Component =
   class Component {

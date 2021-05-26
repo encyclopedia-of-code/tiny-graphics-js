@@ -16,7 +16,7 @@ import {Demonstration}
 import {Inertia_Demo, Collision_Demo}
                     from "./examples/collisions-demo.js";
 import {Instanced_Cubes_Demo}
-                    from "./examples/instancing_demos.js";
+                    from "./examples/instancing-demos.js";
 import {Many_Lights_Demo}
                     from "./examples/many-lights-demo.js";
 import {Obj_File_Demo}
@@ -27,6 +27,8 @@ import {Particle_Demo}
                     from "./examples/particle-demo.js";
 import {Scene_To_Texture_Demo}
                     from "./examples/scene-to-texture-demo.js";
+import {Shadows_Demo}
+                    from "./examples/shadows-demo.js";
 import {Text_Demo}
                     from "./examples/text-demo.js";
 import {Transforms_Sandbox_Base, Transforms_Sandbox}
@@ -43,13 +45,14 @@ Object.assign (defs,
                {Parametric_Surfaces},
                {Particle_Demo},
                {Scene_To_Texture_Demo},
+               {Shadows_Demo},
                {Text_Demo},
                {Transforms_Sandbox_Base, Transforms_Sandbox}
 );
 
 // ******************** SELECT THE DEMO TO DISPLAY:
 
-const main_scene        = Instanced_Cubes_Demo;
+const main_scene        = Shadows_Demo;
 const additional_scenes = [];
 
 export {main_scene, additional_scenes, defs};
