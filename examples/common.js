@@ -84,11 +84,11 @@ const Light = defs.Light =
                 diffuse: 1.0,
                 specular: 1.0,
                 attenuation_factor: 0.0,
-                casts_shadow = false,
-                shadow_map_width = 128,
-                shadow_map_height = 128,
-                shadow_map_shader = null,
-                shadow_map_texture = null,
+                casts_shadow: false,
+                shadow_map_width: 128,
+                shadow_map_height: 128,
+                shadow_map_shader: null,
+                shadow_map_texture: null,
               };
     }
     initialize(caller) {
@@ -322,9 +322,9 @@ const Entity = defs.Entity =
     }
     submit (object) {
       if (object instanceof Entity)
-        this.entities.push(entity);
+        this.entities.push(object);
     }
-    submit_light_shadow (object)
+    submit_light_shadow (object) {}
     flush (caller) {
       for(let entity of this.entities){
         if( entity.transforms instanceof tiny.Matrix ) {
