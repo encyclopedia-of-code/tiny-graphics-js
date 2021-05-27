@@ -34,7 +34,7 @@ class Shadows_Demo extends Component {
                        this.sand));
 
     this.camera = new Camera(vec3(0.0, 0.0, 2.0));
-    this.sun = new Light({direction_or_position: vec4(2.0, 5.0, 0.0, 1.0), color: vec3(1.0, 1.0, 1.0), diffuse: 0.6, specular: 0.2, attenuation_factor: 0.001,
+    this.sun = new Light({direction_or_position: vec4(2.0, 5.0, 0.0, 0.0), color: vec3(1.0, 1.0, 1.0), diffuse: 0.6, specular: 0.2, attenuation_factor: 0.001,
                           casts_shadow: true});
     //this.sun2 = new Light({direction_or_position: vec4(5.0, 10.0, 0.0, 0.0), color: vec3(1.0, 1.0, 1.0), diffuse: 0.5, specular: 1.0, attenuation_factor: 0.001});
   }
@@ -64,6 +64,7 @@ class Shadows_Demo extends Component {
         // Mat4.translation(... vec3(Math.random()* 2 - 1, Math.random(),  Math.random()*2 - 1).times_pairwise(vec3(20, 2, 20)))))
         this.renderer.submit(obj);
       }
+    this.renderer.shadow_map_pass(caller, [this.sun]);
     this.renderer.flush(caller);
   }
 };
