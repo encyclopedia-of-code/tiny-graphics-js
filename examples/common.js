@@ -51,6 +51,8 @@ const Camera = defs.Camera =
 const Light = defs.Light =
   class Light {
 
+    //Break it down into a Shadow_Light subclass!
+
     static NUM_LIGHTS = 2;
     static global_index = 0;
     static global_ambient = 0.4;
@@ -74,7 +76,31 @@ const Light = defs.Light =
                                         {name:"attenuation_factor", type:"float"}]
                          },
                         ];
-      this.shadow_map_texture = new tiny.Shadow_Map(this.shadow_map_width, this.shadow_map_height);
+
+      this.shadow_map = [];
+      this.light_space_matrix = [];
+      this.is_point_light = (this.direction_or_position[3] == 1.0);
+
+      if (this.is_point_light) {
+        let directions = [ vec3(1.0, 0.0, 0.0), vec3(-1.0, 0.0, 0.0), vec3(0.0, 1.0, 0.0), vec3(0.0, -1.0, 0.0), vec3(0.0, 0.0, 1.0), vec3(0.0, 0.0, -1.0)];
+        let ups = [vec3(0.0, -1.0, 0.0), vec3(0.0, -1.0, 0.0), vec3(0.0, 0.0, 1.0), vec3(0.0, 0.0, -1.0), vec3(0.0, -1.0, 0.0), vec3(0.0, -1.0, 0.0)];
+
+        for (let i = 0; i < 6; i++) {
+          this.shadow_map[i] = new tiny.Shadow_Map(this.shadow_map_width, this.shadow_map_height);
+          let light_view = Mat4.look_at(this.direction_or_position.to3(), directions[i], ups[i]);
+          let light_projection = Mat4.perspective(Math.PI/2, this.shadow_map_width/this.shadow_map_height, 0.01, 20.0);
+          this.light_space_matrix[i] = light_projection.times(light_view);
+        }
+      }
+      else {
+        this.shadow_map[0] = new tiny.Shadow_Map(this.shadow_map_width, this.shadow_map_height);
+        let epsilon = 0.00756; //to be able to have +-y pointing light
+        let light_view = Mat4.look_at(this.direction_or_position.to3(), vec3(0.0, 0.0, 0.0), vec3(0.0 + epsilon, 1.0, 0.0));;
+        let light_projection = Mat4.orthographic(-10.0, 10.0, -10.0, 10.0, 0.01, 20.0);
+        this.light_space_matrix[0] = light_projection.times(light_view);
+      }
+
+
       this.is_initialized = false;
     }
     static default_values () {
@@ -87,8 +113,8 @@ const Light = defs.Light =
                 casts_shadow: false,
                 shadow_map_width: 128,
                 shadow_map_height: 128,
-                shadow_map_shader: null,
-                shadow_map_texture: null,
+                shadow_map_shader: new defs.Shadow_Pass_Shader(),
+                shadow_map: null,
               };
     }
     initialize(caller) {
@@ -113,15 +139,19 @@ const Light = defs.Light =
         this.is_initialized = true;
       }
     }
-    generate_shadow_map(caller) {
+    activate (caller, shadow_map_index = 0) {
+      //always index 0 if directional light
       if (!this.casts_shadow)
         return;
 
-      if (this.shadow_map_texture == null) {
-        //create
-      }
-
-      //clear
+        //offset through UBOs for camera matrix and distance parameters??
+      this.shadow_map_shader.activate(caller.context, {light_space_matrix: this.light_space_matrix[shadow_map_index]});
+      this.shadow_map[shadow_map_index].activate(caller);
+    }
+    deactivate (caller, shadow_map_index = 0) {
+      if (!this.casts_shadow)
+        return;
+      this.shadow_map[shadow_map_index].deactivate(caller);
     }
   };
 
@@ -324,8 +354,26 @@ const Entity = defs.Entity =
       if (object instanceof Entity)
         this.entities.push(object);
     }
-    submit_light_shadow (object) {}
-    flush (caller) {
+    shadow_map_pass (caller, lights) {
+      for (let light of lights) {
+        if (light.is_point_light)
+        {
+          for (let i = 0; i < 6; i++) {
+            light.activate(caller, i);
+            this.flush(caller, false);
+            light.deactivate(caller, i);
+          }
+        }
+        else {
+          light.activate(caller);
+          this.flush(caller, false);
+          light.deactivate(caller);
+        }
+      }
+    }
+
+    //$$$$$$$$$$$$$$$$$$$$$$$$$$   make a new flush that takes shader as an argument so that override entity shader, by creating dummy material
+    flush (caller, clear_entities = true) {
       for(let entity of this.entities){
         if( entity.transforms instanceof tiny.Matrix ) {
           if (entity.dirty && entity.shape.ready) {
@@ -345,6 +393,8 @@ const Entity = defs.Entity =
           entity.shape.draw(caller, undefined, entity.global_transform, entity.material, undefined, entity.transforms.length)
         }
       }
-      this.entities = []
+
+      if (clear_entities)
+        this.entities = []
     }
   };

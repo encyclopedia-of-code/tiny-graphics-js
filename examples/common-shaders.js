@@ -322,6 +322,44 @@ const Instanced_Shader = defs.Instanced_Shader =
       }
   };
 
+  const Shadow_Pass_Shader = defs.Shadow_Pass_Shader =
+  class Shadow_Pass_Shader extends Shader {
+      update_GPU (context, gpu_addresses, uniforms, model_transform, material) {
+        context.uniformMatrix4fv (gpu_addresses.light_space_matrix, true, Matrix.flatten_2D_to_1D (uniforms.light_space_matrix));
+        context.uniformMatrix4fv (gpu_addresses.global_transform, true, Matrix.flatten_2D_to_1D (model_transform));
+      }
+      shared_glsl_code () {           // ********* SHARED CODE, INCLUDED IN BOTH SHADERS *********
+        return "#version 300 es " + `
+                precision mediump float;
+        `;
+      }
+      vertex_glsl_code () {          // ********* VERTEX SHADER *********
+        return this.shared_glsl_code () + `
+      layout(location = 0) in vec3 position; // Position is expressed in object coordinates
+      layout(location = 3) in mat4 matrix;
+
+      uniform mat4 global_transform;
+      uniform mat4 light_space_matrix;
+
+      layout (std140) uniform Camera
+      {
+        mat4 view;
+        mat4 projection;
+        vec3 camera_position;
+      };
+
+      void main() {
+        gl_Position =  light_space_matrix * global_transform * transpose(matrix) * vec4( position, 1.0 );
+      }`;
+    }
+      fragment_glsl_code () {         // ********* FRAGMENT SHADER *********
+          return this.shared_glsl_code () + `
+
+        void main() {
+        }`;
+      }
+  };
+
 // const Funny_Shader = defs.Funny_Shader =
 //   class Funny_Shader extends Shader {
 //       update_GPU (context, gpu_addresses, uniforms, model_transform, material) {
