@@ -73,7 +73,10 @@ const Light = defs.Light =
                                         {name:"color", type:"vec3"},
                                         {name:"diffuse", type:"float"},
                                         {name:"specular", type:"float"},
-                                        {name:"attenuation_factor", type:"float"}]
+                                        {name:"attenuation_factor", type:"float"},
+                                        {name:"casts_shadow", type:"bool"},
+                                        {name:"light_space_matrix", type:"Mat4"}
+                                      ]
                          },
                         ];
 
