@@ -12,7 +12,10 @@ class Shadows_Demo extends Component {
     this.shader = new defs.Instanced_Shader (Light.NUM_LIGHTS);
     this.textured_shader = new defs.Textured_Instanced_Shader (Light.NUM_LIGHTS);
 
-    this.sand = new Material("Water", this.shader, { color: vec4(0.76, 0.69, 0.50, 1.0) });
+    this.sun = new Light({direction_or_position: vec4(2.0, 5.0, 0.0, 0.0), color: vec3(1.0, 1.0, 1.0), diffuse: 0.6, specular: 0.2, attenuation_factor: 0.001,
+      casts_shadow: true});
+
+    this.sand = new Material("Water", this.textured_shader, { color: vec4(0.76, 0.69, 0.50, 1.0) }, { diffuse_texture: this.sun.shadow_map[0] });
     this.shark = new defs.Material_From_File("Shark", this.textured_shader, "assets/shark_cm/shark_cm.mtl" );
     this.renderer = new Renderer();
 
@@ -34,8 +37,6 @@ class Shadows_Demo extends Component {
                        this.sand));
 
     this.camera = new Camera(vec3(0.0, 0.0, 2.0));
-    this.sun = new Light({direction_or_position: vec4(2.0, 5.0, 0.0, 0.0), color: vec3(1.0, 1.0, 1.0), diffuse: 0.6, specular: 0.2, attenuation_factor: 0.001,
-                          casts_shadow: true});
     //this.sun2 = new Light({direction_or_position: vec4(5.0, 10.0, 0.0, 0.0), color: vec3(1.0, 1.0, 1.0), diffuse: 0.5, specular: 1.0, attenuation_factor: 0.001});
   }
   render_animation (caller) {

@@ -433,7 +433,7 @@ const Texture = tiny.Texture =
   const Shadow_Map = tiny.Shadow_Map =
   class Shadow_Map {
       constructor (width, height, min_filter = "NEAREST", mag_filter = "NEAREST") {
-          Object.assign (this, {width, height, min_filter, mag_filter});
+          Object.assign (this, {width, height, min_filter, mag_filter, ready:true});
 
           if ( !this.gpu_instances) this.gpu_instances = new Map ();     // Track which GPU contexts this object has
                                                                          // copied itself onto.
@@ -484,18 +484,21 @@ const Texture = tiny.Texture =
 
           return gpu_instance;
       }
-      activate (caller, texture_unit = 0) {
-          const gl = caller.context;
+      activate (gl, texture_unit = 0, treat_as_fbo = false) {
           const gpu_instance = this.gpu_instances.get (gl) || this.copy_onto_graphics_card (gl);
-          gl.viewport (0, 0, this.width, this.height);
-          gl.bindFramebuffer (gl.FRAMEBUFFER, gpu_instance.fbo_pointer);
-          gl.clear (gl.DEPTH_BUFFER_BIT);
+          if( treat_as_fbo ) {
+            gl.viewport (0, 0, this.width, this.height);
+            gl.bindFramebuffer (gl.FRAMEBUFFER, gpu_instance.fbo_pointer);
+            gl.clear (gl.DEPTH_BUFFER_BIT);
+          }
           gl.activeTexture (gl[ "TEXTURE" + texture_unit ]);
           gl.bindTexture (gl.TEXTURE_2D, gpu_instance.texture_buffer_pointer);
       }
-      deactivate (caller) {
-        caller.context.viewport(0, 0, caller.width, caller.height);
-        caller.context.bindFramebuffer (caller.context.FRAMEBUFFER, null);
+      deactivate (caller, treat_as_fbo = false) {
+        if (treat_as_fbo) {
+          caller.context.viewport(0, 0, caller.width, caller.height);
+          caller.context.bindFramebuffer (caller.context.FRAMEBUFFER, null);
+        }
         caller.context.bindTexture( caller.context.TEXTURE_2D, null);
       }
   };

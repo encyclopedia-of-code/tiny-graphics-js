@@ -139,20 +139,20 @@ const Light = defs.Light =
         this.is_initialized = true;
       }
     }
-    activate (caller, shadow_map_index = 0) {
+    activate (gl, shadow_map_index = 0) {
       //always index 0 if directional light
       if (!this.casts_shadow)
         return;
 
         //offset through UBOs for camera matrix and distance parameters??
-      this.shadow_map_shader.activate(caller.context, {light_space_matrix: this.light_space_matrix[shadow_map_index]}, Mat4.identity(), undefined);
+      this.shadow_map_shader.activate(gl, {light_space_matrix: this.light_space_matrix[shadow_map_index]}, Mat4.identity(), undefined);
 
-      this.shadow_map[shadow_map_index].activate(caller);
+      this.shadow_map[shadow_map_index].activate(gl, 0, true);
     }
     deactivate (caller, shadow_map_index = 0) {
       if (!this.casts_shadow)
         return;
-      this.shadow_map[shadow_map_index].deactivate(caller);
+      this.shadow_map[shadow_map_index].deactivate(caller, true);
     }
   };
 
@@ -360,13 +360,13 @@ const Entity = defs.Entity =
         if (light.is_point_light)
         {
           for (let i = 0; i < 6; i++) {
-            light.activate(caller, i);
+            light.activate(caller.context, i);
             this.flush(caller, false, light.shadow_map_shader);
             light.deactivate(caller, i);
           }
         }
         else {
-          light.activate(caller);
+          light.activate(caller.context);
           this.flush(caller, false, light.shadow_map_shader);
           light.deactivate(caller);
         }
