@@ -111,8 +111,8 @@ const Light = defs.Light =
                 specular: 1.0,
                 attenuation_factor: 0.0,
                 casts_shadow: false,
-                shadow_map_width: 128,
-                shadow_map_height: 128,
+                shadow_map_width: 1024,
+                shadow_map_height: 1024,
                 shadow_map_shader: new defs.Shadow_Pass_Shader(),
                 shadow_map: null,
               };
@@ -145,7 +145,8 @@ const Light = defs.Light =
         return;
 
         //offset through UBOs for camera matrix and distance parameters??
-      this.shadow_map_shader.activate(caller.context, {light_space_matrix: this.light_space_matrix[shadow_map_index]});
+      this.shadow_map_shader.activate(caller.context, {light_space_matrix: this.light_space_matrix[shadow_map_index]}, Mat4.identity(), undefined);
+
       this.shadow_map[shadow_map_index].activate(caller);
     }
     deactivate (caller, shadow_map_index = 0) {
@@ -360,20 +361,26 @@ const Entity = defs.Entity =
         {
           for (let i = 0; i < 6; i++) {
             light.activate(caller, i);
-            this.flush(caller, false);
+            this.flush(caller, false, light.shadow_map_shader);
             light.deactivate(caller, i);
           }
         }
         else {
           light.activate(caller);
-          this.flush(caller, false);
+          this.flush(caller, false, light.shadow_map_shader);
           light.deactivate(caller);
         }
       }
     }
 
     //$$$$$$$$$$$$$$$$$$$$$$$$$$   make a new flush that takes shader as an argument so that override entity shader, by creating dummy material
-    flush (caller, clear_entities = true) {
+    flush (caller, clear_entities = true, alternative_shader = undefined) {
+
+      // Todo:  make dummy material(s) if required
+      const shadow_pass_material = alternative_shader ?
+                      new Material("shadow_pass_material", alternative_shader) :
+                      undefined;
+
       for(let entity of this.entities){
         if( entity.transforms instanceof tiny.Matrix ) {
           if (entity.dirty && entity.shape.ready) {
@@ -382,7 +389,7 @@ const Entity = defs.Entity =
             entity.shape.fill_buffer(["matrix"], undefined, 1);
             entity.dirty = false;
           }
-          entity.shape.draw(caller, undefined, entity.global_transform, entity.material, undefined, 1)
+          entity.shape.draw(caller, {}, entity.global_transform, shadow_pass_material || entity.material, undefined, 1);
         }
         else {
           if (entity.dirty && entity.shape.ready) {
@@ -390,7 +397,7 @@ const Entity = defs.Entity =
             entity.shape.fill_buffer(["matrix"], undefined, 1);
             entity.dirty = false;
           }
-          entity.shape.draw(caller, undefined, entity.global_transform, entity.material, undefined, entity.transforms.length)
+          entity.shape.draw(caller, {}, entity.global_transform, shadow_pass_material || entity.material, undefined, entity.transforms.length);
         }
       }
 

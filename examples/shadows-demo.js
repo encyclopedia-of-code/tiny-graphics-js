@@ -12,8 +12,8 @@ class Shadows_Demo extends Component {
     this.shader = new defs.Instanced_Shader (Light.NUM_LIGHTS);
     this.textured_shader = new defs.Textured_Instanced_Shader (Light.NUM_LIGHTS);
 
-    this.shark = new defs.Material_From_File("Shark", this.textured_shader, "assets/shark_cm/shark_cm.mtl" );
     this.sand = new Material("Water", this.shader, { color: vec4(0.76, 0.69, 0.50, 1.0) });
+    this.shark = new defs.Material_From_File("Shark", this.textured_shader, "assets/shark_cm/shark_cm.mtl" );
     this.renderer = new Renderer();
 
     this.objects = 1;
@@ -59,7 +59,7 @@ class Shadows_Demo extends Component {
 
       for (let obj of this.entities)
       {
-        obj.apply_transform(Mat4.rotation( .1, 0,0,1));
+        // obj.apply_transform(Mat4.rotation( .1, 0,0,1));
         // obj.set_transforms(Array(this.size).fill(0).map( (x,i) =>
         // Mat4.translation(... vec3(Math.random()* 2 - 1, Math.random(),  Math.random()*2 - 1).times_pairwise(vec3(20, 2, 20)))))
         this.renderer.submit(obj);
