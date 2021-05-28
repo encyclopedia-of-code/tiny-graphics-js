@@ -325,7 +325,9 @@ const Instanced_Shader = defs.Instanced_Shader =
   const Shadow_Pass_Shader = defs.Shadow_Pass_Shader =
   class Shadow_Pass_Shader extends Shader {
       update_GPU (context, gpu_addresses, uniforms, model_transform, material) {
-        context.uniformMatrix4fv (gpu_addresses.light_space_matrix, true, Matrix.flatten_2D_to_1D (uniforms.light_space_matrix));
+
+        if(uniforms.light_space_matrix)
+          context.uniformMatrix4fv (gpu_addresses.light_space_matrix, true, Matrix.flatten_2D_to_1D (uniforms.light_space_matrix));
         context.uniformMatrix4fv (gpu_addresses.global_transform, true, Matrix.flatten_2D_to_1D (model_transform));
       }
       shared_glsl_code () {           // ********* SHARED CODE, INCLUDED IN BOTH SHADERS *********

@@ -349,7 +349,8 @@ const Shader = tiny.Shader =
         var ubo_index = 0;
         for (var i = 0; i < ubo_binding.length; i++) {
           ubo_index = gl.getUniformBlockIndex(program, ubo_binding[i].shader_name);
-          gl.uniformBlockBinding(program, ubo_index, ubo_binding[i].binding_point);
+          if (ubo_index !== gl.INVALID_INDEX)
+            gl.uniformBlockBinding(program, ubo_index, ubo_binding[i].binding_point);
         }
       }
 
@@ -437,14 +438,14 @@ const Texture = tiny.Texture =
           if ( !this.gpu_instances) this.gpu_instances = new Map ();     // Track which GPU contexts this object has
                                                                          // copied itself onto.
       }
-      copy_onto_graphics_card (context, need_initial_settings = true) {
+      copy_onto_graphics_card (context) {
 
           const existing_instance = this.gpu_instances.get (context);
           if ( !existing_instance) test_rookie_mistake ();
 
           // If this Texture was never used on this GPU context before, then prepare new buffer indices for this
           // context.
-          const gpu_instance = existing_instance || this.gpu_instances.set (context, defaults).get (context);
+          const gpu_instance = existing_instance || this.gpu_instances.set (context, {}).get (context);
 
           if ( !gpu_instance.fbo_pointer) gpu_instance.fbo_pointer = context.createFramebuffer ();
           if ( !gpu_instance.texture_buffer_pointer) gpu_instance.texture_buffer_pointer = context.createTexture ();
@@ -453,24 +454,33 @@ const Texture = tiny.Texture =
           gl.bindTexture (gl.TEXTURE_2D, gpu_instance.texture_buffer_pointer);
           gl.bindFramebuffer(gl.FRAMEBUFFER, gpu_instance.fbo_pointer);
 
-          if (need_initial_settings) {
-              gl.pixelStorei (gl.UNPACK_FLIP_Y_WEBGL, true);
-              // Always use bi-linear sampling when zoomed out.
-              gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl[ this.mag_filter ]);
-              // Apply user-defined sampling method when zoomed in.
-              gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl[ this.min_filter ]);
-              gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl[ "CLAMP_TO_BORDER" ]);
-              gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl[ "CLAMP_TO_BORDER" ]);
-              gl.texParameterfv (gl.TEXTURE_2D, gl.TEXTURE_BORDER_COLOR, [1.0, 1.0, 1.0, 1.0]);
+          gl.pixelStorei (gl.UNPACK_FLIP_Y_WEBGL, true);
 
-              //onto the fbo
-              gl.framebufferTexture2D (gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, gpu_instance.texture_buffer_pointer, 0);
-              gl.drawBuffers (gl.NONE);
-              gl.readBuffers (gl.NONE);
+          gl.texStorage2D(
+            gl.TEXTURE_2D,      // target
+            1,                  // mip levels
+            gl.DEPTH_COMPONENT16, // internal format
+            this.width, this.height
+          );
+          // gl.texImage2D(gl.TEXTURE_2D, 0, gl.DEPTH_COMPONENT16, this.width, this.height, 0,
+          //   gl.DEPTH_COMPONENT, gl.UNSIGNED_INT, null);
 
-          }
+          // Always use bi-linear sampling when zoomed out.
+          gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl[ this.mag_filter ]);
+          // Apply user-defined sampling method when zoomed in.
+          gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl[ this.min_filter ]);
+          gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl[ "CLAMP_TO_EDGE" ]);
+          gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl[ "CLAMP_TO_EDGE" ]);
+  //        gl.texParameterf (gl.TEXTURE_2D, gl.TEXTURE_BORDER_COLOR, [1.0, 1.0, 1.0, 1.0]);
 
-          gl.bindFramebuffer (gl.FRAMEBUFFER, 0);
+          //onto the fbo
+          gl.framebufferTexture2D (gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, gpu_instance.texture_buffer_pointer, 0);
+
+          gl.drawBuffers ([gl.NONE]);
+          gl.readBuffer (gl.NONE);
+
+          gl.bindFramebuffer (gl.FRAMEBUFFER, null);
+          gl.bindTexture( gl.TEXTURE_2D, null);
 
           return gpu_instance;
       }
@@ -484,7 +494,9 @@ const Texture = tiny.Texture =
           gl.bindTexture (gl.TEXTURE_2D, gpu_instance.texture_buffer_pointer);
       }
       deactivate (caller) {
-        caller.gl.viewport(0, 0, caller.width, caller.height);
+        caller.context.viewport(0, 0, caller.width, caller.height);
+        caller.context.bindFramebuffer (caller.context.FRAMEBUFFER, null);
+        caller.context.bindTexture( caller.context.TEXTURE_2D, null);
       }
   };
 
