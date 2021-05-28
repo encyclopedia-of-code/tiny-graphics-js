@@ -56,6 +56,7 @@ const Light = defs.Light =
     static NUM_LIGHTS = 2;
     static global_index = 0;
     static global_ambient = 0.4;
+    static GLOBAL_TEXTURE_OFFSET = 32;
 
     constructor(data) {
 
@@ -75,13 +76,15 @@ const Light = defs.Light =
                                         {name:"specular", type:"float"},
                                         {name:"attenuation_factor", type:"float"},
                                         {name:"casts_shadow", type:"bool"},
-                                        {name:"light_space_matrix", type:"Mat4"}
                                       ]
+                         },
+                         {num_instances: Light.NUM_LIGHTS * 6,
+                          data_layout: [{name:"light_space_matrix", type:"Mat4"}]
                          },
                         ];
 
       this.shadow_map = [];
-      this.light_space_matrix = [];
+      this.light_space_matrix = Array(6).fill(0).map(x => Mat4.identity());
       this.is_point_light = (this.direction_or_position[3] == 1.0);
 
       if (this.is_point_light) {
@@ -105,6 +108,7 @@ const Light = defs.Light =
 
 
       this.is_initialized = false;
+      this.is_shader_bound = false;
     }
     static default_values () {
       return {
@@ -136,6 +140,12 @@ const Light = defs.Light =
             UBO.Cache["Lights"].update("diffuse", this.diffuse, this.index);
             UBO.Cache["Lights"].update("specular", this.specular, this.index);
             UBO.Cache["Lights"].update("attenuation_factor", this.attenuation_factor, this.index);
+            UBO.Cache["Lights"].update("casts_shadow", this.casts_shadow, this.index);
+
+            for (let i = 0; i < 6; i++) {
+              UBO.Cache["Lights"].update("light_space_matrix", this.light_space_matrix[i], this.index * 6 + i);
+            }
+
             break;
           }
         }
@@ -149,13 +159,25 @@ const Light = defs.Light =
 
         //offset through UBOs for camera matrix and distance parameters??
       this.shadow_map_shader.activate(gl, {light_space_matrix: this.light_space_matrix[shadow_map_index]}, Mat4.identity(), undefined);
-
       this.shadow_map[shadow_map_index].activate(gl, 0, true);
     }
     deactivate (caller, shadow_map_index = 0) {
       if (!this.casts_shadow)
         return;
       this.shadow_map[shadow_map_index].deactivate(caller, true);
+    }
+    bind (context, program) {
+      if(this.is_shader_bound)
+        return;
+
+      for (let i = 0; i < 6; i++) {
+        let name = "shadow_maps[" + (this.index * 6 + i) + "]";
+        let texture_index = Light.GLOBAL_TEXTURE_OFFSET + this.index * 6 + i;
+        context.uniform1i (context.getUniformLocation (program, name), texture_index);
+        this.shadow_map[i].activate (context, texture_index);
+      }
+
+      this.is_shader_bound = true;
     }
   };
 
@@ -364,22 +386,21 @@ const Entity = defs.Entity =
         {
           for (let i = 0; i < 6; i++) {
             light.activate(caller.context, i);
-            this.flush(caller, false, light.shadow_map_shader);
+            this.flush(caller, [], false, light.shadow_map_shader);
             light.deactivate(caller, i);
           }
         }
         else {
           light.activate(caller.context);
-          this.flush(caller, false, light.shadow_map_shader);
+          this.flush(caller, [], false, light.shadow_map_shader);
           light.deactivate(caller);
         }
       }
     }
 
-    //$$$$$$$$$$$$$$$$$$$$$$$$$$   make a new flush that takes shader as an argument so that override entity shader, by creating dummy material
-    flush (caller, clear_entities = true, alternative_shader = undefined) {
+    //$$$$$$$$$$$$$$$$$$$$$$$$$$ PASS THE LIGHTS TO THE SHADER SO IT CAN BIND THEM
+    flush (caller, lights = [], clear_entities = true, alternative_shader = undefined) {
 
-      // Todo:  make dummy material(s) if required
       const shadow_pass_material = alternative_shader ?
                       new Material("shadow_pass_material", alternative_shader) :
                       undefined;

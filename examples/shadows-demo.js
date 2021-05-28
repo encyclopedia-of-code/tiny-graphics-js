@@ -10,7 +10,7 @@ class Shadows_Demo extends Component {
   init () {
     this.shapes = {square: new defs.Instanced_Cube_Index ()};
     this.shader = new defs.Instanced_Shader (Light.NUM_LIGHTS);
-    this.textured_shader = new defs.Textured_Instanced_Shader (Light.NUM_LIGHTS);
+    this.textured_shader = new defs.Shadow_Textured_Instanced_Shader (Light.NUM_LIGHTS);
 
     this.sun = new Light({direction_or_position: vec4(2.0, 5.0, 0.0, 0.0), color: vec3(1.0, 1.0, 1.0), diffuse: 0.6, specular: 0.2, attenuation_factor: 0.001,
       casts_shadow: true});
@@ -65,7 +65,9 @@ class Shadows_Demo extends Component {
         // Mat4.translation(... vec3(Math.random()* 2 - 1, Math.random(),  Math.random()*2 - 1).times_pairwise(vec3(20, 2, 20)))))
         this.renderer.submit(obj);
       }
-    this.renderer.shadow_map_pass(caller, [this.sun]);
-    this.renderer.flush(caller);
+
+    let Lights = [this.sun];
+    this.renderer.shadow_map_pass(caller, Lights);
+    this.renderer.flush(caller, Lights);
   }
 };
