@@ -29,9 +29,6 @@ const Basicer_Shader = defs.Basicer_Shader =
       }
   };
 
-
-
-
 const Basic_Shader = defs.Basic_Shader =
   class Basic_Shader extends Shader {
       // Basic_Shader is nearly the simplest way to subclass Shader, which stores and manages a GPU program.
@@ -385,14 +382,13 @@ const Instanced_Shader = defs.Instanced_Shader =
           }
          ];
       }
-      update_GPU (context, gpu_addresses, uniforms, model_transform, material, lights = []) {
+      update_GPU (context, gpu_addresses, uniforms, model_transform, material) {
         material.initialize(context, this.ubo_layout);
         material.bind(this.ubo_binding[0].binding_point);
         context.uniformMatrix4fv (gpu_addresses.global_transform, true, Matrix.flatten_2D_to_1D (model_transform));
-        for (let light of lights) {
-          light.bind(context, this.gpu_instances.program);
+        for (let light of uniforms.lights) {
+          light.bind(context, gpu_addresses);
         }
-
       }
       fragment_glsl_code () {         // ********* FRAGMENT SHADER *********
           return this.shared_glsl_code () + `
@@ -423,7 +419,9 @@ const Instanced_Shader = defs.Instanced_Shader =
           mat4 light_space_matrix[N_LIGHTS * 6];
         };
 
-        uniform sampler2D shadow_maps[N_LIGHTS * 6]; //since point lights have up to 6 samplers
+        const int NUM_SHADOW_MAPS = N_LIGHTS * 6;
+
+        uniform sampler2D shadow_maps[NUM_SHADOW_MAPS]; //since point lights have up to 6 samplers
 
         layout (std140) uniform Material
         {
@@ -432,7 +430,6 @@ const Instanced_Shader = defs.Instanced_Shader =
           vec3 specular;
           float smoothness;
         };
-
         uniform sampler2D diffuse_texture;
 
         in vec3 VERTEX_POS;
@@ -441,6 +438,25 @@ const Instanced_Shader = defs.Instanced_Shader =
 
         out vec4 frag_color;
 
+        // float ShadowCalculation(vec4 fragPosLightSpace, int index)
+        // {
+        //     // perform perspective divide
+        //     vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
+
+        //     // transform to [0,1] range
+        //     projCoords = projCoords * 0.5 + 0.5;
+
+        //     // get closest depth value from light's perspective (using [0,1] range fragPosLight as coords)
+        //     float closestDepth = texture(shadow_maps[index], projCoords.xy).r;
+
+        //     // get depth of current fragment from light's perspective
+        //     float currentDepth = projCoords.z;
+
+        //     // check whether current frag pos is in shadow
+        //     float shadow = currentDepth > closestDepth  ? 1.0 : 0.0;
+
+        //     return shadow;
+        // }
 
         // ***** PHONG SHADING HAPPENS HERE: *****
         vec3 phong_model_lights( vec3 N, vec3 vertex_worldspace ) {
@@ -463,6 +479,31 @@ const Instanced_Shader = defs.Instanced_Shader =
                 vec3 light_contribution = color.xyz * lights[i].color.xyz * diffuse * lights[i].diffuse * diffuse
                                                           + lights[i].color.xyz * specular * lights[i].specular * specular;
 
+                vec4 fragPosLightSpace = light_space_matrix[i * 6] * vec4 (VERTEX_POS, 1.0);
+
+
+
+                  // perform perspective divide
+                  vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
+
+                  // transform to [0,1] range
+                  projCoords = projCoords * 0.5 + 0.5;
+
+                  // get closest depth value from light's perspective (using [0,1] range fragPosLight as coords)
+                  // float closestDepth = texture(shadow_maps[i*6], projCoords.xy).r;
+
+                  // // get depth of current fragment from light's perspective
+                  // float currentDepth = projCoords.z;
+
+                  // // check whether current frag pos is in shadow
+                  // float shadow = currentDepth > closestDepth  ? 1.0 : 0.0;
+
+
+
+
+
+               // float shadow = ShadowCalculation(FragPosLightSpace, i);
+                // result += attenuation * (1.0 - shadow) * light_contribution;
                 result += attenuation * light_contribution;
               }
             return result;

@@ -108,7 +108,7 @@ const Light = defs.Light =
 
 
       this.is_initialized = false;
-      this.is_shader_bound = false;
+      this.are_textures_bound = false;
     }
     static default_values () {
       return {
@@ -166,18 +166,24 @@ const Light = defs.Light =
         return;
       this.shadow_map[shadow_map_index].deactivate(caller, true);
     }
-    bind (context, program) {
-      if(this.is_shader_bound)
+    bind (context, gpu_addresses) {
+
+      // TODO:  The light can't re-bind if it gets unbound
+          // update: (we would just destroy it and reuse its index rather than unbind/rebind)
+      if(this.are_textures_bound)
         return;
 
       for (let i = 0; i < 6; i++) {
+        if( !this.shadow_map[i])
+          continue;
         let name = "shadow_maps[" + (this.index * 6 + i) + "]";
         let texture_index = Light.GLOBAL_TEXTURE_OFFSET + this.index * 6 + i;
-        context.uniform1i (context.getUniformLocation (program, name), texture_index);
+
+        context.uniform1i (gpu_addresses[name], texture_index);
         this.shadow_map[i].activate (context, texture_index);
       }
 
-      this.is_shader_bound = true;
+      this.are_textures_bound = true;
     }
   };
 
@@ -413,7 +419,7 @@ const Entity = defs.Entity =
             entity.shape.fill_buffer(["matrix"], undefined, 1);
             entity.dirty = false;
           }
-          entity.shape.draw(caller, {}, entity.global_transform, shadow_pass_material || entity.material, undefined, 1);
+          entity.shape.draw(caller, {lights}, entity.global_transform, shadow_pass_material || entity.material, undefined, 1);
         }
         else {
           if (entity.dirty && entity.shape.ready) {
@@ -421,7 +427,7 @@ const Entity = defs.Entity =
             entity.shape.fill_buffer(["matrix"], undefined, 1);
             entity.dirty = false;
           }
-          entity.shape.draw(caller, {}, entity.global_transform, shadow_pass_material || entity.material, undefined, entity.transforms.length);
+          entity.shape.draw(caller, {lights}, entity.global_transform, shadow_pass_material || entity.material, undefined, entity.transforms.length);
         }
       }
 

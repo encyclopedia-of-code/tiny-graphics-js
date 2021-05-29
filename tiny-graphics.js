@@ -473,6 +473,21 @@ const Texture = tiny.Texture =
           gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl[ "CLAMP_TO_EDGE" ]);
   //        gl.texParameterf (gl.TEXTURE_2D, gl.TEXTURE_BORDER_COLOR, [1.0, 1.0, 1.0, 1.0]);
 
+
+
+
+  // const tex = gl.createTexture();
+  // gl.bindTexture(gl.TEXTURE_3D, tex);
+  // gl.texImage3D(gl.TEXTURE_3D, 0, gl.RGBA8, this.width, this.height, depth of texture???, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+
+  // gl.framebufferTextureLayer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT16, tex, 0, light.index);
+
+
+
+
+
+
+
           //onto the fbo
           gl.framebufferTexture2D (gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, gpu_instance.texture_buffer_pointer, 0);
 
