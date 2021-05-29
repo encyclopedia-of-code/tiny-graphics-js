@@ -56,7 +56,7 @@ const Light = defs.Light =
     static NUM_LIGHTS = 2;
     static global_index = 0;
     static global_ambient = 0.4;
-    static GLOBAL_TEXTURE_OFFSET = 32;
+    static GLOBAL_TEXTURE_OFFSET = 16;
 
     constructor(data) {
 
