@@ -678,7 +678,8 @@ const Minimal_Shape = defs.Minimal_Shape =
 
           this.indices = unpacked.indices;
         }
-        this.normalize_positions( false );
+
+        //this.normalize_positions( false );
 
         //Deduce it from the obj data!
         this.fill_buffer( selection_of_attributes );

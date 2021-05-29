@@ -40,16 +40,16 @@ class Fish_Demo extends Component {
          shark_2r: new defs.Shape_From_File("models/shark_2r.obj"),
          // Shrimp
          food: new defs.Shape_From_File("models/copepod.obj"),
-
       }
 
-    this.shader = new defs.Textured_Instanced_Shader (Light.NUM_LIGHTS);
+    this.shader = new defs.Instanced_Shader (Light.NUM_LIGHTS);
+    this.textured_shader = new defs.Textured_Instanced_Shader (Light.NUM_LIGHTS);
 
     this.materials = {
       red_phong: new Material("Red_Phong", this.shader, { color: vec4(0.92, 0.22, 0.66, 1.0), diffuse: vec3(0.92, 0.22, 0.66), specular: vec3(1.0, 1.0, 1.0), smoothness: 32.0 }),
-      phong: new Material("Phong", this.shader, { color: vec4(1.0, 1.0, 1.0, 1.0), diffuse: vec3(1.0, 1.0, 1.0), specular: vec3(1.0, 1.0, 1.0), smoothness: 32.0 }, { diffuse_texture: new Texture( "assets/rgb.jpg" ) }),
-      fish: new defs.Material_From_File("Fish", this.shader, "assets/fish_cm/fish_cm.mtl"),
-      shark: new defs.Material_From_File("Shark", this.shader, "assets/shark_cm/shark_cm.mtl"),
+      grey_phong: new Material("Phong", this.textured_shader, { color: vec4(0.5, 0.5, 0.5, 1.0), diffuse: vec3(0.5, 0.5, 0.5), specular: vec3(1.0, 1.0, 1.0), smoothness: 32.0 }, {diffuse_texture: new Texture("models/coral.jpg")}),
+      fish: new defs.Material_From_File("Fish", this.textured_shader, "models/fish.mtl", {diffuse_texture: new Texture("models/fish_icon_red.jpg")}),
+      shark: new defs.Material_From_File("Shark", this.textured_shader, "assets/shark_cm/shark_cm.mtl"),
 
    }
 
@@ -59,9 +59,10 @@ class Fish_Demo extends Component {
 
     this.renderer = new Renderer();
 
-    this.fish_entity = new Entity(this.shapes.fish, Mat4.identity(), this.materials.fish);
+    this.fish_entity = new Entity(this.shapes.fish2, Mat4.identity(), this.materials.fish);
     this.shark_entity = new Entity(this.shapes.shark, Mat4.identity(), this.materials.shark);
     this.shrimp_entity = new Entity(this.shapes.food, Mat4.identity(), this.materials.red_phong);
+    this.obstacle_ball_entity = new Entity(this.shapes.ball, Mat4.identity(), this.materials.grey_phong);
   }
 
 
@@ -98,16 +99,26 @@ class Fish_Demo extends Component {
 
     //FISH AND SHARK UPDATE
     let fish_list =  this.game.move(this.food_list, dt);
-    let map = {fish: [], shark: []};
+    let fish_map = {fish: [], shark: []};
     for(let f of fish_list) {
-      this.draw_fish(caller.context, this.uniforms, f, map);
+      this.draw_fish(caller.context, this.uniforms, f, fish_map);
     }
-    this.fish_entity.set_transforms(map["fish"]);
-    this.shark_entity.set_transforms(map["shark"]);
+    this.fish_entity.set_transforms(fish_map["fish"]);
+    this.shark_entity.set_transforms(fish_map["shark"]);
+
+    //OBSTACLES
+    let obstacle_list = this.game.school.obstacle_list;
+    let obstacle_map = {obstacle: [], ball: [], cylinder: []};
+    for(let f of obstacle_list) {
+        this.draw_obstacle(caller.context, this.uniforms, f, obstacle_map);
+    }
+    this.obstacle_ball_entity.set_transforms(obstacle_map["ball"]);
+
 
     //this.renderer.shadow_map_pass(caller, Lights);
     this.renderer.submit(this.fish_entity);
     this.renderer.submit(this.shark_entity);
+    this.renderer.submit(this.obstacle_ball_entity);
     this.renderer.flush(caller, Lights);
   }
 
@@ -143,12 +154,12 @@ class Fish_Demo extends Component {
 
     let my_scale = 2;
 
-    if(f.type == "fish"  && f.live == true && fish_type == "fish") {
+    if(f.type == "fish"  && f.live == true) {
         my_scale = 2;
         m=m.times(Mat4.scale(my_scale, my_scale, my_scale));
     }
 
-    if(f.type == "shark" && fish_type == "shark") {
+    if(f.type == "shark") {
          my_scale = 5;
          m=m.times(Mat4.scale(my_scale, my_scale, my_scale));
 
@@ -166,7 +177,43 @@ class Fish_Demo extends Component {
 
     }
 
-    map[fish_type].push(m);
+    map[f.type].push(m);
  }
+
+ draw_obstacle(context, program_state, f, map) {
+
+  let x=f.position.x;
+  let y=f.position.y;
+  let z=f.position.z;
+  let r=f.r;
+  let h=f.h;
+
+  //console.log("draw_fish " + i);
+
+  let m = Mat4.identity();
+
+  m = m.times(Mat4.translation(x, y, -z));     // translate the rotated fish into position
+
+  // this area can be optimized to omit calculations for dead fish.
+
+  let my_scale = 1;
+
+  if(f.type == "obstacle") {
+      m=m.times(Mat4.scale(r, r, r));
+      //this.shapes.cube.draw(context, program_state, m, this.materials.phong);
+  }
+
+  if(f.type == "ball") {
+      m=m.times(Mat4.scale(r, r, r));
+      //this.shapes.ball.draw(context, program_state, m, this.materials.phong);
+  }
+
+  if(f.type == "cylinder") {
+       m=m.times(Mat4.scale(r, h, r));
+       //this.shapes.cylinder.draw(context, program_state, m, this.materials.phong);
+  }
+
+  map[f.type].push(m);
+}
 
 };
