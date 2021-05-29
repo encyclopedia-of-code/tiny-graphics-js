@@ -42,13 +42,13 @@ class Fish_Demo extends Component {
 
    }
 
-    this.sun = new Light({direction_or_position: vec4(0.0, 2.0, 0.0, 0.0), color: vec3(1.0, 1.0, 1.0), diffuse: 0.4, specular: 0.1, attenuation_factor: 0.001, casts_shadow: true});
+    this.sun = new Light({direction_or_position: vec4(0.0, 2.0, 0.0, 0.0), color: vec3(1.0, 1.0, 1.0), diffuse: 0.6, specular: 0.1, attenuation_factor: 0.001, casts_shadow: true});
 
     this.camera = new Camera(vec3(0.0, 0.0, 2.0));
 
     this.renderer = new Renderer();
 
-    this.fish_entity = new Entity(this.shapes.shark, Mat4.identity(), this.materials.phong);
+    this.fish_entity = new Entity(this.shapes.fish2, Mat4.identity(), this.materials.phong);
     this.shark_entity = new Entity(this.shapes.shark, Mat4.identity(), this.materials.shark);
     this.shrimp_entity = new Entity(this.shapes.food, Mat4.identity(), this.materials.red_phong);
   }
@@ -73,7 +73,7 @@ class Fish_Demo extends Component {
 
     let Lights = [this.sun];
     //this.renderer.shadow_map_pass(caller, Lights);
-    this.renderer.submit(this.fish_entity);
+    this.renderer.submit(this.shark_entity);
     this.renderer.flush(caller, Lights);
   }
 };
