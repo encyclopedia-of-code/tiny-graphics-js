@@ -53,9 +53,9 @@ const Light = defs.Light =
 
     //Break it down into a Shadow_Light subclass!
 
-    static NUM_LIGHTS = 2;
+    static NUM_LIGHTS = 1;
     static global_index = 0;
-    static global_ambient = 0.4;
+    static global_ambient = 0.1;
     static GLOBAL_TEXTURE_OFFSET = 16;
 
     constructor(data) {

@@ -13,6 +13,8 @@ import {Axes_Viewer, Axes_Viewer_Test_Scene, Matrix_Game}
                     from "./examples/axes-viewer.js";
 import {Demonstration}
                     from "./examples/demonstration.js";
+import {Fish_Demo}
+                    from "./examples/fish-demo.js";
 import {Inertia_Demo, Collision_Demo}
                     from "./examples/collisions-demo.js";
 import {Instanced_Cubes_Demo}
@@ -38,6 +40,7 @@ Object.assign (defs,
                {Minimal_Webgl_Demo},
                {Axes_Viewer, Axes_Viewer_Test_Scene, Matrix_Game},
                {Demonstration},
+               {Fish_Demo},
                {Inertia_Demo, Collision_Demo},
                {Instanced_Cubes_Demo},
                {Many_Lights_Demo},
@@ -52,7 +55,7 @@ Object.assign (defs,
 
 // ******************** SELECT THE DEMO TO DISPLAY:
 
-const main_scene        = Shadows_Demo;
+const main_scene        = Fish_Demo;
 const additional_scenes = [];
 
 export {main_scene, additional_scenes, defs};

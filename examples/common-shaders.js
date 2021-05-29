@@ -304,7 +304,7 @@ const Instanced_Shader = defs.Instanced_Shader =
                 float specular = pow( max( dot( N, H ), 0.0 ), smoothness );     // Use Blinn's "halfway vector" method.
                 float attenuation = 1.0 / (1.0 + lights[i].attenuation_factor * distance_to_light * distance_to_light );
 
-                //vec4 color = texture( diffuse_texture, VERTEX_TEXCOORD );
+                vec4 color = texture( diffuse_texture, VERTEX_TEXCOORD );
                 vec3 light_contribution = color.xyz * lights[i].color.xyz * diffuse * lights[i].diffuse * diffuse
                                                           + lights[i].color.xyz * specular * lights[i].specular * specular;
 
@@ -316,7 +316,7 @@ const Instanced_Shader = defs.Instanced_Shader =
         void main() {
           // Compute an initial (ambient) color:
           vec4 tex_color = texture( diffuse_texture, VERTEX_TEXCOORD );
-          frag_color = vec4( ( tex_color.xyz + color.xyz ) * ambient, color.w * tex_color.w );
+          frag_color = vec4( ( tex_color.xyz ) * ambient, tex_color.w );
           // Compute the final color with contributions from lights:
           frag_color.xyz += phong_model_lights( normalize( VERTEX_NORMAL ), VERTEX_POS );
         }`;
@@ -510,7 +510,7 @@ const Instanced_Shader = defs.Instanced_Shader =
                 float specular = pow( max( dot( N, H ), 0.0 ), smoothness );     // Use Blinn's "halfway vector" method.
                 float attenuation = 1.0 / (1.0 + lights[i].attenuation_factor * distance_to_light * distance_to_light );
 
-                //vec4 color = texture( diffuse_texture, VERTEX_TEXCOORD );
+                vec4 color = texture( diffuse_texture, VERTEX_TEXCOORD );
                 vec3 light_contribution = color.xyz * lights[i].color.xyz * diffuse * lights[i].diffuse * diffuse
                                                           + lights[i].color.xyz * specular * lights[i].specular * specular;
 
@@ -527,7 +527,7 @@ const Instanced_Shader = defs.Instanced_Shader =
         void main() {
           // Compute an initial (ambient) color:
           vec4 tex_color = texture( diffuse_texture, VERTEX_TEXCOORD );
-          frag_color = vec4( ( tex_color.xyz + color.xyz ) * ambient, color.w * tex_color.w );
+          frag_color = vec4( ( tex_color.xyz ) * ambient, tex_color.w );
           // Compute the final color with contributions from lights:
           frag_color.xyz += phong_model_lights( normalize( VERTEX_NORMAL ), VERTEX_POS );
         }`;
