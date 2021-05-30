@@ -38,7 +38,7 @@ export class PVector {
       this.z = z;
    }
 
-   duplicate() {  // add points
+   duplicate() {  // copy points
       let p = new PVector(0,0,0);
       p.x = this.x;
       p.y = this.y;
@@ -46,15 +46,22 @@ export class PVector {
       return p;
    }
 
-   add(other) {  // add points
+   add_to(other) {  // vector add points
       let p = new PVector(0,0,0);
+      p.x = this.x + other.x;
+      p.y = this.y + other.y;
+      p.z = this.z + other.z;
+      return p;
+   }
+
+   add(other) {  // vector add points
       this.x = this.x + other.x;
       this.y = this.y + other.y;
       this.z = this.z + other.z;
       return this;
    }
 
-   sub(other) {  // add points
+   sub(other) {  // vector subtract points
       this.x = this.x - other.x;
       this.y = this.y - other.y;
       this.z = this.z - other.z;
@@ -155,102 +162,20 @@ export class PVector {
 
 // tests for vector math routines
 
+export function normalize_angle(a) {  // put a in range -pi to pi
+
+   let PI = 3.14159;
+   if (a > PI)a = a - 2 * PI;
+   if (a > PI)a = a - 2 * PI;
+   if (a < -PI)a = a + 2 * PI;
+   if (a < -PI)a = a + 2 * PI;
+   return a;
+}
 
 export function do_math_test() {
    console.log("Math test");
 /*
-   let a = new PVector(2,2,2);
-   let b = new PVector(3,0,0);
-   let c = new PVector(4,0,-.3);
-   let d = new PVector(0,5,0);
-   let e = new PVector(-6,-6,-6);
-
-  // let f = new PVector(0,0,0);
-
-   //functions
-
-  // f = pv_add(a,c);
-
-   console.log("Start values:")
-   console.log("a=" + JSON.stringify(a));
-   console.log("b=" + JSON.stringify(b));
-   console.log("c=" + JSON.stringify(c));
-   console.log("d=" + JSON.stringify(d));
-   console.log("e=" + JSON.stringify(e));
-
-   console.log("Testing static fuctions");
-
-   console.log("f=pv_add(a,b)");
-
-   console.log("a+a=" + JSON.stringify(pv_add(a,a)));
-   console.log("a+b=" + JSON.stringify(pv_add(a,b)));
-   console.log("d+e=" + JSON.stringify(pv_add(d,e)));
-   console.log("e+e=" + JSON.stringify(pv_add(e,e)));
-   console.log("a+c=" + JSON.stringify(pv_add(a,c)));
-
-   console.log("f=pv_sub(a,b)");
-
-   console.log("a-a=" + JSON.stringify(pv_sub(a,a)));
-   console.log("a-b=" + JSON.stringify(pv_sub(a,b)));
-   console.log("d-e=" + JSON.stringify(pv_sub(d,e)));
-   console.log("e-e=" + JSON.stringify(pv_sub(e,e)));
-   console.log("a-c=" + JSON.stringify(pv_sub(a,c)));
-
-   console.log("f=pv_dist(a,b)");
-
-   console.log("dist(a,a)=" + JSON.stringify(pv_dist(a,a)));
-   console.log("dist(a,b)=" + JSON.stringify(pv_dist(a,b)));
-   console.log("dist(a,e)=" + JSON.stringify(pv_dist(d,e)));
-   console.log("dist(e,e)=" + JSON.stringify(pv_dist(e,e)));
-   console.log("dist(a,c)=" + JSON.stringify(pv_dist(a,c)));
-
-   console.log("Test static functions.");
-   console.log("a.add(a)" + JSON.stringify(a.add(a)));
-   console.log("a.add(b)" + JSON.stringify(a.add(b)));
-   console.log("a.add(c)" + JSON.stringify(a.add(c)));
-   console.log("a.add(d)" + JSON.stringify(a.add(d)));
-   console.log("a.add(e)" + JSON.stringify(a.add(e)));
-
-   console.log("a.sub(a)" + JSON.stringify(a.sub(a)));
-   console.log("a.sub(b)" + JSON.stringify(a.sub(b)));
-   console.log("a.sub(c)" + JSON.stringify(a.sub(c)));
-   console.log("a.sub(d)" + JSON.stringify(a.sub(d)));
-   console.log("a.sub(e)" + JSON.stringify(a.sub(e)));
-
-   let x=3;
-   a=new PVector(2,2,2);
-   console.log("x=3");
-   console.log("a.mult(x)=" + JSON.stringify(a.mult(x)));
-   console.log("b.mult(x)=" + JSON.stringify(b.mult(x)));
-   console.log("c.mult(x)=" + JSON.stringify(c.mult(x)));
-   console.log("d.mult(x)=" + JSON.stringify(d.mult(x)));
-   console.log("e.mult(x)=" + JSON.stringify(e.mult(x)));
-
-   console.log("a.div(x)=" + JSON.stringify(a.div(x)));
-   console.log("b.div(x)=" + JSON.stringify(b.div(x)));
-   console.log("c.div(x)=" + JSON.stringify(c.div(x)));
-   console.log("d.div(x)=" + JSON.stringify(d.div(x)));
-   console.log("e.div(x)=" + JSON.stringify(e.div(x)));
-
-   console.log("a.mag()=" + JSON.stringify(a.mag()));
-   console.log("b.mag()=" + JSON.stringify(b.mag()));
-   console.log("c.mag()=" + JSON.stringify(c.mag()));
-   console.log("d.mag()=" + JSON.stringify(d.mag()));
-   console.log("e.mag()=" + JSON.stringify(e.mag()));
-
-   console.log("a.normalize()=" + JSON.stringify(a.normalize()));
-   console.log("b.normalize()=" + JSON.stringify(b.normalize()));
-   console.log("c.normalize()=" + JSON.stringify(c.normalize()));
-   console.log("d.normalize()=" + JSON.stringify(d.normalize()));
-   console.log("e.normalize()=" + JSON.stringify(e.normalize()));
-
-
-   console.log("Testing angle");
-   let f = PVector(1,0,0);
-   let g = PVector(0,1,0);
-   let h = PVector(0,0,1);
-
-   console.log("a.angle()=" + JSON.stringify(a.angle()));
+tests have been removed from this version
 */
 
 }
@@ -280,20 +205,15 @@ export class Fish {  // these are our fish
       this.type = "fish";  // right now the choices are fish or shark but we can add more later.
       this.live = true;    // this will become false if this fish has been eaten.  In that case do not draw it.
       this.mouth_state="fish_CM";
-      // This is going to require a bunch of fixes to accomodate sharkes and fish that have been eaten.
-      // dead fish do not school.
-      // dead fish do not attract sharks.
-      // dead fish should not be drawn.
-
-      this.acceleration = new PVector(0,0,0);
-      this.velocity =  new PVector(vx, vy, vz);
+      this.acceleration = new PVector(0, 0, 0);
+      this.save_acceleration = new PVector(0, 0, 0);
+      this.turning_angle = 0; // xz angle of turn, for drawing turning sharks.
+      this.velocity = new PVector(vx, vy, vz);
       this.position = new PVector(x,y,z);
       this.r=2.0;
       this.maxspeed = 1; // 2;
       this.maxforce = 0.03;
       this.desired_separation = 25;
-      this.food_seekdistance = 0.0;
-      this.previous_position = new PVector(x,y,z);
 
       fish_count++;
    }
@@ -301,6 +221,26 @@ export class Fish {  // these are our fish
    theta () {
       let theta=this.velocity.angle();
       return theta;
+   }
+
+//   theta_a () {  // this is not the calculation we need
+//      let theta=this.acceleration.angle();
+//      this.theta_acceleration = theta;
+//      return theta;
+//   }
+
+   get_turn_angle() {
+      // Is this fish is turning left or right?
+      let a = this.velocity.duplicate();
+      let b = this.velocity.duplicate();
+      b.add(this.save_acceleration);
+      let a1 = a.angle();
+      a1 = normalize_angle(a1);
+      let a2 = b.angle();
+      a2 = normalize_angle(a2);
+      let a3 = a2-a1;
+      a3 = normalize_angle(a3);
+      return a3;
    }
 
    phi () {
@@ -322,16 +262,9 @@ export class Fish {  // these are our fish
 
       // obstacles and food are handled within flock
 
-
-
-
-// debugging - is foodlist defined?
-
-
-
       this.flock(fish_list, obstacle_list, food_list);  // not dt
 
-      // update velocities and positions
+      // up-date velocities and positions
       // This does depend on dt
 
       this.update(dt);
@@ -348,13 +281,14 @@ export class Fish {  // these are our fish
 
    // We accumulate a new acceleration each time based on three rules of flocking
    // plus rules for fleeing predators, eating, and avoiding obstacles
+
+
    flock(fish_list, obstacle_list, food_list) {
-
-
-// I suspect that the foodlist is not getting passed here.
-// seekFood is choking on bad foodlist
-
+      // FInd the path for a particular fish
+      // Takes into account factors such as schooling,
+      // fleeing sharks, and pursuing food
       if(this.type == "fish") {
+         let wan = this.wander();              // What the fish does if none of the other forces are active
          let sep = this.separate(fish_list);   // Separation - do not collide with nearby fish
          let ali = this.align(fish_list);      // Alignment - align with nearby fish
          let coh = this.cohesion(fish_list);   // Cohesion - find other fish
@@ -363,6 +297,7 @@ export class Fish {  // these are our fish
          let avo = this.avoid(obstacle_list);  // Do not collide with obstacles
 
          // Arbitrarily weight these forces
+         wan.mult(1.0);
          sep.mult(1.5);
          ali.mult(1.0);
          coh.mult(1.0);
@@ -371,6 +306,7 @@ export class Fish {  // these are our fish
          avo.mult(3.0);
 
          // Add the force vectors to acceleration
+         this.applyForce(wan);  // for the moment this force is zero
          this.applyForce(sep);
          this.applyForce(ali);
          this.applyForce(coh);
@@ -383,19 +319,35 @@ export class Fish {  // these are our fish
 
       // this is not really the best way to do it, but for now...
       if(this.type =="shark"){
-         console.log(this.name + "  loking for food.")
+         let wan = this.wander();              // What the fish does if none of the other forces are active
+         let sep = this.separate(fish_list);   // Separation - do not collide with nearby fish
+
+         this.applyForce(wan);  // for the moment this force is zero
+         this.applyForce(sep);
+
+         // console.log(this.name + "  looking for food.")
          let food = this.look_for_food(fish_list);
          this.applyForce(food);
          let avo = this.avoid(obstacle_list);  // Do not collide with obstacles
          this.applyForce(avo);
       }
+
    }
 
    // Method to seek and eat food
+   wander() {
+      // Fish have a preference to swim horizontally.
+      // scale will control how fast they level out.
+      let scale = .1;
+      let ay = this.velocity.y;
+      ay = - ay * scale;
+      var steer = new PVector(0, ay, 0);  // default is do nothing
+      return steer;
+   }
+
    seekFood(food_list) {
-
+      // Method to seek and eat food
       var steer = new PVector(0, 0, 0);  // default is do nothing
-
       let closestFoodCoord = new PVector();   // closet --> closest
       let closestFoodDist = Number.MAX_SAFE_INTEGER;
       for(let food of food_list) {  // we are getting undefined list errors, check calling routine
@@ -425,27 +377,39 @@ export class Fish {  // these are our fish
       return steer;
    }
 
-
-
-
-   // Method to update position, acceleration and velocity
+   // Method to up-date position, acceleration and velocity
 
    update(dt) {
+
+      // console.log("Acceleration received by update: " + JSON.stringify(this.acceleration));
+
       // Update velocity
       let scale = .2;
       if(dt>scale)dt=scale;
 
+      // preserve direction for the purpose of animating the shark
+      //
+      this.save_acceleration = this.acceleration.duplicate();  // saves to object
+
+      if(this.type == "shark") {
+         // console.log("Acceleration copy: " + JSON.stringify(this.save_acceleration));
+         //debugger;  // debugging problems with sharks
+      }
+
+      // Make another copy for this calculation
       let a = this.acceleration.duplicate()
       a.mult(dt/scale);
 
       //this.velocity.add(this.acceleration);
       this.velocity.add(a);
+
       // Limit speed
       this.velocity.limit(this.maxspeed);
 
       let v = this.velocity.duplicate();
       v.mult(dt/scale);
 
+      //let f = this.fish_turn_angle();
 
       //this.position.add(this.velocity);
 
@@ -521,7 +485,7 @@ export class Fish {  // these are our fish
          let r = this.r + obstacle.r;  // allow for radius of obstacle and fish
 
          if(d==0){
-            console.log("Warning: fish is sitting on an object dsitance=0.  Numerically this is a problem.")
+            console.log("Warning: fish is sitting on an object distance=0.  Numerically this is a problem.")
             sum.add(1,0,0);  // default behavior.  This is completely arbitrary
             // but will prevent our fish from sitting on an obstacle and not moving.
          }
@@ -539,8 +503,10 @@ export class Fish {  // these are our fish
                //   " > min disk " + minimum_acceptable_distance + ".   No action taken");
             }
             else {
-               // console.log("We will collide.  Distance of closests approach = " + distance_of_closest_approach +
-               //    "\nMinimum acceptable distance = " + minimum_acceptable_distance + ".  \nWe will attempt to evade.");
+               // console.log("We will collide.  Distance of closests approach = " +
+               //distance_of_closest_approach +
+               //    "\nMinimum acceptable distance = " + minimum_acceptable_distance +
+               // ".  \nWe will attempt to evade.");
 
                // if we are headed directly to the center, choose an arbitrary perpendiclar vector
                //let p = PVector(0,0,0);
@@ -568,8 +534,13 @@ export class Fish {  // these are our fish
    //
    // Method checks for nearby fish and steers away from them
 
+   // I am modifying this to prevent sharks from colliding too  --Jim
+
    separate (fishes) {
-      var desiredseparation = 4;  // 25.0;
+      var desired_separation = 6;  // 25.0;
+      // we might want to make this different for sharks
+      if(this.type=="shark") desired_separation = 25;
+
       var steer = new PVector(0, 0, 0);
       var count = 0;
 
@@ -578,11 +549,16 @@ export class Fish {  // these are our fish
       // except sharks
 
       for (let other of fishes) {
+
+         // we might want to check the type of the fish
+         // fish avoid everyone
+         // sharks avoid each other but do not avoid fish
+
          var d = pv_dist(this.position, other.position);
          // If the distance is greater than 0 and less than an
          // arbitrary amount (0 when you are yourself)
 
-         if ((d > 0) && (d < desiredseparation)) {
+         if ((d > 0) && (d < desired_separation) && this.type == other.type) {
             // Calculate vector pointing away from neighbor
             var diff = pv_sub(this.position, other.position);
             diff.normalize();
@@ -709,7 +685,7 @@ export class Fish {  // these are our fish
 
 
 //------------------------------ SHARK ----------------------------------
-export var food_seekdistance = 0.0;
+
 export class Shark extends Fish {
 
    constructor(x, y, z, vx, vy, vz) {
@@ -719,37 +695,17 @@ export class Shark extends Fish {
       this.type="shark";
       this.mouth_state="shark_CM";
       this.r = 5;
-      this.previous_position = new PVector(x,y,z);
    }
 
    look_for_food(fish_list) {   // go through the list and see if we can find anything to eat
       // debugger;
-      console.log("Checking distances of potential food.")
+      // console.log("Checking distances of potential food.")
       let food_distance = 1000;   // arbitrary far away distance
-      let vision_distance = 50;    // shark can't see very far
+      let vision_distance = 35;    // shark can't see very far
       let bite_distance = 5;  // how close to food we are eating.
       let food_direction = new PVector(0, 0, 0);
       let food = 0;
       this.mouth_state="shark_CM";
-      let food_seekdistance_threshold = 40.0;
-      let food_wander_weight = 10.0;
-
-      console.log(food_seekdistance)
-      var tmp_dif = pv_sub(this.position, this.previous_position);
-      food_seekdistance = food_seekdistance + tmp_dif.mag();
-      this.previous_position = this.position.duplicate();
-
-      if(food_seekdistance > food_seekdistance_threshold){
-         var random_x = Math.random() * 2 - 1;
-         var random_y = Math.random() * 2 - 1;
-         var random_z = Math.random() * 2 - 1;
-         food_direction = new PVector(random_x, random_y, random_z)
-         food_direction.normalize()
-         food_direction.mult(food_wander_weight)
-         console.log("Direction test!!")
-         console.log(food_direction)
-         food_seekdistance = 0.0;
-      }
 
       // Find the nearest edible and live fish
       for (let other of fish_list) {
@@ -760,7 +716,6 @@ export class Shark extends Fish {
                   if (other.type == "fish") {  // self is excluded, right?
                      food = other;  // We have found an edible fish within vision range
                      food_distance = d
-                     this.food_seekdistance = 0.0;
                   }
                }
             }
@@ -848,6 +803,10 @@ export class School {
       // debugger;
    }
 
+
+
+
+
    run(food_list, dt) {
       for(let fish of this.fish_list) {
 
@@ -858,9 +817,116 @@ export class School {
       }
    }
 
+   on_obstacles(food_coord) {  //Brooke
+       let smallest_dist = Number.MAX_SAFE_INTEGER;
+       let max_range = 2;
+       //console.log("Caculate distance");
+       for (let obstacle of this.obstacle_list) {
+           let dist = pv_dist(food_coord, obstacle.position);
+           dist = dist - (1.5 * obstacle.r);
+           if (dist <0) dist = 0; //  a rough approximation of distance
+           if(dist < smallest_dist) {
+               smallest_dist = dist;
+           }
+       }
+       if(smallest_dist < max_range) {
+           return true;
+       }
+       return false;
+   }
+
+   get_open_location() {  // Brooke
+       // We want a location that is not blocked by an obstacle
+       // This can be used when creating food or fish
+
+       let play_area = .8 * game_size;
+       if(play_area < 10) play_area = 10;  // just in case
+
+       let x = Math.floor(Math.random() * play_area * 2.0) - play_area;
+       let y = Math.floor(Math.random() * play_area * 2.0) - play_area;
+       let z = Math.floor(Math.random() * play_area * 2.0) - play_area;
+
+       let food_coord = new PVector(x, y, z);
+       while(this.on_obstacles(food_coord)) {
+           // console.log("Keep trying");
+           x = Math.floor(Math.random() * play_area * 2.0) - play_area;
+           y = Math.floor(Math.random() * play_area * 2.0) - play_area;
+           z = Math.floor(Math.random() * play_area * 2.0) - play_area;
+           food_coord = new PVector(x, y, z);
+       }
+       return food_coord;
+   }
+
    add_fish(b) {
       this.fish_list.push(b);
    }
+
+
+   add_a_shark() {
+      // Choose a random direction and location
+      let angle = Math.random() * 2 * Math.PI;
+      let anglez = -Math.PI/2 + (Math.random() * Math.PI);  // about -1.6 to 1.6
+      // x is left, y is up, z is towards us
+      let l = this.get_open_location();
+      let f = new Shark(l.x, l.y, l.z,
+         Math.cos(angle),
+         Math.sin(anglez),
+         Math.sin(angle)  );
+      this.add_fish(f);
+      return f;
+   }
+
+
+   add_a_fish() {
+      // Choose a random location
+      let l = this.get_open_location();
+
+      // choose a random direction
+      let angle = Math.random() * 2 * Math.PI;
+      let anglez = -Math.PI/2 + (Math.random() * Math.PI);  // about -1.6 to 1.6
+      let f = new Fish(l.x, l.y, l.z,
+         Math.cos(angle),
+         Math.sin(anglez),
+         Math.sin(angle)  );
+      this.add_fish(f);
+
+      return f;
+   }
+
+
+   add_school_fish() {
+      // Createa a school of fish
+      let nfish = 10;
+
+      // Choose a random location
+      let l = this.get_open_location();
+      let i = 0;
+
+      for(i = 0; i < nfish; i++) {
+         // choose a random direction
+         let angle = Math.random() * 2 * Math.PI;
+         let anglez = -Math.PI/2 + (Math.random() * Math.PI);  // about -1.6 to 1.6
+         let f = new Fish(l.x, l.y, l.z,
+            Math.cos(angle),
+            Math.sin(anglez),
+            Math.sin(angle)  );
+         this.add_fish(f);
+
+      }
+   }
+
+
+
+
+
+   clear_all_fish() {
+      // restart the simulation by deleting all the fish and sharks.
+      this.fish_list.length = 0;
+   }
+
+
+
+
 
    add_obstacle(b) {
       this.obstacle_list.push(b);
@@ -897,7 +963,7 @@ export class School {
 //========================= GAME =====================
 
 var game_size = 40;
-var NUMBER_OF_FISH = 10; // for testing purposes we will have just a few fish
+var NUMBER_OF_FISH = 40; // for testing purposes we will have just a few fish
 var NUMBER_OF_SHARKS = 1;
 var game_height = game_size;
 var game_width = game_size*2.0;
@@ -927,6 +993,8 @@ export class Game {
 
       let j = 0;
 
+      // Create coral obstacles
+
       for(j = -separation; j <= separation; j = j + separation) {
          x = j;
          y = base;
@@ -944,11 +1012,13 @@ export class Game {
       }
 
 
-      //let o2 = new Cylinder(-20,0,0, 2, 10);
-      //this.school.add_obstacle(02);
+      // Add fish
 
       let f = 0;
       var i=0;
+
+      let u = this.school.get_open_location();
+
       for (i = 0; i<NUMBER_OF_FISH; i++) {
 
          this.angle = Math.random() * 2 * Math.PI;  // choose a random angle for this new fish (xz plane)
@@ -956,7 +1026,7 @@ export class Game {
 
          // x is left, y is up, z is towards us
 
-         f = new Fish(10, 0, 0,     // all fish will start at the same location
+         f = new Fish(u.x, u.y, u.z,     // all fish will start at the same location
             Math.cos(this.angle),
             Math.sin(this.anglez),    // they will point in some random direction
             Math.sin(this.angle)  );
@@ -966,6 +1036,8 @@ export class Game {
       }
       console.log("We have created " + i + " fish.");
 
+      // Add shark
+
       for (i=0; i<NUMBER_OF_SHARKS; i++) {           // note that sharks are added to the fish list
 
          this.angle = Math.random() * 2 * Math.PI;
@@ -973,10 +1045,17 @@ export class Game {
 
          // x is left, y is up, z is towards us
 
-         f = new Shark(-10, 1, 0,
+         let l = this.school.get_open_location();
+
+         let f = new Shark(l.x, l.y, l.z,
             Math.cos(this.angle),
             Math.sin(this.anglez),
             Math.sin(this.angle)  );
+
+//         f = new Shark(-10, 1, 0,
+//            Math.cos(this.angle),
+//            Math.sin(this.anglez),
+//            Math.sin(this.angle)  );
 
          this.school.add_fish(f);  // note we are adding it as a fish not a shark
          console.log("New shark: " + JSON.stringify(f));
