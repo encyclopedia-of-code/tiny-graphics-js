@@ -304,7 +304,7 @@ const Instanced_Shader = defs.Instanced_Shader =
                 float specular = pow( max( dot( N, H ), 0.0 ), smoothness );     // Use Blinn's "halfway vector" method.
                 float attenuation = 1.0 / (1.0 + lights[i].attenuation_factor * distance_to_light * distance_to_light );
 
-                //vec4 color = texture( diffuse_texture, VERTEX_TEXCOORD );
+                vec4 color = texture( diffuse_texture, VERTEX_TEXCOORD );
                 vec3 light_contribution = color.xyz * lights[i].color.xyz * diffuse * lights[i].diffuse * diffuse
                                                           + lights[i].color.xyz * specular * lights[i].specular * specular;
 
@@ -510,7 +510,7 @@ const Instanced_Shader = defs.Instanced_Shader =
                 float specular = pow( max( dot( N, H ), 0.0 ), smoothness );     // Use Blinn's "halfway vector" method.
                 float attenuation = 1.0 / (1.0 + lights[i].attenuation_factor * distance_to_light * distance_to_light );
 
-                //vec4 color = texture( diffuse_texture, VERTEX_TEXCOORD );
+                vec4 color = texture( diffuse_texture, VERTEX_TEXCOORD );
                 vec3 light_contribution = color.xyz * lights[i].color.xyz * diffuse * lights[i].diffuse * diffuse
                                                           + lights[i].color.xyz * specular * lights[i].specular * specular;
 
