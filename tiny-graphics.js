@@ -46,7 +46,7 @@ const Shape = tiny.Shape =
         // When a new buffer is requested by using a group of attributes not seen before, make a buffer.
         if( !buffer_to_overwrite ) {
           // TODO:  This part assumes a vertex type of FLOAT.  May need to override.
-          const stride = squared_sizes.reduce( (acc,x) => acc + x * 4, 0 )
+          const stride = squared_sizes.reduce( (acc,x) => acc + x * 4, 0 );
 
           const offsets = [];
           let offset = 0;
@@ -57,7 +57,15 @@ const Shape = tiny.Shape =
           buffer_to_overwrite = this.local_buffers.push(
             {attributes:  [ ...selection_of_attributes ],
               sizes: attribute_sizes, attribute_is_matrix, offsets, stride, divisor, hint: buffer_hint,
+              vertices_length: this.vertices.length, override: false,
               data: new Float32Array (stride/4 * this.vertices.length) }) - 1;
+        }
+        // If a buffer already exists but we need a bigger one to hold all our data
+        else if (this.local_buffers[buffer_to_overwrite].vertices_length < this.vertices.length) {
+          const stride = squared_sizes.reduce( (acc,x) => acc + x * 4, 0 );
+          this.local_buffers[buffer_to_overwrite].vertices_length = this.vertices.length;
+          this.local_buffers[buffer_to_overwrite].override = true;
+          this.local_buffers[buffer_to_overwrite].data = new Float32Array (stride/4 * this.vertices.length);
         }
 
         const buffer = this.local_buffers[buffer_to_overwrite];
@@ -124,10 +132,12 @@ const Shape = tiny.Shape =
             buffer_info.gpu_pointer = buffer_info.gpu_pointer ?? gl.createBuffer();
             gl.bindBuffer (gl.ARRAY_BUFFER, buffer_info.gpu_pointer);
 
-            if (existing_pointer !== undefined)
+            if (existing_pointer !== undefined && !buffer_info.override)
               gl.bufferSubData (gl.ARRAY_BUFFER, 0, buffer_info.data)
-            else
+            else {
               gl.bufferData (gl.ARRAY_BUFFER, buffer_info.data, gl[buffer_info.hint]);
+              buffer_info.override = false;
+            }
 
             for( let i of buffer_info.attributes.keys()) {
 

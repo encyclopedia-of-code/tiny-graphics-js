@@ -4,6 +4,9 @@
 *.jpg
 *.obj
 *.mtl
+*.mb
+*.psd
+*.zip
 *.bat
 *.command
 node_modules
