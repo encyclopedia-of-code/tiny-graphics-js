@@ -15,6 +15,8 @@ class Fish_Demo extends Component {
     this.old_t = 0;
     this.t  =    0;
     this.dt    = 0;   // incremental spin time only when actually spinning
+    this.background_color = vec4 (0.0, 0.41, 0.58, 1.0);
+    this.background_set = false;
 
     this.food_list = [];
 
@@ -25,12 +27,12 @@ class Fish_Demo extends Component {
          //axis: new Axis_Arrows(),
          //complex_shape: new Cube(),
          //"teapot": new Shape_From_File("assets/teapot.obj"),  // why the quotes?
-         fish: new defs.Shape_From_File("assets/fish_cm/fish_cm.obj"),
+         fish: new defs.Shape_From_File("models/textured_obj/fish_CM_textured/fish_CM_textured.obj"),
          fish2: new defs.Shape_From_File("models/fish2.obj"),
          herring: new defs.Shape_From_File("models/herring.obj"),
          simple_fish: new defs.Shape_From_File("models/simple_fish.obj"),
-         shark: new defs.Shape_From_File("assets/shark_cm/shark_cm.obj"),
-         shark_OM: new defs.Shape_From_File("models/shark_OM.obj"),
+         shark_CM: new defs.Shape_From_File("models/textured_obj/shark_CM_textured/shark_CM_textured.obj"),
+         shark_OM: new defs.Shape_From_File("models/textured_obj/shark_OM_textured/shark_OM_textured.obj"),
 
          // animated shark sequence
          shark_2l: new defs.Shape_From_File("models/shark_2l.obj"),
@@ -47,9 +49,9 @@ class Fish_Demo extends Component {
 
     this.materials = {
       food: new Material("Food", this.shader, { color: vec4(0.92, 0.22, 0.66, 1.0), diffuse: vec3(0.92, 0.22, 0.66), specular: vec3(1.0, 1.0, 1.0), smoothness: 32.0 }),
-      coral: new Material("Coral", this.textured_shader, { color: vec4(0.5, 0.5, 0.5, 1.0), diffuse: vec3(0.5, 0.5, 0.5), specular: vec3(1.0, 1.0, 1.0), smoothness: 32.0 }, {diffuse_texture: new Texture("models/coral.jpg")}),
-      fish: new defs.Material_From_File("Fish", this.textured_shader, "models/fish.mtl", {}, {diffuse_texture: new Texture("assets/rgb.jpg")}),
-      shark: new defs.Material_From_File("Shark", this.textured_shader, "assets/shark_cm/shark_cm.mtl"),
+      coral: new Material("Coral", this.textured_shader, { color: vec4(0.5, 0.5, 0.5, 1.0), diffuse: vec3(0.5, 0.5, 0.5), specular: vec3(1.0, 1.0, 1.0), smoothness: 32.0 }, {diffuse_texture: new Texture("models/coral.png")}),
+      fish: new defs.Material_From_File("Fish", this.textured_shader, "models/textured_obj/fish_CM_textured/fish_CM_textured.mtl"),
+      shark: new defs.Material_From_File("Shark", this.textured_shader, "models/textured_obj/shark_CM_textured/shark_CM_textured.mtl"),
 
    }
 
@@ -59,8 +61,9 @@ class Fish_Demo extends Component {
 
     this.renderer = new Renderer();
 
-    this.fish_entity = new Entity(this.shapes.fish2, Mat4.identity(), this.materials.fish);
-    this.shark_entity = new Entity(this.shapes.shark, Mat4.identity(), this.materials.shark);
+    this.fish_entity = new Entity(this.shapes.fish, Mat4.identity(), this.materials.fish);
+    this.shark_CM_entity = new Entity(this.shapes.shark_CM, Mat4.identity(), this.materials.shark);
+    this.shark_OM_entity = new Entity(this.shapes.shark_OM, Mat4.identity(), this.materials.shark);
     this.food_shrimp_entity = new Entity(this.shapes.food, Mat4.identity(), this.materials.food);
     this.obstacle_ball_entity = new Entity(this.shapes.ball, Mat4.identity(), this.materials.coral);
 
@@ -68,6 +71,12 @@ class Fish_Demo extends Component {
 
 
   render_animation (caller) {
+
+    if (!this.background_set) {
+      caller.context.clearColor.apply (caller.context, this.background_color);
+      this.background_set = true;
+    }
+
 
     // Handle time
     let t = this.uniforms.animation_time / 400;
@@ -100,12 +109,13 @@ class Fish_Demo extends Component {
 
     //FISH AND SHARK UPDATE
     let fish_list =  this.game.move(this.food_list, dt);
-    let fish_map = {fish: [], shark: []};
+    let fish_map = {fish: [], shark_CM: [], shark_OM: []};
     for(let f of fish_list) {
       this.draw_fish(caller.context, this.uniforms, f, fish_map);
     }
     this.fish_entity.set_transforms(fish_map["fish"]);
-    this.shark_entity.set_transforms(fish_map["shark"]);
+    this.shark_CM_entity.set_transforms(fish_map["shark_CM"]);
+    this.shark_OM_entity.set_transforms(fish_map["shark_OM"]);
 
     //OBSTACLES UPDATE
     let obstacle_list = this.game.school.obstacle_list;
@@ -125,7 +135,8 @@ class Fish_Demo extends Component {
 
     //this.renderer.shadow_map_pass(caller, Lights);
     this.renderer.submit(this.fish_entity);
-    this.renderer.submit(this.shark_entity);
+    this.renderer.submit(this.shark_CM_entity);
+    this.renderer.submit(this.shark_OM_entity);
     this.renderer.submit(this.obstacle_ball_entity);
     this.renderer.submit(this.food_shrimp_entity);
     this.renderer.flush(caller, Lights);
@@ -166,13 +177,14 @@ class Fish_Demo extends Component {
     if(f.type == "fish"  && f.live == true) {
         my_scale = 2;
         m=m.times(Mat4.scale(my_scale, my_scale, my_scale));
+        map[f.type].push(m);
     }
 
     if(f.type == "shark") {
          my_scale = 5;
          m=m.times(Mat4.scale(my_scale, my_scale, my_scale));
 
-
+         map[f.mouth_state].push(m);
          // if we knew if the shark is turning left or right we could
          // use the images shark_2l, shark_1l, shark_c, shark_1r, shark_2r
          // to bend the shark appropriately
@@ -181,12 +193,11 @@ class Fish_Demo extends Component {
          //   this.shapes.shark.draw(context, program_state, m, this.materials.phong);
          }
          else if(f.mouth_state == "shark_OM"){
+
          //   this.shapes.shark_OM.draw(context, program_state, m, this.materials.phong);
          }
 
     }
-
-    map[f.type].push(m);
  }
 
  draw_obstacle(context, program_state, f, map) {

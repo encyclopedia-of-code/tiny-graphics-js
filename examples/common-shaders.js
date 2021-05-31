@@ -286,6 +286,16 @@ const Instanced_Shader = defs.Instanced_Shader =
 
         out vec4 frag_color;
 
+        float getFogFactor(float d)
+        {
+          const float FogMax = 100.0;
+          const float FogMin = 0.0;
+
+          if (d>=FogMax) return 1.0;
+          if (d<=FogMin) return 0.0;
+
+          return 1.0 - (FogMax - d) / (FogMax - FogMin);
+        }
 
         // ***** PHONG SHADING HAPPENS HERE: *****
         vec3 phong_model_lights( vec3 N, vec3 vertex_worldspace ) {
@@ -319,6 +329,12 @@ const Instanced_Shader = defs.Instanced_Shader =
           frag_color = vec4( ( tex_color.xyz ) * ambient, tex_color.w );
           // Compute the final color with contributions from lights:
           frag_color.xyz += phong_model_lights( normalize( VERTEX_NORMAL ), VERTEX_POS );
+
+          //Blue for depth distance
+          float d = distance(camera_position, VERTEX_POS);
+          float alpha = getFogFactor(d);
+          vec4 fog_color = vec4 (0.0, 0.41, 0.58, 1.0);
+          frag_color = mix(frag_color, fog_color, alpha);
         }`;
       }
   };
