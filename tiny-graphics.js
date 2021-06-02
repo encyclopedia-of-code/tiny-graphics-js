@@ -516,7 +516,10 @@ const Texture = tiny.Texture =
             gl.bindFramebuffer (gl.FRAMEBUFFER, gpu_instance.fbo_pointer);
             gl.clear (gl.DEPTH_BUFFER_BIT);
           }
-          gl.activeTexture (gl[ "TEXTURE" + texture_unit ]);
+
+          gl.uniform1i (this.texture_address, this.texture_index);
+
+          gl.activeTexture (gl[ "TEXTURE" + this.texture_index ]);
           gl.bindTexture (gl.TEXTURE_2D, gpu_instance.texture_buffer_pointer);
       }
       deactivate (caller, treat_as_fbo = false) {

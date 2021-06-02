@@ -42,6 +42,8 @@ const Camera = defs.Camera =
         this.is_initialized = true;
       }
 
+      this.position = this.view.times( vec4(0,0,0,1) );
+
       UBO.Cache["Camera"].update("view", this.view);
       UBO.Cache["Camera"].update("projection", this.proj);
       UBO.Cache["Camera"].update("camera_position", this.position);
@@ -176,11 +178,14 @@ const Light = defs.Light =
       for (let i = 0; i < 6; i++) {
         if( !this.shadow_map[i])
           continue;
-        let name = "shadow_maps[" + (this.index * 6 + i) + "]";
-        let texture_index = Light.GLOBAL_TEXTURE_OFFSET + this.index * 6 + i;
 
-        context.uniform1i (gpu_addresses[name], texture_index);
-        this.shadow_map[i].activate (context, texture_index);
+        this.shadow_map.index = this.index * 6 + i;
+        let name = "shadow_maps[" + this.shadow_map.index + "]";
+        context.uniform1i (gpu_addresses[name], this.shadow_map[i].texture_index);
+        this.shadow_map[i].texture_address = gpu_addresses[name];
+        this.shadow_map[i].texture_index = Light.GLOBAL_TEXTURE_OFFSET + this.shadow_map.index;
+
+        this.shadow_map[i].activate (context, this.shadow_map[i].texture_index);
       }
 
       this.are_textures_bound = true;
@@ -413,11 +418,13 @@ const Entity = defs.Entity =
 
       for(let entity of this.entities){
         if( entity.transforms instanceof tiny.Matrix ) {
+          // Single matrix case
           if (entity.dirty && entity.shape.ready) {
             entity.shape.vertices = [{matrix: entity.transforms}];
             //Ideally use a shader with just a uniform matrix where you pass global.times(model)?
             entity.shape.fill_buffer(["matrix"], undefined, 1);
-            entity.dirty = false;
+            if( !alternative_shader)
+              entity.dirty = false;
           }
           entity.shape.draw(caller, {lights}, entity.global_transform, shadow_pass_material || entity.material, undefined, 1);
         }
@@ -425,6 +432,7 @@ const Entity = defs.Entity =
           if (entity.dirty && entity.shape.ready) {
             entity.shape.vertices = Array(entity.transforms.length).fill(0).map( (x,i) => ({matrix: entity.transforms[i]}));
             entity.shape.fill_buffer(["matrix"], undefined, 1);
+            if( !alternative_shader)
             entity.dirty = false;
           }
           entity.shape.draw(caller, {lights}, entity.global_transform, shadow_pass_material || entity.material, undefined, entity.transforms.length);

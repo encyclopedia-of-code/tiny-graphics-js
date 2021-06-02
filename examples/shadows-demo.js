@@ -8,16 +8,17 @@ export
 const Shadows_Demo = defs.Shadows_Demo =
 class Shadows_Demo extends Component {
   init () {
-    this.shapes = {square: new defs.Instanced_Cube_Index ()};
+    this.shapes = {cube: new defs.Instanced_Cube_Index ()};
     this.shader = new defs.Instanced_Shader (Light.NUM_LIGHTS);
-    this.textured_shader = new defs.Shadow_Textured_Instanced_Shader (Light.NUM_LIGHTS);
+    this.shadowed_shader = new defs.Shadow_Textured_Instanced_Shader (Light.NUM_LIGHTS);
 
     this.sun = new Light({direction_or_position: vec4(2.0, 5.0, 0.0, 0.0), color: vec3(1.0, 1.0, 1.0), diffuse: 0.6, specular: 0.2, attenuation_factor: 0.001,
       casts_shadow: true});
 
-    // this.sand = new Material("Water", this.textured_shader, { color: vec4(0.76, 0.69, 0.50, 1.0) });
-    this.sand = new Material("Water", this.textured_shader, { color: vec4(0.76, 0.69, 0.50, 1.0) }, { diffuse_texture: this.sun.shadow_map[0] });
-    this.shark = new defs.Material_From_File("Shark", this.textured_shader, "assets/shark_cm/shark_cm.mtl" );
+     this.sand = new Material("Water", this.shadowed_shader, { color: vec4(0.76, 0.69, 0.50, 1.0) });
+    // this.sand = new Material("Water", this.shadowed_shader, { color: vec4(0.76, 0.69, 0.50, 1.0) }, { diffuse_texture: this.sun.shadow_map[0] });
+    // this.sand = new Material("Water", this.shadowed_shader, { color: vec4(0.76, 0.69, 0.50, 1.0) }, { diffuse_texture: new Texture( "assets/stars.png" ) });
+    this.shark = new defs.Material_From_File("Shark", this.shadowed_shader, "assets/shark_cm/shark_cm.mtl" );
     this.renderer = new Renderer();
 
     this.objects = 1;
@@ -33,9 +34,18 @@ class Shadows_Demo extends Component {
       );
     }
 
-    this.entities.push(new Entity(this.shapes.square,
-                       Mat4.translation(0.0, -2.0, 0.0).times(Mat4.scale(50, .05, 50)),
-                       this.sand));
+
+
+    // this.entities.push(new Entity(this.shapes.cube,
+    //     Mat4.translation(0,0,0),
+    //     this.sand));
+    // this.entities.push(new Entity(this.shapes.cube,
+    //   Mat4.translation(...this.sun.direction_or_position),
+    //   this.sand));
+
+    this.entities.push(new Entity(this.shapes.cube,
+      Mat4.translation(0.0, -2.0, 0.0).times(Mat4.scale(50, .05, 50)),
+      this.sand));
 
     this.camera = new Camera(vec3(0.0, 0.0, 2.0));
     //this.sun2 = new Light({direction_or_position: vec4(5.0, 10.0, 0.0, 0.0), color: vec3(1.0, 1.0, 1.0), diffuse: 0.5, specular: 1.0, attenuation_factor: 0.001});
