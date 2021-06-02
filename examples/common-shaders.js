@@ -420,7 +420,8 @@ const Instanced_Shader = defs.Instanced_Shader =
 
         const int NUM_SHADOW_MAPS = N_LIGHTS * 6;
 
-        uniform sampler2D shadow_maps[NUM_SHADOW_MAPS]; //since point lights have up to 6 samplers
+        //uniform sampler2D shadow_maps[NUM_SHADOW_MAPS]; //since point lights have up to 6 samplers
+        uniform sampler2D shadow_maps;
 
         layout (std140) uniform Material
         {
@@ -453,7 +454,8 @@ const Instanced_Shader = defs.Instanced_Shader =
 
           // get closest depth value from light's perspective (using [0,1] range fragPosLight as coords)
           // float closestDepth = texture(shadow_maps[i*6], projCoords.xy).r;
-          float closestDepth = texture(shadow_maps[0], projCoords.xy).r;
+          //float closestDepth = texture(shadow_maps[0], projCoords.xy).r;
+          float closestDepth = texture(shadow_maps, projCoords.xy).r;
 
           // get depth of current fragment from light's perspective
           float currentDepth = projCoords.z;
@@ -473,13 +475,13 @@ const Instanced_Shader = defs.Instanced_Shader =
 
           // PCF
           float shadow = 0.0;
-          vec2 temp = vec2(textureSize(shadow_maps[0], 0));
+          vec2 temp = vec2(textureSize(shadow_maps, 0));
           vec2 texelSize = 1.0 / temp;
           for(int x = -1; x <= 1; ++x)
           {
               for(int y = -1; y <= 1; ++y)
               {
-                  float pcfDepth = texture(shadow_maps[0], projCoords.xy + vec2(x, y) * texelSize).r;
+                  float pcfDepth = texture(shadow_maps, projCoords.xy + vec2(x, y) * texelSize).r;
                   shadow += currentDepth - bias > pcfDepth  ? 1.0 : 0.0;
               }
           }
