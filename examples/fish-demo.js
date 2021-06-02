@@ -42,22 +42,31 @@ class Fish_Demo extends Component {
          shark_2r: new defs.Shape_From_File("models/shark_2r.obj"),
          // Shrimp
          food: new defs.Shape_From_File("models/copepod.obj"),
+         //Floor
+         sea_floor: new defs.Shape_From_File("models/textured_obj/sea_floor_textured/sea_floor.obj"),
+         sand_floor: new defs.Shape_From_File("models/textured_obj/sand_floor_textured/sand_floor.obj"),
+         //Sky
+         sea_sky: new defs.Shape_From_File("models/textured_obj/sea_sky_textured/sea_sky.obj"),
       }
 
-    this.shader = new defs.Instanced_Shader (Light.NUM_LIGHTS);
-    this.textured_shader = new defs.Textured_Instanced_Shader (Light.NUM_LIGHTS);
+    this.shader = new defs.Shadow_Instanced_Shader (Light.NUM_LIGHTS);
+    this.textured_shader = new defs.Shadow_Textured_Instanced_Shader (Light.NUM_LIGHTS);
 
     this.materials = {
       food: new Material("Food", this.shader, { color: vec4(0.92, 0.22, 0.66, 1.0), diffuse: vec3(0.92, 0.22, 0.66), specular: vec3(1.0, 1.0, 1.0), smoothness: 32.0 }),
       coral: new Material("Coral", this.textured_shader, { color: vec4(0.5, 0.5, 0.5, 1.0), diffuse: vec3(0.5, 0.5, 0.5), specular: vec3(1.0, 1.0, 1.0), smoothness: 32.0 }, {diffuse_texture: new Texture("models/textured_obj/obstacle_textured/coral.png")}),
       fish: new defs.Material_From_File("Fish", this.textured_shader, "models/textured_obj/fish_CM_textured/fish_CM_textured.mtl"),
       shark: new defs.Material_From_File("Shark", this.textured_shader, "models/textured_obj/shark_CM_textured/shark_CM_textured.mtl"),
-
+      sea_floor: new defs.Material_From_File("Sea_Floor", this.textured_shader, "models/textured_obj/sea_floor_textured/sea_floor.mtl"),
+      sand_floor: new defs.Material_From_File("Sand_Floor", this.textured_shader, "models/textured_obj/sand_floor_textured/sand_floor.mtl"),
+      sea_sky: new defs.Material_From_File("Sea_Sky", this.textured_shader, "models/textured_obj/sea_sky_textured/sea_sky.mtl"),
    }
 
-    this.sun = new Light({direction_or_position: vec4(0.0, 2.0, 0.0, 0.0), color: vec3(1.0, 1.0, 1.0), diffuse: 0.6, specular: 0.1, attenuation_factor: 0.001, casts_shadow: true});
+    this.sun_dir = vec4(0.0, 5.0, 7.0, 0.0);
+    this.sun = new Light({direction_or_position: this.sun_dir, color: vec3(1.0, 1.0, 1.0), diffuse: 0.6, specular: 0.1, attenuation_factor: 0.000001,
+                          shadow_map_width: 1024, shadow_map_height: 1024, casts_shadow: true});
 
-    this.camera = new Camera(vec3(0.0, 0.0, 2.0));
+    this.camera = new Camera(vec3(0.0, 0.0, 40.0));
 
     this.renderer = new Renderer();
 
@@ -66,7 +75,8 @@ class Fish_Demo extends Component {
     this.shark_OM_entity = new Entity(this.shapes.shark_OM, Mat4.identity(), this.materials.shark);
     this.food_shrimp_entity = new Entity(this.shapes.food, Mat4.identity(), this.materials.food);
     this.obstacle_ball_entity = new Entity(this.shapes.ball, Mat4.identity(), this.materials.coral);
-
+    this.floor_entity = new Entity(this.shapes.sand_floor, Mat4.scale(500.0, 1.0, 500.0).times(Mat4.translation(0.0, -60.0, 0.0)), this.materials.sand_floor);
+    this.sky_entity = new Entity(this.shapes.sea_sky, Mat4.scale(500.0, 1.0, 500.0).times(Mat4.translation(0.0, 80.0, 0.0)), this.materials.sea_sky);
   }
 
 
@@ -104,6 +114,10 @@ class Fish_Demo extends Component {
       this.camera.initialize(caller);
     }
 
+    let sun_movement_y = 0.05 * Math.sin(t);
+    let sun_movement_z = 0.05 * Math.cos(t);
+
+    this.sun.direction_or_position = this.sun_dir.plus(vec4(0.0, sun_movement_y, sun_movement_z, 0.0));
     this.sun.initialize(caller);
     let Lights = [this.sun];
 
@@ -132,13 +146,15 @@ class Fish_Demo extends Component {
     }
     this.food_shrimp_entity.set_transforms(food_map["shrimp"]);
 
-
-    //this.renderer.shadow_map_pass(caller, Lights);
     this.renderer.submit(this.fish_entity);
     this.renderer.submit(this.shark_CM_entity);
     this.renderer.submit(this.shark_OM_entity);
     this.renderer.submit(this.obstacle_ball_entity);
     this.renderer.submit(this.food_shrimp_entity);
+    this.renderer.shadow_map_pass(caller, Lights);
+
+    this.renderer.submit(this.sky_entity);
+    this.renderer.submit(this.floor_entity);
     this.renderer.flush(caller, Lights);
   }
 

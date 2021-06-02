@@ -104,13 +104,12 @@ const Light = defs.Light =
         this.shadow_map[0] = new tiny.Shadow_Map(this.shadow_map_width, this.shadow_map_height);
         let epsilon = 0.00756; //to be able to have +-y pointing light
         let light_view = Mat4.look_at(this.direction_or_position.to3(), vec3(0.0, 0.0, 0.0), vec3(0.0 + epsilon, 1.0, 0.0));;
-        let light_projection = Mat4.orthographic(-10.0, 10.0, -10.0, 10.0, 0.01, 20.0);
+        let light_projection = Mat4.orthographic(-80.0, 80.0, -80.0, 80.0, 0.01, 200.0);
         this.light_space_matrix[0] = light_projection.times(light_view);
       }
 
 
       this.is_initialized = false;
-      this.are_textures_bound = false;
     }
     static default_values () {
       return {
@@ -153,6 +152,15 @@ const Light = defs.Light =
         }
         this.is_initialized = true;
       }
+      else { //Temporary solution now, moving shadows
+        UBO.Cache["Lights"].update("direction_or_position", this.direction_or_position, this.index);
+        let epsilon = 0.00756; //to be able to have +-y pointing light
+        let light_view = Mat4.look_at(this.direction_or_position.to3(), vec3(0.0, 0.0, 0.0), vec3(0.0 + epsilon, 1.0, 0.0));;
+        let light_projection = Mat4.orthographic(-200.0, 100.0, -200.0, 200.0, 0.01, 200.0);
+        this.light_space_matrix[0] = light_projection.times(light_view);
+        UBO.Cache["Lights"].update("light_space_matrix", this.light_space_matrix[0], this.index * 6 + 0);
+
+      }
     }
     activate (gl, shadow_map_index = 0) {
       //always index 0 if directional light
@@ -173,10 +181,6 @@ const Light = defs.Light =
       // TODO:  The light can't re-bind if it gets unbound
           // update: (we would just destroy it and reuse its index rather than unbind/rebind)
 
-      //Do we really want to only bind ONCE??? EVER??? ARE YOU SURE????
-      if(this.are_textures_bound)
-        return;
-
       for (let i = 0; i < 1; i++) {
         if( !this.shadow_map[i])
           continue;
@@ -186,8 +190,6 @@ const Light = defs.Light =
         context.uniform1i (gpu_addresses[name], texture_index);
         this.shadow_map[i].activate (context, texture_index);
       }
-
-      this.are_textures_bound = true;
     }
   };
 
