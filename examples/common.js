@@ -211,6 +211,8 @@ const Material = defs.Material =
     }
 
     bind(binding_point) {
+      if(!this.is_initialized)
+        return;
 
       //Bind Material Data
       UBO.Cache[this.name].bind(binding_point);
