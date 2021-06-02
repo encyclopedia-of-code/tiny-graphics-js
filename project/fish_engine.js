@@ -173,7 +173,7 @@ export function normalize_angle(a) {  // put a in range -pi to pi
 }
 
 export function do_math_test() {
-   console.log("Math test");
+   //console.log("Math test");
 /*
 tests have been removed from this version
 */
@@ -199,7 +199,7 @@ export class Fish {  // these are our fish
    constructor(x, y, z, vx, vy, vz) {  // create a fish
       // Fish generally are started at the middle
       // All start with the same velocity but in different directions.
-      console.log("Creating fish: " + x + ", " + y + ", " + z);
+      //console.log("Creating fish: " + x + ", " + y + ", " + z);
       let PI = 3.14159;
       this.name = "Fish_" + fish_count;
       this.type = "fish";  // right now the choices are fish or shark but we can add more later.
@@ -440,7 +440,7 @@ export class Fish {  // these are our fish
       let phi = this.velocity.anglez();  ////>>>>>???????
 
 /*
-      console.log("Rendering object: " + this.position.x + ", "
+      //console.log("Rendering object: " + this.position.x + ", "
                                        + this.position.y + ", "
                                        + this.position.z
 
@@ -485,7 +485,7 @@ export class Fish {  // these are our fish
          let r = this.r + obstacle.r;  // allow for radius of obstacle and fish
 
          if(d==0){
-            console.log("Warning: fish is sitting on an object distance=0.  Numerically this is a problem.")
+            //console.log("Warning: fish is sitting on an object distance=0.  Numerically this is a problem.")
             sum.add(1,0,0);  // default behavior.  This is completely arbitrary
             // but will prevent our fish from sitting on an obstacle and not moving.
          }
@@ -689,7 +689,7 @@ export class Fish {  // these are our fish
 export class Shark extends Fish {
 
    constructor(x, y, z, vx, vy, vz) {
-      console.log("Creating shark: " + x + ", " + y + ", " + z);
+      //console.log("Creating shark: " + x + ", " + y + ", " + z);
       super(x, y, z, vx, vy, vz) ;
       this.name="Shark_" + (fish_count-1);
       this.type="shark";
@@ -733,7 +733,7 @@ export class Shark extends Fish {
       if(food_distance <= bite_distance) {  // food found, aim for it
          // debugger;
          ///food_direction = this.seek(food.position);
-         console.log("Food eaten: " + food.name);
+         //console.log("Food eaten: " + food.name);
          let bleep_sound = new Audio("sounds/blip.mp3");
          bleep_sound.play();
          // Playing the sound does not work.  The command is correct, but
@@ -753,7 +753,7 @@ export class Shark extends Fish {
 var n_obstacles = 0;
 export class Obstacle {
    constructor(x, y, z, r) {
-      console.log("Creating obstacle");
+      //console.log("Creating obstacle");
       this.position = new PVector(x,y,z);
       this.r = r;
       this.h = 0;
@@ -794,7 +794,7 @@ export class School {
    // contains all the fish and obstacles.
 
    constructor() {
-      console.log("Creating a School");
+      //console.log("Creating a School");
       this.fish_list=[];
       this.obstacle_list=[];
 
@@ -971,7 +971,7 @@ var game_depth = game_size;
 
 export class Game {
    constructor() {
-      console.log("Creating a Game");
+      //console.log("Creating a Game");
 
      // debugger;
 
@@ -1032,9 +1032,9 @@ export class Game {
             Math.sin(this.angle)  );
 
          this.school.add_fish(f);
-         console.log("New fish: " + JSON.stringify(f));
+         //console.log("New fish: " + JSON.stringify(f));
       }
-      console.log("We have created " + i + " fish.");
+      //console.log("We have created " + i + " fish.");
 
       // Add shark
 
@@ -1058,10 +1058,10 @@ export class Game {
 //            Math.sin(this.angle)  );
 
          this.school.add_fish(f);  // note we are adding it as a fish not a shark
-         console.log("New shark: " + JSON.stringify(f));
+         //console.log("New shark: " + JSON.stringify(f));
       }
 
-      console.log("We have created " + i + " (shark).");
+      //console.log("We have created " + i + " (shark).");
 
       // For testing collisions we will have one fish at 0,0,0 heading -1 0 0
       // This guarantees that it will collide with obstacle
@@ -1071,7 +1071,7 @@ export class Game {
    }
 
    move(food_list,dt) {
-       console.log("Game move dt=" + dt);
+       //console.log("Game move dt=" + dt);
        this.school.run(food_list, dt);
        return this.school.fish_list;
    }

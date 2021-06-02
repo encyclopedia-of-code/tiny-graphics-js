@@ -204,7 +204,7 @@ class Fish_Demo extends Component {
          // if we knew if the shark is turning left or right we could
          // use the images shark_2l, shark_1l, shark_c, shark_1r, shark_2r
          // to bend the shark appropriately
-         console.log(f.mouth_state);
+         //console.log(f.mouth_state);
          if(f.mouth_state == "shark_CM"){
          //   this.shapes.shark.draw(context, program_state, m, this.materials.phong);
          }
@@ -253,10 +253,10 @@ class Fish_Demo extends Component {
 }
 
 draw_food(context, program_state, t, map) {
-  // console.log("Draw food called.");
+  //console.log("Draw food called.");
   for(let i = 0;i < this.food_list.length;i++) {
       if(this.food_list[i].eaten == false) {
-          console.log(this.food_list[i].jump == true);
+          //console.log(this.food_list[i].jump == true);
           if(this.food_list[i].jump == true && this.food_list[i].lastJumpTime + this.jump_interval < t) {
               this.food_list[i].lastJumpTime = t;
               this.food_list[i].jump = false;
@@ -300,22 +300,22 @@ render_controls () {
 }
 
 add_shark() {
-  console.log("Add shark");
+  //console.log("Add shark");
   this.game.school.add_a_shark();
 }
 
 add_fish() {
-  console.log("Add fish");
+  //console.log("Add fish");
   this.game.school.add_a_fish();
 }
 
 add_school_fish() {
-  console.log("Add a school of fish");
+  //console.log("Add a school of fish");
   this.game.school.add_school_fish();
 }
 
 clear_fish() {
-  console.log("Clearing all fish from this simulation");
+  //console.log("Clearing all fish from this simulation");
   this.game.school.clear_all_fish();
 }
 
@@ -324,7 +324,7 @@ add_food() {
    let food_coord = this.game.school.get_open_location();
    let f = new Food(food_coord.x, food_coord.y, food_coord.z);
    this.food_list.push(f);
-   console.log ("Add Food: " + JSON.stringify(f));
+   //console.log ("Add Food: " + JSON.stringify(f));
 }
 
 };
