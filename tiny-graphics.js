@@ -481,7 +481,7 @@ const Texture = tiny.Texture =
           gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl[ this.min_filter ]);
           gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl[ "CLAMP_TO_EDGE" ]);
           gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl[ "CLAMP_TO_EDGE" ]);
-          gl.texParameterf (gl.TEXTURE_2D, gl.TEXTURE_BORDER_COLOR, [1.0, 1.0, 1.0, 1.0]);
+          //gl.texParameterf (gl.TEXTURE_2D, gl.TEXTURE_BORDER_COLOR, [1.0, 1.0, 1.0, 1.0]);
 
 
 

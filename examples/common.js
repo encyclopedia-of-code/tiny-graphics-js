@@ -172,13 +172,15 @@ const Light = defs.Light =
 
       // TODO:  The light can't re-bind if it gets unbound
           // update: (we would just destroy it and reuse its index rather than unbind/rebind)
+
+      //Do we really want to only bind ONCE??? EVER??? ARE YOU SURE????
       if(this.are_textures_bound)
         return;
 
-      for (let i = 0; i < 6; i++) {
+      for (let i = 0; i < 1; i++) {
         if( !this.shadow_map[i])
           continue;
-        let name = "shadow_maps[" + (this.index * 6 + i) + "]";
+        let name = "shadow_maps"; //[" + (this.index * 6 + i) + "]";
         let texture_index = Light.GLOBAL_TEXTURE_OFFSET + this.index * 6 + i;
 
         context.uniform1i (gpu_addresses[name], texture_index);
@@ -211,6 +213,8 @@ const Material = defs.Material =
     }
 
     bind(binding_point) {
+      if(!this.is_initialized)
+        return;
 
       //Bind Material Data
       UBO.Cache[this.name].bind(binding_point);
