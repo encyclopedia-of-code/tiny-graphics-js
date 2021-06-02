@@ -44,6 +44,8 @@ const Camera = defs.Camera =
 
       UBO.Cache["Camera"].update("view", this.view);
       UBO.Cache["Camera"].update("projection", this.proj);
+      let inv_view = Mat4.inverse(this.view);
+      this.position = vec3(inv_view[0][3], inv_view[1][3], inv_view[2][3]);
       UBO.Cache["Camera"].update("camera_position", this.position);
     }
   };
