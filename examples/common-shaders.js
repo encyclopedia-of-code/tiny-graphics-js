@@ -332,7 +332,7 @@ const Instanced_Shader = defs.Instanced_Shader =
 
           //Blue for depth distance
           #define LOG2 1.442695
-          float fogDensity = 0.017;
+          float fogDensity = 0.011;
           float fogDistance = length(camera_position - VERTEX_POS);
           float fogAmount = 1. - exp2(-fogDensity * fogDensity * fogDistance * fogDistance * LOG2);
           fogAmount = clamp(fogAmount, 0., 1.);

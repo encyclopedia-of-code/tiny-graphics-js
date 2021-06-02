@@ -22,7 +22,7 @@ class Fish_Demo extends Component {
 
     this.shapes = {
          cylinder: new defs.Shape_From_File("models/cylinder.obj"),
-         ball: new defs.Shape_From_File("models/sphere6.obj"),
+         ball: new defs.Shape_From_File("models/textured_obj/obstacle_textured/sphere6.obj"),
          //box_2: new defs.Cube2(),
          //axis: new Axis_Arrows(),
          //complex_shape: new Cube(),
@@ -49,7 +49,7 @@ class Fish_Demo extends Component {
 
     this.materials = {
       food: new Material("Food", this.shader, { color: vec4(0.92, 0.22, 0.66, 1.0), diffuse: vec3(0.92, 0.22, 0.66), specular: vec3(1.0, 1.0, 1.0), smoothness: 32.0 }),
-      coral: new Material("Coral", this.textured_shader, { color: vec4(0.5, 0.5, 0.5, 1.0), diffuse: vec3(0.5, 0.5, 0.5), specular: vec3(1.0, 1.0, 1.0), smoothness: 32.0 }, {diffuse_texture: new Texture("models/coral.png")}),
+      coral: new Material("Coral", this.textured_shader, { color: vec4(0.5, 0.5, 0.5, 1.0), diffuse: vec3(0.5, 0.5, 0.5), specular: vec3(1.0, 1.0, 1.0), smoothness: 32.0 }, {diffuse_texture: new Texture("models/textured_obj/obstacle_textured/coral.png")}),
       fish: new defs.Material_From_File("Fish", this.textured_shader, "models/textured_obj/fish_CM_textured/fish_CM_textured.mtl"),
       shark: new defs.Material_From_File("Shark", this.textured_shader, "models/textured_obj/shark_CM_textured/shark_CM_textured.mtl"),
 
