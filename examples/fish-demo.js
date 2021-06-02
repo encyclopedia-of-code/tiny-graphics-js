@@ -66,7 +66,7 @@ class Fish_Demo extends Component {
     this.sun = new Light({direction_or_position: this.sun_dir, color: vec3(1.0, 1.0, 1.0), diffuse: 0.6, specular: 0.1, attenuation_factor: 0.000001,
                           shadow_map_width: 1024, shadow_map_height: 1024, casts_shadow: true});
 
-    this.camera = new Camera(vec3(0.0, 0.0, 40.0));
+    this.camera = new Camera(vec3(-5.0, 15.0, 60.0));
 
     this.renderer = new Renderer();
 
@@ -75,8 +75,8 @@ class Fish_Demo extends Component {
     this.shark_OM_entity = new Entity(this.shapes.shark_OM, Mat4.identity(), this.materials.shark);
     this.food_shrimp_entity = new Entity(this.shapes.food, Mat4.identity(), this.materials.food);
     this.obstacle_ball_entity = new Entity(this.shapes.ball, Mat4.identity(), this.materials.coral);
-    this.floor_entity = new Entity(this.shapes.sand_floor, Mat4.scale(500.0, 1.0, 500.0).times(Mat4.translation(0.0, -60.0, 0.0)), this.materials.sand_floor);
-    this.sky_entity = new Entity(this.shapes.sea_sky, Mat4.scale(500.0, 1.0, 500.0).times(Mat4.translation(0.0, 80.0, 0.0)), this.materials.sea_sky);
+    this.floor_entity = new Entity(this.shapes.sand_floor, Mat4.scale(1000.0, 1.0, 1000.0).times(Mat4.translation(0.0, -60.0, 0.0)), this.materials.sand_floor);
+    this.sky_entity = new Entity(this.shapes.sea_sky, Mat4.scale(1000.0, 1.0, 1000.0).times(Mat4.translation(0.0, 80.0, 0.0)), this.materials.sea_sky);
   }
 
 
