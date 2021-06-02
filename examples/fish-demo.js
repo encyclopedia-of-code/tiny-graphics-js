@@ -256,20 +256,18 @@ draw_food(context, program_state, t, map) {
   //console.log("Draw food called.");
   for(let i = 0;i < this.food_list.length;i++) {
       if(this.food_list[i].eaten == false) {
-          //console.log(this.food_list[i].jump == true);
+          let angle = this.food_list[i].angle;
+          let position = this.food_list[i].get_position();
           if(this.food_list[i].jump == true && this.food_list[i].lastJumpTime + this.jump_interval < t) {
               this.food_list[i].lastJumpTime = t;
               this.food_list[i].jump = false;
               this.food_list[i].position.y = this.food_list[i].position.y + 8;
-              let position = this.food_list[i].get_position();
-              let location = Mat4.identity().times(Mat4.translation(position.x, position.y, position.z));
+              let location = Mat4.identity().times(Mat4.rotation(angle, 0, 1, 0)).times(Mat4.translation(position.x, position.y, position.z));
               map["shrimp"].push(location);
           } else {
-              let position = this.food_list[i].get_position();
-              let location = Mat4.identity().times(Mat4.translation(position.x, position.y, position.z));
+              let location = Mat4.identity().times(Mat4.rotation(angle, 0, 1, 0)).times(Mat4.translation(position.x, position.y, position.z));
               map["shrimp"].push(location);
           }
-
       }
   }
 }
@@ -320,11 +318,19 @@ clear_fish() {
 }
 
 add_food() {
-   // Create a Copepod (shrimp) at a random location
-   let food_coord = this.game.school.get_open_location();
-   let f = new Food(food_coord.x, food_coord.y, food_coord.z);
-   this.food_list.push(f);
-   //console.log ("Add Food: " + JSON.stringify(f));
+  // debugger;
+  let food_coord = new PVector(Math.floor(Math.random() * 40)-20, Math.floor(Math.random() * 30)-15, Math.floor(Math.random() * 30)-15);
+  while(this.game.school.on_obstacles(food_coord)) {
+      //console.log("Keep generating");
+      food_coord = new PVector(Math.floor(Math.random() * 40)-20, Math.floor(Math.random() * 30)-15, Math.floor(Math.random() * 30)-15);
+  }
+  // debugger;
+  let f = new Food(food_coord.x, food_coord.y, food_coord.z, (Math.random() - 0.5) * Math.PI);
+  this.food_list.push(f);
+  //this.food_list.push(new Food(food_coord.x, food_coord.y, food_coord.z));
+  //console.log ("Add Food: " + JSON.stringify(f));
 }
+
+
 
 };
