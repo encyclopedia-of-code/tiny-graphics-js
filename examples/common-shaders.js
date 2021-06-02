@@ -331,10 +331,13 @@ const Instanced_Shader = defs.Instanced_Shader =
           frag_color.xyz += phong_model_lights( normalize( VERTEX_NORMAL ), VERTEX_POS );
 
           //Blue for depth distance
-          float d = distance(camera_position, VERTEX_POS);
-          float alpha = getFogFactor(d);
+          #define LOG2 1.442695
+          float fogDensity = 0.017;
+          float fogDistance = length(camera_position - VERTEX_POS);
+          float fogAmount = 1. - exp2(-fogDensity * fogDensity * fogDistance * fogDistance * LOG2);
+          fogAmount = clamp(fogAmount, 0., 1.);
           vec4 fog_color = vec4 (0.0, 0.41, 0.58, 1.0);
-          frag_color = mix(frag_color, fog_color, alpha);
+          frag_color = mix(frag_color, fog_color, fogAmount);
         }`;
       }
   };
