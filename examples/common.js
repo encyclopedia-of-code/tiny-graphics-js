@@ -42,10 +42,10 @@ const Camera = defs.Camera =
         this.is_initialized = true;
       }
 
-      this.position = this.view.times( vec4(0,0,0,1) );
-
       UBO.Cache["Camera"].update("view", this.view);
       UBO.Cache["Camera"].update("projection", this.proj);
+      const inv_view = Mat4.inverse(this.view);
+      this.position = vec3(inv_view[0][3], inv_view[1][3], inv_view[2][3]);
       UBO.Cache["Camera"].update("camera_position", this.position);
     }
   };
@@ -172,13 +172,14 @@ const Light = defs.Light =
 
       // TODO:  The light can't re-bind if it gets unbound
           // update: (we would just destroy it and reuse its index rather than unbind/rebind)
+
+      //Do we really want to only bind ONCE??? EVER??? ARE YOU SURE????
       if(this.are_textures_bound)
         return;
 
       for (let i = 0; i < 6; i++) {
         if( !this.shadow_map[i])
           continue;
-
         this.shadow_map.index = this.index * 6 + i;
         let name = "shadow_maps[" + this.shadow_map.index + "]";
         context.uniform1i (gpu_addresses[name], this.shadow_map[i].texture_index);
@@ -214,6 +215,8 @@ const Material = defs.Material =
     }
 
     bind(binding_point, gpu_addresses) {
+      if(!this.is_initialized)
+        return;
 
       //Bind Material Data
       UBO.Cache[this.name].bind(binding_point);
@@ -433,7 +436,7 @@ const Entity = defs.Entity =
             entity.shape.vertices = Array(entity.transforms.length).fill(0).map( (x,i) => ({matrix: entity.transforms[i]}));
             entity.shape.fill_buffer(["matrix"], undefined, 1);
             if( !alternative_shader)
-            entity.dirty = false;
+              entity.dirty = false;
           }
           entity.shape.draw(caller, {lights}, entity.global_transform, shadow_pass_material || entity.material, undefined, entity.transforms.length);
         }
