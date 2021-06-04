@@ -384,7 +384,7 @@ const Instanced_Shader = defs.Instanced_Shader =
       }
       update_GPU (context, gpu_addresses, uniforms, model_transform, material) {
         material.initialize(context, this.ubo_layout);
-        material.bind(this.ubo_binding[0].binding_point);
+        material.bind(this.ubo_binding[0].binding_point, gpu_addresses);
         context.uniformMatrix4fv (gpu_addresses.global_transform, true, Matrix.flatten_2D_to_1D (model_transform));
         for (let light of uniforms.lights) {
           light.bind(context, gpu_addresses);
@@ -447,6 +447,7 @@ const Instanced_Shader = defs.Instanced_Shader =
           // transform to [0,1] range
           projCoords = projCoords * 0.5 + 0.5;
 
+          // Workaround for unsupported TEXTURE_BORDER_COLOR setting in WebGL2
           if( projCoords.x < 0.0 || projCoords.y < 0.0 || projCoords.x > 1.0 || projCoords.y > 1.0 )
             return 0.0;
 
@@ -510,12 +511,11 @@ const Instanced_Shader = defs.Instanced_Shader =
                 float specular = pow( max( dot( N, H ), 0.0 ), smoothness );     // Use Blinn's "halfway vector" method.
                 float attenuation = 1.0 / (1.0 + lights[i].attenuation_factor * distance_to_light * distance_to_light );
 
-                vec4 color = vec4(1.0);// texture( diffuse_texture, VERTEX_TEXCOORD );
+                vec4 color = texture( diffuse_texture, VERTEX_TEXCOORD );
                 vec3 light_contribution = color.xyz * lights[i].color.xyz * diffuse * lights[i].diffuse * diffuse
                                                           + lights[i].color.xyz * specular * lights[i].specular * specular;
 
                 vec4 fragPosLightSpace = light_space_matrix[i * 6] * vec4 (VERTEX_POS, 1.0);
-
 
 
                float shadow = ShadowCalculation(fragPosLightSpace, i, N, L);
@@ -526,7 +526,7 @@ const Instanced_Shader = defs.Instanced_Shader =
 
         void main() {
           // Compute an initial (ambient) color:
-          vec4 tex_color = vec4(1.0);// texture( diffuse_texture, VERTEX_TEXCOORD );
+          vec4 tex_color = texture( diffuse_texture, VERTEX_TEXCOORD );
           frag_color = vec4( ( tex_color.xyz + color.xyz ) * ambient, color.w * tex_color.w );
           // Compute the final color with contributions from lights:
           frag_color.xyz += phong_model_lights( normalize( VERTEX_NORMAL ), VERTEX_POS );

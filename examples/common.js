@@ -213,7 +213,7 @@ const Material = defs.Material =
       }
     }
 
-    bind(binding_point) {
+    bind(binding_point, gpu_addresses) {
 
       //Bind Material Data
       UBO.Cache[this.name].bind(binding_point);
@@ -227,7 +227,7 @@ const Material = defs.Material =
       for (const [name, sampler] of Object.entries(this.samplers)) {
         if (sampler && sampler.ready) {
           // Select texture unit offset for the fragment shader Sampler2D uniform called "samplers.name":
-          gl.uniform1i (this.shader.gpu_instances.get(gl).gpu_addresses.name, offset);
+          gl.uniform1i (gpu_addresses[name], offset);
           // For this draw, use the texture image from correct the GPU buffer:
           sampler.activate (gl, offset);
           offset++;

@@ -187,6 +187,9 @@ const Shape = tiny.Shape =
           material.shader.activate (webgl_manager.context, uniforms, model_transform, material);
           // Run the shaders to draw every triangle now:
           this.execute_shaders (webgl_manager.context, gpu_instance, type, instances);
+
+          // TODO:  This is just a test
+          webgl_manager.context.bindTexture( webgl_manager.context.TEXTURE_2D, null);
       }
 
       // NOTE: All the below functions make a further assumption: that your vertex buffer includes fields called
@@ -305,7 +308,7 @@ const Shader = tiny.Shader =
                   // Retrieve the GPU addresses of each uniform variable in the shader based on their names.  Store
                   // these pointers for later.
                   for (let i = 0; i < num_uniforms; ++i) {
-                      let u     = gl.getActiveUniform (program, i).name.split ('[')[ 0 ];
+                      let u     = gl.getActiveUniform (program, i).name;
                       this[ u ] = gl.getUniformLocation (program, u);
                   }
               }
@@ -481,7 +484,8 @@ const Texture = tiny.Texture =
           gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl[ this.min_filter ]);
           gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl[ "CLAMP_TO_EDGE" ]);
           gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl[ "CLAMP_TO_EDGE" ]);
-          gl.texParameterf (gl.TEXTURE_2D, gl.TEXTURE_BORDER_COLOR, [1.0, 1.0, 1.0, 1.0]);
+    // Unsupported; implement in shader instead:
+    // gl.texParameterf (gl.TEXTURE_2D, gl.TEXTURE_BORDER_COLOR, [1.0, 1.0, 1.0, 1.0]);
 
 
 
@@ -516,10 +520,10 @@ const Texture = tiny.Texture =
             gl.bindFramebuffer (gl.FRAMEBUFFER, gpu_instance.fbo_pointer);
             gl.clear (gl.DEPTH_BUFFER_BIT);
           }
-
-          gl.uniform1i (this.texture_address, this.texture_index);
-
-          gl.activeTexture (gl[ "TEXTURE" + this.texture_index ]);
+          else {
+            gl.uniform1i (this.texture_address, this.texture_index);
+            gl.activeTexture (gl[ "TEXTURE" + this.texture_index ]);
+          }
           gl.bindTexture (gl.TEXTURE_2D, gpu_instance.texture_buffer_pointer);
       }
       deactivate (caller, treat_as_fbo = false) {
