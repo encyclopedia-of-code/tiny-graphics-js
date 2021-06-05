@@ -17,10 +17,11 @@ const Camera = defs.Camera =
       this.at = at;
       this.up = up;
 
-      this.view = Mat4.look_at(this.position, this.at, this.up);
+      this.camera_inverse = Mat4.look_at (this.position, this.at, this.up);
+      this.camera_world = Mat4.inverse (this.camera_inverse);
 
       this.ubo_layout = [{num_instances: 1,
-                          data_layout:[{name:"view", type:"Mat4"},
+                          data_layout:[{name:"camera_inverse", type:"Mat4"},
                                        {name:"projection", type:"Mat4"},
                                        {name:"camera_position", type:"vec3"}]
                          }
@@ -42,10 +43,9 @@ const Camera = defs.Camera =
         this.is_initialized = true;
       }
 
-      UBO.Cache["Camera"].update("view", this.view);
+      UBO.Cache["Camera"].update("camera_inverse", this.camera_inverse);
       UBO.Cache["Camera"].update("projection", this.proj);
-      const inv_view = Mat4.inverse(this.view);
-      this.position = vec3(inv_view[0][3], inv_view[1][3], inv_view[2][3]);
+      this.position = vec3(this.camera_world[0][3], this.camera_world[1][3], this.camera_world[2][3]);
       UBO.Cache["Camera"].update("camera_position", this.position);
     }
   };

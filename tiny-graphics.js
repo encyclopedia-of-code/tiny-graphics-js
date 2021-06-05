@@ -188,7 +188,7 @@ const Shape = tiny.Shape =
           // Run the shaders to draw every triangle now:
           this.execute_shaders (webgl_manager.context, gpu_instance, type, instances);
 
-          // TODO:  This is just a test
+          // TODO:  This is just a test -- move it somewhere appropriate
           webgl_manager.context.bindTexture( webgl_manager.context.TEXTURE_2D, null);
       }
 

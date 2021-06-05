@@ -93,13 +93,13 @@ const Instanced_Shader = defs.Instanced_Shader =
       }
       update_GPU (context, gpu_addresses, uniforms, model_transform, material) {
         material.initialize(context, this.ubo_layout);
-        material.bind(this.ubo_binding[0].binding_point);
+        material.bind(this.ubo_binding[0].binding_point, gpu_addresses);
         context.uniformMatrix4fv (gpu_addresses.global_transform, true, Matrix.flatten_2D_to_1D (model_transform));
       }
       static default_values () {
         return {
                 color: vec4 (1.0, 1.0, 1.0, 1.0),
-                ambient: 1.0,
+                ambient: 0.0,
                 diffuse: vec3(1.0, 1.0, 1.0),
                 specular: vec3 (1.0, 1.0, 1.0),
                 smoothness: 32.0
@@ -122,7 +122,7 @@ const Instanced_Shader = defs.Instanced_Shader =
 
         layout (std140) uniform Camera
         {
-          mat4 view;
+          mat4 camera_inverse;
           mat4 projection;
           vec3 camera_position;
         };
@@ -132,7 +132,7 @@ const Instanced_Shader = defs.Instanced_Shader =
         out vec2 VERTEX_TEXCOORD;
 
         void main() {
-          gl_Position =  projection * view * global_transform * transpose(matrix) * vec4( position, 1.0 );
+          gl_Position =  projection * camera_inverse * global_transform * transpose(matrix) * vec4( position, 1.0 );
           VERTEX_POS = vec3(global_transform * transpose(matrix) * vec4( position, 1.0 ));
           VERTEX_NORMAL = mat3(transpose(inverse(global_transform * transpose(matrix)))) * normal;
           VERTEX_TEXCOORD = texture_coord;
@@ -143,7 +143,7 @@ const Instanced_Shader = defs.Instanced_Shader =
 
         layout (std140) uniform Camera
         {
-          mat4 view;
+          mat4 camera_inverse;
           mat4 projection;
           vec3 camera_position;
         };
@@ -238,7 +238,7 @@ const Instanced_Shader = defs.Instanced_Shader =
       }
       update_GPU (context, gpu_addresses, uniforms, model_transform, material) {
         material.initialize(context, this.ubo_layout);
-        material.bind(this.ubo_binding[0].binding_point);
+        material.bind(this.ubo_binding[0].binding_point, gpu_addresses);
         context.uniformMatrix4fv (gpu_addresses.global_transform, true, Matrix.flatten_2D_to_1D (model_transform));
       }
       fragment_glsl_code () {         // ********* FRAGMENT SHADER *********
@@ -246,7 +246,7 @@ const Instanced_Shader = defs.Instanced_Shader =
 
         layout (std140) uniform Camera
         {
-          mat4 view;
+          mat4 camera_inverse;
           mat4 projection;
           vec3 camera_position;
         };
@@ -346,7 +346,7 @@ const Instanced_Shader = defs.Instanced_Shader =
 
       layout (std140) uniform Camera
       {
-        mat4 view;
+        mat4 camera_inverse;
         mat4 projection;
         vec3 camera_position;
       };
@@ -384,17 +384,17 @@ const Instanced_Shader = defs.Instanced_Shader =
       }
       update_GPU (context, gpu_addresses, uniforms, model_transform, material) {
         material.initialize(context, this.ubo_layout);
-        material.bind(this.ubo_binding[0].binding_point, gpu_addresses);
-        context.uniformMatrix4fv (gpu_addresses.global_transform, true, Matrix.flatten_2D_to_1D (model_transform));
         for (let light of uniforms.lights) {
           light.bind(context, gpu_addresses);
         }
+        material.bind(this.ubo_binding[0].binding_point, gpu_addresses);
+        context.uniformMatrix4fv (gpu_addresses.global_transform, true, Matrix.flatten_2D_to_1D (model_transform));
       }
       fragment_glsl_code () {         // ********* FRAGMENT SHADER *********
           return this.shared_glsl_code () + `
         layout (std140) uniform Camera
         {
-          mat4 view;
+          mat4 camera_inverse;
           mat4 projection;
           vec3 camera_position;
         };
