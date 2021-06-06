@@ -188,7 +188,7 @@ const Shape = tiny.Shape =
           // Run the shaders to draw every triangle now:
           this.execute_shaders (webgl_manager.context, gpu_instance, type, instances);
 
-          // TODO:  This is just a test -- move it somewhere appropriate
+          // Unbind the texture after the second (shadow) pass.  TODO:  Does this do anything?
           webgl_manager.context.bindTexture( webgl_manager.context.TEXTURE_2D, null);
       }
 
@@ -519,12 +519,13 @@ const Texture = tiny.Texture =
             gl.viewport (0, 0, this.width, this.height);
             gl.bindFramebuffer (gl.FRAMEBUFFER, gpu_instance.fbo_pointer);
             gl.clear (gl.DEPTH_BUFFER_BIT);
+            gl.bindTexture (gl.TEXTURE_2D, gpu_instance.texture_buffer_pointer);
           }
           else {
-            gl.uniform1i (this.texture_address, this.texture_index);
-            gl.activeTexture (gl[ "TEXTURE" + this.texture_index ]);
+            gl.uniform1i (this.sampler_address, texture_unit);
+            gl.bindTexture (gl.TEXTURE_2D, gpu_instance.texture_buffer_pointer);
+            gl.activeTexture (gl[ "TEXTURE" + texture_unit ]);
           }
-          gl.bindTexture (gl.TEXTURE_2D, gpu_instance.texture_buffer_pointer);
       }
       deactivate (caller, treat_as_fbo = false) {
         if (treat_as_fbo) {

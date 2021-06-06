@@ -182,11 +182,10 @@ const Light = defs.Light =
           continue;
         this.shadow_map.index = this.index * 6 + i;
         let name = "shadow_maps[" + this.shadow_map.index + "]";
-        context.uniform1i (gpu_addresses[name], this.shadow_map[i].texture_index);
-        this.shadow_map[i].texture_address = gpu_addresses[name];
-        this.shadow_map[i].texture_index = Light.GLOBAL_TEXTURE_OFFSET + this.shadow_map.index;
+        this.shadow_map[i].sampler_address = gpu_addresses[name];
+        this.shadow_map[i].texture_unit = Light.GLOBAL_TEXTURE_OFFSET + this.shadow_map.index;
 
-        this.shadow_map[i].activate (context, this.shadow_map[i].texture_index);
+        this.shadow_map[i].activate (context, this.shadow_map[i].texture_unit);
       }
 
       this.are_textures_bound = true;
