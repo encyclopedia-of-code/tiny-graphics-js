@@ -363,6 +363,174 @@ const Instanced_Shader = defs.Instanced_Shader =
       }
   };
 
+  const Shadow_Instanced_Shader = defs.Shadow_Instanced_Shader =
+  class Shadow_Instanced_Shader extends Instanced_Shader {
+      constructor (num_lights = 2) {
+        super ();
+        this.num_lights = num_lights;
+
+        this.ubo_binding = [
+          {shader_name: "Material",  binding_point: 2},
+        ];
+
+        this.ubo_layout = [
+          {num_instances: 1,
+           data_layout:[{name:"color", type:"vec4"},
+                        {name:"diffuse", type:"vec3"},
+                        {name:"specular", type:"vec3"},
+                        {name:"smoothness", type:"float"}]
+          }
+         ];
+      }
+      update_GPU (context, gpu_addresses, uniforms, model_transform, material) {
+        material.initialize(context, this.ubo_layout);
+        for (let light of uniforms.lights) {
+          light.bind(context, gpu_addresses);
+        }
+        material.bind(this.ubo_binding[0].binding_point, gpu_addresses);
+        context.uniformMatrix4fv (gpu_addresses.global_transform, true, Matrix.flatten_2D_to_1D (model_transform));
+      }
+      fragment_glsl_code () {         // ********* FRAGMENT SHADER *********
+          return this.shared_glsl_code () + `
+        layout (std140) uniform Camera
+        {
+          mat4 camera_inverse;
+          mat4 projection;
+          vec3 camera_position;
+        };
+
+        struct Light
+        {
+          vec4 direction_or_position;
+          vec3 color;
+          float diffuse;
+          float specular;
+          float attenuation_factor;
+          bool casts_shadow;
+        };
+
+        const int N_LIGHTS = ` + this.num_lights + `;
+
+        layout (std140) uniform Lights
+        {
+          float ambient;
+          Light lights[N_LIGHTS];
+          mat4 light_space_matrix[N_LIGHTS * 6];
+        };
+
+        const int NUM_SHADOW_MAPS = N_LIGHTS * 6;
+
+        uniform sampler2D shadow_maps[NUM_SHADOW_MAPS]; //since point lights have up to 6 samplers
+
+        layout (std140) uniform Material
+        {
+          vec4 color;
+          vec3 diffuse;
+          vec3 specular;
+          float smoothness;
+        };
+
+        in vec3 VERTEX_POS;
+        in vec3 VERTEX_NORMAL;
+        in vec2 VERTEX_TEXCOORD;
+
+        out vec4 frag_color;
+
+        float ShadowCalculation(vec4 fragPosLightSpace, int index, vec3 N, vec3 L )
+        {
+
+
+          // perform perspective divide
+          vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
+
+          // transform to [0,1] range
+          projCoords = projCoords * 0.5 + 0.5;
+
+          // Workaround for unsupported TEXTURE_BORDER_COLOR setting in WebGL2
+          if( projCoords.x < 0.0 || projCoords.y < 0.0 || projCoords.x > 1.0 || projCoords.y > 1.0 )
+            return 0.0;
+
+
+          // get closest depth value from light's perspective (using [0,1] range fragPosLight as coords)
+          // float closestDepth = texture(shadow_maps[i*6], projCoords.xy).r;
+          float closestDepth = texture(shadow_maps[0], projCoords.xy).r;
+
+          // get depth of current fragment from light's perspective
+          float currentDepth = projCoords.z;
+
+
+
+
+
+
+
+
+          // calculate bias (based on depth map resolution and slope)
+          float bias = max(0.05 * (1.0 - dot(N, L)), 0.005);
+
+          // WITHOUT PCF - check whether current frag pos is in shadow
+          // float shadow = currentDepth - bias > closestDepth  ? 1.0 : 0.0;
+
+          // PCF
+          float shadow = 0.0;
+          vec2 temp = vec2(textureSize(shadow_maps[0], 0));
+          vec2 texelSize = 1.0 / temp;
+          for(int x = -1; x <= 1; ++x)
+          {
+              for(int y = -1; y <= 1; ++y)
+              {
+                  float pcfDepth = texture(shadow_maps[0], projCoords.xy + vec2(x, y) * texelSize).r;
+                  shadow += currentDepth - bias > pcfDepth  ? 1.0 : 0.0;
+              }
+          }
+          shadow /= 9.0;
+
+          // keep the shadow at 0.0 when outside the far_plane region of the light's frustum.
+          if(projCoords.z > 1.0)
+              shadow = 0.0;
+
+
+            return shadow;
+        }
+
+        // ***** PHONG SHADING HAPPENS HERE: *****
+        vec3 phong_model_lights( vec3 N, vec3 vertex_worldspace ) {
+            vec3 E = normalize( camera_position - vertex_worldspace );
+            vec3 result = vec3( 0.0 );
+            for(int i = 0; i < N_LIGHTS; i++) {
+                vec3 surface_to_light_vector = lights[i].direction_or_position.xyz -
+                                               lights[i].direction_or_position.w * vertex_worldspace;
+                float distance_to_light = length( surface_to_light_vector );
+
+                vec3 L = normalize( surface_to_light_vector );
+                vec3 H = normalize( L + E );
+
+                  // Compute diffuse and specular components of Phong Reflection Model.
+                float diffuse  =      max( dot( N, L ), 0.0 );
+                float specular = pow( max( dot( N, H ), 0.0 ), smoothness );     // Use Blinn's "halfway vector" method.
+                float attenuation = 1.0 / (1.0 + lights[i].attenuation_factor * distance_to_light * distance_to_light );
+
+                vec3 light_contribution = color.xyz * lights[i].color.xyz * diffuse * lights[i].diffuse * diffuse
+                                                          + lights[i].color.xyz * specular * lights[i].specular * specular;
+
+                vec4 fragPosLightSpace = light_space_matrix[i * 6] * vec4 (VERTEX_POS, 1.0);
+
+
+               float shadow = ShadowCalculation(fragPosLightSpace, i, N, L);
+               result += attenuation * (1.0 - shadow) * light_contribution;
+              }
+            return result;
+          }
+
+        void main() {
+          // Compute an initial (ambient) color:
+          frag_color = vec4( color.xyz * ambient, color.w );
+          // Compute the final color with contributions from lights:
+          frag_color.xyz += phong_model_lights( normalize( VERTEX_NORMAL ), VERTEX_POS );
+        }`;
+      }
+  };
+
   const Shadow_Textured_Instanced_Shader = defs.Shadow_Textured_Instanced_Shader =
   class Shadow_Textured_Instanced_Shader extends Instanced_Shader {
       constructor (num_lights = 2) {
