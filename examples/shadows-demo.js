@@ -11,7 +11,7 @@ class Shadows_Demo extends Component {
     this.shapes = {cube: new defs.Instanced_Cube_Index ()};
     this.shader = new defs.Instanced_Shader (Light.NUM_LIGHTS);
 
-     this.shadowed_shader = new defs.Shadow_Instanced_Shader (Light.NUM_LIGHTS);
+     this.shadowed_shader = new defs.Shadow_Textured_Instanced_Shader (Light.NUM_LIGHTS);
     //this.shadowed_shader = new defs.Textured_Instanced_Shader (Light.NUM_LIGHTS);
 
 
@@ -19,8 +19,8 @@ class Shadows_Demo extends Component {
       casts_shadow: true});
 
     //this.debug_shadow_map = new Material("Debug_Shadow_Map", this.shadowed_shader, { color: vec4(0.76, 0.69, 0.50, 1.0) }, { diffuse_texture: this.sun.shadow_map[0] });
-    this.sand = new Material("Sand", this.shadowed_shader, { color: vec4(0.76, 0.69, 0.50, 1.0) });
-  //  this.stars = new Material("Stars", this.shadowed_shader, { color: vec4(0.76, 0.69, 0.50, 1.0) }, { diffuse_texture: new Texture( "assets/stars.png" ) });
+   // this.sand = new Material("Sand", this.shadowed_shader, { color: vec4(0.76, 0.69, 0.50, 1.0) });
+    this.stars = new Material("Stars", this.shadowed_shader, { color: vec4(0.76, 0.69, 0.50, 1.0) }, { diffuse_texture: new Texture( "assets/stars.png" ) });
   //  this.shark = new defs.Material_From_File("Shark", this.shadowed_shader, "assets/shark_cm/shark_cm.mtl" );
 
      this.renderer = new Renderer();
@@ -54,7 +54,7 @@ class Shadows_Demo extends Component {
         , Mat4.identity()
         // , Mat4.translation(2.0+1.0, 5.0+1.0, 0.0+1.0)
       ],
-      this.sand));
+      this.stars));
 
     this.camera = new Camera(vec3(-1.0, 2.0, 1.0));
     //this.sun2 = new Light({direction_or_position: vec4(5.0, 10.0, 0.0, 0.0), color: vec3(1.0, 1.0, 1.0), diffuse: 0.5, specular: 1.0, attenuation_factor: 0.001});
@@ -68,8 +68,7 @@ class Shadows_Demo extends Component {
       this.uniforms.camera_transform = this.camera.camera_world;
       this.animated_children.push( caller.controls = new defs.Movement_Controls(
               { uniforms: this.uniforms },
-              // TODO:  TEMP TEST
-              () => {} //() => {this.camera.initialize(caller)}
+              () => {this.camera.initialize(caller)}
               ) );
       caller.controls.add_mouse_controls( caller.canvas );
 

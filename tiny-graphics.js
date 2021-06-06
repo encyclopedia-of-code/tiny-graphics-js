@@ -524,8 +524,8 @@ const Texture = tiny.Texture =
           else {
             gl.uniform1i (this.sampler_address, texture_unit);
             gl.bindTexture (gl.TEXTURE_2D, gpu_instance.texture_buffer_pointer);
-            gl.activeTexture (gl[ "TEXTURE" + texture_unit ]);
           }
+          gl.activeTexture (gl[ "TEXTURE" + texture_unit ]);
       }
       deactivate (caller, treat_as_fbo = false) {
         if (treat_as_fbo) {
