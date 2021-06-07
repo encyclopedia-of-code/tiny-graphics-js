@@ -15,7 +15,7 @@ import {Demonstration}
                     from "./examples/demonstration.js";
 import {Inertia_Demo, Collision_Demo}
                     from "./examples/collisions-demo.js";
-import {Instanced_Cubes_Demo}
+import {Instanced_Cubes_Demo, UBO_Test_Demo}
                     from "./examples/instancing-demos.js";
 import {Many_Lights_Demo}
                     from "./examples/many-lights-demo.js";
@@ -39,7 +39,7 @@ Object.assign (defs,
                {Axes_Viewer, Axes_Viewer_Test_Scene, Matrix_Game},
                {Demonstration},
                {Inertia_Demo, Collision_Demo},
-               {Instanced_Cubes_Demo},
+               {Instanced_Cubes_Demo, UBO_Test_Demo},
                {Many_Lights_Demo},
                {Obj_File_Demo},
                {Parametric_Surfaces},
@@ -52,7 +52,7 @@ Object.assign (defs,
 
 // ******************** SELECT THE DEMO TO DISPLAY:
 
-const main_scene        = Shadows_Demo;
+const main_scene        = UBO_Test_Demo;
 const additional_scenes = [];
 
 export {main_scene, additional_scenes, defs};
