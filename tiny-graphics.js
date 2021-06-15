@@ -285,6 +285,25 @@ const test_rookie_mistake = function () {
 };
 
 
+
+
+
+var obj = {one: [1, { two: {three: 3}, four: {five: 5, six: {seven: 7}, eight: 8}, nine: 9 } ] };
+
+
+const flatten_JSON = (o,p="") => { return Object.keys(o)
+                                    .map(k => o[k] === null           ||
+                                              typeof o[k] !== "object" ? {[p + (p ? ".":"") + k]:o[k]}
+                                                                        : flatten_JSON(o[k],p + (p ? ".":"") + k))
+                                    .reduce((p,c) => Object.assign(p,c));
+                      };
+const table = Object.entries( flatten_JSON(obj) );
+// TODO:  Support JSON paths that end in an array index (a.1 should become a[1])
+const fix_array_notation = s => s.replaceAll (/\.(\d+)\./g, (match, number) => '['+number+'].' );
+const uniform_names_from_JSON = new Map( table.map (r => [fix_array_notation(r[0]), r[1] ]) );
+
+
+
 const Shader = tiny.Shader =
   class Shader {
       // See description at https://github.com/encyclopedia-of-code/tiny-graphics-js/wiki/tiny-graphics.js#shader
@@ -302,14 +321,42 @@ const Shader = tiny.Shader =
           // context.
           const gpu_instance = existing_instance || this.gpu_instances.set (context, defaults).get (context);
 
-          class Graphics_Addresses {            // Helper inner class
+          class Uniforms_Addresses {            // Helper inner class
               constructor (program, gl) {
+                  this.UBOs = new Map();
+                  this.indices_to_blockname = new Map();
+                  this.indices_to_offsets = new Map();
+                  this.num_blocks = gl.getProgramParameter(program, gl.ACTIVE_UNIFORM_BLOCKS);
+                  for (let i = 0; i < this.num_blocks; i++ ) {
+                    const UBO_name = gl.getActiveUniformBlockName(program, i);
+                    const UBO_size = gl.getActiveUniformBlockParameter(program, i, gl.UNIFORM_BLOCK_DATA_SIZE);
+                    this.UBOs.set (UBO_name, {UBO_size, block_index: i, element_offsets: new Map()});
+
+                    const indices = gl.getActiveUniformBlockParameter(program, i, gl.UNIFORM_BLOCK_ACTIVE_UNIFORM_INDICES);
+                    const offsets = gl.getActiveUniforms(program, indices, gl.UNIFORM_OFFSET);
+                    for (let i = 0; i < indices.length; i++) {
+                      this.indices_to_blockname.set(indices[i], UBO_name);
+                      this.indices_to_offsets.set(indices[i], offsets[i]);
+                    }
+                  }
+
                   const num_uniforms = gl.getProgramParameter (program, gl.ACTIVE_UNIFORMS);
                   // Retrieve the GPU addresses of each uniform variable in the shader based on their names.  Store
                   // these pointers for later.
                   for (let i = 0; i < num_uniforms; ++i) {
-                      let u     = gl.getActiveUniform (program, i).name;
-                      this[ u ] = gl.getUniformLocation (program, u);
+
+                      const full_name = gl.getActiveUniform (program, i).name;
+
+                      if (this.indices_to_blockname.get(i)) {
+                          // Belongs to a UBO
+                        const name = this.indices_to_blockname.get(i);
+                        const offset = this.indices_to_offsets.get(i);
+                        this.UBOs.get (name).element_offsets.set (full_name, offset);
+                      }
+                      else {
+                          // Loose uniform
+                          this[ full_name ] = gl.getUniformLocation (program, full_name);
+                      }
                   }
               }
           }
@@ -338,11 +385,19 @@ const Shader = tiny.Shader =
           if ( !gl.getProgramParameter (program, gl.LINK_STATUS))
               throw "Shader linker error: " + gl.getProgramInfoLog (program);
 
-          //Init UBO for the Camera and Lights
+          const gpu_addresses = new Uniforms_Addresses (program, gl);
+
+          // //Init UBO for the Camera and Lights
           this.init_UBO(gl, program, Shader.mapping_UBO());
 
-          Object.assign (gpu_instance,
-                         {program, vertShdr, fragShdr, gpu_addresses: new Graphics_Addresses (program, gl)});
+          // for (let ubo of gpu_addresses.UBOs) {
+          //   if (!ubo.binding_point)
+          //     throw "Each category of UBO must specify its own binding point on the UBO object."
+          //   gl.uniformBlockBinding(program, ubo.block_index, ubo.binding_point);
+          // }
+
+
+          Object.assign (gpu_instance, {program, vertShdr, fragShdr, gpu_addresses});
           return gpu_instance;
       }
       activate (context, uniforms, model_transform, material) {
@@ -367,10 +422,11 @@ const Shader = tiny.Shader =
         }
       }
 
-      bind_UBO (gl, program, shader_name, binding_point) {
-        var ubo_index = gl.getUniformBlockIndex(program, shader_name);
-        gl.uniformBlockBinding(program, ubo_index, binding_point);
-      }
+      // Was this always unused??
+      // bind_UBO (gl, program, shader_name, binding_point) {
+      //   var ubo_index = gl.getUniformBlockIndex(program, shader_name);
+      //   gl.uniformBlockBinding(program, ubo_index, binding_point);
+      // }
 
       // Your custom Shader has to override the following functions:
       vertex_glsl_code () {}
