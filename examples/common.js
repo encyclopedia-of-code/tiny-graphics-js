@@ -173,26 +173,15 @@ const Light = defs.Light =
       this.shadow_map[shadow_map_index].deactivate(caller, true);
     }
     bind (context, gpu_addresses) {
-
-      // TODO:  The light can't re-bind if it gets unbound
-          // update: (we would just destroy it and reuse its index rather than unbind/rebind)
-
-      //Do we really want to only bind ONCE??? EVER??? ARE YOU SURE????
-      if(this.are_textures_bound)
-        return;
-
       for (let i = 0; i < 6; i++) {
         if( !this.shadow_map[i])
           continue;
         this.shadow_map.index = this.index * 6 + i;
         let name = "shadow_maps[" + this.shadow_map.index + "]";
-        this.shadow_map[i].sampler_address = gpu_addresses[name];
+        this.shadow_map[i].draw_sampler_address = gpu_addresses[name];
         this.shadow_map[i].texture_unit = Light.GLOBAL_TEXTURE_OFFSET + this.shadow_map.index;
-
-        this.shadow_map[i].activate (context, this.shadow_map[i].texture_unit);
+        this.shadow_map[i].activate (context, this.shadow_map[i].texture_unit, false);
       }
-
-      this.are_textures_bound = true;
     }
   };
 
