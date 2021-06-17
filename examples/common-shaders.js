@@ -86,11 +86,11 @@ const Instanced_Shader = defs.Instanced_Shader =
          ];
       }
 
-      copy_onto_graphics_card (context) {
-        const instance = super.copy_onto_graphics_card (context);
-        this.init_UBO (context, this.gpu_instances.get(context).program, this.ubo_binding);
-        return instance;
-      }
+      // copy_onto_graphics_card (context) {
+      //   const instance = super.copy_onto_graphics_card (context);
+      //   this.init_UBO (context, this.gpu_instances.get(context).program, this.ubo_binding);
+      //   return instance;
+      // }
       update_GPU (context, gpu_addresses, uniforms, model_transform, material) {
         material.initialize(context, this.ubo_layout);
         material.bind(this.ubo_binding[0].binding_point, gpu_addresses);
