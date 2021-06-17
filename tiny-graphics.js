@@ -187,9 +187,6 @@ const Shape = tiny.Shape =
           material.shader.activate (webgl_manager.context, uniforms, model_transform, material);
           // Run the shaders to draw every triangle now:
           this.execute_shaders (webgl_manager.context, gpu_instance, type, instances);
-
-          // Unbind the texture after the second (shadow) pass.  TODO:  Does this do anything?
-          webgl_manager.context.bindTexture( webgl_manager.context.TEXTURE_2D, null);
       }
 
       // NOTE: All the below functions make a further assumption: that your vertex buffer includes fields called
@@ -515,17 +512,16 @@ const Texture = tiny.Texture =
       }
       activate (gl, texture_unit = 0, treat_as_fbo = false) {
           const gpu_instance = this.gpu_instances.get (gl) || this.copy_onto_graphics_card (gl);
+
           if( treat_as_fbo ) {
             gl.viewport (0, 0, this.width, this.height);
             gl.bindFramebuffer (gl.FRAMEBUFFER, gpu_instance.fbo_pointer);
             gl.clear (gl.DEPTH_BUFFER_BIT);
-            gl.bindTexture (gl.TEXTURE_2D, gpu_instance.texture_buffer_pointer);
           }
-          else {
-            gl.uniform1i (this.sampler_address, texture_unit);
-            gl.bindTexture (gl.TEXTURE_2D, gpu_instance.texture_buffer_pointer);
-          }
-          gl.activeTexture (gl[ "TEXTURE" + texture_unit ]);
+          else
+            gl.activeTexture (gl[ "TEXTURE" + texture_unit ]);
+          gl.uniform1i (this.draw_sampler_address, texture_unit);
+          gl.bindTexture (gl.TEXTURE_2D, gpu_instance.texture_buffer_pointer);
       }
       deactivate (caller, treat_as_fbo = false) {
         if (treat_as_fbo) {
