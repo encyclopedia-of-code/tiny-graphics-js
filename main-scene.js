@@ -52,7 +52,7 @@ Object.assign (defs,
 
 // ******************** SELECT THE DEMO TO DISPLAY:
 
-const main_scene        = UBO_Test_Demo;
+const main_scene        = Shadows_Demo;
 const additional_scenes = [];
 
 export {main_scene, additional_scenes, defs};
