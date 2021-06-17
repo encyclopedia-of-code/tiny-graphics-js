@@ -154,21 +154,20 @@ const Light = defs.Light =
         this.is_initialized = true;
       }
     }
-    activate (gl, shadow_map_index = 0) {
-      //always index 0 if directional light
-      if (!this.casts_shadow)
-        return;
-
-        //offset through UBOs for camera matrix and distance parameters??
-      this.shadow_map_shader.activate(gl, {light_space_matrix: this.light_space_matrix[shadow_map_index]}, Mat4.identity(), undefined);
-      this.shadow_map[shadow_map_index].activate(gl, 0, true);
-    }
     deactivate (caller, shadow_map_index = 0) {
       if (!this.casts_shadow)
         return;
       this.shadow_map[shadow_map_index].deactivate(caller, true);
     }
-    bind (context, gpu_addresses) {
+    bind (context, gpu_addresses, is_shadow_pass, shadow_map_index = 0) {
+      if (is_shadow_pass) {
+        if (!this.casts_shadow)
+          return;
+
+          //offset through UBOs for camera matrix and distance parameters??
+        this.shadow_map_shader.activate(gl, {light_space_matrix: this.light_space_matrix[shadow_map_index]}, Mat4.identity(), undefined);
+        this.shadow_map[shadow_map_index].activate(gl, 0, true);
+      }
       for (let i = 0; i < 6; i++) {
         if( !this.shadow_map[i])
           continue;
