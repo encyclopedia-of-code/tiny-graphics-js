@@ -321,7 +321,9 @@ const Shader = tiny.Shader =
           // context.
           const gpu_instance = existing_instance || this.gpu_instances.set (context, defaults).get (context);
 
-          class Uniforms_Addresses {            // Helper inner class
+          class Uniforms_Addresses {
+            // Uniforms_Addresses: Helper inner class. Retrieve the GPU addresses of each uniform variable in
+            // the shader based on their names.  Store these pointers for later.
               constructor (program, gl) {
                   this.UBOs = new Map();
                   this.indices_to_blockname = new Map();
@@ -339,12 +341,9 @@ const Shader = tiny.Shader =
                       this.indices_to_offsets.set(indices[i], offsets[i]);
                     }
                   }
-
                   const num_uniforms = gl.getProgramParameter (program, gl.ACTIVE_UNIFORMS);
-                  // Retrieve the GPU addresses of each uniform variable in the shader based on their names.  Store
-                  // these pointers for later.
-                  for (let i = 0; i < num_uniforms; ++i) {
 
+                  for (let i = 0; i < num_uniforms; ++i) {
                       const full_name = gl.getActiveUniform (program, i).name;
 
                       if (this.indices_to_blockname.get(i)) {
@@ -353,10 +352,8 @@ const Shader = tiny.Shader =
                         const offset = this.indices_to_offsets.get(i);
                         this.UBOs.get (name).element_offsets.set (full_name, offset);
                       }
-                      else {
-                          // Loose uniform
+                      else // Loose uniform
                           this[ full_name ] = gl.getUniformLocation (program, full_name);
-                      }
                   }
               }
           }
@@ -388,17 +385,32 @@ const Shader = tiny.Shader =
           const gpu_addresses = new Uniforms_Addresses (program, gl);
 
           // //Init UBO for the Camera and Lights
-          this.init_UBO(gl, program, Shader.mapping_UBO());
+          // this.init_UBO(gl, program, Shader.mapping_UBO());
 
-          // for (let ubo of gpu_addresses.UBOs) {
-          //   if (!ubo.binding_point)
-          //     throw "Each category of UBO must specify its own binding point on the UBO object."
-          //   gl.uniformBlockBinding(program, ubo.block_index, ubo.binding_point);
-          // }
+          for (let ubo of gpu_addresses.UBOs) {
+
+            // TODO: Tell all the UBO_Managers to send using the context/caller. (also from initialize())
+
+                // TODO:  Remember to implement UBO_Manager::dirty.
+
+            // TODO:  For each UBO do this
+            // this.buffer = gl.createBuffer ();
+            // gl.bindBuffer (gl.UNIFORM_BUFFER, this.buffer);
+            // gl.bufferData (gl.UNIFORM_BUFFER, buffer_size, gl.DYNAMIC_DRAW);
+            // gl.bindBuffer (gl.UNIFORM_BUFFER, null);
+
+
+            if (!ubo.binding_point)
+              throw "Each category of UBO must specify its own binding point on the UBO object."
+            gl.uniformBlockBinding(program, ubo.block_index, ubo.binding_point);
+          }
 
 
           Object.assign (gpu_instance, {program, vertShdr, fragShdr, gpu_addresses});
           return gpu_instance;
+      }
+      assign_ubo_handler (gpu_instance, ubo_name, binding_point, callback) {
+
       }
       activate (context, uniforms, model_transform, material) {
           // Track which GPU contexts this object has copied itself onto:
@@ -413,14 +425,14 @@ const Shader = tiny.Shader =
           this.update_GPU (context, gpu_instance.gpu_addresses, uniforms, model_transform, material);
       }
 
-      init_UBO (gl, program, ubo_binding) {
-        var ubo_index = 0;
-        for (var i = 0; i < ubo_binding.length; i++) {
-          ubo_index = gl.getUniformBlockIndex(program, ubo_binding[i].shader_name);
-          if (ubo_index !== gl.INVALID_INDEX)
-            gl.uniformBlockBinding(program, ubo_index, ubo_binding[i].binding_point);
-        }
-      }
+      // init_UBO (gl, program, ubo_binding) {
+      //   var ubo_index = 0;
+      //   for (var i = 0; i < ubo_binding.length; i++) {
+      //     ubo_index = gl.getUniformBlockIndex(program, ubo_binding[i].shader_name);
+      //     if (ubo_index !== gl.INVALID_INDEX)
+      //       gl.uniformBlockBinding(program, ubo_index, ubo_binding[i].binding_point);
+      //   }
+      // }
 
       // Was this always unused??
       // bind_UBO (gl, program, shader_name, binding_point) {
@@ -433,12 +445,12 @@ const Shader = tiny.Shader =
       fragment_glsl_code () {}
       update_GPU () {}
       static default_values () {}
-      static mapping_UBO () {
-        return [
-          {shader_name: "Camera", binding_point: 0},
-          {shader_name: "Lights", binding_point: 1},
-        ];
-      }
+      // static mapping_UBO () {
+      //   return [
+      //     {shader_name: "Camera", binding_point: 0},
+      //     {shader_name: "Lights", binding_point: 1},
+      //   ];
+      // }
       static assign_camera (camera_inverse, uniforms) {
           Object.assign (uniforms, {camera_inverse, camera_transform: Mat4.inverse (camera_inverse)});
       }

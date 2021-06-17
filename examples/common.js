@@ -20,12 +20,13 @@ const Camera = defs.Camera =
       this.camera_inverse = Mat4.look_at (this.position, this.at, this.up);
       this.camera_world = Mat4.inverse (this.camera_inverse);
 
-      this.ubo_layout = [{num_instances: 1,
-                          data_layout:[{name:"camera_inverse", type:"Mat4"},
-                                       {name:"projection", type:"Mat4"},
-                                       {name:"camera_position", type:"vec3"}]
-                         }
-                        ];
+      this.ubo_binding_point = 0;
+      // this.ubo_layout = [{num_instances: 1,
+      //                     data_layout:[{name:"camera_inverse", type:"Mat4"},
+      //                                  {name:"projection", type:"Mat4"},
+      //                                  {name:"camera_position", type:"vec3"}]
+      //                    }
+      //                   ];
       this.is_initialized = false;
     }
     initialize(caller) {
@@ -40,6 +41,9 @@ const Camera = defs.Camera =
             break;
           }
         }
+        
+
+
         this.is_initialized = true;
       }
 
