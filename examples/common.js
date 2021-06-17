@@ -159,14 +159,14 @@ const Light = defs.Light =
         return;
       this.shadow_map[shadow_map_index].deactivate(caller, true);
     }
-    bind (context, gpu_addresses, is_shadow_pass, shadow_map_index = 0) {
+    bind (gl, gpu_addresses, is_shadow_pass, shadow_map_index = 0) {
       if (is_shadow_pass) {
-        if (!this.casts_shadow)
-          return;
-
-          //offset through UBOs for camera matrix and distance parameters??
+        if (this.casts_shadow) {
+          //apply shadow frustum offset through UBOs for camera matrix and distance parameters??
         this.shadow_map_shader.activate(gl, {light_space_matrix: this.light_space_matrix[shadow_map_index]}, Mat4.identity(), undefined);
         this.shadow_map[shadow_map_index].activate(gl, 0, true);
+        }
+        return;
       }
       for (let i = 0; i < 6; i++) {
         if( !this.shadow_map[i])
@@ -175,7 +175,7 @@ const Light = defs.Light =
         let name = "shadow_maps[" + this.shadow_map.index + "]";
         this.shadow_map[i].draw_sampler_address = gpu_addresses[name];
         this.shadow_map[i].texture_unit = Light.GLOBAL_TEXTURE_OFFSET + this.shadow_map.index;
-        this.shadow_map[i].activate (context, this.shadow_map[i].texture_unit, false);
+        this.shadow_map[i].activate (gl, this.shadow_map[i].texture_unit, false);
       }
     }
   };
@@ -386,13 +386,13 @@ const Entity = defs.Entity =
         if (light.is_point_light)
         {
           for (let i = 0; i < 6; i++) {
-            light.activate(caller.context, i);
+            light.activate(caller.context, undefined, i);
             this.flush(caller, [], false, light.shadow_map_shader);
             light.deactivate(caller, i);
           }
         }
         else {
-          light.activate(caller.context);
+          light.bind(caller.context, undefined, true);
           this.flush(caller, [], false, light.shadow_map_shader);
           light.deactivate(caller);
         }
