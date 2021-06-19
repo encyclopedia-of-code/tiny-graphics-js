@@ -50,8 +50,64 @@ const Camera = defs.Camera =
     }
   };
 
-const Light = defs.Light =
+
+  const Light = defs.Light =
   class Light {
+
+    static NUM_LIGHTS = 2;
+    static global_index = 0;
+    static global_ambient = 0.4;
+
+    constructor(data) {
+
+      const defaults = Light.default_values();
+      Object.assign(this, defaults, data);
+
+      this.ubo_layout = [{num_instances: 1,
+                          data_layout: [{name:"ambient", type:"float"}]
+                         },
+                         {num_instances: Light.NUM_LIGHTS,
+                          data_layout: [{name:"direction_or_position", type:"vec4"},
+                                        {name:"color", type:"vec3"},
+                                        {name:"diffuse", type:"float"},
+                                        {name:"specular", type:"float"},
+                                        {name:"attenuation_factor", type:"float"}
+                                      ]
+                         }
+                        ];
+    }
+    static default_values () {
+      return {
+                direction_or_position: vec4 (0.0, 0.0, 0.0, 0.0),
+                color: vec3 (1.0, 1.0, 1.0, 1.0),
+                diffuse: 1.0,
+                specular: 1.0,
+                attenuation_factor: 0.0
+              };
+    }
+    initialize(caller) {
+      if (!this.is_initialized) {
+        const mappings = Shader.mapping_UBO();
+        for (var i = 0; i < mappings.length; i++) {
+          if (mappings[i].shader_name == "Lights") {
+            UBO.create(caller.context, "Lights", this.ubo_layout);
+            UBO.Cache["Lights"].bind(mappings[i].binding_point);
+            UBO.Cache["Lights"].update("ambient", Light.global_ambient);
+            UBO.Cache["Lights"].update("direction_or_position", this.direction_or_position, this.index);
+            UBO.Cache["Lights"].update("color", this.color, this.index);
+            UBO.Cache["Lights"].update("diffuse", this.diffuse, this.index);
+            UBO.Cache["Lights"].update("specular", this.specular, this.index);
+            UBO.Cache["Lights"].update("attenuation_factor", this.attenuation_factor, this.index);
+            break;
+          }
+        }
+        this.is_initialized = true;
+      }
+    }
+  };
+
+const Shadow_Light = defs.Shadow_Light =
+  class Shadow_Light {
 
     //Break it down into a Shadow_Light subclass!
 
@@ -62,11 +118,11 @@ const Light = defs.Light =
 
     constructor(data) {
 
-      const defaults = Light.default_values();
+      const defaults = Shadow_Light.default_values();
       Object.assign(this, defaults, data);
 
-      this.index = Light.global_index;
-      Light.global_index++;
+      this.index = Shadow_Light.global_index;
+      Shadow_Light.global_index++;
 
       this.ubo_layout = [{num_instances: 1,
                           data_layout: [{name:"ambient", type:"float"}]
@@ -161,11 +217,9 @@ const Light = defs.Light =
     }
     bind (gl, gpu_addresses, is_shadow_pass, shadow_map_index = 0) {
       if (is_shadow_pass) {
-        if (this.casts_shadow) {
           //apply shadow frustum offset through UBOs for camera matrix and distance parameters??
         this.shadow_map_shader.activate(gl, {light_space_matrix: this.light_space_matrix[shadow_map_index]}, Mat4.identity(), undefined);
         this.shadow_map[shadow_map_index].activate(gl, 0, true);
-        }
         return;
       }
       for (let i = 0; i < 6; i++) {
@@ -174,7 +228,7 @@ const Light = defs.Light =
         this.shadow_map.index = this.index * 6 + i;
         let name = "shadow_maps[" + this.shadow_map.index + "]";
         this.shadow_map[i].draw_sampler_address = gpu_addresses[name];
-        this.shadow_map[i].texture_unit = Light.GLOBAL_TEXTURE_OFFSET + this.shadow_map.index;
+        this.shadow_map[i].texture_unit = Shadow_Light.GLOBAL_TEXTURE_OFFSET + this.shadow_map.index;
         this.shadow_map[i].activate (gl, this.shadow_map[i].texture_unit, false);
       }
     }
@@ -383,6 +437,8 @@ const Entity = defs.Entity =
     }
     shadow_map_pass (caller, lights) {
       for (let light of lights) {
+        if (!light.casts_shadow)
+          continue;
         if (light.is_point_light)
         {
           for (let i = 0; i < 6; i++) {
