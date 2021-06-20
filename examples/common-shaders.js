@@ -681,11 +681,11 @@ const Instanced_Shader = defs.Instanced_Shader =
 
   const Universal_Shader = defs.Universal_Shader =
   class Universal_Shader extends Instanced_Shader {
-      constructor (num_lights = 2, is_shadowed, is_textured) {
+      constructor (num_lights = 2, has_shadows, has_texture) {
         super ();
         this.num_lights = num_lights;
-        this.is_shadowed = is_shadowed;
-        this.is_textured = is_textured;
+        this.has_shadows = has_shadows;
+        this.has_texture = has_texture;
 
         this.ubo_binding = [
           {shader_name: "Material",  binding_point: 2},
@@ -702,7 +702,7 @@ const Instanced_Shader = defs.Instanced_Shader =
       }
       update_GPU (context, gpu_addresses, uniforms, model_transform, material) {
         material.initialize(context, this.ubo_layout);
-        if (this.is_shadowed)
+        if (this.has_shadows)
           for (let light of uniforms.lights)
             if (light.casts_shadow)
               light.bind(context, gpu_addresses);
@@ -769,18 +769,21 @@ const Instanced_Shader = defs.Instanced_Shader =
           bool casts_shadow;
         };
 
-        const int N_LIGHTS = ` + this.num_lights + `;
+        const int N_LIGHTS = ${this.num_lights};
 
         layout (std140) uniform Lights
         {
           float ambient;
           Light lights[N_LIGHTS];
-          mat4 light_space_matrix[N_LIGHTS * 6];
+          ${this.has_shadows ? `
+            mat4 light_space_matrix[N_LIGHTS * 6];`
+            : ``}
         };
 
-        const int NUM_SHADOW_MAPS = N_LIGHTS * 6;
-
-        uniform sampler2D shadow_maps[NUM_SHADOW_MAPS]; //since point lights have up to 6 samplers
+        ${this.has_shadows ? `
+          const int NUM_SHADOW_MAPS = N_LIGHTS * 6;
+          uniform sampler2D shadow_maps[NUM_SHADOW_MAPS]; //since point lights have up to 6 samplers`
+          : ``}
 
         layout (std140) uniform Material
         {
@@ -789,7 +792,9 @@ const Instanced_Shader = defs.Instanced_Shader =
           vec3 specular;
           float smoothness;
         };
-        uniform sampler2D diffuse_texture;
+        ${this.has_texture ? `
+        uniform sampler2D diffuse_texture;`
+        : ``}
 
         in vec3 VERTEX_POS;
         in vec3 VERTEX_NORMAL;
@@ -797,6 +802,7 @@ const Instanced_Shader = defs.Instanced_Shader =
 
         out vec4 frag_color;
 
+        ${this.has_shadows ? `
         float ShadowCalculation(vec4 fragPosLightSpace, int index, vec3 N, vec3 L )
         {
           // perform perspective divide
@@ -837,45 +843,58 @@ const Instanced_Shader = defs.Instanced_Shader =
           if(projCoords.z > 1.0)
               shadow = 0.0;
           return shadow;
-        }
+        }`
+        : ``}
 
         // ***** PHONG SHADING HAPPENS HERE: *****
-        vec3 phong_model_lights( vec3 N, vec3 vertex_worldspace ) {
+        vec3 phong_model_lights( vec3 N, vec3 vertex_worldspace
+                              ${this.has_texture ? `, vec4 texture_color` : ``}
+                              ) {
             vec3 E = normalize( camera_position - vertex_worldspace );
             vec3 result = vec3( 0.0 );
             for(int i = 0; i < N_LIGHTS; i++) {
-                vec3 surface_to_light_vector = lights[i].direction_or_position.xyz -
-                                               lights[i].direction_or_position.w * vertex_worldspace;
-                float distance_to_light = length( surface_to_light_vector );
+              vec3 surface_to_light_vector = lights[i].direction_or_position.xyz -
+                                              lights[i].direction_or_position.w * vertex_worldspace;
+              float distance_to_light = length( surface_to_light_vector );
 
-                vec3 L = normalize( surface_to_light_vector );
-                vec3 H = normalize( L + E );
+              vec3 L = normalize( surface_to_light_vector );
+              vec3 H = normalize( L + E );
 
-                  // Compute diffuse and specular components of Phong Reflection Model.
-                float diffuse  =      max( dot( N, L ), 0.0 );
-                float specular = pow( max( dot( N, H ), 0.0 ), smoothness );     // Use Blinn's "halfway vector" method.
-                float attenuation = 1.0 / (1.0 + lights[i].attenuation_factor * distance_to_light * distance_to_light );
+                // Compute diffuse and specular components of Phong Reflection Model.
+              float diffuse  =      max( dot( N, L ), 0.0 );
+              float specular = pow( max( dot( N, H ), 0.0 ), smoothness );     // Use Blinn's "halfway vector" method.
+              float attenuation = 1.0 / (1.0 + lights[i].attenuation_factor * distance_to_light * distance_to_light );
 
-                vec4 color = texture( diffuse_texture, VERTEX_TEXCOORD );
-                vec3 light_contribution = color.xyz * lights[i].color.xyz * diffuse * lights[i].diffuse * diffuse
-                                                          + lights[i].color.xyz * specular * lights[i].specular * specular;
+              vec3 light_contribution = ${this.has_texture ? `texture_color.xyz * ` : ``}
+                                                          diffuse * lights[i].diffuse * diffuse
+                                                        + specular * lights[i].specular * specular;
+              light_contribution *= lights[i].color.xyz;
 
-                vec4 fragPosLightSpace = light_space_matrix[i * 6] * vec4 (VERTEX_POS, 1.0);
-
-
-               float shadow = ShadowCalculation(fragPosLightSpace, i, N, L);
-               result += attenuation * (1.0 - shadow) * light_contribution;
-              }
+              ${this.has_shadows ? `
+              vec4 fragPosLightSpace = light_space_matrix[i * 6] * vec4 (VERTEX_POS, 1.0);
+              float shadow = ShadowCalculation(fragPosLightSpace, i, N, L);
+              result += attenuation * (1.0 - shadow) * light_contribution;`
+              :
+              `result += attenuation * light_contribution;`}
+            }
             return result;
           }
-
         void main() {
+          ${this.has_texture ? `
           // Compute an initial (ambient) color:
           vec4 tex_color = texture( diffuse_texture, VERTEX_TEXCOORD );
           frag_color = vec4( ( tex_color.xyz + color.xyz ) * ambient, color.w * tex_color.w );
           // Compute the final color with contributions from lights:
-          frag_color.xyz += phong_model_lights( normalize( VERTEX_NORMAL ), VERTEX_POS );
-        }`;
+          frag_color.xyz += phong_model_lights( normalize( VERTEX_NORMAL ), VERTEX_POS, tex_color);
+          `
+          :
+          `
+          // Compute an initial (ambient) color:
+          frag_color = vec4( shape_color.xyz * ambient, shape_color.w );
+          // Compute the final color with contributions from lights:
+          frag_color.xyz += phong_model_lights( normalize( N ), vertex_worldspace );
+          `}
+        };`
       }
   };
 
