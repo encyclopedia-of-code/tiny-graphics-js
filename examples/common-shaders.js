@@ -91,10 +91,10 @@ const Instanced_Shader = defs.Instanced_Shader =
         this.init_UBO (context, this.gpu_instances.get(context).program, this.ubo_binding);
         return instance;
       }
-      update_GPU (context, gpu_addresses, uniforms, model_transform, material) {
+      update_GPU (context, gpu_addresses, uniforms, global_transform, material) {
         material.initialize(context, this.ubo_layout);
         material.bind(this.ubo_binding[0].binding_point, gpu_addresses);
-        context.uniformMatrix4fv (gpu_addresses.global_transform, true, Matrix.flatten_2D_to_1D (model_transform));
+        context.uniformMatrix4fv (gpu_addresses.global_transform, true, Matrix.flatten_2D_to_1D (global_transform));
       }
       static default_values () {
         return {
@@ -329,7 +329,7 @@ const Instanced_Shader = defs.Instanced_Shader =
 
         if(uniforms.light_space_matrix)
           context.uniformMatrix4fv (gpu_addresses.light_space_matrix, true, Matrix.flatten_2D_to_1D (uniforms.light_space_matrix));
-        context.uniformMatrix4fv (gpu_addresses.global_transform, true, Matrix.flatten_2D_to_1D (model_transform));
+        context.uniformMatrix4fv (gpu_addresses.model_transform, true, Matrix.flatten_2D_to_1D (model_transform));
       }
       shared_glsl_code () {           // ********* SHARED CODE, INCLUDED IN BOTH SHADERS *********
         return "#version 300 es " + `
@@ -339,9 +339,9 @@ const Instanced_Shader = defs.Instanced_Shader =
       vertex_glsl_code () {          // ********* VERTEX SHADER *********
         return this.shared_glsl_code () + `
       layout(location = 0) in vec3 position; // Position is expressed in object coordinates
-      layout(location = 3) in mat4 matrix;
+      layout(location = 3) in mat4 instance_transform;
 
-      uniform mat4 global_transform;
+      uniform mat4 model_transform;
       uniform mat4 light_space_matrix;
 
       layout (std140) uniform Camera
@@ -352,7 +352,7 @@ const Instanced_Shader = defs.Instanced_Shader =
       };
 
       void main() {
-        gl_Position =  light_space_matrix * global_transform * transpose(matrix) * vec4( position, 1.0 );
+        gl_Position =  light_space_matrix * model_transform * instance_transform * vec4( position, 1.0 );
       }`;
     }
       fragment_glsl_code () {         // ********* FRAGMENT SHADER *********
@@ -707,7 +707,7 @@ const Instanced_Shader = defs.Instanced_Shader =
             if (light.casts_shadow)
               light.bind(context, gpu_addresses);
         material.bind(this.ubo_binding[0].binding_point, gpu_addresses);
-        context.uniformMatrix4fv (gpu_addresses.global_transform, true, Matrix.flatten_2D_to_1D (model_transform));
+        context.uniformMatrix4fv (gpu_addresses.model_transform, true, Matrix.flatten_2D_to_1D (model_transform));
       }
       static default_values () {
         return {
@@ -728,9 +728,9 @@ const Instanced_Shader = defs.Instanced_Shader =
         layout(location = 0) in vec3 position; // Position is expressed in object coordinates
         layout(location = 1) in vec3 normal;
         layout(location = 2) in vec2 texture_coord;
-        layout(location = 3) in mat4 matrix;
+        layout(location = 3) in mat4 instance_transform;
 
-        uniform mat4 global_transform;
+        uniform mat4 model_transform;
 
         layout (std140) uniform Camera
         {
@@ -744,9 +744,10 @@ const Instanced_Shader = defs.Instanced_Shader =
         out vec2 VERTEX_TEXCOORD;
 
         void main() {
-          gl_Position =  projection * camera_inverse * global_transform * transpose(matrix) * vec4( position, 1.0 );
-          VERTEX_POS = vec3(global_transform * transpose(matrix) * vec4( position, 1.0 ));
-          VERTEX_NORMAL = mat3(transpose(inverse(global_transform * transpose(matrix)))) * normal;
+          vec4 world_position = model_transform * instance_transform * vec4( position, 1.0 );
+          gl_Position = projection * camera_inverse * world_position;
+          VERTEX_POS = vec3(world_position);
+          VERTEX_NORMAL = mat3(inverse(transpose(model_transform * instance_transform))) * normal;
           VERTEX_TEXCOORD = texture_coord;
         }`;
       }
@@ -865,9 +866,9 @@ const Instanced_Shader = defs.Instanced_Shader =
               float specular = pow( max( dot( N, H ), 0.0 ), smoothness );     // Use Blinn's "halfway vector" method.
               float attenuation = 1.0 / (1.0 + lights[i].attenuation_factor * distance_to_light * distance_to_light );
 
-              vec3 light_contribution = ${this.has_texture ? `texture_color.xyz * ` : ``}
-                                                          diffuse * lights[i].diffuse * diffuse
-                                                        + specular * lights[i].specular * specular;
+              vec3 light_contribution = ${this.has_texture ? `texture_color.xyz` : `vec3(1,1,1)`}
+                                                        * diffuse * lights[i].diffuse * diffuse
+                                                      + specular * lights[i].specular * specular;
               light_contribution *= lights[i].color.xyz;
 
               ${this.has_shadows ? `
@@ -890,11 +891,11 @@ const Instanced_Shader = defs.Instanced_Shader =
           :
           `
           // Compute an initial (ambient) color:
-          frag_color = vec4( shape_color.xyz * ambient, shape_color.w );
+          frag_color = vec4( color.xyz * ambient, color.w );
           // Compute the final color with contributions from lights:
-          frag_color.xyz += phong_model_lights( normalize( N ), vertex_worldspace );
+          frag_color.xyz += phong_model_lights( normalize( VERTEX_NORMAL ), VERTEX_POS );
           `}
-        };`
+        }`
       }
   };
 

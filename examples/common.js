@@ -11,13 +11,13 @@ export {tiny, defs};
 
 const Camera = defs.Camera =
   class Camera {
-    constructor(eye = vec3 (0.0, 0.0, 0.0), at = vec3 (0.0, 0.0, -1.0), up = vec3 (0.0, 1.0, 0.0),  fov_y = Math.PI/4, aspect = 1080/600, near = 0.01, far = 1024) {
+    constructor(eye_point = vec3 (0.0, 0.0, 0.0), at_point = vec3 (0.0, 0.0, -1.0), up_point = vec3 (0.0, 1.0, 0.0),  fov_y = Math.PI/4, aspect = 1080/600, near = 0.01, far = 1024) {
 
-      this.position = eye;
-      this.at = at;
-      this.up = up;
+      this.position = eye_point;
+      this.at_point = at_point;
+      this.up_point = up_point;
 
-      this.camera_inverse = Mat4.look_at (this.position, this.at, this.up);
+      this.camera_inverse = Mat4.look_at (this.position, this.at_point, this.up_point);
       this.camera_world = Mat4.inverse (this.camera_inverse);
 
       this.ubo_layout = [{num_instances: 1,
@@ -405,7 +405,7 @@ const Entity = defs.Entity =
     constructor(shape, transforms, material) {
       this.dirty = true
       this.shape = shape;
-      this.global_transform = Mat4.identity();
+      this.model_transform = Mat4.identity();
       this.transforms = transforms;
       this.material = material;
     }
@@ -418,7 +418,7 @@ const Entity = defs.Entity =
       this.dirty = true;
     }
     apply_transform(model_transform) {
-      this.global_transform = model_transform;
+      this.model_transform = model_transform;
     }
     set_material(material) {
       this.material = material;
@@ -466,22 +466,22 @@ const Entity = defs.Entity =
         if( entity.transforms instanceof tiny.Matrix ) {
           // Single matrix case
           if (entity.dirty && entity.shape.ready) {
-            entity.shape.vertices = [{matrix: entity.transforms}];
+            entity.shape.vertices = [{instance_transform: entity.transforms}];
             //Ideally use a shader with just a uniform matrix where you pass global.times(model)?
-            entity.shape.fill_buffer(["matrix"], undefined, 1);
+            entity.shape.fill_buffer(["instance_transform"], undefined, 1);
             if( !alternative_shader)
               entity.dirty = false;
           }
-          entity.shape.draw(caller, {lights}, entity.global_transform, shadow_pass_material || entity.material, undefined, 1);
+          entity.shape.draw(caller, {lights}, entity.model_transform, shadow_pass_material || entity.material, undefined, 1);
         }
         else {
           if (entity.dirty && entity.shape.ready) {
-            entity.shape.vertices = Array(entity.transforms.length).fill(0).map( (x,i) => ({matrix: entity.transforms[i]}));
-            entity.shape.fill_buffer(["matrix"], undefined, 1);
+            entity.shape.vertices = Array(entity.transforms.length).fill(0).map( (x,i) => ({instance_transform: entity.transforms[i]}));
+            entity.shape.fill_buffer(["instance_transform"], undefined, 1);
             if( !alternative_shader)
               entity.dirty = false;
           }
-          entity.shape.draw(caller, {lights}, entity.global_transform, shadow_pass_material || entity.material, undefined, entity.transforms.length);
+          entity.shape.draw(caller, {lights}, entity.model_transform, shadow_pass_material || entity.material, undefined, entity.transforms.length);
         }
       }
 

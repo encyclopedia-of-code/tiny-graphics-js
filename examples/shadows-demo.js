@@ -11,7 +11,7 @@ class Shadows_Demo extends Component {
     this.shapes = {cube: new defs.Instanced_Cube_Index ()};
     this.shader = new defs.Instanced_Shader (Light.NUM_LIGHTS);
 
-     this.shadowed_shader = new defs.Shadow_Textured_Instanced_Shader (Light.NUM_LIGHTS);
+     this.shadowed_shader = new defs.Universal_Shader (Light.NUM_LIGHTS, true, false);
     //this.shadowed_shader = new defs.Textured_Instanced_Shader (Light.NUM_LIGHTS);
 
 

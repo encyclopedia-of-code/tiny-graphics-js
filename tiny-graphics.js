@@ -86,9 +86,10 @@ const Shape = tiny.Shape =
             else if( attribute_is_matrix[a] ) {
               for (let i=0; i < v[attr].length; i++) {
                 for (let j=0; j < v[attr].length; j++) {
-                  if( buffer.data[pos] != v[attr][i][j] )
+                  // GLSL wants column major matrices.
+                  if( buffer.data[pos] != v[attr][j][i] )
                     buffer.dirty = true;
-                  buffer.data[pos] = v[attr][i][j];
+                  buffer.data[pos] = v[attr][j][i];
                   pos++;
                 }
               }
@@ -356,7 +357,7 @@ const Shader = tiny.Shader =
       }
 
       init_UBO (gl, program, ubo_binding) {
-        var ubo_index = 0;
+        var ubo_index = -1;
         for (var i = 0; i < ubo_binding.length; i++) {
           ubo_index = gl.getUniformBlockIndex(program, ubo_binding[i].shader_name);
           if (ubo_index !== gl.INVALID_INDEX)
