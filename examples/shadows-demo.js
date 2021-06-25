@@ -9,9 +9,9 @@ const Shadows_Demo = defs.Shadows_Demo =
 class Shadows_Demo extends Component {
   init () {
     this.shapes = {cube: new defs.Instanced_Cube_Index ()};
-    this.shader = new defs.Instanced_Shader (Light.NUM_LIGHTS);
+    //this.shader = new defs.Universal_Shader (Light.NUM_LIGHTS, {has_shadows: false});
 
-     this.shadowed_shader = new defs.Universal_Shader (Light.NUM_LIGHTS, true, false);
+    this.shadowed_shader = new defs.Universal_Shader (Light.NUM_LIGHTS);
     //this.shadowed_shader = new defs.Textured_Instanced_Shader (Light.NUM_LIGHTS);
 
 
