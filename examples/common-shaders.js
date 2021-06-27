@@ -35,7 +35,9 @@ class Universal_Shader extends Shader {
       material.initialize(context, this.ubo_layout);
       if (this.has_shadows)
         for (let light of uniforms.lights)
-          if (light.casts_shadow)
+          if (!light.supports_shadow)
+            throw `Simpler lights do not have compatible UBO layouts to use with shadowed shaders!`;
+          else if (light.casts_shadow)
             light.bind(context, gpu_addresses);
       material.bind(this.ubo_binding[0].binding_point, gpu_addresses);
       context.uniformMatrix4fv (gpu_addresses.model_transform, true, Matrix.flatten_2D_to_1D (model_transform));

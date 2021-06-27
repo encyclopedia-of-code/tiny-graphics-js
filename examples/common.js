@@ -58,10 +58,13 @@ const Camera = defs.Camera =
     static global_index = 0;
     static global_ambient = 0.4;
 
-    constructor(data) {
+    constructor(options) {
 
       const defaults = Light.default_values();
-      Object.assign(this, defaults, data);
+      Object.assign(this, defaults, options);
+
+      this.index = Light.global_index;
+      Light.global_index++;
 
       this.ubo_layout = [{num_instances: 1,
                           data_layout: [{name:"ambient", type:"float"}]
@@ -90,9 +93,12 @@ const Camera = defs.Camera =
         const mappings = Shader.mapping_UBO();
         for (var i = 0; i < mappings.length; i++) {
           if (mappings[i].shader_name == "Lights") {
-            UBO.create(caller.context, "Lights", this.ubo_layout);
-            UBO.Cache["Lights"].bind(mappings[i].binding_point);
-            UBO.Cache["Lights"].update("ambient", Light.global_ambient);
+            if (this.index == 0) {
+              //Only one UBO shared amongst all of the lights, have ID 0 cretate it
+              UBO.create(caller.context, "Lights", this.ubo_layout);
+              UBO.Cache["Lights"].bind(mappings[i].binding_point);
+              UBO.Cache["Lights"].update("ambient", Light.global_ambient);
+            }
             UBO.Cache["Lights"].update("direction_or_position", this.direction_or_position, this.index);
             UBO.Cache["Lights"].update("color", this.color, this.index);
             UBO.Cache["Lights"].update("diffuse", this.diffuse, this.index);
@@ -104,23 +110,26 @@ const Camera = defs.Camera =
         this.is_initialized = true;
       }
     }
+    bind (gl, gpu_addresses, is_shadow_pass, shadow_map_index = 0)
+    { }
+    deactivate (caller, shadow_map_index = 0)
+    { }
   };
 
 const Shadow_Light = defs.Shadow_Light =
   class Shadow_Light {
-
-    //Break it down into a Shadow_Light subclass!
 
     static NUM_LIGHTS = 2;
     static global_index = 0;
     static global_ambient = 0.4;
     static GLOBAL_TEXTURE_OFFSET = 16;
 
-    constructor(data) {
+    constructor(options) {
 
       const defaults = Shadow_Light.default_values();
-      Object.assign(this, defaults, data);
+      Object.assign(this, defaults, options);
 
+      this.supports_shadow = true;
       this.index = Shadow_Light.global_index;
       Shadow_Light.global_index++;
 
