@@ -11,13 +11,13 @@ export {tiny, defs};
 
 const Camera = defs.Camera =
   class Camera {
-    constructor(eye = vec3 (0.0, 0.0, 0.0), at = vec3 (0.0, 0.0, -1.0), up = vec3 (0.0, 1.0, 0.0),  fov_y = Math.PI/4, aspect = 1080/600, near = 0.01, far = 1024) {
+    constructor(eye_point = vec3 (0.0, 0.0, 0.0), at_point = vec3 (0.0, 0.0, -1.0), up_point = vec3 (0.0, 1.0, 0.0),  fov_y = Math.PI/4, aspect = 1080/600, near = 0.01, far = 1024) {
 
-      this.position = eye;
-      this.at = at;
-      this.up = up;
+      this.position = eye_point;
+      this.at_point = at_point;
+      this.up_point = up_point;
 
-      this.camera_inverse = Mat4.look_at (this.position, this.at, this.up);
+      this.camera_inverse = Mat4.look_at (this.position, this.at_point, this.up_point);
       this.camera_world = Mat4.inverse (this.camera_inverse);
 
       this.ubo_binding_point = 0;
@@ -54,23 +54,88 @@ const Camera = defs.Camera =
     }
   };
 
-const Light = defs.Light =
+
+  const Light = defs.Light =
   class Light {
 
-    //Break it down into a Shadow_Light subclass!
+    static NUM_LIGHTS = 2;
+    static global_index = 0;
+    static global_ambient = 0.4;
+
+    constructor(options) {
+
+      const defaults = Light.default_values();
+      Object.assign(this, defaults, options);
+
+      this.index = Light.global_index;
+      Light.global_index++;
+
+      this.ubo_layout = [{num_instances: 1,
+                          data_layout: [{name:"ambient", type:"float"}]
+                         },
+                         {num_instances: Light.NUM_LIGHTS,
+                          data_layout: [{name:"direction_or_position", type:"vec4"},
+                                        {name:"color", type:"vec3"},
+                                        {name:"diffuse", type:"float"},
+                                        {name:"specular", type:"float"},
+                                        {name:"attenuation_factor", type:"float"}
+                                      ]
+                         }
+                        ];
+    }
+    static default_values () {
+      return {
+                direction_or_position: vec4 (0.0, 0.0, 0.0, 0.0),
+                color: vec3 (1.0, 1.0, 1.0, 1.0),
+                diffuse: 1.0,
+                specular: 1.0,
+                attenuation_factor: 0.0
+              };
+    }
+    initialize(caller) {
+      if (!this.is_initialized) {
+        const mappings = Shader.mapping_UBO();
+        for (var i = 0; i < mappings.length; i++) {
+          if (mappings[i].shader_name == "Lights") {
+            if (this.index == 0) {
+              //Only one UBO shared amongst all of the lights, have ID 0 cretate it
+              UBO.create(caller.context, "Lights", this.ubo_layout);
+              UBO.Cache["Lights"].bind(mappings[i].binding_point);
+              UBO.Cache["Lights"].update("ambient", Light.global_ambient);
+            }
+            UBO.Cache["Lights"].update("direction_or_position", this.direction_or_position, this.index);
+            UBO.Cache["Lights"].update("color", this.color, this.index);
+            UBO.Cache["Lights"].update("diffuse", this.diffuse, this.index);
+            UBO.Cache["Lights"].update("specular", this.specular, this.index);
+            UBO.Cache["Lights"].update("attenuation_factor", this.attenuation_factor, this.index);
+            break;
+          }
+        }
+        this.is_initialized = true;
+      }
+    }
+    bind (gl, gpu_addresses, is_shadow_pass, shadow_map_index = 0)
+    { }
+    deactivate (caller, shadow_map_index = 0)
+    { }
+  };
+
+const Shadow_Light = defs.Shadow_Light =
+  class Shadow_Light {
 
     static NUM_LIGHTS = 2;
     static global_index = 0;
     static global_ambient = 0.4;
     static GLOBAL_TEXTURE_OFFSET = 16;
 
-    constructor(data) {
+    constructor(options) {
 
-      const defaults = Light.default_values();
-      Object.assign(this, defaults, data);
+      const defaults = Shadow_Light.default_values();
+      Object.assign(this, defaults, options);
 
-      this.index = Light.global_index;
-      Light.global_index++;
+      this.supports_shadow = true;
+      this.index = Shadow_Light.global_index;
+      Shadow_Light.global_index++;
 
       this.ubo_layout = [{num_instances: 1,
                           data_layout: [{name:"ambient", type:"float"}]
@@ -165,11 +230,9 @@ const Light = defs.Light =
     }
     bind (gl, gpu_addresses, is_shadow_pass, shadow_map_index = 0) {
       if (is_shadow_pass) {
-        if (this.casts_shadow) {
           //apply shadow frustum offset through UBOs for camera matrix and distance parameters??
         this.shadow_map_shader.activate(gl, {light_space_matrix: this.light_space_matrix[shadow_map_index]}, Mat4.identity(), undefined);
         this.shadow_map[shadow_map_index].activate(gl, 0, true);
-        }
         return;
       }
       for (let i = 0; i < 6; i++) {
@@ -178,7 +241,7 @@ const Light = defs.Light =
         this.shadow_map.index = this.index * 6 + i;
         let name = "shadow_maps[" + this.shadow_map.index + "]";
         this.shadow_map[i].draw_sampler_address = gpu_addresses[name];
-        this.shadow_map[i].texture_unit = Light.GLOBAL_TEXTURE_OFFSET + this.shadow_map.index;
+        this.shadow_map[i].texture_unit = Shadow_Light.GLOBAL_TEXTURE_OFFSET + this.shadow_map.index;
         this.shadow_map[i].activate (gl, this.shadow_map[i].texture_unit, false);
       }
     }
@@ -355,7 +418,7 @@ const Entity = defs.Entity =
     constructor(shape, transforms, material) {
       this.dirty = true
       this.shape = shape;
-      this.global_transform = Mat4.identity();
+      this.model_transform = Mat4.identity();
       this.transforms = transforms;
       this.material = material;
     }
@@ -368,7 +431,7 @@ const Entity = defs.Entity =
       this.dirty = true;
     }
     apply_transform(model_transform) {
-      this.global_transform = model_transform;
+      this.model_transform = model_transform;
     }
     set_material(material) {
       this.material = material;
@@ -387,6 +450,8 @@ const Entity = defs.Entity =
     }
     shadow_map_pass (caller, lights) {
       for (let light of lights) {
+        if (!light.casts_shadow)
+          continue;
         if (light.is_point_light)
         {
           for (let i = 0; i < 6; i++) {
@@ -414,22 +479,22 @@ const Entity = defs.Entity =
         if( entity.transforms instanceof tiny.Matrix ) {
           // Single matrix case
           if (entity.dirty && entity.shape.ready) {
-            entity.shape.vertices = [{matrix: entity.transforms}];
+            entity.shape.vertices = [{instance_transform: entity.transforms}];
             //Ideally use a shader with just a uniform matrix where you pass global.times(model)?
-            entity.shape.fill_buffer(["matrix"], undefined, 1);
+            entity.shape.fill_buffer(["instance_transform"], undefined, 1);
             if( !alternative_shader)
               entity.dirty = false;
           }
-          entity.shape.draw(caller, {lights}, entity.global_transform, shadow_pass_material || entity.material, undefined, 1);
+          entity.shape.draw(caller, {lights}, entity.model_transform, shadow_pass_material || entity.material, undefined, 1);
         }
         else {
           if (entity.dirty && entity.shape.ready) {
-            entity.shape.vertices = Array(entity.transforms.length).fill(0).map( (x,i) => ({matrix: entity.transforms[i]}));
-            entity.shape.fill_buffer(["matrix"], undefined, 1);
+            entity.shape.vertices = Array(entity.transforms.length).fill(0).map( (x,i) => ({instance_transform: entity.transforms[i]}));
+            entity.shape.fill_buffer(["instance_transform"], undefined, 1);
             if( !alternative_shader)
               entity.dirty = false;
           }
-          entity.shape.draw(caller, {lights}, entity.global_transform, shadow_pass_material || entity.material, undefined, entity.transforms.length);
+          entity.shape.draw(caller, {lights}, entity.model_transform, shadow_pass_material || entity.material, undefined, entity.transforms.length);
         }
       }
 
