@@ -86,9 +86,10 @@ const Shape = tiny.Shape =
             else if( attribute_is_matrix[a] ) {
               for (let i=0; i < v[attr].length; i++) {
                 for (let j=0; j < v[attr].length; j++) {
-                  if( buffer.data[pos] != v[attr][i][j] )
+                  // GLSL wants column major matrices.
+                  if( buffer.data[pos] != v[attr][j][i] )
                     buffer.dirty = true;
-                  buffer.data[pos] = v[attr][i][j];
+                  buffer.data[pos] = v[attr][j][i];
                   pos++;
                 }
               }
@@ -422,14 +423,14 @@ const Shader = tiny.Shader =
           this.update_GPU (context, gpu_instance.gpu_addresses, uniforms, model_transform, material);
       }
 
-      // init_UBO (gl, program, ubo_binding) {
-      //   var ubo_index = 0;
-      //   for (var i = 0; i < ubo_binding.length; i++) {
-      //     ubo_index = gl.getUniformBlockIndex(program, ubo_binding[i].shader_name);
-      //     if (ubo_index !== gl.INVALID_INDEX)
-      //       gl.uniformBlockBinding(program, ubo_index, ubo_binding[i].binding_point);
-      //   }
-      // }
+      init_UBO (gl, program, ubo_binding) {
+        var ubo_index = -1;
+        for (var i = 0; i < ubo_binding.length; i++) {
+          ubo_index = gl.getUniformBlockIndex(program, ubo_binding[i].shader_name);
+          if (ubo_index !== gl.INVALID_INDEX)
+            gl.uniformBlockBinding(program, ubo_index, ubo_binding[i].binding_point);
+        }
+      }
 
       // Was this always unused??
       // bind_UBO (gl, program, shader_name, binding_point) {
@@ -549,24 +550,6 @@ const Texture = tiny.Texture =
           gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl[ this.min_filter ]);
           gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl[ "CLAMP_TO_EDGE" ]);
           gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl[ "CLAMP_TO_EDGE" ]);
-    // Unsupported; implement in shader instead:
-    // gl.texParameterf (gl.TEXTURE_2D, gl.TEXTURE_BORDER_COLOR, [1.0, 1.0, 1.0, 1.0]);
-
-
-
-
-  // const tex = gl.createTexture();
-  // gl.bindTexture(gl.TEXTURE_3D, tex);
-  // gl.texImage3D(gl.TEXTURE_3D, 0, gl.RGBA8, this.width, this.height, depth of texture???, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
-
-  // gl.framebufferTextureLayer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT16, tex, 0, light.index);
-
-
-
-
-
-
-
           //onto the fbo
           gl.framebufferTexture2D (gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, gpu_instance.texture_buffer_pointer, 0);
 
@@ -586,9 +569,10 @@ const Texture = tiny.Texture =
             gl.bindFramebuffer (gl.FRAMEBUFFER, gpu_instance.fbo_pointer);
             gl.clear (gl.DEPTH_BUFFER_BIT);
           }
-          else
+          else {
             gl.activeTexture (gl[ "TEXTURE" + texture_unit ]);
-          gl.uniform1i (this.draw_sampler_address, texture_unit);
+            gl.uniform1i (this.draw_sampler_address, texture_unit);
+          }
           gl.bindTexture (gl.TEXTURE_2D, gpu_instance.texture_buffer_pointer);
       }
       deactivate (caller, treat_as_fbo = false) {

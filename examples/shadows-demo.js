@@ -9,13 +9,10 @@ const Shadows_Demo = defs.Shadows_Demo =
 class Shadows_Demo extends Component {
   init () {
     this.shapes = {cube: new defs.Instanced_Cube_Index ()};
-    this.shader = new defs.Instanced_Shader (Light.NUM_LIGHTS);
-
-     this.shadowed_shader = new defs.Shadow_Textured_Instanced_Shader (Light.NUM_LIGHTS);
-    //this.shadowed_shader = new defs.Textured_Instanced_Shader (Light.NUM_LIGHTS);
+    this.shadowed_shader = new defs.Universal_Shader (Light.NUM_LIGHTS, {has_shadows: true});
 
 
-    this.sun = new Light({direction_or_position: vec4(2.0, 5.0, 0.0, 0.0), color: vec3(1.0, 1.0, 1.0), diffuse: 1, specular: 0.7, attenuation_factor: 0.01,
+    this.sun = new defs.Shadow_Light({direction_or_position: vec4(2.0, 5.0, 0.0, 0.0), color: vec3(1.0, 1.0, 1.0), diffuse: 1, specular: 0.7, attenuation_factor: 0.01,
       casts_shadow: true});
 
     //this.debug_shadow_map = new Material("Debug_Shadow_Map", this.shadowed_shader, { color: vec4(0.76, 0.69, 0.50, 1.0) }, { diffuse_texture: this.sun.shadow_map[0] });
@@ -57,7 +54,6 @@ class Shadows_Demo extends Component {
       this.stars));
 
     this.camera = new Camera(vec3(-1.0, 2.0, 1.0));
-    //this.sun2 = new Light({direction_or_position: vec4(5.0, 10.0, 0.0, 0.0), color: vec3(1.0, 1.0, 1.0), diffuse: 0.5, specular: 1.0, attenuation_factor: 0.001});
   }
   render_animation (caller) {
 
@@ -76,7 +72,6 @@ class Shadows_Demo extends Component {
     }
 
     this.sun.initialize(caller);
-    //this.sun2.initialize(caller);
 
     let Lights = [this.sun];
 
