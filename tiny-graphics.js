@@ -286,7 +286,7 @@ const test_rookie_mistake = function () {
 
 
 
-var obj = {one: [1, { two: {three: 3}, four: {five: 5, six: {seven: 7}, eight: 8}, nine: 9 } ] };
+var obj = {one: [1, [22, [23]], {one: "two"}, { two: {three: 3}, four: {five: 5, six: {seven: [7, 2]}, eight: 8}, nine: 9 } ] };
 
 
 const flatten_JSON = (o,p="") => { return Object.keys(o)
@@ -296,8 +296,7 @@ const flatten_JSON = (o,p="") => { return Object.keys(o)
                                     .reduce((p,c) => Object.assign(p,c));
                       };
 const table = Object.entries( flatten_JSON(obj) );
-// TODO:  Support JSON paths that end in an array index (a.1 should become a[1])
-const fix_array_notation = s => s.replaceAll (/\.(\d+)\./g, (match, number) => '['+number+'].' );
+const fix_array_notation = s => s.replaceAll (/\.(\d+)(?=\.|$)/g, (match, number) => '['+number+']' );
 const uniform_names_from_JSON = new Map( table.map (r => [fix_array_notation(r[0]), r[1] ]) );
 
 
