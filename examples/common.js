@@ -21,12 +21,12 @@ const Camera = defs.Camera =
       this.camera_world = Mat4.inverse (this.camera_inverse);
 
       this.ubo_binding_point = 0;
-      // this.ubo_layout = [{num_instances: 1,
-      //                     data_layout:[{name:"camera_inverse", type:"Mat4"},
-      //                                  {name:"projection", type:"Mat4"},
-      //                                  {name:"camera_position", type:"vec3"}]
-      //                    }
-      //                   ];
+      this.ubo_layout = [{num_instances: 1,
+                          data_layout:[{name:"camera_inverse", type:"Mat4"},
+                                       {name:"projection", type:"Mat4"},
+                                       {name:"camera_position", type:"vec3"}]
+                         }
+                        ];
       this.is_initialized = false;
     }
     initialize(caller) {
@@ -41,7 +41,7 @@ const Camera = defs.Camera =
             break;
           }
         }
-        
+
 
 
         this.is_initialized = true;
@@ -182,6 +182,9 @@ const Shadow_Light = defs.Shadow_Light =
       this.are_textures_bound = false;
     }
     static default_values () {
+
+      // TODO:  Each Light should not really compile its own Shader!!  Too many identical Shaders stored on GPU.
+
       return {
                 direction_or_position: vec4 (0.0, 0.0, 0.0, 0.0),
                 color: vec3 (1.0, 1.0, 1.0, 1.0),
@@ -229,21 +232,20 @@ const Shadow_Light = defs.Shadow_Light =
       this.shadow_map[shadow_map_index].deactivate(caller, true);
     }
     bind (gl, gpu_addresses, is_shadow_pass, shadow_map_index = 0) {
+      if( !this.shadow_map[shadow_map_index])
+        return;
       if (is_shadow_pass) {
           //apply shadow frustum offset through UBOs for camera matrix and distance parameters??
         this.shadow_map_shader.activate(gl, {light_space_matrix: this.light_space_matrix[shadow_map_index]}, Mat4.identity(), undefined);
         this.shadow_map[shadow_map_index].activate(gl, 0, true);
         return;
       }
-      for (let i = 0; i < 6; i++) {
-        if( !this.shadow_map[i])
-          continue;
-        this.shadow_map.index = this.index * 6 + i;
-        let name = "shadow_maps[" + this.shadow_map.index + "]";
-        this.shadow_map[i].draw_sampler_address = gpu_addresses[name];
-        this.shadow_map[i].texture_unit = Shadow_Light.GLOBAL_TEXTURE_OFFSET + this.shadow_map.index;
-        this.shadow_map[i].activate (gl, this.shadow_map[i].texture_unit, false);
-      }
+      const map = this.shadow_map[i];
+      map.index = this.index * 6 + shadow_map_index;
+      let name = "shadow_maps[" + map.index + "]";
+      map.draw_sampler_address = gpu_addresses[name];
+      map.texture_unit = Shadow_Light.GLOBAL_TEXTURE_OFFSET + map.index;
+      map.activate (gl, map.texture_unit, false);
     }
   };
 
@@ -440,65 +442,4 @@ const Entity = defs.Entity =
 
   const Renderer = defs.Renderer =
   class Renderer {
-    constructor() {
-      this.entities = []
-      this.lights = []
-    }
-    submit (object) {
-      if (object instanceof Entity)
-        this.entities.push(object);
-    }
-    shadow_map_pass (caller, lights) {
-      for (let light of lights) {
-        if (!light.casts_shadow)
-          continue;
-        if (light.is_point_light)
-        {
-          for (let i = 0; i < 6; i++) {
-            light.activate(caller.context, undefined, i);
-            this.flush(caller, [], false, light.shadow_map_shader);
-            light.deactivate(caller, i);
-          }
-        }
-        else {
-          light.bind(caller.context, undefined, true);
-          this.flush(caller, [], false, light.shadow_map_shader);
-          light.deactivate(caller);
-        }
-      }
-    }
-
-    //$$$$$$$$$$$$$$$$$$$$$$$$$$ PASS THE LIGHTS TO THE SHADER SO IT CAN BIND THEM
-    flush (caller, lights = [], clear_entities = true, alternative_shader = undefined) {
-
-      const shadow_pass_material = alternative_shader ?
-                      new Material("shadow_pass_material", alternative_shader) :
-                      undefined;
-
-      for(let entity of this.entities){
-        if( entity.transforms instanceof tiny.Matrix ) {
-          // Single matrix case
-          if (entity.dirty && entity.shape.ready) {
-            entity.shape.vertices = [{instance_transform: entity.transforms}];
-            //Ideally use a shader with just a uniform matrix where you pass global.times(model)?
-            entity.shape.fill_buffer(["instance_transform"], undefined, 1);
-            if( !alternative_shader)
-              entity.dirty = false;
-          }
-          entity.shape.draw(caller, {lights}, entity.model_transform, shadow_pass_material || entity.material, undefined, 1);
-        }
-        else {
-          if (entity.dirty && entity.shape.ready) {
-            entity.shape.vertices = Array(entity.transforms.length).fill(0).map( (x,i) => ({instance_transform: entity.transforms[i]}));
-            entity.shape.fill_buffer(["instance_transform"], undefined, 1);
-            if( !alternative_shader)
-              entity.dirty = false;
-          }
-          entity.shape.draw(caller, {lights}, entity.model_transform, shadow_pass_material || entity.material, undefined, entity.transforms.length);
-        }
-      }
-
-      if (clear_entities)
-        this.entities = []
-    }
   };

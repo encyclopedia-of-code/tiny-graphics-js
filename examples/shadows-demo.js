@@ -9,16 +9,26 @@ const Shadows_Demo = defs.Shadows_Demo =
 class Shadows_Demo extends Component {
   init () {
     this.shapes = {cube: new defs.Instanced_Cube_Index ()};
-    this.shadowed_shader = new defs.Universal_Shader (Light.NUM_LIGHTS, {has_shadows: true});
-
 
     this.sun = new defs.Shadow_Light({direction_or_position: vec4(2.0, 5.0, 0.0, 0.0), color: vec3(1.0, 1.0, 1.0), diffuse: 1, specular: 0.7, attenuation_factor: 0.01,
       casts_shadow: true});
 
-    //this.debug_shadow_map = new Material("Debug_Shadow_Map", this.shadowed_shader, { color: vec4(0.76, 0.69, 0.50, 1.0) }, { diffuse_texture: this.sun.shadow_map[0] });
-   // this.sand = new Material("Sand", this.shadowed_shader, { color: vec4(0.76, 0.69, 0.50, 1.0) });
-    this.stars = new Material("Stars", this.shadowed_shader, { color: vec4(0.76, 0.69, 0.50, 1.0) }, { diffuse_texture: new Texture( "assets/stars.png" ) });
-  //  this.shark = new defs.Material_From_File("Shark", this.shadowed_shader, "assets/shark_cm/shark_cm.mtl" );
+    const camera = new Camera(vec3(-1.0, 2.0, 1.0));
+
+   //  this.debug_shadow_map = new Material("Debug_Shadow_Map", this.shadowed_shader, { color: vec4(0.76, 0.69, 0.50, 1.0) }, { diffuse_texture: this.sun.shadow_map[0] });
+   //  this.sand = new Material("Sand", this.shadowed_shader, { color: vec4(0.76, 0.69, 0.50, 1.0) });
+   //  this.shark = new defs.Material_From_File("Shark", this.shadowed_shader, "assets/shark_cm/shark_cm.mtl" );
+   this.stars = new Material("Stars", this.shadowed_shader, { color: vec4(0.76, 0.69, 0.50, 1.0) }, { diffuse_texture: new Texture( "assets/stars.png" ) });
+
+    // TODO:  Support one UBO called "Lights", rather than individual Light objects each being a UBO?
+    // OR keep the current setup involving an array of UBO blocks?
+    // const lights = [sun];
+
+    this.uniforms.UBOs = new Map({camera, light: this.sun, stars: this.stars})
+
+
+    this.shadowed_shader = new defs.Universal_Shader (Light.NUM_LIGHTS, {has_shadows: true});
+
 
      this.renderer = new Renderer();
 
@@ -53,7 +63,7 @@ class Shadows_Demo extends Component {
       ],
       this.stars));
 
-    this.camera = new Camera(vec3(-1.0, 2.0, 1.0));
+    // this.camera = new Camera(vec3(-1.0, 2.0, 1.0));
   }
   render_animation (caller) {
 
@@ -73,8 +83,6 @@ class Shadows_Demo extends Component {
 
     this.sun.initialize(caller);
 
-    let Lights = [this.sun];
-
     // Yet another test shape that doesn't work due to sharing transforms VBO.
     //this.shapes.cube.draw( caller, {lights: Lights}, Mat4.translation(2.0, 5.0, 0.0), this.stars, undefined, 1);
 
@@ -86,7 +94,7 @@ class Shadows_Demo extends Component {
         this.renderer.submit(obj);
       }
 
-    this.renderer.shadow_map_pass(caller, Lights);
+    this.renderer.shadow_map_pass(caller.context, {lights: [this.sun]});
     this.renderer.flush(caller, Lights);
   }
 };

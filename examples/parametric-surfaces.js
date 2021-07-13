@@ -19,6 +19,9 @@ export class Parametric_Surfaces extends Component
 
       this.init_shared_objects();
 
+
+      // TODO:  Should a loop like below exist in the core library, to loop through all document_children and call their render_layout()?
+
       for( let i = 0; i < this.num_sections; i++ )
       {
         const inner_div = div.appendChild( document.createElement( "div" ) );
