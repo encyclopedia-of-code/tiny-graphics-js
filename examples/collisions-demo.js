@@ -130,7 +130,7 @@ class Simulation extends Component
       this.live_string( box => { box.textContent = "Fixed simulation time step size: "  + this.dt     } ); this.new_line();
       this.live_string( box => { box.textContent = this.steps_taken + " timesteps were taken so far." } );
     }
-  render_animation( caller )
+  render_frame( caller )
     {                                     // display(): advance the time and state of our whole simulation.
       if( this.uniforms.animate )
         this.simulate( this.uniforms.animation_delta_time );
@@ -203,9 +203,9 @@ export class Inertia_Demo extends Simulation
                                                       // Delete bodies that stop or stray too far away:
       this.bodies = this.bodies.filter( b => b.center.norm() < 50 && b.linear_velocity.norm() > 2 );
     }
-  render_animation( caller )
+  render_frame( caller )
     {                                 // display(): Draw everything else in the scene besides the moving bodies.
-      super.render_animation( caller );
+      super.render_frame( caller );
 
       if( !caller.controls )
         { this.animated_children.push( caller.controls = new defs.Movement_Controls( { uniforms: this.uniforms } ) );
@@ -295,9 +295,9 @@ export class Collision_Demo extends Simulation
           }
         }
     }
-  render_animation( caller )
+  render_frame( caller )
     {                                 // display(): Draw everything else in the scene besides the moving bodies.
-      super.render_animation( caller );
+      super.render_frame( caller );
       if( !caller.controls )
         { this.animated_children.push( caller.controls = new defs.Movement_Controls( { uniforms: this.uniforms } ) );
           caller.controls.add_mouse_controls( caller.canvas );

@@ -2,7 +2,7 @@ import {tiny, defs} from './common.js';
 
                                                   // Pull these names into this module's scope for convenience:
 const { vec3, vec4, color, Mat4, Shape, Shader, Texture, Component } = tiny;
-const {Renderer, Entity, Camera, Light, Material} = defs
+const {Entity, Camera, Light, Material} = defs
 
 export
 const Shadows_Demo = defs.Shadows_Demo =
@@ -29,8 +29,6 @@ class Shadows_Demo extends Component {
 
     this.shadowed_shader = new defs.Universal_Shader (Light.NUM_LIGHTS, {has_shadows: true});
 
-
-     this.renderer = new Renderer();
 
     // this.objects = 1;
     // this.size = 1;
@@ -65,26 +63,26 @@ class Shadows_Demo extends Component {
 
     // this.camera = new Camera(vec3(-1.0, 2.0, 1.0));
   }
-  render_animation (caller) {
+  render_frame (renderer) {
 
 
-    if( !caller.controls )
+    if( !renderer.controls )
     {
       this.uniforms.camera_inverse = this.camera.camera_inverse;
       this.uniforms.camera_transform = this.camera.camera_world;
-      this.animated_children.push( caller.controls = new defs.Movement_Controls(
+      this.animated_children.push( renderer.controls = new defs.Movement_Controls(
               { uniforms: this.uniforms },
-              () => {this.camera.initialize(caller)}
+              () => {this.camera.initialize(renderer)}
               ) );
-      caller.controls.add_mouse_controls( caller.canvas );
+      renderer.controls.add_mouse_controls( renderer.canvas );
 
-      this.camera.initialize(caller);
+      this.camera.initialize(renderer);
     }
 
-    this.sun.initialize(caller);
+    this.sun.initialize(renderer);
 
     // Yet another test shape that doesn't work due to sharing transforms VBO.
-    //this.shapes.cube.draw( caller, {lights: Lights}, Mat4.translation(2.0, 5.0, 0.0), this.stars, undefined, 1);
+    //this.shapes.cube.draw( renderer, {lights: Lights}, Mat4.translation(2.0, 5.0, 0.0), this.stars, undefined, 1);
 
       for (let obj of this.entities)
       {
@@ -94,7 +92,7 @@ class Shadows_Demo extends Component {
         this.renderer.submit(obj);
       }
 
-    this.renderer.shadow_map_pass(caller.context, {lights: [this.sun]});
-    this.renderer.flush(caller, Lights);
+    renderer.shadow_map_pass({lights: [this.sun]});
+    renderer.flush(Lights);
   }
 };

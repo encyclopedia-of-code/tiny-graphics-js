@@ -164,7 +164,7 @@ const Movement_Controls = defs.Movement_Controls =
           this.matrix ().post_multiply (Mat4.translation (0, 0, +25));
           this.inverse ().pre_multiply (Mat4.translation (0, 0, -25));
       }
-      render_animation (caller) {
+      render_frame (caller) {
           const m  = this.speed_multiplier * this.meters_per_frame,
                 r  = this.speed_multiplier * this.radians_per_frame,
                 dt = this.uniforms.animation_delta_time / 1000;

@@ -35,7 +35,7 @@ export class Many_Lights_Demo extends Component
       for( let r = 0; r < this.rows;    r++ )
         this.column_lights [ ~~( r) ] = vec3( r, -Math.random(), -2*Math.random()*this.columns  );
     }
-  render_animation( caller )
+  render_frame( caller )
     {                                         // display():  Draw each frame to animate the scene.
       Shader.assign_camera( Mat4.look_at( vec3( this.rows/2,5,5 ), vec3( this.rows/2,0,-4 ), vec3( 0,1,0 ) ), this.uniforms );
       this.uniforms.projection_transform = Mat4.perspective( Math.PI/4, caller.width/caller.height, 1, 500 );

@@ -30,7 +30,7 @@ class Instanced_Cubes_Demo extends Component {
     this.sun = new Light({direction_or_position: vec4(0.0, 10.0, 0.0, 1.0), color: vec3(1.0, 0.0, 0.0), diffuse: 0.5, specular: 1.0, attenuation_factor: 0.001});
     this.sun2 = new Light({direction_or_position: vec4(5.0, 10.0, 0.0, 0.0), color: vec3(1.0, 1.0, 1.0), diffuse: 0.5, specular: 1.0, attenuation_factor: 0.001});
   }
-  render_animation (caller) {
+  render_frame (caller) {
 
 
     if( !caller.controls )
@@ -83,7 +83,7 @@ class UBO_Test_Demo extends Component {
     this.camera = new Camera(vec3(0.0, 5.0, 20.0));
     this.sun = new Light({direction_or_position: vec4(0.0, 10.0, 0.0, 1.0), color: vec3(1.0, 1.0, 1.0), diffuse: 1.0, specular: 1.0, attenuation_factor: 0.0001});
   }
-  render_animation (caller) {
+  render_frame (caller) {
     this.camera.initialize(caller);
     this.sun.initialize(caller);
 
