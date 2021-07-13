@@ -17,6 +17,10 @@ const Shape = tiny.Shape =
       constructor () {
           [this.vertices, this.indices, this.local_buffers] = [[], [], []];
           this.attribute_counter = 0;
+
+
+  // TODO:  There should be seperate dirty flags per each GPU instance.
+
           this.dirty = true;
           this.ready = true; //Since 3d models can be not ready
           this.gpu_instances = new Map ();      // Track which GPU contexts this object has copied itself onto.
@@ -110,10 +114,9 @@ const Shape = tiny.Shape =
 
           // When this Shape sees a new GPU context (in case of multiple drawing areas), copy the Shape to the GPU. If
           // it already was copied over, get a pointer to the existing instance.
-          const existing_instance = this.gpu_instances.get (context);
+          const gpu_instance = existing_instance = this.gpu_instances.get (context);
 
           // If this Shape was never used on this GPU context before, then prepare new buffer indices for this context.
-          let gpu_instance = existing_instance;
           if(!existing_instance) {
             test_rookie_mistake ();
             const defaults = { VAO: gl.createVertexArray () };
@@ -180,14 +183,14 @@ const Shape = tiny.Shape =
               gl.drawElementsInstanced (gl[ type ], this.indices.length, gl.UNSIGNED_INT, 0, instances);
           } else gl.drawArraysInstanced (gl[ type ], 0, this.num_vertices, instances);
       }
-      draw (webgl_manager, uniforms, model_transform, material, type = "TRIANGLES", instances) {
-          let gpu_instance = this.gpu_instances.get (webgl_manager.context);
+      draw (context, uniforms, model_transform, material, type = "TRIANGLES", instances) {
+          let gpu_instance = this.gpu_instances.get (context);
           if( !gpu_instance || this.dirty)
-            gpu_instance = this.copy_onto_graphics_card (webgl_manager.context);
-          webgl_manager.context.bindVertexArray( gpu_instance.VAO );
-          material.shader.activate (webgl_manager.context, uniforms, model_transform, material);
+            gpu_instance = this.copy_onto_graphics_card (context);
+          context.bindVertexArray( gpu_instance.VAO );
+          material.shader.activate (context, uniforms, model_transform, material);
           // Run the shaders to draw every triangle now:
-          this.execute_shaders (webgl_manager.context, gpu_instance, type, instances);
+          this.execute_shaders (context, gpu_instance, type, instances);
       }
 
       // NOTE: All the below functions make a further assumption: that your vertex buffer includes fields called
@@ -286,54 +289,46 @@ const test_rookie_mistake = function () {
 
 
 
-var obj = {one: [1, [22, [23]], {one: "two"}, { two: {three: 3}, four: {five: 5, six: {seven: [7, 2]}, eight: 8}, nine: 9 } ] };
-
-
-const flatten_JSON = (o,p="") => { return Object.keys(o)
-                                    .map(k => o[k] === null           ||
-                                              typeof o[k] !== "object" ? {[p + (p ? ".":"") + k]:o[k]}
-                                                                        : flatten_JSON(o[k],p + (p ? ".":"") + k))
-                                    .reduce((p,c) => Object.assign(p,c));
-                      };
-const table = Object.entries( flatten_JSON(obj) );
-const fix_array_notation = s => s.replaceAll (/\.(\d+)(?=\.|$)/g, (match, number) => '['+number+']' );
-const uniform_names_from_JSON = new Map( table.map (r => [fix_array_notation(r[0]), r[1] ]) );
-
-
 
 const Shader = tiny.Shader =
   class Shader {
       // See description at https://github.com/encyclopedia-of-code/tiny-graphics-js/wiki/tiny-graphics.js#shader
-      copy_onto_graphics_card (context) {
+      copy_onto_graphics_card (context, uniforms) {
+          // Note:  Calling this twice should recompile the shader in-place with updated options (untested)
+
           // Define what this object should store in each new WebGL Context:
           const defaults = {
               program : undefined, gpu_addresses: undefined,
               vertShdr: undefined, fragShdr: undefined
           };
 
-          const existing_instance = this.gpu_instances.get (context);
-          if ( !existing_instance) test_rookie_mistake ();
+          const gpu_instance = existing_instance = this.gpu_instances.get (context);
 
           // If this Shader was never used on this GPU context before, then prepare new buffer indices for this
           // context.
-          const gpu_instance = existing_instance || this.gpu_instances.set (context, defaults).get (context);
+          if(!existing_instance) {
+            test_rookie_mistake ();
+            gpu_instance = this.gpu_instances.set (context, defaults).get (context);
+          }
 
           class Uniforms_Addresses {
             // Uniforms_Addresses: Helper inner class. Retrieve the GPU addresses of each uniform variable in
             // the shader based on their names.  Store these pointers for later.
               constructor (program, gl) {
-                  this.UBOs = new Map();
                   this.indices_to_blockname = new Map();
                   this.indices_to_offsets = new Map();
+                  this.UBOs_to_block_index = new Map();
                   this.num_blocks = gl.getProgramParameter(program, gl.ACTIVE_UNIFORM_BLOCKS);
                   for (let i = 0; i < this.num_blocks; i++ ) {
                     const UBO_name = gl.getActiveUniformBlockName(program, i);
                     const UBO_size = gl.getActiveUniformBlockParameter(program, i, gl.UNIFORM_BLOCK_DATA_SIZE);
-                    this.UBOs.set (UBO_name, {UBO_size, block_index: i, element_offsets: new Map()});
+                    if (! uniforms.UBOs.get (UBO_name).initialized)
+                      uniforms.UBOs.get (UBO_name).buffer_size = UBO_size;
 
                     const indices = gl.getActiveUniformBlockParameter(program, i, gl.UNIFORM_BLOCK_ACTIVE_UNIFORM_INDICES);
                     const offsets = gl.getActiveUniforms(program, indices, gl.UNIFORM_OFFSET);
                     for (let i = 0; i < indices.length; i++) {
+                      this.UBOs_to_block_index.set (uniforms.UBOs.get (UBO_name), i)
                       this.indices_to_blockname.set(indices[i], UBO_name);
                       this.indices_to_offsets.set(indices[i], offsets[i]);
                     }
@@ -347,7 +342,12 @@ const Shader = tiny.Shader =
                           // Belongs to a UBO
                         const name = this.indices_to_blockname.get(i);
                         const offset = this.indices_to_offsets.get(i);
-                        this.UBOs.get (name).element_offsets.set (full_name, offset);
+
+                        // TODO: Skip loop iterations instead if initialized, according to many offsets this UBO is known to have?
+                        // Would save a lot of GL calls when the UBO is used in the next shader.
+
+                        if (! uniforms.UBOs.get (name).initialized)
+                          uniforms.UBOs.get (name).element_offsets.set (full_name, offset);
                       }
                       else // Loose uniform
                           this[ full_name ] = gl.getUniformLocation (program, full_name);
@@ -381,38 +381,34 @@ const Shader = tiny.Shader =
 
           const gpu_addresses = new Uniforms_Addresses (program, gl);
 
-          // //Init UBO for the Camera and Lights
-          // this.init_UBO(gl, program, Shader.mapping_UBO());
-
-          for (let ubo of gpu_addresses.UBOs) {
-
-            // TODO: Tell all the UBO_Managers to send using the context/caller. (also from initialize())
-
-                // TODO:  Remember to implement UBO_Manager::dirty.
-
-            // TODO:  For each UBO do this
-            // this.buffer = gl.createBuffer ();
-            // gl.bindBuffer (gl.UNIFORM_BUFFER, this.buffer);
-            // gl.bufferData (gl.UNIFORM_BUFFER, buffer_size, gl.DYNAMIC_DRAW);
-            // gl.bindBuffer (gl.UNIFORM_BUFFER, null);
-
-
-            if (!ubo.binding_point)
-              throw "Each category of UBO must specify its own binding point on the UBO object."
-            gl.uniformBlockBinding(program, ubo.block_index, ubo.binding_point);
-          }
-
+          for (let index of this.UBOs_to_block_index.values())
+            gl.uniformBlockBinding(program, index, ubo.get_binding_point());
 
           Object.assign (gpu_instance, {program, vertShdr, fragShdr, gpu_addresses});
           return gpu_instance;
       }
-      assign_ubo_handler (gpu_instance, ubo_name, binding_point, callback) {
-
-      }
       activate (context, uniforms, model_transform, material) {
           // Track which GPU contexts this object has copied itself onto:
           if ( !this.gpu_instances) this.gpu_instances =  new Map ();
-          const gpu_instance = this.gpu_instances.get (context) || this.copy_onto_graphics_card (context);
+          const gpu_instance = this.gpu_instances.get (context) || this.copy_onto_graphics_card (context, uniforms);
+
+          // TODO:  Should this loop be moved outside Shader::activate() call to renderer caller, since it deals more with context's buffers?
+          for (let binding_point of context.selected_ubos.keys()) {
+            const ubo = context.selected_ubos[binding_point];
+
+            // TODO:  How to initialize context.buffers?
+
+            // Send the buffer if dirty.
+            if (context.buffers.get(ubo).dirty)
+              ubo.send_to_GPU (context);
+
+             // TODO:  Initialize bound_ubos, and remove entries how?  By bind index?  Needs to be a map then?
+            // Bind the UBO if it needs it.
+            if (context.bound_ubos.includes(ubo))
+              continue;
+            gl.bindBufferBase (gl.UNIFORM_BUFFER, binding_point, ubo.buffer);
+            context.bound_ubos.add (ubo);
+          }
 
           // TODO:  Cache this
           context.useProgram (gpu_instance.program);
@@ -442,15 +438,15 @@ const Shader = tiny.Shader =
       fragment_glsl_code () {}
       update_GPU () {}
       static default_values () {}
-      // static mapping_UBO () {
-      //   return [
-      //     {shader_name: "Camera", binding_point: 0},
-      //     {shader_name: "Lights", binding_point: 1},
-      //   ];
-      // }
-      static assign_camera (camera_inverse, uniforms) {
-          Object.assign (uniforms, {camera_inverse, camera_transform: Mat4.inverse (camera_inverse)});
+      static mapping_UBO () {
+        return [
+          {shader_name: "Camera", binding_point: 0},
+          {shader_name: "Lights", binding_point: 1},
+        ];
       }
+      // static assign_camera (camera_inverse, uniforms) {
+      //     Object.assign (uniforms, {camera_inverse, camera_transform: Mat4.inverse (camera_inverse)});
+      // }
   };
 
 
@@ -723,6 +719,67 @@ const Component = tiny.Component =
           if ( !shortcut_combination) return;
           this.key_controls.add (shortcut_combination, press, release);
       }
+      constructor() {
+        this.entities = []
+        this.lights = []
+      }
+      submit (object) {
+        if (object instanceof Entity)
+          this.entities.push(object);
+      }
+      shadow_map_pass (caller, lights) {
+        for (let light of lights) {
+          if (!light.casts_shadow)
+            continue;
+          if (light.is_point_light)
+          {
+            for (let i = 0; i < 6; i++) {
+              light.activate(caller.context, undefined, i);
+              this.flush(caller, [], false, light.shadow_map_shader);
+              light.deactivate(caller, i);
+            }
+          }
+          else {
+            light.bind(caller.context, undefined, true);
+            this.flush(caller, [], false, light.shadow_map_shader);
+            light.deactivate(caller);
+          }
+        }
+      }
+
+      flush (context, uniforms, clear_entities = true, alternative_shader = undefined) {
+
+        const shadow_pass_material = alternative_shader ?
+                        new Material("shadow_pass_material", alternative_shader) :
+                        undefined;
+
+        for(let entity of this.entities){
+          if( entity.transforms instanceof tiny.Matrix ) {
+            // Single matrix case
+            if (entity.dirty && entity.shape.ready) {
+              entity.shape.vertices = [{instance_transform: entity.transforms}];
+              //Ideally use a shader with just a uniform matrix where you pass global.times(model)?
+              entity.shape.fill_buffer(["instance_transform"], undefined, 1);
+              if( !alternative_shader)
+                entity.dirty = false;
+            }
+            entity.shape.draw(context, uniforms, entity.model_transform, shadow_pass_material || entity.material, undefined, 1);
+          }
+          else {
+            if (entity.dirty && entity.shape.ready) {
+              entity.shape.vertices = Array(entity.transforms.length).fill(0).map( (x,i) => ({instance_transform: entity.transforms[i]}));
+              entity.shape.fill_buffer(["instance_transform"], undefined, 1);
+              if( !alternative_shader)
+                entity.dirty = false;
+            }
+            entity.shape.draw(context, uniforms, entity.model_transform, shadow_pass_material || entity.material, undefined, entity.transforms.length);
+          }
+        }
+
+        if (clear_entities)
+          this.entities = []
+      }
+      init () { }     // Abstract -- user overrides this
       render_layout (div, options = {}) {
           this.div         = div;
           div.className    = "documentation_treenode";
@@ -771,8 +828,6 @@ const Component = tiny.Component =
               this.embedded_editor                = new tiny.Editor_Widget (this);
           }
       }
-
-      init () {}
       render_animation (context) {}                            // Called each frame for drawing.
       render_explanation () {}
       render_controls () {}     // render_controls(): Called by Controls_Widget for generating interactive UI.
@@ -933,3 +988,57 @@ class UBO  {
 };
 
 UBO.Cache = []; //To be on the gl object!!!
+
+
+
+// var obj = {one: [1, [22, [23]], {one: "two"}, { two: {three: 3}, four: {five: 5, six: {seven: [7, 2]}, eight: 8}, nine: 9 } ] };
+
+
+class UBO {
+  constructor () {
+    this.element_offsets = new Map();
+    this.initialized = false;
+    this.init();
+  }
+  init () { }     // Abstract -- user overrides this
+  initial_values () { return {}; }
+  flatten_JSON (o,p="") {
+    return Object.keys (o).map (k => o[k] === null           ||
+                                    typeof o[k] !== "object" ? {[p + (p ? ".":"") + k] : o[k]}
+                                                             : flatten_JSON (o[k],p + (p ? ".":"") + k))
+                          .reduce ((p,c) => Object.assign (p,c));
+                      }
+  uniform_names_from_JSON (json) {
+    const table = Object.entries( flatten_JSON(json) );
+    const fix_array_notation = s => s.replaceAll (/\.(\d+)(?=\.|$)/g, (match, number) => '['+number+']' );
+    return new Map( table.map (r => [fix_array_notation(r[0]), r[1] ]) );
+  }
+  get_binding_point () {
+    throw `Each subclass of UBO must specify its own binding point for its corresponding GLSL program uniform block.`; }
+  fill_buffer (json) {
+        // TODO: Implement.
+
+  }
+  send_to_GPU (context) {
+    let instance  = context.buffers.get(this);
+    let gl = context;
+    if(! entry) {
+      test_rookie_mistake ();
+      instance = context.buffers.set(this, {dirty:true, buffer: gl.createBuffer()})
+      gl.bindBuffer (gl.UNIFORM_BUFFER, buffer);
+      gl.bufferData (gl.UNIFORM_BUFFER, buffer_size, gl.DYNAMIC_DRAW);
+    }
+    gl.bindBuffer(gl.UNIFORM_BUFFER, instance.buffer);
+    gl.bufferSubData(gl.UNIFORM_BUFFER, 0, this.local_buffer);
+
+    // gl.bindBuffer(gl.UNIFORM_BUFFER, null);      // Unneccesary?
+    // Old implementation called its own bind() at the end:
+    // this.bind (context, this.get_binding_point ());
+  }
+  // bind (gl, shader, binding_point) {
+  //   const gpu_instance = this.gpu_instances.get (context)
+  //                    || this.copy_onto_graphics_card (context, shader.gpu_addresses);
+
+  //   gl.bindBufferBase (gl.UNIFORM_BUFFER, binding_point, gpu_instance.buffer);
+  // }
+}

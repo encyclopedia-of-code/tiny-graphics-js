@@ -28,7 +28,7 @@ class Universal_Shader extends Shader {
     }
     copy_onto_graphics_card (context) {
       const instance = super.copy_onto_graphics_card (context);
-      this.init_UBO (context, this.gpu_instances.get(context).program, this.ubo_binding);
+      this.init_UBO (context, instance.program, this.ubo_binding);
       return instance;
     }
     update_GPU (context, gpu_addresses, uniforms, model_transform, material) {
