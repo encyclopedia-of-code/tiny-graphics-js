@@ -42,7 +42,7 @@ const Shape = tiny.Shape =
         }
 
         // Visit first vertex to note how big the type of each fields/attribute is.  Assume all others will match.
-        // TODO:  Allow mat2/mat3/mat4 attribute types as well.  Test single float attribute type.
+        // TODO:  Test single float attribute type, and perhaps the smaller matrix sizes.
         let attribute_sizes = selection_of_attributes.map( a => this.vertices[0][a].length || 1 );
         const attribute_is_matrix = selection_of_attributes.map( a => this.vertices[0][a] instanceof Matrix );
         let squared_sizes = attribute_sizes.map( (a,i) => Math.pow(a, 1 + attribute_is_matrix[i]) );
@@ -177,22 +177,6 @@ const Shape = tiny.Shape =
           this.dirty = false;
           return gpu_instance;
       }
-      execute_shaders (gl, gpu_instance, type, instances) {
-          if (this.indices.length) {
-              gl.bindBuffer (gl.ELEMENT_ARRAY_BUFFER, gpu_instance.index_buffer);
-              gl.drawElementsInstanced (gl[ type ], this.indices.length, gl.UNSIGNED_INT, 0, instances);
-          } else gl.drawArraysInstanced (gl[ type ], 0, this.num_vertices, instances);
-      }
-      draw (context, uniforms, model_transform, material, type = "TRIANGLES", instances) {
-          let gpu_instance = this.gpu_instances.get (context);
-          if( !gpu_instance || this.dirty)
-            gpu_instance = this.copy_onto_graphics_card (context);
-          context.bindVertexArray( gpu_instance.VAO );
-          material.shader.activate (context, uniforms, model_transform, material);
-          // Run the shaders to draw every triangle now:
-          this.execute_shaders (context, gpu_instance, type, instances);
-      }
-
       // NOTE: All the below functions make a further assumption: that your vertex buffer includes fields called
       // "position" and "normal" stored at each point, instead of just any arbitrary fields.
 
@@ -278,7 +262,7 @@ const test_rookie_mistake = function () {
     if (test_rookie_mistake.counter++ > 200)
         throw `Error: You are sending a lot of object definitions to the GPU, probably by mistake!  Many are likely
         duplicates, which you don't want since sending each one is very slow.  TO FIX THIS: Avoid ever declaring a
-        Shape, Shader, or Texture with "new" anywhere that's called repeatedly (such as inside render_animation()).
+        Shape, Shader, or Texture with "new" anywhere that's called repeatedly (such as inside render_frame()).
         You don't want simple definitions to be re-created and re-transmitted every frame.  Your scene's constructor is
         a better option; it's only called once.  Call "new" there instead, then keep the result as a class member.  If
         you somehow have a deformable shape that must really be updated every frame, then refer to the documentation of
@@ -392,28 +376,9 @@ const Shader = tiny.Shader =
           if ( !this.gpu_instances) this.gpu_instances =  new Map ();
           const gpu_instance = this.gpu_instances.get (context) || this.copy_onto_graphics_card (context, uniforms);
 
-          // TODO:  Should this loop be moved outside Shader::activate() call to renderer caller, since it deals more with context's buffers?
-          for (let binding_point of context.selected_ubos.keys()) {
-            const ubo = context.selected_ubos[binding_point];
-
-            // TODO:  How to initialize context.buffers?
-
-            // Send the buffer if dirty.
-            if (context.buffers.get(ubo).dirty)
-              ubo.send_to_GPU (context);
-
-             // TODO:  Initialize bound_ubos, and remove entries how?  By bind index?  Needs to be a map then?
-            // Bind the UBO if it needs it.
-            if (context.bound_ubos.includes(ubo))
-              continue;
-            gl.bindBufferBase (gl.UNIFORM_BUFFER, binding_point, ubo.buffer);
-            context.bound_ubos.add (ubo);
-          }
-
           // TODO:  Cache this
           context.useProgram (gpu_instance.program);
 
-          // TODO:  Use UBO instead:
           // --- Send over all the values needed by this particular shader to the GPU: ---
           this.update_GPU (context, gpu_instance.gpu_addresses, uniforms, model_transform, material);
       }
@@ -611,6 +576,7 @@ const Component = tiny.Component =
       static types_used_before = new Set ();
       static default_uniforms () {
           return {
+              UBOs                : new Map(),
               camera_inverse      : Mat4.identity (),
               camera_transform    : Mat4.identity (),
               projection_transform: Mat4.identity (),
@@ -678,7 +644,7 @@ const Component = tiny.Component =
           {
               open_list.push (...open_list[ 0 ].animated_children);
               // Call display() to draw each registered animation:
-              open_list.shift ().render_animation (this);
+              open_list.shift ().render_frame (this);
           }
           // Now that this frame is drawn, request that render() happen again as soon as all other web page events
           // are processed:
@@ -719,35 +685,31 @@ const Component = tiny.Component =
           if ( !shortcut_combination) return;
           this.key_controls.add (shortcut_combination, press, release);
       }
-      constructor() {
-        this.entities = []
-        this.lights = []
-      }
       submit (object) {
         if (object instanceof Entity)
           this.entities.push(object);
       }
-      shadow_map_pass (caller, lights) {
+      shadow_map_pass (lights) {
         for (let light of lights) {
           if (!light.casts_shadow)
             continue;
           if (light.is_point_light)
           {
             for (let i = 0; i < 6; i++) {
-              light.activate(caller.context, undefined, i);
-              this.flush(caller, [], false, light.shadow_map_shader);
-              light.deactivate(caller, i);
+              light.activate(this.context, undefined, i);
+              this.flush([], false, light.shadow_map_shader);
+              light.deactivate(this, i);
             }
           }
           else {
-            light.bind(caller.context, undefined, true);
-            this.flush(caller, [], false, light.shadow_map_shader);
+            light.bind(this.context, undefined, true);
+            this.flush([], false, light.shadow_map_shader);
             light.deactivate(caller);
           }
         }
       }
 
-      flush (context, uniforms, clear_entities = true, alternative_shader = undefined) {
+      flush (uniforms, clear_entities = true, alternative_shader = undefined) {
 
         const shadow_pass_material = alternative_shader ?
                         new Material("shadow_pass_material", alternative_shader) :
@@ -763,7 +725,7 @@ const Component = tiny.Component =
               if( !alternative_shader)
                 entity.dirty = false;
             }
-            entity.shape.draw(context, uniforms, entity.model_transform, shadow_pass_material || entity.material, undefined, 1);
+            entity.shape.draw(this.context, uniforms, entity.model_transform, shadow_pass_material || entity.material, undefined, 1);
           }
           else {
             if (entity.dirty && entity.shape.ready) {
@@ -772,13 +734,45 @@ const Component = tiny.Component =
               if( !alternative_shader)
                 entity.dirty = false;
             }
-            entity.shape.draw(context, uniforms, entity.model_transform, shadow_pass_material || entity.material, undefined, entity.transforms.length);
+            entity.shape.draw(this.context, uniforms, entity.model_transform, shadow_pass_material || entity.material, undefined, entity.transforms.length);
           }
         }
 
         if (clear_entities)
           this.entities = []
       }
+
+      execute_shaders (gl, shape, gpu_instance, type, instances) {
+        if (shape.indices.length) {
+            gl.bindBuffer (gl.ELEMENT_ARRAY_BUFFER, gpu_instance.index_buffer);
+            gl.drawElementsInstanced (gl[ type ], shape.indices.length, gl.UNSIGNED_INT, 0, instances);
+        } else gl.drawArraysInstanced (gl[ type ], 0, shape.num_vertices, instances);
+      }
+      draw (shape, uniforms, model_transform, material, type = "TRIANGLES", instances) {
+          let gpu_instance = shape.gpu_instances.get (this.context);
+          if( !gpu_instance || shape.dirty)
+            gpu_instance = shape.copy_onto_graphics_card (this.context);
+          this.context.bindVertexArray( gpu_instance.VAO );
+
+          for (let binding_point of this.selected_ubos.keys()) {
+            const ubo = this.selected_ubos[binding_point];
+
+            // Send the buffer if dirty.
+            if (this.buffers.get(ubo).dirty)
+              ubo.send_to_GPU (this);
+
+            // Bind the UBO if it needs it.
+            if (this.bound_ubos.includes(ubo))
+              continue;
+            gl.bindBufferBase (gl.UNIFORM_BUFFER, binding_point, ubo.buffer);
+            this.bound_ubos.set (binding_point, ubo);
+          }
+
+          material.shader.activate (this.context, uniforms, model_transform, material);
+          // Run the shaders to draw every triangle now:
+          this.execute_shaders (this.context, shape, gpu_instance, type, instances);
+      }
+
       init () { }     // Abstract -- user overrides this
       render_layout (div, options = {}) {
           this.div         = div;
@@ -805,6 +799,12 @@ const Component = tiny.Component =
           const canvas = this.program_stuff.appendChild (document.createElement ("canvas"));
           canvas.style = `width:1080px; height:600px; background:DimGray; margin:auto; margin-bottom:-4px`;
 
+          this.entities = []
+          this.lights = []
+          this.buffers = new Map();
+          this.bound_ubos = new Map();
+          this.selected_ubos = new Map();
+
           if ( !overridden_options.show_canvas)
               canvas.style.display = "none";
           // Use tiny-graphics-js to draw graphics to the canvas, using the given scene objects.
@@ -828,167 +828,10 @@ const Component = tiny.Component =
               this.embedded_editor                = new tiny.Editor_Widget (this);
           }
       }
-      render_animation (context) {}                            // Called each frame for drawing.
+      render_frame (context) {}                            // Called each frame for drawing.
       render_explanation () {}
       render_controls () {}     // render_controls(): Called by Controls_Widget for generating interactive UI.
   };
-
-
-
-const UBO = tiny.UBO =
-class UBO  {
-  constructor (gl, buffer_name, buffer_size, buffer_layout) {
-
-    this.items = {};
-
-    for (var i = 0; i < buffer_layout.length; i++) {
-      for ( var j = 0; j < buffer_layout[i].data_layout.length; j++) {
-        this.items[buffer_layout[i].data_layout[j].name] = { //offset of the whole data_layout in the whole ubo buffer
-                                                             data_layout_offset: buffer_layout[i].data_offset,
-                                                             //length of the data_layout
-                                                             data_layout_length: buffer_layout[i].data_length,
-                                                             //offset of the item within the data_layout
-                                                             offset: buffer_layout[i].data_layout[j].offset,
-                                                             data_length: buffer_layout[i].data_layout[j].data_length,
-                                                             chunk_length: buffer_layout[i].data_layout[j].chunk_length,
-                                                            };
-      }
-    }
-
-    this.gl = gl;
-    this.buffer_name = buffer_name;
-
-    this.buffer = gl.createBuffer ();
-    gl.bindBuffer (gl.UNIFORM_BUFFER, this.buffer);
-    gl.bufferData (gl.UNIFORM_BUFFER, buffer_size, gl.DYNAMIC_DRAW);
-    gl.bindBuffer (gl.UNIFORM_BUFFER, null);
-  }
-
-  bind (binding_point) {
-    this.binding_point = binding_point;
-    this.gl.bindBufferBase (this.gl.UNIFORM_BUFFER, binding_point, this.buffer);
-  }
-
-  update (buffer_name, buffer_data, num_instance = 0) {
-    if (buffer_data instanceof Matrix)
-      buffer_data = Matrix.flatten_2D_to_1D(buffer_data.transposed());
-
-    //Force the data to be Float32Array
-    if (!(buffer_data instanceof Float32Array)) {
-      if ( Array.isArray(buffer_data))
-        buffer_data = new Float32Array(buffer_data);
-      else
-        buffer_data = new Float32Array([buffer_data]);
-    }
-
-    var ref = this.items[buffer_name];
-    var buffer_offset = ref.data_layout_offset + ref.data_layout_length * num_instance + ref.offset;
-
-    this.gl.bindBuffer(this.gl.UNIFORM_BUFFER, this.buffer);
-    this.gl.bufferSubData(this.gl.UNIFORM_BUFFER, buffer_offset, buffer_data, 0, null);
-    this.gl.bindBuffer(this.gl.UNIFORM_BUFFER, null);
-
-    return this;
-  }
-
-  static create (gl, block_name, buffer_layout) {
-
-    var buffer_size = 0;
-
-    for ( var i = 0; i < buffer_layout.length; i++ ) {
-      var data_size = UBO.calculate(buffer_layout[i].data_layout); //size occupied by a single instance, 16b aligned
-      buffer_layout[i].data_length = data_size;
-      buffer_size += data_size * buffer_layout[i].num_instances;
-
-      if (i > 0)
-        buffer_layout[i].data_offset = buffer_layout[i-1].data_offset + buffer_layout[i-1].num_instances * buffer_layout[i-1].data_length;
-      else
-        buffer_layout[i].data_offset = 0;
-
-    }
-    UBO.Cache[block_name] = new UBO(gl, block_name, buffer_size, buffer_layout);
-  }
-
-  static get_size (type) { //[Alignment,Size]
-    switch (type) {
-      case "float":
-      case "int":
-      case "bool":
-        return [4,4];
-      case "Mat4":
-        return [64,64]; //16*4
-      case "Mat3":
-        return [48,48]; //16*3
-      case "vec2":
-        return [8,8];
-      case "vec3":
-        return [16,12]; //Special Case
-      case "vec4":
-        return [16,16];
-      default:
-        return [0,0];
-    }
-  }
-
-  static calculate(buffer_layout) {
-    var chunk = 16;	//Data size in Bytes, UBO using layout std140 needs to build out the struct in chunks of 16 bytes.
-    var temp_size = 0;	//Temp Size, How much of the chunk is available after removing the data size from it
-    var offset = 0;	//Offset in the buffer allocation
-    var size;		//Data Size of the current type
-
-    for (var i=0; i < buffer_layout.length; i++) {
-      //When dealing with arrays, Each element takes up 16 bytes regardless of type.
-      if (!buffer_layout[i].length || buffer_layout[i].length == 0)
-        size = UBO.get_size(buffer_layout[i].type);
-      else
-        size = [buffer_layout[i].length * 16, buffer_layout[i].length * 16];
-
-      temp_size = chunk - size[0];	//How much of the chunk exists after taking the size of the data.
-
-      //Chunk has been overdrawn when it already has some data resurved for it.
-      if (temp_size < 0 && chunk < 16) {
-        offset += chunk;						//Add Remaining Chunk to offset...
-        if (i > 0)
-          buffer_layout[i-1].chunk_length += chunk;	//So the remaining chunk can be used by the last variable
-        chunk = 16;								//Reset Chunk
-        if(buffer_layout[i].type == "vec3")
-          chunk -= size[1];	//If Vec3 is the first var in the chunk, subtract size since size and alignment is different.
-      }
-      else if (temp_size < 0 && chunk == 16) {
-        //Do nothing incase data length is >= to unused chunk size.
-        //Do not want to change the chunk size at all when this happens.
-      }
-      else if (temp_size == 0) { //If evenly closes out the chunk, reset
-
-        if(buffer_layout[i].type == "vec3" && chunk == 16)
-          chunk -= size[1];	//If Vec3 is the first var in the chunk, subtract size since size and alignment is different.
-        else
-          chunk = 16;
-      }
-      else
-        chunk -= size[1];	//Chunk isn't filled, just remove a piece
-
-      //Add some data of how the chunk will exist in the buffer.
-      buffer_layout[i].offset	= offset;
-      buffer_layout[i].chunk_length	= size[1];
-      buffer_layout[i].data_length = size[1];
-
-      offset += size[1];
-    }
-
-    //Check if the final offset is divisiable by 16, if not add remaining chunk space to last element.
-    if (offset % 16 != 0) {
-      buffer_layout[buffer_layout.length-1].chunk_length += 16 - offset % 16;
-      offset += 16 - offset % 16;
-    }
-
-    return offset;
-  }
-
-};
-
-UBO.Cache = []; //To be on the gl object!!!
-
 
 
 // var obj = {one: [1, [22, [23]], {one: "two"}, { two: {three: 3}, four: {five: 5, six: {seven: [7, 2]}, eight: 8}, nine: 9 } ] };
@@ -1019,14 +862,14 @@ class UBO {
         // TODO: Implement.
 
   }
-  send_to_GPU (context) {
-    let instance  = context.buffers.get(this);
-    let gl = context;
+  send_to_GPU (renderer) {
+    let instance = renderer.buffers.get(this);
+    const gl = renderer.context;
     if(! entry) {
       test_rookie_mistake ();
-      instance = context.buffers.set(this, {dirty:true, buffer: gl.createBuffer()})
+      instance = renderer.buffers.set(this, {dirty:true, buffer: gl.createBuffer()})
       gl.bindBuffer (gl.UNIFORM_BUFFER, buffer);
-      gl.bufferData (gl.UNIFORM_BUFFER, buffer_size, gl.DYNAMIC_DRAW);
+      gl.bufferData (gl.UNIFORM_BUFFER, this.buffer_size, gl.DYNAMIC_DRAW);
     }
     gl.bindBuffer(gl.UNIFORM_BUFFER, instance.buffer);
     gl.bufferSubData(gl.UNIFORM_BUFFER, 0, this.local_buffer);
@@ -1035,10 +878,7 @@ class UBO {
     // Old implementation called its own bind() at the end:
     // this.bind (context, this.get_binding_point ());
   }
-  // bind (gl, shader, binding_point) {
-  //   const gpu_instance = this.gpu_instances.get (context)
-  //                    || this.copy_onto_graphics_card (context, shader.gpu_addresses);
-
-  //   gl.bindBufferBase (gl.UNIFORM_BUFFER, binding_point, gpu_instance.buffer);
-  // }
+  bind (renderer, binding_point) {
+    renderer.selected_ubos.set(binding_point, this);
+  }
 }

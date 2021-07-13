@@ -48,8 +48,8 @@ export class Scene_To_Texture_Demo extends Component
         this.result_img = this.control_panel.appendChild( Object.assign( document.createElement( "img" ),
                 { style:"width:200px; height:" + 200 * this.aspect_ratio + "px" } ) );
       }
-    render_animation( caller )
-      {                                 // render_animation():  Draw both scenes, clearing the buffer in between.
+    render_frame( caller )
+      {                                 // render_frame():  Draw both scenes, clearing the buffer in between.
         this.uniforms.lights = [ defs.Phong_Shader.light_source( vec4( -5,5,5,1 ), color( 0,1,1,1 ), 100000 ) ];
         const t = this.uniforms.animation_time / 1000, dt = this.uniforms.animation_delta_time / 1000;
 

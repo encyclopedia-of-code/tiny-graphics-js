@@ -439,7 +439,3 @@ const Entity = defs.Entity =
       this.material = material;
     }
   };
-
-  const Renderer = defs.Renderer =
-  class Renderer {
-  };

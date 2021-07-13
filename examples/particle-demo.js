@@ -22,7 +22,7 @@ export class Particle_Demo extends Simulation {
         this.document_region.innerHTML +=
           `<p>A minimal example of a particle shader.  The cloud of particles is collectively one big Shape made of lots of squares at the origin.  The vertex shader identifies each square and moves them each to different places, while ensuring that they always face the screen.  The fragment shader colors them in with transparency. </p>`;
     }
-    render_animation (caller) {
+    render_frame (caller) {
         if ( !caller.controls) {
             this.animated_children.push (caller.controls = new defs.Movement_Controls ({uniforms: this.uniforms}));
             caller.controls.add_mouse_controls (caller.canvas);

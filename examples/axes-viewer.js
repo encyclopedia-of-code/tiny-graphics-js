@@ -52,7 +52,7 @@ class Axes_Viewer extends Component
     }
   increase() { this.selected_basis_id = Math.min( this.selected_basis_id + 1, this.groups.length-1 ); }
   decrease() { this.selected_basis_id = Math.max( this.selected_basis_id - 1, 0 ); }   // Don't allow selection of negative IDs.
-  render_animation( caller )
+  render_frame( caller )
     {                                                 // display(): Draw the selected group of axes arrows.
       if( this.groups[ this.selected_basis_id ] )
         for( let a of this.groups[ this.selected_basis_id ] )
@@ -74,7 +74,7 @@ export class Axes_Viewer_Test_Scene extends Component
     }
   render_controls()
     { this.control_panel.innerHTML += "(Substitute your own scene here)" }
-  render_animation( caller )
+  render_frame( caller )
     {                                   // display():  *********** See instructions below ***********
       this.uniforms.lights = [ defs.Phong_Shader.light_source( vec4( 0,0,1,0 ), color( 0,1,1,1 ), 100000 ) ];
 

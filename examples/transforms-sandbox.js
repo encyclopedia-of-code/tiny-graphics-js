@@ -50,7 +50,7 @@ class Transforms_Sandbox_Base extends Component
       this.new_line();
       this.key_triggered_button( "Swarm mode", [ "m" ], function() { this.swarm ^= 1; } );
     }
-  render_animation( caller )
+  render_frame( caller )
     {                                                // display():  Called once per frame of animation.  We'll isolate out
                                                      // the code that actually draws things into Transforms_Sandbox, a
                                                      // subclass of this Scene.  Here, the base class's display only does
@@ -90,7 +90,7 @@ export class Transforms_Sandbox extends Transforms_Sandbox_Base
                                                      // the shapes.  We isolate that code so it can be experimented with on its own.
                                                      // This gives you a very small code sandbox for editing a simple scene, and for
                                                      // experimenting with matrix transformations.
-  render_animation( caller )
+  render_frame( caller )
     {                                                // display():  Called once per frame of animation.  For each shape that you want to
                                                      // appear onscreen, place a .draw() call for it inside.  Each time, pass in a
                                                      // different matrix value to control where the shape appears.
@@ -106,7 +106,7 @@ export class Transforms_Sandbox extends Transforms_Sandbox_Base
                                                      // caller:  Wraps the WebGL rendering context shown onscreen.  Pass to draw().
 
                                                 // Call the setup code that we left inside the base class:
-      super.render_animation( caller );
+      super.render_frame( caller );
 
       /**********************************
       Start coding down here!!!!

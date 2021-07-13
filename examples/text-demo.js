@@ -67,7 +67,7 @@ export class Text_Demo extends Component
       this.text_image = { shader: texture, ambient: 1, diffusivity: 0, specularity: 0,
                                       texture: new Texture( "assets/text.png" ) };
     }
-  render_animation( caller, uniforms )
+  render_frame( caller, uniforms )
     { this.uniforms.lights = [ defs.Phong_Shader.light_source( vec4( 3,2,1,0 ),   color( 1,1,1,1 ),  1000000 ),
                                  defs.Phong_Shader.light_source( vec4( 3,10,10,1 ), color( 1,.7,.7,1 ), 100000 ) ];
       Shader.assign_camera( Mat4.look_at( ...Vector.cast( [ 0,0,4 ], [0,0,0], [0,1,0] ) ), this.uniforms );
