@@ -754,6 +754,8 @@ const Component = tiny.Component =
             gpu_instance = shape.copy_onto_graphics_card (this.context);
           this.context.bindVertexArray( gpu_instance.VAO );
 
+          material.shader.activate (this.context, uniforms, model_transform, material);
+
           for (let binding_point of this.selected_ubos.keys()) {
             const ubo = this.selected_ubos[binding_point];
 
@@ -768,7 +770,20 @@ const Component = tiny.Component =
             this.bound_ubos.set (binding_point, ubo);
           }
 
-          material.shader.activate (this.context, uniforms, model_transform, material);
+          let offset = 0;
+          if ( this.samplers.size() )
+            for (const [name, sampler] of this.samplers.entries())
+              if (sampler && sampler.ready) {
+
+                //  TODO: Is the following comment accurate?  Or is it a plan that ought to be followed?
+
+                // Select texture unit offset for the fragment shader Sampler2D uniform called "samplers.name":
+                gl.uniform1i (material.shader.uniforms_addresses[name], offset);
+                // For this draw, use the texture image from correct the GPU buffer:
+                sampler.activate (gl, offset);
+                offset++;
+              }
+
           // Run the shaders to draw every triangle now:
           this.execute_shaders (this.context, shape, gpu_instance, type, instances);
       }
@@ -859,8 +874,25 @@ class UBO {
   get_binding_point () {
     throw `Each subclass of UBO must specify its own binding point for its corresponding GLSL program uniform block.`; }
   fill_buffer (json) {
-        // TODO: Implement.
+    if (!this.local_buffer)
+      this.local_buffer = new Float32Array(this.buffer_size);     // TODO:  Test that this size matches intended size.
+    const values_to_set = uniform_names_from_JSON(json);
 
+    for( let [key, value] of values_to_set.entities() ) {
+      let offset = this.element_offsets.get(key);
+      if (!value.size()) {
+        // Scalar case
+        this.local_buffer[offset] = value;
+        continue;
+      }
+      // Treat all other types like a vector, flattening any matrices into a vector first.
+      value = value.map( row => row.size ? row.reduce( (acc,x) => acc.concat(x), []) : row );
+      for (let row of value) {
+        this.local_buffer[offset] = row;
+        offset += 4;
+      }
+    }
+    this.dirty = true;
   }
   send_to_GPU (renderer) {
     let instance = renderer.buffers.get(this);
@@ -874,6 +906,7 @@ class UBO {
     gl.bindBuffer(gl.UNIFORM_BUFFER, instance.buffer);
     gl.bufferSubData(gl.UNIFORM_BUFFER, 0, this.local_buffer);
 
+    return instance;
     // gl.bindBuffer(gl.UNIFORM_BUFFER, null);      // Unneccesary?
     // Old implementation called its own bind() at the end:
     // this.bind (context, this.get_binding_point ());
