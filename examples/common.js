@@ -11,9 +11,8 @@ export {tiny, defs};
 
 const Camera = defs.Camera =
 class Camera extends UBO {
-    constructor() {
+    init(fields) {
       this.fields = Object.assign(Camera.default_values(), fields);
-      this.fill_buffer(this.fields);
     }
     static default_values () {
       return { projection:      Mat4.identity(),
@@ -25,34 +24,30 @@ class Camera extends UBO {
     post_multiply (matrix) {
       this.fields.camera_world.post_multiply( matrix );
       this.fields.camera_inverse = Mat4.inverse(camera_world);
-      this.fields.camera_position = vec3(this.camera_world[0][3], this.camera_world[1][3], this.camera_world[2][3]);
-      this.fill_buffer(this.fields);
+      this.fields.camera_position = vec3(this.fields.camera_world[0][3], this.fields.camera_world[1][3], this.fields.camera_world[2][3]);
     }
     pre_multply (inverse_matrix) {
       this.fields.camera_inverse.pre_multply( inverse_matrix );
       this.fields.camera_world = Mat4.inverse(camera_inverse);
-      this.fields.camera_position = vec3(this.camera_world[0][3], this.camera_world[1][3], this.camera_world[2][3]);
-      this.fill_buffer(this.fields);
+      this.fields.camera_position = vec3(this.fields.camera_world[0][3], this.fields.camera_world[1][3], this.fields.camera_world[2][3]);
 
     }
     emplace(camera_inverse) {
       this.fields.camera_inverse = camera_inverse;
       this.fields.camera_world = Mat4.inverse(camera_inverse);
-      this.fields.camera_position = vec3(this.camera_world[0][3], this.camera_world[1][3], this.camera_world[2][3]);
-      this.fill_buffer(this.fields);
+      this.fields.camera_position = vec3(this.fields.camera_world[0][3], this.fields.camera_world[1][3], this.fields.camera_world[2][3]);
     }
   };
 
 const Light = defs.Light =
-class Light {
+class Light extends UBO {
 
     static NUM_LIGHTS = 2;
     static global_index = 0;
     static global_ambient = 0.4;
 
-    constructor(fields) {
+    init(fields) {
       this.fields = Object.assign(Light.default_values(), fields);
-      this.fill_buffer(this.fields);
     }
     static default_values () {
       return {
@@ -201,18 +196,16 @@ class Shadow_Light {
 
 const Material = defs.Material =
 class Material extends UBO {
-    constructor(shader = undefined, fields = {}, samplers = {}) {
-      Object.assign (this, shader, {samplers: new Map(samplers)} );
+    init(shader = undefined, fields = {}, samplers = {}) {
+      Object.assign (this, shader, {samplers: new Map(Object.entries(samplers))} );
       this.fields = Object.assign(shader.constructor.default_values(), fields);
-      this.ready = true;
-      this.fill_buffer(this.fields);
     }
     get_binding_point () { return 2; }
 };
 
 const Material_From_File = defs.Material_From_File =
 class Material_From_File extends UBO {
-    constructor(shader = undefined, filename, arg_fields = {}, arg_samplers = {}) {
+    init(shader = undefined, filename, arg_fields = {}, arg_samplers = {}) {
       Object.assign (this, shader, filename, arg_fields, {arg_samplers: new Map(arg_samplers)} );
       this.ready = false;
 
@@ -322,7 +315,7 @@ class Material_From_File extends UBO {
         //mtl file <- argument sampler
         this.samplers = Object.assign(this.MTL[first_material_name].samplers, this.arg_samplers);
         this.ready = true;
-        this.fill_buffer(this.fields);
+
     }
   };
 
