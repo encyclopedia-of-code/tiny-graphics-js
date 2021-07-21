@@ -14,7 +14,7 @@ class Shadows_Demo extends Component {
       // this.sun = new defs.Shadow_Light({direction_or_position: vec4(2.0, 5.0, 0.0, 0.0), color: vec3(1.0, 1.0, 1.0), diffuse: 1, specular: 0.7, attenuation_factor: 0.01,
       //   casts_shadow: true});
 
-    const camera = new Camera();
+    this.camera = new Camera();
 
     this.shadowed_shader = new defs.Universal_Shader (Light.NUM_LIGHTS, {has_shadows: true});
 
@@ -27,7 +27,8 @@ class Shadows_Demo extends Component {
     // OR keep the current setup involving an array of UBO blocks?
     // const lights = [sun];
 
-    this.uniforms.UBOs = new Map({Camera: camera, Lights: this.sun, Material: this.stars})
+    const UBOs = {Camera: this.camera, Lights: this.sun, Material: this.stars};
+    this.uniforms.UBOs = new Map(Object.entries(UBOs))
 
     // this.objects = 1;
     // this.size = 1;
@@ -59,12 +60,14 @@ class Shadows_Demo extends Component {
   }
   render_frame (renderer) {
     if( !renderer.controls )  {
-      camera.emplace( Mat4.look_at( vec3(-1.0, 2.0, 1.0), vec3(0,0,-1), vec3(0,0,1) ) );
-      this.uniforms.camera_inverse = this.camera.camera_inverse;
-      this.uniforms.camera_transform = this.camera.camera_world;
+      this.camera.emplace( Mat4.look_at( vec3(-1.0, 2.0, 1.0), vec3(0,0,-1), vec3(0,0,1) ) );
+      this.uniforms.camera_inverse = this.camera.fields.camera_inverse;
+      this.uniforms.camera_transform = this.camera.fields.camera_world;
       this.animated_children.push( renderer.controls = new defs.Movement_Controls(
               { uniforms: this.uniforms },
-              () => {this.camera.fill_buffer(this.camera.fields)}
+         // Can't do on first frame:    () => {this.camera.fill_buffer(this.camera.fields)}
+         // Yuck:
+              () => {if(this.buffers.get(this.camera)) this.buffers.get(this.camera).dirty = true;}
               ) );
       renderer.controls.add_mouse_controls( renderer.canvas );
     }
@@ -79,7 +82,7 @@ class Shadows_Demo extends Component {
       // Mat4.translation(... vec3(Math.random()* 2 - 1, Math.random(),  Math.random()*2 - 1).times_pairwise(vec3(20, 2, 20)))))
       this.renderer.submit(entity);
     }
-    renderer.shadow_map_pass({lights: [this.sun]});
-    renderer.flush(Lights);
+    renderer.shadow_map_pass([this.sun]);
+    renderer.flush([this.sun]);
   }
 };

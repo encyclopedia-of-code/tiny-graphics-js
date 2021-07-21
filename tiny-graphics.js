@@ -771,7 +771,7 @@ const Component = tiny.Component =
           }
 
           let offset = 0;
-          if ( this.samplers.size() )
+          if ( this.samplers.length )
             for (const [name, sampler] of this.samplers.entries())
               if (sampler && sampler.ready) {
 
@@ -849,44 +849,57 @@ const Component = tiny.Component =
   };
 
 
+
+
+
+const Renderer = tiny.Renderer =
+class Renderer extends Component {
+  constructor (props) {
+    super(props);
+  }
+}
+
 // var obj = {one: [1, [22, [23]], {one: "two"}, { two: {three: 3}, four: {five: 5, six: {seven: [7, 2]}, eight: 8}, nine: 9 } ] };
 
 
+const UBO = tiny.UBO =
 class UBO {
-  constructor () {
+  constructor (...args) {
     this.element_offsets = new Map();
-    this.initialized = false;
-    this.init();
+    this.ready = true;
+    this.init(...args);
   }
-  init () { }     // Abstract -- user overrides this
+  init (fields) { }     // Abstract -- user overrides this
   initial_values () { return {}; }
-  flatten_JSON (o,p="") {
+  static flatten_JSON (o,p="") {
     return Object.keys (o).map (k => o[k] === null           ||
                                     typeof o[k] !== "object" ? {[p + (p ? ".":"") + k] : o[k]}
-                                                             : flatten_JSON (o[k],p + (p ? ".":"") + k))
+                                                             : UBO.flatten_JSON (o[k],p + (p ? ".":"") + k))
                           .reduce ((p,c) => Object.assign (p,c));
                       }
-  uniform_names_from_JSON (json) {
-    const table = Object.entries( flatten_JSON(json) );
+  static uniform_names_from_JSON (json) {
+    const table = Object.entries( UBO.flatten_JSON(json) );
     const fix_array_notation = s => s.replaceAll (/\.(\d+)(?=\.|$)/g, (match, number) => '['+number+']' );
     return new Map( table.map (r => [fix_array_notation(r[0]), r[1] ]) );
   }
   get_binding_point () {
     throw `Each subclass of UBO must specify its own binding point for its corresponding GLSL program uniform block.`; }
   fill_buffer (json) {
+    if (!this.buffer_size)
+      throw `full_buffer() was called to early; UBO doesn't query its size until draw time the first time.`
     if (!this.local_buffer)
       this.local_buffer = new Float32Array(this.buffer_size);     // TODO:  Test that this size matches intended size.
-    const values_to_set = uniform_names_from_JSON(json);
+    const values_to_set = UBO.uniform_names_from_JSON(json);
 
-    for( let [key, value] of values_to_set.entities() ) {
+    for( let [key, value] of values_to_set.entries() ) {
       let offset = this.element_offsets.get(key);
-      if (!value.size()) {
+      if (!value.length) {
         // Scalar case
         this.local_buffer[offset] = value;
         continue;
       }
       // Treat all other types like a vector, flattening any matrices into a vector first.
-      value = value.map( row => row.size ? row.reduce( (acc,x) => acc.concat(x), []) : row );
+      value = value.map( row => row.length ? row.reduce( (acc,x) => acc.concat(x), []) : row );
       for (let row of value) {
         this.local_buffer[offset] = row;
         offset += 4;
@@ -895,6 +908,8 @@ class UBO {
     this.dirty = true;
   }
   send_to_GPU (renderer) {
+    if (this.ready)
+      this.fill_buffer(this.fields);
     let instance = renderer.buffers.get(this);
     const gl = renderer.context;
     if(! entry) {
