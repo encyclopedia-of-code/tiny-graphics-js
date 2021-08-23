@@ -114,7 +114,8 @@ const Shape = tiny.Shape =
 
           // When this Shape sees a new GPU context (in case of multiple drawing areas), copy the Shape to the GPU. If
           // it already was copied over, get a pointer to the existing instance.
-          const gpu_instance = existing_instance = this.gpu_instances.get (context);
+          const existing_instance = this.gpu_instances.get (context);
+          let gpu_instance = existing_instance;
 
           // If this Shape was never used on this GPU context before, then prepare new buffer indices for this context.
           if(!existing_instance) {
@@ -140,6 +141,8 @@ const Shape = tiny.Shape =
               gl.bufferSubData (gl.ARRAY_BUFFER, 0, buffer_info.data)
             else {
               gl.bufferData (gl.ARRAY_BUFFER, buffer_info.data, gl[buffer_info.hint]);
+
+              // TODO:  Clean this up (the resize case)
               buffer_info.override = false;
             }
 
@@ -285,20 +288,18 @@ const Shader = tiny.Shader =
               program : undefined, gpu_addresses: undefined,
               vertShdr: undefined, fragShdr: undefined
           };
-
-          const gpu_instance = existing_instance = this.gpu_instances.get (context);
+          const existing_instance = this.gpu_instances.get (context);
+          if ( !existing_instance) test_rookie_mistake ();
 
           // If this Shader was never used on this GPU context before, then prepare new buffer indices for this
           // context.
-          if(!existing_instance) {
-            test_rookie_mistake ();
-            gpu_instance = this.gpu_instances.set (context, defaults).get (context);
-          }
+          const gpu_instance = existing_instance || this.gpu_instances.set (context, defaults).get (context);
 
           class Uniforms_Addresses {
             // Uniforms_Addresses: Helper inner class. Retrieve the GPU addresses of each uniform variable in
             // the shader based on their names.  Store these pointers for later.
               constructor (program, gl) {
+                                          // TODO: Store fewer of the following on this if possible (local scope instead).
                   this.indices_to_blockname = new Map();
                   this.indices_to_offsets = new Map();
                   this.UBOs_to_block_index = new Map();
@@ -306,13 +307,15 @@ const Shader = tiny.Shader =
                   for (let i = 0; i < this.num_blocks; i++ ) {
                     const UBO_name = gl.getActiveUniformBlockName(program, i);
                     const UBO_size = gl.getActiveUniformBlockParameter(program, i, gl.UNIFORM_BLOCK_DATA_SIZE);
-                    if (! uniforms.UBOs.get (UBO_name).initialized)
-                      uniforms.UBOs.get (UBO_name).buffer_size = UBO_size;
+                    const UBO_index = gl.getUniformBlockIndex(program, UBO_name);
+                    this.UBOs_to_block_index.set (uniforms.UBOs[UBO_name], UBO_index)
+
+                    if (! uniforms.UBOs[UBO_name].initialized)
+                      uniforms.UBOs[UBO_name].buffer_size = UBO_size;
 
                     const indices = gl.getActiveUniformBlockParameter(program, i, gl.UNIFORM_BLOCK_ACTIVE_UNIFORM_INDICES);
                     const offsets = gl.getActiveUniforms(program, indices, gl.UNIFORM_OFFSET);
                     for (let i = 0; i < indices.length; i++) {
-                      this.UBOs_to_block_index.set (uniforms.UBOs.get (UBO_name), i)
                       this.indices_to_blockname.set(indices[i], UBO_name);
                       this.indices_to_offsets.set(indices[i], offsets[i]);
                     }
@@ -327,11 +330,11 @@ const Shader = tiny.Shader =
                         const name = this.indices_to_blockname.get(i);
                         const offset = this.indices_to_offsets.get(i);
 
-                        // TODO: Skip loop iterations instead if initialized, according to many offsets this UBO is known to have?
+                        // TODO: Skip loop iterations instead if initialized, according to how many offsets this UBO is known to occupy?
                         // Would save a lot of GL calls when the UBO is used in the next shader.
 
-                        if (! uniforms.UBOs.get (name).initialized)
-                          uniforms.UBOs.get (name).element_offsets.set (full_name, offset);
+                        if (! uniforms.UBOs[name].initialized)
+                          uniforms.UBOs[name].element_offsets.set (full_name, offset);
                       }
                       else // Loose uniform
                           this[ full_name ] = gl.getUniformLocation (program, full_name);
@@ -365,14 +368,15 @@ const Shader = tiny.Shader =
 
           const gpu_addresses = new Uniforms_Addresses (program, gl);
 
-          for (let index of this.UBOs_to_block_index.values())
+          for (let [ubo, index] of gpu_addresses.UBOs_to_block_index.entries())
             gl.uniformBlockBinding(program, index, ubo.get_binding_point());
 
           Object.assign (gpu_instance, {program, vertShdr, fragShdr, gpu_addresses});
           return gpu_instance;
       }
-      activate (context, uniforms, model_transform, material) {
+      activate (renderer, uniforms, model_transform, material) {
           // Track which GPU contexts this object has copied itself onto:
+          const context = renderer.context;
           if ( !this.gpu_instances) this.gpu_instances =  new Map ();
           const gpu_instance = this.gpu_instances.get (context) || this.copy_onto_graphics_card (context, uniforms);
 
@@ -380,17 +384,29 @@ const Shader = tiny.Shader =
           context.useProgram (gpu_instance.program);
 
           // --- Send over all the values needed by this particular shader to the GPU: ---
-          this.update_GPU (context, gpu_instance.gpu_addresses, uniforms, model_transform, material);
+          this.update_GPU (renderer, gpu_instance.gpu_addresses, uniforms, model_transform, material);
+
+          let offset = 0;
+          for (const [name, sampler] of material.samplers.entries())
+            if (sampler && sampler.ready) {
+
+              //  TODO: The following comment describes a change that doesn't exist yet.  Should it?
+              // Select texture unit offset for the fragment shader Sampler2D uniform called "samplers.name":
+              context.uniform1i (gpu_instance.gpu_addresses[name], offset);
+              // For this draw, use the texture image from correct the GPU buffer:
+              sampler.activate (context, offset);
+              offset++;
+            }
       }
 
-      init_UBO (gl, program, ubo_binding) {
-        var ubo_index = -1;
-        for (var i = 0; i < ubo_binding.length; i++) {
-          ubo_index = gl.getUniformBlockIndex(program, ubo_binding[i].shader_name);
-          if (ubo_index !== gl.INVALID_INDEX)
-            gl.uniformBlockBinding(program, ubo_index, ubo_binding[i].binding_point);
-        }
-      }
+      // init_UBO (gl, program, ubo_binding) {
+      //   var ubo_index = -1;
+      //   for (var i = 0; i < ubo_binding.length; i++) {
+      //     ubo_index = gl.getUniformBlockIndex(program, ubo_binding[i].shader_name);
+      //     if (ubo_index !== gl.INVALID_INDEX)
+      //       gl.uniformBlockBinding(program, ubo_index, ubo_binding[i].binding_point);
+      //   }
+      // }
 
       // Was this always unused??
       // bind_UBO (gl, program, shader_name, binding_point) {
@@ -403,12 +419,12 @@ const Shader = tiny.Shader =
       fragment_glsl_code () {}
       update_GPU () {}
       static default_values () {}
-      static mapping_UBO () {
-        return [
-          {shader_name: "Camera", binding_point: 0},
-          {shader_name: "Lights", binding_point: 1},
-        ];
-      }
+      // static mapping_UBO () {
+      //   return [
+      //     {shader_name: "Camera", binding_point: 0},
+      //     {shader_name: "Lights", binding_point: 1},
+      //   ];
+      // }
       // static assign_camera (camera_inverse, uniforms) {
       //     Object.assign (uniforms, {camera_inverse, camera_transform: Mat4.inverse (camera_inverse)});
       // }
@@ -482,7 +498,7 @@ const Texture = tiny.Texture =
           const existing_instance = this.gpu_instances.get (context);
           if ( !existing_instance) test_rookie_mistake ();
 
-          // If this Texture was never used on this GPU context before, then prepare new buffer indices for this
+          // If this Shadow_Map was never used on this GPU context before, then prepare new buffer indices for this
           // context.
           const gpu_instance = existing_instance || this.gpu_instances.set (context, {}).get (context);
 
@@ -593,63 +609,6 @@ const Component = tiny.Component =
           for (const r of rules) document.styleSheets[ document.styleSheets.length - 1 ].insertRule (r, 0);
           Component.types_used_before.add (classType);
       }
-      make_context (canvas, background_color = color (0, 0, 0, 1), dimensions) {
-          this.canvas              = canvas;
-          this.context = canvas.getContext("webgl2");
-          if ( !this.context) throw "Canvas failed to make a WebGL context.";
-          const gl = this.context;
-
-          this.set_canvas_size (dimensions);
-          // Tell the GPU which color to clear the canvas with each frame.
-          gl.clearColor.apply (gl, background_color);
-          gl.enable (gl.DEPTH_TEST);                            // Enable Z-Buffering test.
-          // Specify an interpolation method for blending "transparent" triangles over the existing pixels:
-          gl.enable (gl.BLEND);
-          gl.blendFunc (gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-          // Store a single red pixel, as a placeholder image to prevent a console warning:
-          gl.bindTexture (gl.TEXTURE_2D, gl.createTexture ());
-          gl.texImage2D (gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE,
-                         new Uint8Array ([255, 0, 0, 255]));
-
-          // Find the correct browser's version of requestAnimationFrame() needed for queue-ing up re-display events:
-          window.requestAnimFrame = (w =>
-            w.requestAnimationFrame || w.webkitRequestAnimationFrame
-            || w.mozRequestAnimationFrame || w.oRequestAnimationFrame || w.msRequestAnimationFrame
-            || function (callback) { w.setTimeout (callback, 1000 / 60); }) (window);
-      }
-      set_canvas_size (dimensions = [1080, 600]) {
-          // We must change size in CSS, wait for style re-flow, and then change size again within canvas attributes.
-          // Both steps are needed; attributes on a canvas have a special effect on buffers, separate from their style.
-          const [width, height]         = dimensions;
-          this.canvas.style[ "width" ]  = width + "px";
-          this.canvas.style[ "height" ] = height + "px";
-          Object.assign (this, {width, height});
-          Object.assign (this.canvas, {width, height});
-          // Build the canvas's matrix for converting -1 to 1 ranged coords (NCDS) into its own pixel coords:
-          this.context.viewport (0, 0, width, height);
-      }
-      frame_advance (time = 0) {
-          if ( !this.props.dont_tick) {
-              this.uniforms.animation_delta_time = time - this.prev_time | 0;
-              if (this.uniforms.animate) this.uniforms.animation_time += this.uniforms.animation_delta_time;
-              this.prev_time = time;
-          }
-
-          const gl = this.context;
-          if (gl)
-              gl.clear (gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);        // Clear the canvas's pixels and z-buffer.
-
-          const open_list = [this];
-          while (open_list.length)                           // Traverse all Scenes and their children, recursively.
-          {
-              open_list.push (...open_list[ 0 ].animated_children);
-              // Call display() to draw each registered animation:
-              open_list.shift ().render_frame (this);
-          }
-          // Now that this frame is drawn, request that render() happen again as soon as all other web page events
-          // are processed:
-          this.event = window.requestAnimFrame (this.frame_advance.bind (this));
-      }
       new_line (parent = this.control_panel) { parent.appendChild (document.createElement ("br")); }
       live_string (callback, parent = this.control_panel) {
           parent.appendChild (
@@ -685,109 +644,6 @@ const Component = tiny.Component =
           if ( !shortcut_combination) return;
           this.key_controls.add (shortcut_combination, press, release);
       }
-      submit (object) {
-        if (object instanceof Entity)
-          this.entities.push(object);
-      }
-      shadow_map_pass (lights) {
-        for (let light of lights) {
-          if (!light.casts_shadow)
-            continue;
-          if (light.is_point_light)
-          {
-            for (let i = 0; i < 6; i++) {
-              light.activate(this.context, undefined, i);
-              this.flush([], false, light.shadow_map_shader);
-              light.deactivate(this, i);
-            }
-          }
-          else {
-            light.bind(this.context, undefined, true);
-            this.flush([], false, light.shadow_map_shader);
-            light.deactivate(caller);
-          }
-        }
-      }
-
-      flush (uniforms, clear_entities = true, alternative_shader = undefined) {
-
-        const shadow_pass_material = alternative_shader ?
-                        new Material("shadow_pass_material", alternative_shader) :
-                        undefined;
-
-        for(let entity of this.entities){
-          if( entity.transforms instanceof tiny.Matrix ) {
-            // Single matrix case
-            if (entity.dirty && entity.shape.ready) {
-              entity.shape.vertices = [{instance_transform: entity.transforms}];
-              //Ideally use a shader with just a uniform matrix where you pass global.times(model)?
-              entity.shape.fill_buffer(["instance_transform"], undefined, 1);
-              if( !alternative_shader)
-                entity.dirty = false;
-            }
-            entity.shape.draw(this.context, uniforms, entity.model_transform, shadow_pass_material || entity.material, undefined, 1);
-          }
-          else {
-            if (entity.dirty && entity.shape.ready) {
-              entity.shape.vertices = Array(entity.transforms.length).fill(0).map( (x,i) => ({instance_transform: entity.transforms[i]}));
-              entity.shape.fill_buffer(["instance_transform"], undefined, 1);
-              if( !alternative_shader)
-                entity.dirty = false;
-            }
-            entity.shape.draw(this.context, uniforms, entity.model_transform, shadow_pass_material || entity.material, undefined, entity.transforms.length);
-          }
-        }
-
-        if (clear_entities)
-          this.entities = []
-      }
-
-      execute_shaders (gl, shape, gpu_instance, type, instances) {
-        if (shape.indices.length) {
-            gl.bindBuffer (gl.ELEMENT_ARRAY_BUFFER, gpu_instance.index_buffer);
-            gl.drawElementsInstanced (gl[ type ], shape.indices.length, gl.UNSIGNED_INT, 0, instances);
-        } else gl.drawArraysInstanced (gl[ type ], 0, shape.num_vertices, instances);
-      }
-      draw (shape, uniforms, model_transform, material, type = "TRIANGLES", instances) {
-          let gpu_instance = shape.gpu_instances.get (this.context);
-          if( !gpu_instance || shape.dirty)
-            gpu_instance = shape.copy_onto_graphics_card (this.context);
-          this.context.bindVertexArray( gpu_instance.VAO );
-
-          material.shader.activate (this.context, uniforms, model_transform, material);
-
-          for (let binding_point of this.selected_ubos.keys()) {
-            const ubo = this.selected_ubos[binding_point];
-
-            // Send the buffer if dirty.
-            if (this.buffers.get(ubo).dirty)
-              ubo.send_to_GPU (this);
-
-            // Bind the UBO if it needs it.
-            if (this.bound_ubos.includes(ubo))
-              continue;
-            gl.bindBufferBase (gl.UNIFORM_BUFFER, binding_point, ubo.buffer);
-            this.bound_ubos.set (binding_point, ubo);
-          }
-
-          let offset = 0;
-          if ( this.samplers.length )
-            for (const [name, sampler] of this.samplers.entries())
-              if (sampler && sampler.ready) {
-
-                //  TODO: Is the following comment accurate?  Or is it a plan that ought to be followed?
-
-                // Select texture unit offset for the fragment shader Sampler2D uniform called "samplers.name":
-                gl.uniform1i (material.shader.uniforms_addresses[name], offset);
-                // For this draw, use the texture image from correct the GPU buffer:
-                sampler.activate (gl, offset);
-                offset++;
-              }
-
-          // Run the shaders to draw every triangle now:
-          this.execute_shaders (this.context, shape, gpu_instance, type, instances);
-      }
-
       init () { }     // Abstract -- user overrides this
       render_layout (div, options = {}) {
           this.div         = div;
@@ -813,12 +669,6 @@ const Component = tiny.Component =
           // eye out.
           const canvas = this.program_stuff.appendChild (document.createElement ("canvas"));
           canvas.style = `width:1080px; height:600px; background:DimGray; margin:auto; margin-bottom:-4px`;
-
-          this.entities = []
-          this.lights = []
-          this.buffers = new Map();
-          this.bound_ubos = new Map();
-          this.selected_ubos = new Map();
 
           if ( !overridden_options.show_canvas)
               canvas.style.display = "none";
@@ -849,13 +699,186 @@ const Component = tiny.Component =
   };
 
 
-
-
+const Entity = tiny.Entity =
+class Entity {
+  constructor(shape, transforms, material) {
+    this.dirty = true
+    this.shape = shape;
+    this.model_transform = Mat4.identity();
+    this.transforms = transforms;
+    this.material = material;
+  }
+  set_shape(shape) {
+    this.shape = shape;
+    this.dirty = true;
+  }
+  set_transforms(transforms) {
+    this.transforms = transforms;
+    this.dirty = true;
+  }
+  apply_transform(model_transform) {
+    this.model_transform = model_transform;
+  }
+  set_material(material) {
+    this.material = material;
+  }
+};
 
 const Renderer = tiny.Renderer =
 class Renderer extends Component {
-  constructor (props) {
-    super(props);
+  init (...args) {
+    this.entities = []
+    this.queued_entities = []
+    this.lights = []            // TODO: Needed?
+    this.buffers = new Map();
+    this.bound_ubos = new Map();
+    this.selected_ubos = new Map();
+    super.init(...args);
+  }
+  make_context (canvas, background_color = color (0, 0, 0, 1), dimensions) {
+      this.canvas              = canvas;
+      this.context = canvas.getContext("webgl2");
+      if ( !this.context) throw "Canvas failed to make a WebGL context.";
+      const gl = this.context;
+
+      this.set_canvas_size (dimensions);
+      // Tell the GPU which color to clear the canvas with each frame.
+      gl.clearColor.apply (gl, background_color);
+      gl.enable (gl.DEPTH_TEST);                            // Enable Z-Buffering test.
+      // Specify an interpolation method for blending "transparent" triangles over the existing pixels:
+      gl.enable (gl.BLEND);
+      gl.blendFunc (gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+      // Store a single red pixel, as a placeholder image to prevent a console warning:
+      gl.bindTexture (gl.TEXTURE_2D, gl.createTexture ());
+      gl.texImage2D (gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE,
+                     new Uint8Array ([255, 0, 0, 255]));
+
+      // Find the correct browser's version of requestAnimationFrame() needed for queue-ing up re-display events:
+      window.requestAnimFrame = (w =>
+        w.requestAnimationFrame || w.webkitRequestAnimationFrame
+        || w.mozRequestAnimationFrame || w.oRequestAnimationFrame || w.msRequestAnimationFrame
+        || function (callback) { w.setTimeout (callback, 1000 / 60); }) (window);
+  }
+  set_canvas_size (dimensions = [1080, 600]) {
+      // We must change size in CSS, wait for style re-flow, and then change size again within canvas attributes.
+      // Both steps are needed; attributes on a canvas have a special effect on buffers, separate from their style.
+      const [width, height]         = dimensions;
+      this.canvas.style[ "width" ]  = width + "px";
+      this.canvas.style[ "height" ] = height + "px";
+      Object.assign (this, {width, height});
+      Object.assign (this.canvas, {width, height});
+      // Build the canvas's matrix for converting -1 to 1 ranged coords (NCDS) into its own pixel coords:
+      this.context.viewport (0, 0, width, height);
+  }
+  frame_advance (time = 0) {
+      if ( !this.props.dont_tick) {
+          this.uniforms.animation_delta_time = time - this.prev_time | 0;
+          if (this.uniforms.animate) this.uniforms.animation_time += this.uniforms.animation_delta_time;
+          this.prev_time = time;
+      }
+
+      const gl = this.context;
+      if (gl)
+          gl.clear (gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);        // Clear the canvas's pixels and z-buffer.
+
+      const open_list = [this];
+      while (open_list.length)                           // Traverse all Scenes and their children, recursively.
+      {
+          open_list.push (...open_list[ 0 ].animated_children);
+          // Call display() to draw each registered animation:
+          open_list.shift ().render_frame (this);
+      }
+      // Now that this frame is drawn, request that render() happen again as soon as all other web page events
+      // are processed:
+      this.event = window.requestAnimFrame (this.frame_advance.bind (this));
+  }
+  submit (object) {
+    if (object instanceof Entity)
+      this.queued_entities.push(object);
+  }
+  shadow_map_pass (uniforms) {
+    for (let light of uniforms.UBOs.lightArray.fields.lights) {
+      if (!light.casts_shadow)
+        continue;
+      if (light.is_point_light)
+      {
+        for (let i = 0; i < 6; i++) {
+          light.activate(this.context, undefined, i);
+          this.flush([], false, light.shadow_map_shader);
+          light.deactivate(this, i);
+        }
+      }
+      else {
+        light.bind(this.context, undefined, true);
+        this.flush([], false, light.shadow_map_shader);
+        light.deactivate(caller);
+      }
+    }
+  }
+  flush (uniforms, clear_entities = true, alternative_shader = undefined) {
+
+    const shadow_pass_material = alternative_shader ?
+                    new Material("shadow_pass_material", alternative_shader) :
+                    undefined;
+
+    for(let entity of this.queued_entities){
+      if( entity.transforms instanceof tiny.Matrix ) {
+        // Single matrix case
+        if (entity.dirty && entity.shape.ready) {
+          entity.shape.vertices = [{instance_transform: entity.transforms}];
+          //Ideally use a shader with just a uniform matrix where you pass global.times(model)?
+          entity.shape.fill_buffer(["instance_transform"], undefined, 1);
+          if( !alternative_shader)
+            entity.dirty = false;
+        }
+        this.draw(entity.shape, uniforms, entity.model_transform, shadow_pass_material || entity.material, undefined, 1);
+      }
+      else {
+        if (entity.dirty && entity.shape.ready) {
+          entity.shape.vertices = Array(entity.transforms.length).fill(0).map( (x,i) => ({instance_transform: entity.transforms[i]}));
+          entity.shape.fill_buffer(["instance_transform"], undefined, 1);
+          if( !alternative_shader)
+            entity.dirty = false;
+        }
+        this.draw(entity.shape, uniforms, entity.model_transform, shadow_pass_material || entity.material, undefined, entity.transforms.length);
+      }
+    }
+
+    if (clear_entities)
+      this.queued_entities = []
+  }
+
+  execute_shaders (gl, shape, gpu_instance, type, instances) {
+    if (shape.indices.length) {
+        gl.bindBuffer (gl.ELEMENT_ARRAY_BUFFER, gpu_instance.index_buffer);
+        gl.drawElementsInstanced (gl[ type ], shape.indices.length, gl.UNSIGNED_INT, 0, instances);
+    } else gl.drawArraysInstanced (gl[ type ], 0, shape.num_vertices, instances);
+  }
+  draw (shape, uniforms, model_transform, material, type = "TRIANGLES", instances) {
+      const gl = this.context;
+      let gpu_instance = shape.gpu_instances.get (gl);
+      if( !gpu_instance || shape.dirty)
+        gpu_instance = shape.copy_onto_graphics_card (gl);
+      gl.bindVertexArray( gpu_instance.VAO );
+
+      material.shader.activate (this, uniforms, model_transform, material);
+
+      for (let binding_point of this.selected_ubos.keys()) {
+        const ubo = this.selected_ubos.get(binding_point);
+
+        // Send the buffer if dirty.
+        if (!this.buffers.get(ubo) || this.buffers.get(ubo).dirty)
+          ubo.send_to_GPU (this);
+
+        // Bind the UBO if it needs it.
+        if (this.bound_ubos.has(ubo))
+          continue;
+          gl.bindBufferBase (gl.UNIFORM_BUFFER, binding_point, ubo.buffer);
+        this.bound_ubos.set (binding_point, ubo);
+      }
+
+      // Run the shaders to draw every triangle now:
+      this.execute_shaders (gl, shape, gpu_instance, type, instances);
   }
 }
 
@@ -866,36 +889,43 @@ const UBO = tiny.UBO =
 class UBO {
   constructor (...args) {
     this.element_offsets = new Map();
-    this.ready = true;
+    this.ready = true;        // For async loaded entries
     this.init(...args);
   }
   init (fields) { }     // Abstract -- user overrides this
-  initial_values () { return {}; }
+  initial_values () { return {}; }        // TODO:  Unused
   static flatten_JSON (o,p="") {
     return Object.keys (o).map (k => o[k] === null           ||
-                                    typeof o[k] !== "object" ? {[p + (p ? ".":"") + k] : o[k]}
+                                    typeof o[k] !== "object" ? {[p + (p ? ".":"") + k]: o[k]}
                                                              : UBO.flatten_JSON (o[k],p + (p ? ".":"") + k))
-                          .reduce ((p,c) => Object.assign (p,c));
+                          .reduce ((acc,value) => Object.assign (acc,value));
                       }
   static uniform_names_from_JSON (json) {
     const table = Object.entries( UBO.flatten_JSON(json) );
-    const fix_array_notation = s => s.replaceAll (/\.(\d+)(?=\.|$)/g, (match, number) => '['+number+']' );
+    const fix_array_notation = s => s.replaceAll (/\.(\d+)(?=\.|$)/g, (match, num) => '['+num+']' );
     return new Map( table.map (r => [fix_array_notation(r[0]), r[1] ]) );
   }
   get_binding_point () {
     throw `Each subclass of UBO must specify its own binding point for its corresponding GLSL program uniform block.`; }
   fill_buffer (json) {
     if (!this.buffer_size)
-      throw `full_buffer() was called to early; UBO doesn't query its size until draw time the first time.`
+      throw `full_buffer() was called too early; UBO doesn't query its size until draw time the first time.`
     if (!this.local_buffer)
-      this.local_buffer = new Float32Array(this.buffer_size);     // TODO:  Test that this size matches intended size.
+      this.local_buffer = new Float32Array(this.buffer_size/4);     // TODO:  Test that this size matches intended size.
     const values_to_set = UBO.uniform_names_from_JSON(json);
 
-    for( let [key, value] of values_to_set.entries() ) {
-      let offset = this.element_offsets.get(key);
+    for( let [key, value] of values_to_set ) {
+
+      let [uniform_name, index] = key.split('[');
+      index = parseInt(index);
+      const vector_index = index || 0;
+
+      // TODO:  BUFFER OVERFLOW is possible if the user gives a vector_index that is too high.
+
+      let offset = this.element_offsets.get(uniform_name);
       if (!value.length) {
         // Scalar case
-        this.local_buffer[offset] = value;
+        this.local_buffer[offset/4 + vector_index] = value;
         continue;
       }
       // Treat all other types like a vector, flattening any matrices into a vector first.
@@ -912,10 +942,10 @@ class UBO {
       this.fill_buffer(this.fields);
     let instance = renderer.buffers.get(this);
     const gl = renderer.context;
-    if(! entry) {
+    if(! instance) {
       test_rookie_mistake ();
       instance = renderer.buffers.set(this, {dirty:true, buffer: gl.createBuffer()})
-      gl.bindBuffer (gl.UNIFORM_BUFFER, buffer);
+      gl.bindBuffer (gl.UNIFORM_BUFFER, instance.buffer);
       gl.bufferData (gl.UNIFORM_BUFFER, this.buffer_size, gl.DYNAMIC_DRAW);
     }
     gl.bindBuffer(gl.UNIFORM_BUFFER, instance.buffer);

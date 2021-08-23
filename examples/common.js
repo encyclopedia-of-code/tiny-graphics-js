@@ -39,23 +39,35 @@ class Camera extends UBO {
     }
   };
 
-const Light = defs.Light =
-class Light extends UBO {
+const LightArray = defs.LightArray =
+class LightArray extends UBO {
 
     static NUM_LIGHTS = 2;
     static global_index = 0;
     static global_ambient = 0.4;
 
     init(fields) {
-      this.fields = Object.assign(Light.default_values(), fields);
+      this.fields = Object.assign(LightArray.default_values(), fields);
     }
     static default_values () {
       return {
-                direction_or_position: vec4 (0.0, 0.0, 0.0, 0.0),
-                color: vec3 (1.0, 1.0, 1.0, 1.0),
-                diffuse: 1.0,
-                specular: 1.0,
-                attenuation_factor: 0.0
+                ambient: 0,
+                lights: [
+                          {
+                            direction_or_position: vec4 (0.0, 0.0, 0.0, 0.0),
+                            color: vec3 (1.0, 1.0, 1.0, 1.0),
+                            diffuse: 1.0,
+                            specular: 1.0,
+                            attenuation_factor: 0.0
+                          },
+                          {
+                            direction_or_position: vec4 (0.0, -1.0, 0.0, 1.0),
+                            color: vec3 (1.0, 1.0, 1.0, 1.0),
+                            diffuse: 1.0,
+                            specular: 1.0,
+                            attenuation_factor: 0.0
+                          }
+                        ]
               };
     }
     get_binding_point () { return 1; }
@@ -197,7 +209,7 @@ class Shadow_Light {
 const Material = defs.Material =
 class Material extends UBO {
     init(shader = undefined, fields = {}, samplers = {}) {
-      Object.assign (this, shader, {samplers: new Map(Object.entries(samplers))} );
+      Object.assign (this, {shader, samplers: new Map(Object.entries(samplers))} );
       this.fields = Object.assign(shader.constructor.default_values(), fields);
     }
     get_binding_point () { return 2; }
@@ -316,30 +328,5 @@ class Material_From_File extends UBO {
         this.samplers = Object.assign(this.MTL[first_material_name].samplers, this.arg_samplers);
         this.ready = true;
 
-    }
-  };
-
-const Entity = defs.Entity =
-  class Entity {
-    constructor(shape, transforms, material) {
-      this.dirty = true
-      this.shape = shape;
-      this.model_transform = Mat4.identity();
-      this.transforms = transforms;
-      this.material = material;
-    }
-    set_shape(shape) {
-      this.shape = shape;
-      this.dirty = true;
-    }
-    set_transforms(transforms) {
-      this.transforms = transforms;
-      this.dirty = true;
-    }
-    apply_transform(model_transform) {
-      this.model_transform = model_transform;
-    }
-    set_material(material) {
-      this.material = material;
     }
   };
