@@ -9,43 +9,43 @@ export {tiny, defs};
 const Universal_Shader = defs.Universal_Shader =
 class Universal_Shader extends Shader {
     constructor (num_lights = 2, options) {
-      super ();
+      super();
       const defaults = { has_instancing: true, has_shadows: true, has_texture: true };
       Object.assign (this, defaults, options, {num_lights});
 
-      this.ubo_binding = [
-        {shader_name: "Material",  binding_point: 2},
-      ];
+      // this.ubo_binding = [
+      //   {shader_name: "Material",  binding_point: 2},
+      // ];
 
-      this.ubo_layout = [
-        {num_instances: 1,
-          data_layout:[{name:"color", type:"vec4"},
-                      {name:"diffuse", type:"vec3"},
-                      {name:"specular", type:"vec3"},
-                      {name:"smoothness", type:"float"}]
-        }
-        ];
+      // this.ubo_layout = [
+      //   {num_instances: 1,
+      //     data_layout:[{name:"color", type:"vec4"},
+      //                 {name:"diffuse", type:"vec3"},
+      //                 {name:"specular", type:"vec3"},
+      //                 {name:"smoothness", type:"float"}]
+      //   }
+      //   ];
     }
-    copy_onto_graphics_card (context) {
-      const instance = super.copy_onto_graphics_card (context);
-      this.init_UBO (context, instance.program, this.ubo_binding);
+    copy_onto_graphics_card (context, uniforms) {
+      const instance = super.copy_onto_graphics_card (context, uniforms);
+     // this.init_UBO (context, instance.program, this.ubo_binding);
       return instance;
     }
-    update_GPU (context, gpu_addresses, uniforms, model_transform, material) {
-      material.initialize(context, this.ubo_layout);
+    update_GPU (renderer, gpu_addresses, uniforms, model_transform, material) {
+   //   material.initialize(context, this.ubo_layout);
       if (this.has_shadows)
         for (let light of uniforms.lights)
           if (!light.supports_shadow)
             throw `Simpler lights do not have compatible UBO layouts to use with shadowed shaders!`;
           else if (light.casts_shadow)
-            light.bind(context, gpu_addresses);
-      material.bind(this.ubo_binding[0].binding_point, gpu_addresses);
-      context.uniformMatrix4fv (gpu_addresses.model_transform, true, Matrix.flatten_2D_to_1D (model_transform));
+            light.bind(renderer, gpu_addresses);
+      material.bind(renderer, material.get_binding_point());
+      //this.ubo_binding[0].binding_point, gpu_addresses);
+      renderer.context.uniformMatrix4fv (gpu_addresses.model_transform, true, Matrix.flatten_2D_to_1D (model_transform));
     }
     static default_values () {
       return {
               color: vec4 (1.0, 1.0, 1.0, 1.0),
-              ambient: 0.0,
               diffuse: vec3(1.0, 1.0, 1.0),
               specular: vec3 (1.0, 1.0, 1.0),
               smoothness: 32.0
@@ -62,12 +62,12 @@ class Universal_Shader extends Shader {
       layout(location = 1) in vec3 normal;
       layout(location = 2) in vec2 texture_coord;
       ${this.has_instancing ? `
-        layout(location = 3) in mat4 instance_transform;`
-        : ``}
+              layout(location = 3) in mat4 instance_transform;`
+              : ``}
 
       uniform mat4 model_transform;
 
-      layout (std140) uniform Camera
+      uniform camera
       {
         mat4 camera_inverse;
         mat4 projection;
@@ -80,9 +80,9 @@ class Universal_Shader extends Shader {
 
       void main() {
         ${this.has_instancing ? `
-          mat4 world_space = model_transform * instance_transform;`
-          :
-          `mat4 world_space = model_transform;`}
+                mat4 world_space = model_transform * instance_transform;`
+                :
+                `mat4 world_space = model_transform;`}
         vec4 world_position = world_space * vec4( position, 1.0 );
         gl_Position = projection * camera_inverse * world_position;
         VERTEX_POS = vec3(world_position);
@@ -92,7 +92,7 @@ class Universal_Shader extends Shader {
     }
     fragment_glsl_code () {         // ********* FRAGMENT SHADER *********
         return this.shared_glsl_code () + `
-      layout (std140) uniform Camera
+      uniform camera
       {
         mat4 camera_inverse;
         mat4 projection;
@@ -111,21 +111,21 @@ class Universal_Shader extends Shader {
 
       const int N_LIGHTS = ${this.num_lights};
 
-      layout (std140) uniform Lights
+      uniform lightArray
       {
         float ambient;
         Light lights[N_LIGHTS];
         ${this.has_shadows ? `
-          mat4 light_space_matrix[N_LIGHTS * 6];`
-          : ``}
+                mat4 light_space_matrix[N_LIGHTS * 6];`
+                : ``}
       };
 
       ${this.has_shadows ? `
-        const int NUM_SHADOW_MAPS = N_LIGHTS * 6;
-        uniform sampler2D shadow_maps[NUM_SHADOW_MAPS]; //since point lights have up to 6 samplers`
-        : ``}
+              const int NUM_SHADOW_MAPS = N_LIGHTS * 6;
+              uniform sampler2D shadow_maps[NUM_SHADOW_MAPS]; //since point lights have up to 6 samplers`
+              : ``}
 
-      layout (std140) uniform Material
+      uniform material
       {
         vec4 color;
         vec3 diffuse;
@@ -133,8 +133,8 @@ class Universal_Shader extends Shader {
         float smoothness;
       };
       ${this.has_texture ? `
-      uniform sampler2D diffuse_texture;`
-      : ``}
+              uniform sampler2D diffuse_texture;`
+              : ``}
 
       in vec3 VERTEX_POS;
       in vec3 VERTEX_NORMAL;
@@ -143,52 +143,53 @@ class Universal_Shader extends Shader {
       out vec4 frag_color;
 
       ${this.has_shadows ? `
-      float ShadowCalculation(vec4 fragPosLightSpace, int index, vec3 N, vec3 L )
-      {
-        // perform perspective divide
-        vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
+              float ShadowCalculation(vec4 fragPosLightSpace, int index, vec3 N, vec3 L )
+              {
+                // perform perspective divide
+                vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
 
-        // transform to [0,1] range
-        projCoords = projCoords * 0.5 + 0.5;
+                // transform to [0,1] range
+                projCoords = projCoords * 0.5 + 0.5;
 
-        // Workaround for unsupported TEXTURE_BORDER_COLOR setting in WebGL2
-        if( projCoords.x < 0.0 || projCoords.y < 0.0 || projCoords.x > 1.0 || projCoords.y > 1.0 )
-          return 0.0;
+                // Workaround for unsupported TEXTURE_BORDER_COLOR setting in WebGL2
+                if( projCoords.x < 0.0 || projCoords.y < 0.0 || projCoords.x > 1.0 || projCoords.y > 1.0 )
+                  return 0.0;
 
-        // get closest depth value from light's perspective (using [0,1] range fragPosLight as coords)
-        // float closestDepth = texture(shadow_maps[i*6], projCoords.xy).r;
-        float closestDepth = texture(shadow_maps[0], projCoords.xy).r;
+                // get closest depth value from light's perspective (using [0,1] range fragPosLight as coords)
+                // float closestDepth = texture(shadow_maps[i*6], projCoords.xy).r;
+                float closestDepth = texture(shadow_maps[0], projCoords.xy).r;
 
-        // get depth of current fragment from light's perspective
-        float currentDepth = projCoords.z;
+                // get depth of current fragment from light's perspective
+                float currentDepth = projCoords.z;
 
-        // calculate bias (based on depth map resolution and slope)
-        float bias = max(0.05 * (1.0 - dot(N, L)), 0.005);
+                // calculate bias (based on depth map resolution and slope)
+                float bias = max(0.05 * (1.0 - dot(N, L)), 0.005);
 
-        // WITHOUT PCF - check whether current frag pos is in shadow
-        // float shadow = currentDepth - bias > closestDepth  ? 1.0 : 0.0;
+                // WITHOUT PCF - check whether current frag pos is in shadow
+                // float shadow = currentDepth - bias > closestDepth  ? 1.0 : 0.0;
 
-        // PCF
-        float shadow = 0.0;
-        vec2 temp = vec2(textureSize(shadow_maps[0], 0));
-        vec2 texelSize = 1.0 / temp;
-        for(int x = -1; x <= 1; ++x)
-            for(int y = -1; y <= 1; ++y) {
-                float pcfDepth = texture(shadow_maps[0], projCoords.xy + vec2(x, y) * texelSize).r;
-                shadow += currentDepth - bias > pcfDepth  ? 1.0 : 0.0;
-            }
-        shadow /= 9.0;
+                // PCF
+                float shadow = 0.0;
+                vec2 temp = vec2(textureSize(shadow_maps[0], 0));
+                vec2 texelSize = 1.0 / temp;
+                for(int x = -1; x <= 1; ++x)
+                    for(int y = -1; y <= 1; ++y) {
+                        float pcfDepth = texture(shadow_maps[0], projCoords.xy + vec2(x, y) * texelSize).r;
+                        shadow += currentDepth - bias > pcfDepth  ? 1.0 : 0.0;
+                    }
+                shadow /= 9.0;
 
-        // keep the shadow at 0.0 when outside the far_plane region of the light's frustum.
-        if(projCoords.z > 1.0)
-            shadow = 0.0;
-        return shadow;
-      }`
-      : ``}
+                // keep the shadow at 0.0 when outside the far_plane region of the light's frustum.
+                if(projCoords.z > 1.0)
+                    shadow = 0.0;
+                return shadow;
+              }`
+              : ``}
 
       // ***** PHONG SHADING HAPPENS HERE: *****
       vec3 phong_model_lights( vec3 N, vec3 vertex_worldspace
-                            ${this.has_texture ? `, vec4 texture_color` : ``}
+                            ${this.has_texture ?
+                                    `, vec4 texture_color` : ``}
                             ) {
           vec3 E = normalize( camera_position - vertex_worldspace );
           vec3 result = vec3( 0.0 );
@@ -205,35 +206,36 @@ class Universal_Shader extends Shader {
             float specular = pow( max( dot( N, H ), 0.0 ), smoothness );     // Use Blinn's "halfway vector" method.
             float attenuation = 1.0 / (1.0 + lights[i].attenuation_factor * distance_to_light * distance_to_light );
 
-            vec3 light_contribution = ${this.has_texture ? `texture_color.xyz` : `vec3(1,1,1)`}
+            vec3 light_contribution = ${this.has_texture ?
+                                              `texture_color.xyz` : `vec3(1,1,1)`}
                                                       * diffuse * lights[i].diffuse * diffuse
                                                     + specular * lights[i].specular * specular;
             light_contribution *= lights[i].color.xyz;
 
             ${this.has_shadows ? `
-            vec4 fragPosLightSpace = light_space_matrix[i * 6] * vec4 (VERTEX_POS, 1.0);
-            float shadow = ShadowCalculation(fragPosLightSpace, i, N, L);
-            result += attenuation * (1.0 - shadow) * light_contribution;`
-            :
-            `result += attenuation * light_contribution;`}
+                    vec4 fragPosLightSpace = light_space_matrix[i * 6] * vec4 (VERTEX_POS, 1.0);
+                    float shadow = ShadowCalculation(fragPosLightSpace, i, N, L);
+                    result += attenuation * (1.0 - shadow) * light_contribution;`
+                    :
+                    `result += attenuation * light_contribution;`}
           }
           return result;
         }
       void main() {
         ${this.has_texture ? `
-        // Compute an initial (ambient) color:
-        vec4 tex_color = texture( diffuse_texture, VERTEX_TEXCOORD );
-        frag_color = vec4( ( tex_color.xyz + color.xyz ) * ambient, color.w * tex_color.w );
-        // Compute the final color with contributions from lights:
-        frag_color.xyz += phong_model_lights( normalize( VERTEX_NORMAL ), VERTEX_POS, tex_color);
-        `
-        :
-        `
-        // Compute an initial (ambient) color:
-        frag_color = vec4( color.xyz * ambient, color.w );
-        // Compute the final color with contributions from lights:
-        frag_color.xyz += phong_model_lights( normalize( VERTEX_NORMAL ), VERTEX_POS );
-        `}
+                // Compute an initial (ambient) color:
+                vec4 tex_color = texture( diffuse_texture, VERTEX_TEXCOORD );
+                frag_color = vec4( ( tex_color.xyz + color.xyz ) * ambient, color.w * tex_color.w );
+                // Compute the final color with contributions from lights:
+                frag_color.xyz += phong_model_lights( normalize( VERTEX_NORMAL ), VERTEX_POS, tex_color);
+                `
+                :
+                `
+                // Compute an initial (ambient) color:
+                frag_color = vec4( color.xyz * ambient, color.w );
+                // Compute the final color with contributions from lights:
+                frag_color.xyz += phong_model_lights( normalize( VERTEX_NORMAL ), VERTEX_POS );
+                `}
       }`
     }
 };
@@ -259,7 +261,7 @@ class Shadow_Pass_Shader extends Shader {
     uniform mat4 model_transform;
     uniform mat4 light_space_matrix;
 
-    layout (std140) uniform Camera
+    uniform camera
     {
       mat4 camera_inverse;
       mat4 projection;
