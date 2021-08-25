@@ -873,7 +873,7 @@ class Renderer extends Component {
         // Bind the UBO if it needs it.
         if (this.bound_ubos.has(ubo))
           continue;
-          gl.bindBufferBase (gl.UNIFORM_BUFFER, binding_point, ubo.buffer);
+        gl.bindBufferBase (gl.UNIFORM_BUFFER, binding_point, ubo.buffer);
         this.bound_ubos.set (binding_point, ubo);
       }
 
@@ -914,28 +914,27 @@ class UBO {
       this.local_buffer = new Float32Array(this.buffer_size/4);     // TODO:  Test that this size matches intended size.
     const values_to_set = UBO.uniform_names_from_JSON(json);
 
+    this.dirty = true;
     for( let [key, value] of values_to_set ) {
 
-      let [uniform_name, index] = key.split('[');
-      index = parseInt(index);
-      const vector_index = index || 0;
+      // Handle setting an individual element within a uniform that's an array:
+      let [uniform_name, ...subindices] = key.split('[');
+      subindices = subindices.map( index => parseInt(index) || 0 );
 
-      // TODO:  BUFFER OVERFLOW is possible if the user gives a vector_index that is too high.
-
-      let offset = this.element_offsets.get(uniform_name);
-      if (!value.length) {
-        // Scalar case
-        this.local_buffer[offset/4 + vector_index] = value;
+      const byte_offset = this.element_offsets.get(uniform_name);
+      // Ignore any fields the shader side did not want when this UBO was used.
+      if(byte_offset === undefined)
         continue;
-      }
-      // Treat all other types like a vector, flattening any matrices into a vector first.
-      value = value.map( row => row.length ? row.reduce( (acc,x) => acc.concat(x), []) : row );
-      for (let row of value) {
-        this.local_buffer[offset] = row;
-        offset += 4;
-      }
+
+      // GLSL doesn't support 3D arrays and beyond, and aligns Mat3s like Mat4s, so assume
+      // we can just jump ahead 4 floats for every row.
+      const row_column_offset = subindices.reduce( (acc,x) => 4*acc+x, 0 );
+      const offset = byte_offset/4 + row_column_offset;
+
+      // TODO:  TEST:  Row major or column major??
+      // TODO:  BUFFER OVERFLOW is possible if the user gives a vector_index that is too high.
+      this.local_buffer[offset] = value;
     }
-    this.dirty = true;
   }
   send_to_GPU (renderer) {
     if (this.ready)
@@ -944,7 +943,7 @@ class UBO {
     const gl = renderer.context;
     if(! instance) {
       test_rookie_mistake ();
-      instance = renderer.buffers.set(this, {dirty:true, buffer: gl.createBuffer()})
+      instance = renderer.buffers.set(this, {dirty:true, buffer: gl.createBuffer()}).get(this);
       gl.bindBuffer (gl.UNIFORM_BUFFER, instance.buffer);
       gl.bufferData (gl.UNIFORM_BUFFER, this.buffer_size, gl.DYNAMIC_DRAW);
     }

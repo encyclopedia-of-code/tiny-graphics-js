@@ -73,6 +73,10 @@ class Shadows_Demo extends Renderer {
     }
     // this.sun.initialize(renderer);
 
+
+    this.camera.bind(this, this.camera.get_binding_point());
+    this.lightArray.bind(this, this.lightArray.get_binding_point());
+
     // Yet another test shape that doesn't work due to sharing transforms VBO.
     //this.shapes.cube.draw( renderer, {lights: Lights}, Mat4.translation(2.0, 5.0, 0.0), this.stars, undefined, 1);
 
