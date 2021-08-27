@@ -71,7 +71,7 @@ class LightArray extends UBO {
               };
     }
     get_binding_point () { return 1; }
-    bind (gl, gpu_addresses, is_shadow_pass, shadow_map_index = 0)
+    activate (gl, gpu_addresses, is_shadow_pass, shadow_map_index = 0)
     { }
     deactivate (caller, shadow_map_index = 0)
     { }
