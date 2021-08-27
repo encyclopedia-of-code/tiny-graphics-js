@@ -911,32 +911,44 @@ class UBO {
     if (!this.buffer_size)
       throw `full_buffer() was called too early; UBO doesn't query its size until draw time the first time.`
     if (!this.local_buffer)
-      this.local_buffer = new Float32Array(this.buffer_size/4);     // TODO:  Test that this size matches intended size.
+      this.local_buffer = new Float32Array(this.buffer_size/4);
     const values_to_set = UBO.uniform_names_from_JSON(json);
 
-    this.dirty = true;
-    for( let [key, value] of values_to_set ) {
+    const arr = [...this.element_offsets];
+    for( let i = 0; i < arr.length; i++ ) {
+      const [key, byte_offset] = arr[i];
+      for( let [in_key, in_value] of values_to_set ) {
+        // Skip inputs we've already handled.  Skip non matches.
+        // Ignore any fields the shader side did not want when this UBO was used.
+        if(in_value === null || !in_key.includes(key) || byte_offset === undefined)
+          continue;
 
-      // Handle setting an individual element within a uniform that's an array:
-      let [uniform_name, ...subindices] = key.split('[');
-      subindices = subindices.map( index => parseInt(index) || 0 );
+        // Handle setting an individual element within a uniform that's an array:
+        const suffix = in_key.substr(key.length, in_key.length);
+        let sub_indices = suffix.split('[');
+        sub_indices = sub_indices.map( index => parseInt(index) || 0 );
 
-      const byte_offset = this.element_offsets.get(uniform_name);
-      // Ignore any fields the shader side did not want when this UBO was used.
-      if(byte_offset === undefined)
-        continue;
+        // GLSL doesn't support 3D arrays and beyond, and aligns Mat3s like Mat4s, so assume
+        // we can just jump ahead 4 floats for every row.
+        const row_column_offset = sub_indices.reduce( (acc,x) => 4*acc+x, 0 );
+        const offset = byte_offset/4 + row_column_offset;
 
-      // GLSL doesn't support 3D arrays and beyond, and aligns Mat3s like Mat4s, so assume
-      // we can just jump ahead 4 floats for every row.
-      const row_column_offset = subindices.reduce( (acc,x) => 4*acc+x, 0 );
-      const offset = byte_offset/4 + row_column_offset;
+        // FINISH:  TEST:  Row major or column major??
 
-      // TODO:  TEST:  Row major or column major??
-      // TODO:  BUFFER OVERFLOW is possible if the user gives a vector_index that is too high.
-      this.local_buffer[offset] = value;
+        // If we get a UBO element that is too big, just silently truncate the extra stuff, rather
+        // than buffer overflowing into the next element.
+        if(arr[i+1] ? offset >= arr[i+1][1]/4 : offset >= this.buffer_size/4)
+          continue;
+
+        this.local_buffer[offset] = in_value;
+        values_to_set.set(in_key, null);
+      }
     }
   }
   send_to_GPU (renderer) {
+
+    // FINISH:  Implement dirty flag when a UBO is changed---so it knows to re-send.
+
     if (this.ready)
       this.fill_buffer(this.fields);
     let instance = renderer.buffers.get(this);
@@ -950,6 +962,7 @@ class UBO {
     gl.bindBuffer(gl.UNIFORM_BUFFER, instance.buffer);
     gl.bufferSubData(gl.UNIFORM_BUFFER, 0, this.local_buffer);
 
+    instance.dirty = false;
     return instance;
     // gl.bindBuffer(gl.UNIFORM_BUFFER, null);      // Unneccesary?
     // Old implementation called its own bind() at the end:
