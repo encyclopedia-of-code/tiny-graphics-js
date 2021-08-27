@@ -865,15 +865,16 @@ class Renderer extends Component {
 
       for (let binding_point of this.selected_ubos.keys()) {
         const ubo = this.selected_ubos.get(binding_point);
+        const buffer_holder = this.buffers.get(ubo);
 
         // Send the buffer if dirty.
-        if (!this.buffers.get(ubo) || this.buffers.get(ubo).dirty)
+        if (!buffer_holder || buffer_holder.dirty)
           ubo.send_to_GPU (this);
 
         // Bind the UBO if it needs it.
         if (this.bound_ubos.has(ubo))
           continue;
-        gl.bindBufferBase (gl.UNIFORM_BUFFER, binding_point, ubo.buffer);
+        gl.bindBufferBase (gl.UNIFORM_BUFFER, binding_point, this.buffers.get(ubo).buffer);
         this.bound_ubos.set (binding_point, ubo);
       }
 
@@ -956,10 +957,10 @@ class UBO {
     if(! instance) {
       test_rookie_mistake ();
       instance = renderer.buffers.set(this, {dirty:true, buffer: gl.createBuffer()}).get(this);
-      gl.bindBuffer (gl.UNIFORM_BUFFER, instance.buffer);
-      gl.bufferData (gl.UNIFORM_BUFFER, this.buffer_size, gl.DYNAMIC_DRAW);
     }
     gl.bindBuffer(gl.UNIFORM_BUFFER, instance.buffer);
+    if(! instance)
+      gl.bufferData (gl.UNIFORM_BUFFER, this.buffer_size, gl.DYNAMIC_DRAW);
     gl.bufferSubData(gl.UNIFORM_BUFFER, 0, this.local_buffer);
 
     instance.dirty = false;

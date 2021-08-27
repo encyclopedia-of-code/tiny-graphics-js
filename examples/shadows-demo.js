@@ -22,7 +22,9 @@ class Shadows_Demo extends Renderer {
     //  this.debug_shadow_map = new Material("Debug_Shadow_Map", this.shadowed_shader, { color: vec4(0.76, 0.69, 0.50, 1.0) }, { diffuse_texture: this.sun.shadow_map[0] });
     //  this.sand = new Material("Sand", this.shadowed_shader, { color: vec4(0.76, 0.69, 0.50, 1.0) });
     //  this.shark = new defs.Material_From_File("Shark", this.shadowed_shader, "assets/shark_cm/shark_cm.mtl" );
-    this.stars = new Material(this.shadowed_shader, { color: vec4(0.76, 0.69, 0.50, 1.0) }, { diffuse_texture: new Texture( "assets/stars.png" ) });
+    this.stars = new Material(this.shadowed_shader, { color: vec4(0.76, 0.69, 0.50, 1.0) }
+    //, { diffuse_texture: new Texture( "assets/stars.png" ) }
+    );
 
     // TODO:  Support one UBO called "Lights", rather than individual Light objects each being a UBO?
     // OR keep the current setup involving an array of UBO blocks?
