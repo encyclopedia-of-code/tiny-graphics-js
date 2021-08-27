@@ -952,14 +952,14 @@ class UBO {
 
     if (this.ready)
       this.fill_buffer(this.fields);
-    let instance = renderer.buffers.get(this);
+    let instance = renderer.buffers.get(this), existing = instance;
     const gl = renderer.context;
     if(! instance) {
       test_rookie_mistake ();
       instance = renderer.buffers.set(this, {dirty:true, buffer: gl.createBuffer()}).get(this);
     }
     gl.bindBuffer(gl.UNIFORM_BUFFER, instance.buffer);
-    if(! instance)
+    if(! existing)
       gl.bufferData (gl.UNIFORM_BUFFER, this.buffer_size, gl.DYNAMIC_DRAW);
     gl.bufferSubData(gl.UNIFORM_BUFFER, 0, this.local_buffer);
 
