@@ -176,7 +176,9 @@ const Shape = tiny.Shape =
               else
                 gl.bufferData (gl.ELEMENT_ARRAY_BUFFER, new Uint32Array (this.indices), gl["STATIC_DRAW"]);
           }
-          gl.bindVertexArray(null);
+
+          // TODO:  Don't need the below line?
+          //gl.bindVertexArray(null);
           this.dirty = false;
           return gpu_instance;
       }
@@ -590,6 +592,9 @@ const Component = tiny.Component =
           this.init ();
       }
       static types_used_before = new Set ();
+
+
+      // FINISH:  Should the matrices below start out null since they are intented to alias onto Camera?
       static default_uniforms () {
           return {
               UBOs                : new Map(),
@@ -915,30 +920,32 @@ class UBO {
       this.local_buffer = new Float32Array(this.buffer_size/4);
     const values_to_set = UBO.uniform_names_from_JSON(json);
 
-    const arr = [...this.element_offsets];
-    for( let i = 0; i < arr.length; i++ ) {
-      const [key, byte_offset] = arr[i];
+    const entries = [...this.element_offsets];
+    for( let i = 0; i < entries.length; i++ ) {
+      const [key, byte_offset] = entries[i];
       for( let [in_key, in_value] of values_to_set ) {
         // Skip inputs we've already handled.  Skip non matches.
         // Ignore any fields the shader side did not want when this UBO was used.
         if(in_value === null || !in_key.includes(key) || byte_offset === undefined)
           continue;
 
-        // Handle setting an individual element within a uniform that's an array:
+        // Handle assigning vecs and mats to UBO entries:
         const suffix = in_key.substr(key.length, in_key.length);
-        let sub_indices = suffix.split('[');
-        sub_indices = sub_indices.map( index => parseInt(index) || 0 );
+        const sub_index_1 =  parseInt(suffix[1]) || 0,
+              sub_index_2 =  parseInt(suffix[4]);
 
         // GLSL doesn't support 3D arrays and beyond, and aligns Mat3s like Mat4s, so assume
         // we can just jump ahead 4 floats for every row.
-        const row_column_offset = sub_indices.reduce( (acc,x) => 4*acc+x, 0 );
+        const row_column_offset = sub_index_2 != sub_index_2 ? sub_index_1
+                                                             : sub_index_1 * 4 + sub_index_2;
+
         const offset = byte_offset/4 + row_column_offset;
 
         // FINISH:  TEST:  Row major or column major??
 
         // If we get a UBO element that is too big, just silently truncate the extra stuff, rather
         // than buffer overflowing into the next element.
-        if(arr[i+1] ? offset >= arr[i+1][1]/4 : offset >= this.buffer_size/4)
+        if(entries[i+1] ? offset >= entries[i+1][1]/4 : offset >= this.buffer_size/4)
           continue;
 
         this.local_buffer[offset] = in_value;

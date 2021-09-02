@@ -26,21 +26,32 @@ class Universal_Shader extends Shader {
       //   }
       //   ];
     }
-    copy_onto_graphics_card (context, uniforms) {
-      const instance = super.copy_onto_graphics_card (context, uniforms);
-     // this.init_UBO (context, instance.program, this.ubo_binding);
-      return instance;
-    }
+    // copy_onto_graphics_card (context, uniforms) {
+    //   const instance = super.copy_onto_graphics_card (context, uniforms);
+    //  // this.init_UBO (context, instance.program, this.ubo_binding);
+    //   return instance;
+    // }
     update_GPU (renderer, gpu_addresses, uniforms, model_transform, material) {
    //   material.initialize(context, this.ubo_layout);
+
+
+
+      // FINISH:  Move lightArray bind out of demo to here instead of the below?  And will shadows use a fully separate lightArray?
+
+      if( false )
       if (this.has_shadows)
         for (let light of uniforms.lights)
           if (!light.supports_shadow)
             throw `Simpler lights do not have compatible UBO layouts to use with shadowed shaders!`;
           else if (light.casts_shadow)
             light.bind(renderer, gpu_addresses);
+
+
+
       material.bind(renderer, material.get_binding_point());
       //this.ubo_binding[0].binding_point, gpu_addresses);
+
+      renderer.context.uniform1f (gpu_addresses.animation_time, uniforms.animation_time / 1000);
       renderer.context.uniformMatrix4fv (gpu_addresses.model_transform, true, Matrix.flatten_2D_to_1D (model_transform));
     }
     static default_values () {
@@ -65,6 +76,7 @@ class Universal_Shader extends Shader {
               layout(location = 3) in mat4 instance_transform;`
               : ``}
 
+      uniform float animation_time;
       uniform mat4 model_transform;
 
       uniform camera
@@ -83,8 +95,11 @@ class Universal_Shader extends Shader {
                 mat4 world_space = model_transform * instance_transform;`
                 :
                 `mat4 world_space = model_transform;`}
-        vec4 world_position = world_space * vec4( position, 1.0 );
-        gl_Position = projection * camera_inverse * world_position;
+        vec4 world_position = vec4( position, 1.0 );                                     // 0
+        gl_Position =              mat4(.01, 0.0, 0.0, animation_time*10. - 10.0,
+                                        0.0, .01, 0.0, 0.0,
+                                        0.0, 0.0, .01, 5.0,
+                                        0.0, 0.0, 0.0, 1.0)  * world_position;           // 0
         VERTEX_POS = vec3(world_position);
         VERTEX_NORMAL = mat3(inverse(transpose(world_space))) * normal;
         VERTEX_TEXCOORD = texture_coord;
@@ -184,6 +199,8 @@ class Universal_Shader extends Shader {
                     shadow = 0.0;
                 return shadow;
               }`
+
+
               : ``}
 
       // ***** PHONG SHADING HAPPENS HERE: *****
@@ -324,6 +341,7 @@ class Shadow_Pass_Shader extends Shader {
 
 const Basicer_Shader = defs.Basicer_Shader =
   class Basicer_Shader extends Shader {
+    static default_values () { return {}; }
       shared_glsl_code () {           // ********* SHARED CODE, INCLUDED IN BOTH SHADERS *********
           return "#version 300 es " + `
                   precision mediump float;
@@ -348,13 +366,14 @@ const Basicer_Shader = defs.Basicer_Shader =
 const Basic_Shader = defs.Basic_Shader =
   class Basic_Shader extends Shader {
       // Basic_Shader is nearly the simplest way to subclass Shader, which stores and manages a GPU program.
-      update_GPU (context, gpu_addresses, uniforms, model_transform, material) {
+      update_GPU (renderer, gpu_addresses, uniforms, model_transform, material) {
           // update_GPU():  Define how to synchronize our JavaScript's variables to the GPU's:
           const [P, C, M] = [uniforms.projection_transform, uniforms.camera_inverse, model_transform],
                 PCM       = P.times (C).times (M);
-          context.uniformMatrix4fv (gpu_addresses.projection_camera_model_transform, false,
-                                    Matrix.flatten_2D_to_1D (PCM.transposed ()));
+          renderer.context.uniformMatrix4fv (gpu_addresses.projection_camera_model_transform, true,
+                  Matrix.flatten_2D_to_1D (PCM));
       }
+      static default_values () { return {}; }
       shared_glsl_code () {           // ********* SHARED CODE, INCLUDED IN BOTH SHADERS *********
           return "#version 300 es " + `
                   precision mediump float;
@@ -368,7 +387,7 @@ const Basic_Shader = defs.Basic_Shader =
         uniform mat4 projection_camera_model_transform;
 
         void main() {
-          gl_Position = projection_camera_model_transform * vec4( position, 1.0 );      // Move vertex to final space.
+          gl_Position = projection_camera_model_transform * vec4( position, 1.0 );   // Move vertex to final space.
           VERTEX_COLOR = color;                                 // Use the hard-coded color of the vertex.
         }`;
       }
