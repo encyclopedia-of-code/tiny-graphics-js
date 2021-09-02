@@ -522,6 +522,7 @@ const Instanced_Cube_Index = defs.Instanced_Cube_Index =
 
           this.fill_buffer( ["position", "normal", "texture_coord"] );
 
+          this.num_vertices = 36; // FINISH: For now, until hammering out multiple vaos per shape.
           this.single_cube = this.vertices;
       }
   };
@@ -537,6 +538,7 @@ const Minimal_Shape = defs.Minimal_Shape =
           this.vertices[1] = { position: vec3 (1, 0, 0), color: color (0, 1, 0, 1) };
           this.vertices[2] = { position: vec3 (0, 1, 0), color: color (0, 0, 1, 1) };
 
+          this.num_vertices = 3; // FINISH: For now, until hammering out multiple vaos per shape.
           this.fill_buffer( ["position", "color"] );
       }
   };
@@ -550,6 +552,7 @@ const Minimal_Shape = defs.Minimal_Shape =
           this.vertices[1] = { position: vec3 (1, 0, 0)};
           this.vertices[2] = { position: vec3 (0, 1, 0)};
 
+          this.num_vertices = 3; // FINISH: For now, until hammering out multiple vaos per shape.
           this.fill_buffer( ["position"] );
       }
   };

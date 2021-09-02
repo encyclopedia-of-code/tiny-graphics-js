@@ -4,9 +4,92 @@ import {tiny, defs} from './common.js';
 const { vec3, vec4, color, Mat4, Shape, Shader, Texture, Entity, Renderer } = tiny;
 const {Camera, LightArray, Material} = defs
 
+
+
+export
+const Small_Demo = defs.Small_Demo =
+class Small_Demo extends Renderer {
+  init () {
+    super.init();
+    this.shapes = {tri: new defs.Minimal_Shape ()};
+
+    this.lightArray = new defs.LightArray({lights:[{direction_or_position: vec4(2.0, 5.0, 0.0, 0.0),
+              color: color(1.0, 1.0, 1.0, 1.0), diffuse: 1, specular: 0.7, attenuation_factor: 0.01}]});
+
+    this.basic_shader = new defs.Basic_Shader ();
+    this.dummy = new Material(this.basic_shader);
+
+    this.entities.push(new Entity(this.shapes.tri,
+      [
+        Mat4.identity()
+      ],
+      this.dummy));
+  }
+  render_frame (renderer) {
+    for (let entity of this.entities) {
+      entity.apply_transform(Mat4.rotation( renderer.uniforms.animation_time/1000, 0,0,1));
+      this.submit(entity);
+    }
+    renderer.flush(this.uniforms);
+  }
+};
+
+
 export
 const Shadows_Demo = defs.Shadows_Demo =
 class Shadows_Demo extends Renderer {
+  init () {
+    super.init();
+    this.shapes = {cube: new defs.Instanced_Cube_Index ()};
+
+    this.lightArray = new defs.LightArray({lights:[{direction_or_position: vec4(2.0, 5.0, 0.0, 0.0),
+              color: color(1.0, 1.0, 1.0, 1.0), diffuse: 1, specular: 0.7, attenuation_factor: 0.01}]});
+    this.camera = new Camera();
+
+    this.shadowed_shader = new defs.Universal_Shader (LightArray.NUM_LIGHTS, {has_shadows: false});
+    this.stars = new Material(this.shadowed_shader, { color: vec4(0.76, 0.69, 0.50, 1.0) });
+
+    const {camera, lightArray} = this;
+    this.uniforms.UBOs = {camera, lightArray, material: this.stars};
+
+    this.entities.push(new Entity(this.shapes.cube,
+      [
+        Mat4.translation(0.0, -2.0, 0.0).times(Mat4.scale(5, .5, 5))
+        , Mat4.identity()
+      ],
+      this.stars));
+  }
+  render_frame (renderer) {
+    if( !renderer.controls )  {
+      this.camera.emplace( Mat4.look_at( vec3(-1.0, 2.0, 1.0), vec3(0,0,-1), vec3(0,0,1) ) );
+      this.uniforms.camera_inverse = this.camera.fields.camera_inverse;
+      this.uniforms.camera_transform = this.camera.fields.camera_world;
+      this.animated_children.push( renderer.controls = new defs.Movement_Controls(
+              { uniforms: this.uniforms },
+         // Can't do on first frame:    () => {this.camera.fill_buffer(this.camera.fields)}
+         // Yuck:
+              () => {if(this.buffers.get(this.camera)) this.buffers.get(this.camera).dirty = true;}
+              ) );
+      renderer.controls.add_mouse_controls( renderer.canvas );
+    }
+    this.camera.bind(this, this.camera.get_binding_point());
+    this.lightArray.bind(this, this.lightArray.get_binding_point());
+
+    for (let entity of this.entities)
+      this.submit(entity);
+    renderer.shadow_map_pass(this.uniforms);
+    renderer.flush(this.uniforms);
+  }
+};
+
+
+
+// See below for remaining TODO:
+
+
+
+const Shadows_Demo_Old = defs.Shadows_Demo_Old =
+class Shadows_Demo_Old extends Renderer {
   init () {
     super.init();
     this.shapes = {cube: new defs.Instanced_Cube_Index ()};
@@ -67,6 +150,7 @@ class Shadows_Demo extends Renderer {
       this.uniforms.camera_transform = this.camera.fields.camera_world;
       this.animated_children.push( renderer.controls = new defs.Movement_Controls(
               { uniforms: this.uniforms },
+// FINISH:
          // Can't do on first frame:    () => {this.camera.fill_buffer(this.camera.fields)}
          // Yuck:
               () => {if(this.buffers.get(this.camera)) this.buffers.get(this.camera).dirty = true;}
@@ -78,7 +162,7 @@ class Shadows_Demo extends Renderer {
 
     this.camera.bind(this, this.camera.get_binding_point());
     this.lightArray.bind(this, this.lightArray.get_binding_point());
-
+// FINISH:
     // Yet another test shape that doesn't work due to sharing transforms VBO.
     //this.shapes.cube.draw( renderer, {lights: Lights}, Mat4.translation(2.0, 5.0, 0.0), this.stars, undefined, 1);
 

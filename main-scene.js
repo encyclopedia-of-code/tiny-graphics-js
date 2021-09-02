@@ -27,7 +27,7 @@ import {Particle_Demo}
                     from "./examples/particle-demo.js";
 import {Scene_To_Texture_Demo}
                     from "./examples/scene-to-texture-demo.js";
-import {Shadows_Demo}
+import {Shadows_Demo, Small_Demo}
                     from "./examples/shadows-demo.js";
 import {Text_Demo}
                     from "./examples/text-demo.js";
@@ -52,7 +52,7 @@ Object.assign (defs,
 
 // ******************** SELECT THE DEMO TO DISPLAY:
 
-const main_scene        = Shadows_Demo;
+const main_scene        = Small_Demo;
 const additional_scenes = [];
 
 export {main_scene, additional_scenes, defs};
