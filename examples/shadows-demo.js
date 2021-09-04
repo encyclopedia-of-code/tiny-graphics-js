@@ -4,11 +4,45 @@ import {tiny, defs} from './common.js';
 const { vec3, vec4, color, Mat4, Shape, Shader, Texture, Entity, Renderer } = tiny;
 const {Camera, LightArray, Material} = defs
 
+export
+const Test = defs.Test =
+class Test extends Renderer {
+  init () {
+    super.init();
+    this.shapes = {tri: new defs.Minimal_Shape ()};
 
+    this.lightArray = new defs.LightArray({lights:[{direction_or_position: vec4(2.0, 5.0, 0.0, 0.0),
+              color: color(1.0, 1.0, 1.0, 1.0), diffuse: 1, specular: 0.7, attenuation_factor: 0.01}]});
+
+ //   this.uniforms.UBOs = {lightArray: this.lightArray};
+    this.shader = new defs.Test_Shader ();
+    this.plain = new Material(this.shader);
+  //  this.plain = new Material(this.shader, { color: vec4(0.76, 0.69, 0.50, 1.0) });
+
+    const m = Mat4.identity().times(0);
+    for( let i = 0; i < 4; i++ )
+    for( let j = 0; j < 4; j++ )
+      m[i][j] = 10*i + j + 11;
+
+    this.entities.push(new Entity(this.shapes.tri,
+      [
+        m
+      ],
+      this.plain));
+  }
+  render_frame (renderer) {
+    for (let entity of this.entities) {
+      entity.apply_transform(Mat4.rotation( renderer.uniforms.animation_time/1000, 0,0,1));
+      this.submit(entity);
+    }
+    this.lightArray.bind(this, this.lightArray.get_binding_point());
+    renderer.flush(this.uniforms);
+  }
+};
 
 export
-const Small_Demo = defs.Small_Demo =
-class Small_Demo extends Renderer {
+const Minimal_Demo = defs.Minimal_Demo =
+class Minimal_Demo extends Renderer {
   init () {
     super.init();
     this.shapes = {tri: new defs.Minimal_Shape ()};

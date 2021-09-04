@@ -234,6 +234,8 @@ const Matrix = math.Matrix =
           super (0);
           this.push (...args);
       }
+
+      // TODO:  This doesn't work, right?  Copies all rows by reference...
       set (M) {
           this.length = 0;
           this.push (...M);
