@@ -6,6 +6,176 @@ const defs = {};
 
 export {tiny, defs};
 
+const Test_Shader = defs.Test_Shader =
+class Test_Shader extends Shader {
+    constructor () {
+      super();
+      this.num_lights =  1;
+      this.has_instancing = true;
+    }
+    update_GPU (renderer, gpu_addresses, uniforms, model_transform, material) {
+      material.bind(renderer, material.get_binding_point());
+
+      renderer.context.uniform1f (gpu_addresses.animation_time, uniforms.animation_time / 1000);
+      renderer.context.uniformMatrix4fv (gpu_addresses.model_transform, true, Matrix.flatten_2D_to_1D (model_transform));
+    }
+    static default_values () {
+      return {
+              color: vec4 (1.0, 1.0, 1.0, 1.0),
+              diffuse: vec3(1.0, 1.0, 1.0),
+              specular: vec3 (1.0, 1.0, 1.0),
+              smoothness: 32.0
+            };
+    }
+    shared_glsl_code () {           // ********* SHARED CODE, INCLUDED IN BOTH SHADERS *********
+        return "#version 300 es " + `
+                precision mediump float;
+    `;
+    }
+    vertex_glsl_code () {          // ********* VERTEX SHADER *********
+        return this.shared_glsl_code () + `
+      layout(location = 0) in vec3 position; // Position is expressed in object coordinates
+      layout(location = 1) in vec3 normal;
+      layout(location = 2) in vec2 texture_coord;
+      ${this.has_instancing ? `
+              layout(location = 3) in mat4 instance_transform;`
+              : ``}
+
+      uniform float animation_time;
+      uniform mat4 model_transform;
+/*
+      uniform camera
+      {
+        mat4 camera_inverse;
+        mat4 projection;
+        vec3 camera_position;
+      };
+*/
+      out vec3 VERTEX_POS;
+      out vec3 VERTEX_NORMAL;
+      out vec2 VERTEX_TEXCOORD;
+
+      void main() {
+        ${this.has_instancing ? `
+            mat4 world_space = model_transform * instance_transform;`
+            :
+            `mat4 world_space = model_transform;`}
+
+
+      vec4 world_position = vec4( position, 1.0 );
+      // 0    vec4 world_position = world_space * vec4( position, 1.0 );
+      // 0   gl_Position = projection * camera_inverse * world_position;
+      gl_Position = world_position;
+      // 0 gl_Position += vec4(animation_time,.05,.05,0.);
+
+     // gl_Position = world_position + vec4(.1,.1,.1,0.);
+
+        // Summary:
+        // Drop the first column.  Append 0,0,0,1 as the last column.  Now transpose.
+
+
+        // n,0 -> lost (first column dropped)
+
+        // 0,1 -> 0,0
+        // 1,1 -> 0,1
+        // 2,1 -> 0,2
+        // 3,1 -> 0,3
+
+        // 1,1 -> 0,1
+        // 2,2 -> 1,2
+        // 3,3 -> 2,3
+        // bottom row -> always 0,0,0,1
+
+       for(int i = 0; i < 4; i++)
+       for(int j = 0; j < 4; j++)
+        if( instance_transform[i][j] == 42.)
+          gl_Position += vec4(.05,.05,.05,0.);
+
+        /*
+        gl_Position =  mat4(1., 0.0, 0.0, 0.0,
+          0.0, 1., 0.0, 0.0,
+          0.0, 0.0, 1., 0.0,
+          animation_time, 0.0, 0.0, 1.0) * model_transform * vec4( position, 1.0 );
+          */
+      }`;
+    }
+    fragment_glsl_code () {         // ********* FRAGMENT SHADER *********
+        return this.shared_glsl_code () + `
+/*      uniform camera
+      {
+        mat4 camera_inverse;
+        mat4 projection;
+        vec3 camera_position;
+      };
+
+      struct Light
+      {
+        vec4 direction_or_position;
+        vec3 color;
+        float diffuse;
+        float specular;
+        float attenuation_factor;
+        bool casts_shadow;
+      };
+
+      const int N_LIGHTS = 1;
+
+      uniform lightArray
+      {
+        float ambient;
+        Light lights[N_LIGHTS];
+      };
+
+      uniform material
+      {
+        vec4 color;
+        vec3 diffuse;
+        vec3 specular;
+        float smoothness;
+      };
+*/
+      in vec3 VERTEX_POS;
+      in vec3 VERTEX_NORMAL;
+      in vec2 VERTEX_TEXCOORD;
+
+      out vec4 frag_color;
+/*
+      // ***** PHONG SHADING HAPPENS HERE: *****
+      vec3 phong_model_lights( vec3 N, vec3 vertex_worldspace
+                            ) {
+          vec3 E = normalize( camera_position - vertex_worldspace );
+          vec3 result = vec3( 0.0 );
+          for(int i = 0; i < N_LIGHTS; i++) {
+            vec3 surface_to_light_vector = lights[i].direction_or_position.xyz -
+                                            lights[i].direction_or_position.w * vertex_worldspace;
+            float distance_to_light = length( surface_to_light_vector );
+
+            vec3 L = normalize( surface_to_light_vector );
+            vec3 H = normalize( L + E );
+
+              // Compute diffuse and specular components of Phong Reflection Model.
+            float diffuse  =      max( dot( N, L ), 0.0 );
+            float specular = pow( max( dot( N, H ), 0.0 ), smoothness );     // Use Blinn's "halfway vector" method.
+            float attenuation = 1.0 / (1.0 + lights[i].attenuation_factor * distance_to_light * distance_to_light );
+
+            vec3 light_contribution =  vec3(1.,1.,1.) * diffuse * lights[i].diffuse * diffuse
+                                                      + specular * lights[i].specular * specular;
+            light_contribution *= lights[i].color.xyz;
+            result += attenuation * light_contribution;
+          }
+          return result;
+        }*/
+      void main() {
+        frag_color = vec4( 1.,1.,1.,1. );
+
+                // Compute an initial (ambient) color:
+//                frag_color = vec4( color.xyz * ambient, color.w );
+                // Compute the final color with contributions from lights:
+ //               frag_color.xyz += phong_model_lights( normalize( VERTEX_NORMAL ), VERTEX_POS );
+      }`
+    }
+};
+
 const Universal_Shader = defs.Universal_Shader =
 class Universal_Shader extends Shader {
     constructor (num_lights = 2, options) {
@@ -92,14 +262,15 @@ class Universal_Shader extends Shader {
 
       void main() {
         ${this.has_instancing ? `
-                mat4 world_space = model_transform * instance_transform;`
+                mat4 world_space = model_transform; // 0 * instance_transform;`
                 :
                 `mat4 world_space = model_transform;`}
-        vec4 world_position = vec4( position, 1.0 );                                     // 0
-        gl_Position =              mat4(.01, 0.0, 0.0, animation_time*10. - 10.0,
-                                        0.0, .01, 0.0, 0.0,
-                                        0.0, 0.0, .01, 5.0,
-                                        0.0, 0.0, 0.0, 1.0)  * world_position;           // 0
+
+        vec4 world_position = vec4( position, 1.0 );
+ // 0       vec4 world_position = world_space * vec4( position, 1.0 );
+ // 0       gl_Position = projection * camera_inverse * world_position;
+        gl_Position = camera_inverse * world_position;
+
         VERTEX_POS = vec3(world_position);
         VERTEX_NORMAL = mat3(inverse(transpose(world_space))) * normal;
         VERTEX_TEXCOORD = texture_coord;
@@ -223,8 +394,9 @@ class Universal_Shader extends Shader {
             float specular = pow( max( dot( N, H ), 0.0 ), smoothness );     // Use Blinn's "halfway vector" method.
             float attenuation = 1.0 / (1.0 + lights[i].attenuation_factor * distance_to_light * distance_to_light );
 
+            // FINISH:  Why is diffuse multiplied in twice? Ditto specular
             vec3 light_contribution = ${this.has_texture ?
-                                              `texture_color.xyz` : `vec3(1,1,1)`}
+                                              `texture_color.xyz` : `vec3(1.,1.,1.)`}
                                                       * diffuse * lights[i].diffuse * diffuse
                                                     + specular * lights[i].specular * specular;
             light_contribution *= lights[i].color.xyz;

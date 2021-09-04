@@ -178,7 +178,7 @@ const Shape = tiny.Shape =
           }
 
           // TODO:  Don't need the below line?
-          //gl.bindVertexArray(null);
+          gl.bindVertexArray(null);
           this.dirty = false;
           return gpu_instance;
       }
@@ -308,6 +308,8 @@ const Shader = tiny.Shader =
                   this.num_blocks = gl.getProgramParameter(program, gl.ACTIVE_UNIFORM_BLOCKS);
                   for (let i = 0; i < this.num_blocks; i++ ) {
                     const UBO_name = gl.getActiveUniformBlockName(program, i);
+                    if (!uniforms.UBOs[UBO_name])
+                      continue;
                     const UBO_size = gl.getActiveUniformBlockParameter(program, i, gl.UNIFORM_BLOCK_DATA_SIZE);
                     const UBO_index = gl.getUniformBlockIndex(program, UBO_name);
                     this.UBOs_to_block_index.set (uniforms.UBOs[UBO_name], UBO_index)
@@ -335,7 +337,7 @@ const Shader = tiny.Shader =
                         // TODO: Skip loop iterations instead if initialized, according to how many offsets this UBO is known to occupy?
                         // Would save a lot of GL calls when the UBO is used in the next shader.
 
-                        if (! uniforms.UBOs[name].initialized)
+                        if (uniforms.UBOs[name] && ! uniforms.UBOs[name].initialized)
                           uniforms.UBOs[name].element_offsets.set (full_name, offset);
                       }
                       else // Loose uniform
@@ -877,7 +879,7 @@ class Renderer extends Component {
           ubo.send_to_GPU (this);
 
         // Bind the UBO if it needs it.
-        if (this.bound_ubos.has(ubo))
+        if (this.bound_ubos.has(ubo) || !this.buffers.get(ubo))
           continue;
         gl.bindBufferBase (gl.UNIFORM_BUFFER, binding_point, this.buffers.get(ubo).buffer);
         this.bound_ubos.set (binding_point, ubo);
@@ -914,8 +916,8 @@ class UBO {
   get_binding_point () {
     throw `Each subclass of UBO must specify its own binding point for its corresponding GLSL program uniform block.`; }
   fill_buffer (json) {
-    if (!this.buffer_size)
-      throw `full_buffer() was called too early; UBO doesn't query its size until draw time the first time.`
+    // 0 if (!this.buffer_size)
+    //     throw `full_buffer() was called too early; UBO doesn't query its size until draw time the first time.`
     if (!this.local_buffer)
       this.local_buffer = new Float32Array(this.buffer_size/4);
     const values_to_set = UBO.uniform_names_from_JSON(json);
@@ -954,11 +956,11 @@ class UBO {
     }
   }
   send_to_GPU (renderer) {
+    if (!this.buffer_size || !this.ready)
+      return;
 
     // FINISH:  Implement dirty flag when a UBO is changed---so it knows to re-send.
-
-    if (this.ready)
-      this.fill_buffer(this.fields);
+    this.fill_buffer(this.fields);
     let instance = renderer.buffers.get(this), existing = instance;
     const gl = renderer.context;
     if(! instance) {
