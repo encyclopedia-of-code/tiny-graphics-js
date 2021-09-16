@@ -55,6 +55,8 @@ class Test_Shader extends Shader {
       out vec3 VERTEX_NORMAL;
       out vec2 VERTEX_TEXCOORD;
 
+      out mat4 TEST;
+
       void main() {
         ${this.has_instancing ? `
             mat4 world_space = model_transform * instance_transform;`
@@ -74,22 +76,19 @@ class Test_Shader extends Shader {
         // Drop the first column.  Append 0,0,0,1 as the last column.  Now transpose.
 
 
-        // n,0 -> lost (first column dropped)
+        // Summary 2:
 
-        // 0,1 -> 0,0
-        // 1,1 -> 0,1
-        // 2,1 -> 0,2
-        // 3,1 -> 0,3
 
-        // 1,1 -> 0,1
-        // 2,2 -> 1,2
-        // 3,3 -> 2,3
-        // bottom row -> always 0,0,0,1
+       TEST = instance_transform;
+       VERTEX_POS = vec3(world_position);
 
-       for(int i = 0; i < 4; i++)
-       for(int j = 0; j < 4; j++)
-        if( instance_transform[i][j] == 42.)
-          gl_Position += vec4(.05,.05,.05,0.);
+
+
+
+      for(int i = 0; i < 4; i++)
+      for(int j = 0; j < 4; j++)
+       if( instance_transform[i][j] == 3.)
+         gl_Position *= vec4(vec3(.5),1.); // -= vec4(.05,.05,.05,0.);
 
         /*
         gl_Position =  mat4(1., 0.0, 0.0, 0.0,
@@ -138,6 +137,8 @@ class Test_Shader extends Shader {
       in vec3 VERTEX_NORMAL;
       in vec2 VERTEX_TEXCOORD;
 
+      in mat4 TEST;
+
       out vec4 frag_color;
 /*
       // ***** PHONG SHADING HAPPENS HERE: *****
@@ -166,7 +167,19 @@ class Test_Shader extends Shader {
           return result;
         }*/
       void main() {
-        frag_color = vec4( 1.,1.,1.,1. );
+
+        frag_color = vec4(0.);
+
+        // for(int i = 0; i < 4; i++)
+        // for(int j = 0; j < 4; j++)
+        //  if( VERTEX_POS.x*5. > float(i) && VERTEX_POS.x*5. < float(i+1) ) // / 1000. && VERTEX_POS.x < float(i+1) / 1000. )   // gl_FragCoord.x < 541.
+        //   frag_color += vec4(mod( .4 * transpose(TEST)[i][j]/33.0, 2. ) );
+        // mod(float(i+j),2.)
+
+        for(int i = 0; i < 4; i++)
+        for(int j = 0; j < 4; j++)
+          if( VERTEX_POS.x*8. > float(j) && VERTEX_POS.x*8. < float(j+1) && VERTEX_POS.y*8. > float(3-i) && VERTEX_POS.y*8. < float(4-i) )
+            frag_color += vec4(TEST[i][j]/33./10., mod(TEST[i][j]/33.,10.), 0., 1.);
 
                 // Compute an initial (ambient) color:
 //                frag_color = vec4( color.xyz * ambient, color.w );

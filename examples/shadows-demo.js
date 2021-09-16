@@ -22,7 +22,7 @@ class Test extends Renderer {
     const m = Mat4.identity().times(0);
     for( let i = 0; i < 4; i++ )
     for( let j = 0; j < 4; j++ )
-      m[i][j] = 10*i + j + 11;
+      m[i][j] = 10*i + j;
 
     this.entities.push(new Entity(this.shapes.tri,
       [

@@ -88,12 +88,15 @@ const Shape = tiny.Shape =
               pos++;
             }
             else if( attribute_is_matrix[a] ) {
+              if(v[attr].length != 4)
+                throw "TODO: Is this ever reached?";
+
               for (let i=0; i < v[attr].length; i++) {
                 for (let j=0; j < v[attr].length; j++) {
                   // GLSL wants column major matrices.
-                  if( buffer.data[pos] != v[attr][j][i] )
+                  if( buffer.data[pos] != v[attr][i][j] )   // 0
                     buffer.dirty = true;
-                  buffer.data[pos] = v[attr][j][i];
+                  buffer.data[pos] = v[attr][i][j];         // 0
                   pos++;
                 }
               }
@@ -147,6 +150,9 @@ const Shape = tiny.Shape =
             }
 
             for( let i of buffer_info.attributes.keys()) {
+
+              // if( buffer_info.attribute_is_matrix[i] )
+              // this.attribute_counter++;   // 0
 
               if( buffer_info.attribute_is_matrix[i] )
                 for( let row = 0; row < buffer_info.sizes[i]; row++ ) {
@@ -296,6 +302,16 @@ const Shader = tiny.Shader =
           // If this Shader was never used on this GPU context before, then prepare new buffer indices for this
           // context.
           const gpu_instance = existing_instance || this.gpu_instances.set (context, defaults).get (context);
+
+          class Attributes_Addresses {
+            // Uniforms_Addresses: Helper inner class. Retrieve the GPU addresses of each uniform variable in
+            // the shader based on their names.  Store these pointers for later.
+              constructor (program, gl) {
+                  }
+              }
+
+
+
 
           class Uniforms_Addresses {
             // Uniforms_Addresses: Helper inner class. Retrieve the GPU addresses of each uniform variable in
