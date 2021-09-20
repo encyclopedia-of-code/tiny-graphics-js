@@ -94,9 +94,9 @@ const Shape = tiny.Shape =
               for (let i=0; i < v[attr].length; i++) {
                 for (let j=0; j < v[attr].length; j++) {
                   // GLSL wants column major matrices.
-                  if( buffer.data[pos] != v[attr][i][j] )   // 0
+                  if( buffer.data[pos] != v[attr][j][i] )
                     buffer.dirty = true;
-                  buffer.data[pos] = v[attr][i][j];         // 0
+                  buffer.data[pos] = v[attr][j][i];
                   pos++;
                 }
               }
@@ -979,12 +979,12 @@ class UBO {
         // Handle assigning vecs and mats to UBO entries:
         const suffix = in_key.substr(key.length, in_key.length);
         const sub_index_1 =  parseInt(suffix[1]) || 0,
-              sub_index_2 =  parseInt(suffix[4]);
+              sub_index_2 =  suffix[4] ? parseInt(suffix[4]) : undefined;
 
         // GLSL doesn't support 3D arrays and beyond, and aligns Mat3s like Mat4s, so assume
         // we can just jump ahead 4 floats for every row.
-        const row_column_offset = sub_index_2 != sub_index_2 ? sub_index_1
-                                                             : sub_index_1 * 4 + sub_index_2;
+        const row_column_offset = sub_index_2 === undefined ? sub_index_1
+                                                            : sub_index_1 + sub_index_2 * 4;
 
         const offset = byte_offset/4 + row_column_offset;
 

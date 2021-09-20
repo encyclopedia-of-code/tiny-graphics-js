@@ -76,14 +76,14 @@ class Debug_Shader extends Shader {
           bool is_fragment_in_cell_xrange = VERTEX_POS.x*8. > float(j) && VERTEX_POS.x*8. < float(j+1);
           bool is_fragment_in_cell_yrange = VERTEX_POS.y*8. > float(3-i) && VERTEX_POS.y*8. < float(4-i);
 
-          float flash_odd = mod (VALUE_TO_TEST[i][j] * animation_time/100., 2. );
+          float flash_odd = mod (VALUE_TO_TEST[j][i] * animation_time/100., 2. );
 
-          float exact_equality_test_value = 5.0;
-          bool expression_to_test = VALUE_TO_TEST[i][j] == exact_equality_test_value;
+          float exact_equality_test_value = 2.0;
+          bool expression_to_test = VALUE_TO_TEST[j][i] == exact_equality_test_value;
           float brighten = float (expression_to_test);
 
           if (is_fragment_in_cell_xrange && is_fragment_in_cell_yrange)
-            frag_color += vec4(VALUE_TO_TEST[i][j]/max/digit, mod(VALUE_TO_TEST[i][j]/max,digit), brighten, 1.);
+            frag_color += vec4(VALUE_TO_TEST[j][i]/max/digit, mod(VALUE_TO_TEST[j][i]/max,digit), brighten, 1.);
         }
       }`
     }
@@ -134,11 +134,11 @@ class Test_Shader extends Shader {
         mat4 world_space = model_transform;       // 0 * instance_transform;
 
         vec4 world_position = vec4( position, 1.0 );
-        gl_Position = transpose(camera_inverse) * world_position;
+        gl_Position = camera_inverse * world_position;
 
         VALUE_TO_TEST = mat4(0.0);
-        VALUE_TO_TEST[0] = gl_Position;
-        // VALUE_TO_TEST = inverse(camera_inverse);
+        // VALUE_TO_TEST[0] = gl_Position;
+        VALUE_TO_TEST = inverse(camera_inverse);
 
         VERTEX_POS = vec3(world_position);
         VERTEX_NORMAL = mat3(inverse(transpose(world_space))) * normal;
@@ -166,15 +166,15 @@ class Test_Shader extends Shader {
           bool is_fragment_in_cell_xrange = VERTEX_POS.x*8. > float(j) && VERTEX_POS.x*8. < float(j+1);
           bool is_fragment_in_cell_yrange = VERTEX_POS.y*8. > float(3-i) && VERTEX_POS.y*8. < float(4-i);
 
-          float flash_odd = mod (VALUE_TO_TEST[i][j] * animation_time/100., 2. );
+          float flash_odd = mod (VALUE_TO_TEST[j][i] * animation_time/100., 2. );
 
           float exact_equality_test_value = 2.0;
-          bool expression_to_test = VALUE_TO_TEST[i][j] == exact_equality_test_value;
-          // bool expression_to_test = VALUE_TO_TEST[i][j] > 1.9;
+          bool expression_to_test = VALUE_TO_TEST[j][i] == exact_equality_test_value;
+          // bool expression_to_test = VALUE_TO_TEST[j][i] > 1.9;
           float brighten = float (expression_to_test);
 
           if (is_fragment_in_cell_xrange && is_fragment_in_cell_yrange)
-            frag_color += vec4(VALUE_TO_TEST[i][j]/max/digit, mod(VALUE_TO_TEST[i][j]/max,digit), brighten, 1.);
+            frag_color += vec4(VALUE_TO_TEST[j][i]/max/digit, mod(VALUE_TO_TEST[j][i]/max,digit), brighten, 1.);
         }
       }
 
@@ -271,14 +271,14 @@ class Universal_Shader extends Shader {
 
       void main() {
         ${this.has_instancing ? `
-                mat4 world_space = model_transform; // 0 * instance_transform;`
+                mat4 world_space = model_transform * instance_transform;`
                 :
                 `mat4 world_space = model_transform;`}
 
-        vec4 world_position = vec4( position, 1.0 );
- // 0       vec4 world_position = world_space * vec4( position, 1.0 );
- // 0       gl_Position = projection * camera_inverse * world_position;
-            gl_Position = camera_inverse * world_position;
+  //        vec4 world_position = vec4( position, 1.0 );
+        vec4 world_position = world_space * vec4( position, 1.0 );
+        gl_Position = projection * camera_inverse * world_position;
+ //           gl_Position = camera_inverse * world_position;
 
         VERTEX_POS = vec3(world_position);
         VERTEX_NORMAL = mat3(inverse(transpose(world_space))) * normal;
@@ -419,6 +419,12 @@ class Universal_Shader extends Shader {
           }
           return result;
         }
+
+
+      void main0() {
+        frag_color = vec4(abs(VERTEX_NORMAL), 1. );
+      }
+
       void main() {
         ${this.has_texture ? `
                 // Compute an initial (ambient) color:
