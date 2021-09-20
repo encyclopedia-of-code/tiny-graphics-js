@@ -16,7 +16,7 @@ const Shape = tiny.Shape =
       // See description at https://github.com/encyclopedia-of-code/tiny-graphics-js/wiki/tiny-graphics.js#shape
       constructor () {
           [this.vertices, this.indices, this.local_buffers] = [[], [], []];
-          this.attribute_counter = 0;
+        //  this.attribute_counter = 0;
 
 
   // TODO:  There should be seperate dirty flags per each GPU instance.
@@ -110,7 +110,7 @@ const Shape = tiny.Shape =
               }
           }
       }
-      copy_onto_graphics_card (context, write_to_indices = true) {
+      copy_onto_graphics_card (context, attribute_addresses, write_to_indices = true) {
           if( !this.local_buffers.length)
             return;
           const gl = context;
@@ -151,25 +151,36 @@ const Shape = tiny.Shape =
 
             for( let i of buffer_info.attributes.keys()) {
 
+              const name = buffer_info.attributes[i];
+              if( !attribute_addresses[name] )
+                continue;
+              const attr_index = attribute_addresses[name].index;
+              if( !(attr_index >= 0 )) throw "Attribute addresses not retrieved yet";   // TODO:  Temporary
+
+
+              // TODO:  Untested with types other than GL_FLOAT.
+              // attribute_addresses[name].type returns the container's type instead (like FLOAT_MAT4/FLOAT_VEC3); not it.
+
               // if( buffer_info.attribute_is_matrix[i] )
               // this.attribute_counter++;   // 0
 
               if( buffer_info.attribute_is_matrix[i] )
                 for( let row = 0; row < buffer_info.sizes[i]; row++ ) {
-                  gl.vertexAttribPointer(this.attribute_counter, buffer_info.sizes[i], gl.FLOAT, false, buffer_info.stride, buffer_info.offsets[i] + row * buffer_info.sizes[i] * 4);
-                  gl.vertexAttribDivisor(this.attribute_counter, buffer_info.divisor);
-                  gl.enableVertexAttribArray (this.attribute_counter);
-                  this.attribute_counter++;
+                  gl.vertexAttribPointer(attr_index+row, buffer_info.sizes[i], gl.FLOAT, false, buffer_info.stride, buffer_info.offsets[i] + row * buffer_info.sizes[i] * 4);
+                  gl.vertexAttribDivisor(attr_index+row, buffer_info.divisor);
+                  gl.enableVertexAttribArray (attr_index+row);
                 }
+
               else {
+                if( attribute_addresses[name].size != buffer_info.sizes[i])
+                  throw "Wrong primitive size provided in the VBO vs the shader attribute.";
 
                 // TODO: Support normalization of attributes; allow the user to specify.
                 // This assumes some stuff about the shader: Vertex fields are interleaved; vertex fields are
                 // in the same order that they'll appear in the shader (using offset keyword).
-                gl.vertexAttribPointer(this.attribute_counter, buffer_info.sizes[i], gl.FLOAT, false, buffer_info.stride, buffer_info.offsets[i]);
-                gl.vertexAttribDivisor(this.attribute_counter, buffer_info.divisor);
-                gl.enableVertexAttribArray (this.attribute_counter);
-                this.attribute_counter++;
+                gl.vertexAttribPointer(attr_index, buffer_info.sizes[i], gl.FLOAT, false, buffer_info.stride, buffer_info.offsets[i]);
+                gl.vertexAttribDivisor(attr_index, buffer_info.divisor);
+                gl.enableVertexAttribArray (attr_index);
               }
             }
           }
@@ -304,14 +315,28 @@ const Shader = tiny.Shader =
           const gpu_instance = existing_instance || this.gpu_instances.set (context, defaults).get (context);
 
           class Attributes_Addresses {
-            // Uniforms_Addresses: Helper inner class. Retrieve the GPU addresses of each uniform variable in
-            // the shader based on their names.  Store these pointers for later.
+            // Attributes_Addresses: Helper inner class. Retrieve the GPU addresses of each attribute.
               constructor (program, gl) {
+                    // Assume per-vertex attributes will each be a set of 1 to 4 floats:
+                    const type_to_size_mapping = {0x1406: 1, 0x8B50: 2, 0x8B51: 3, 0x8B52: 4};
+                    const numAttribs = gl.getProgramParameter (program, gl.ACTIVE_ATTRIBUTES);
+                    // https://github.com/greggman/twgl.js/blob/master/dist/twgl-full.js for another example:
+                    for (let i = 0; i < numAttribs; i++) {
+                        const attribInfo = gl.getActiveAttrib (program, i);
+                        if (!attribInfo)
+                          break;
+                        // Pointers to all shader attribute variables:
+                        this[ attribInfo.name ] = {
+                            index     : gl.getAttribLocation (program, attribInfo.name),
+                            // FINISH:  Can't this just be "i" instead??
+                                // No, doesn't hold if unused attrs, but it'd be nice to skip this command somehow
+                            size      : type_to_size_mapping[ attribInfo.type ],
+                            type      : attribInfo.type,
+                            normalized: false
+                        };
+                    }
                   }
               }
-
-
-
 
           class Uniforms_Addresses {
             // Uniforms_Addresses: Helper inner class. Retrieve the GPU addresses of each uniform variable in
@@ -387,12 +412,16 @@ const Shader = tiny.Shader =
               throw "Shader linker error: " + gl.getProgramInfoLog (program);
 
           const gpu_addresses = new Uniforms_Addresses (program, gl);
+          const attribute_addresses = new Attributes_Addresses (program, gl);
 
           for (let [ubo, index] of gpu_addresses.UBOs_to_block_index.entries())
             gl.uniformBlockBinding(program, index, ubo.get_binding_point());
 
-          Object.assign (gpu_instance, {program, vertShdr, fragShdr, gpu_addresses});
+          Object.assign (gpu_instance, {program, vertShdr, fragShdr, gpu_addresses, attribute_addresses});
           return gpu_instance;
+      }
+      get_attribute_addresses(renderer) {
+        return this.gpu_instances.get(renderer.context).attribute_addresses;
       }
       activate (renderer, uniforms, model_transform, material) {
           // Track which GPU contexts this object has copied itself onto:
@@ -878,14 +907,14 @@ class Renderer extends Component {
     } else gl.drawArraysInstanced (gl[ type ], 0, shape.num_vertices, instances);
   }
   draw (shape, uniforms, model_transform, material, type = "TRIANGLES", instances) {
-      const gl = this.context;
-      let gpu_instance = shape.gpu_instances.get (gl);
-      if( !gpu_instance || shape.dirty)
-        gpu_instance = shape.copy_onto_graphics_card (gl);
-      gl.bindVertexArray( gpu_instance.VAO );
 
       material.shader.activate (this, uniforms, model_transform, material);
 
+      const gl = this.context;
+      let gpu_instance = shape.gpu_instances.get (gl);
+      if( !gpu_instance || shape.dirty)
+        gpu_instance = shape.copy_onto_graphics_card (gl, material.shader.get_attribute_addresses(this) );
+      gl.bindVertexArray( gpu_instance.VAO );
       for (let binding_point of this.selected_ubos.keys()) {
         const ubo = this.selected_ubos.get(binding_point);
         const buffer_holder = this.buffers.get(ubo);
