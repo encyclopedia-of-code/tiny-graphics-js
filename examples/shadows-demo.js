@@ -71,11 +71,12 @@ class Shadows_Demo extends Renderer {
     super.init();
     this.shapes = {cube: new defs.Instanced_Cube_Index ()};
 
-    this.lightArray = new defs.LightArray({lights:[{direction_or_position: vec4(2.0, 5.0, 0.0, 0.0),
+    this.lightArray = new defs.LightArray({ambient: .1, lights:[{direction_or_position: vec4(2.0, 5.0, 0.0, 0.0),
               color: color(1.0, 1.0, 1.0, 1.0), diffuse: 1, specular: 0.7, attenuation_factor: 0.01}]});
+
     this.camera = new Camera();
 
-    this.shadowed_shader = new defs.Test_Shader (LightArray.NUM_LIGHTS, {has_shadows: false});
+    this.shadowed_shader = new defs.Universal_Shader (LightArray.NUM_LIGHTS, {has_shadows: false});
     this.stars = new Material(this.shadowed_shader, { color: vec4(0.76, 0.69, 0.50, 1.0) });
 
     const {camera, lightArray} = this;
@@ -92,7 +93,8 @@ class Shadows_Demo extends Renderer {
     if( !renderer.controls )  {
     // 0  this.camera.emplace( Mat4.look_at( vec3(-1.0, 2.0, 1.0), vec3(0,0,-1), vec3(0,0,1) ) );
 
-      this.camera.emplace( Mat4.translation(0.0, 0.0, 2.0) );
+      this.camera.emplace( Mat4.translation(0.0, 0.0, -1.0) );
+      this.camera.fields.projection = Mat4.perspective(Math.PI/2, this.width/this.height, 0.01, 1024);
 
       this.uniforms.camera_inverse = this.camera.fields.camera_inverse;
       this.uniforms.camera_transform = this.camera.fields.camera_world;
@@ -130,7 +132,8 @@ class Shadows_Demo_Old extends Renderer {
       // this.sun = new defs.Shadow_Light({direction_or_position: vec4(2.0, 5.0, 0.0, 0.0), color: vec3(1.0, 1.0, 1.0), diffuse: 1, specular: 0.7, attenuation_factor: 0.01,
       //   casts_shadow: true});
 
-    this.camera = new Camera();
+    this.camera = new Camera({ projection: Mat4.perspective(Math.PI/2, caller.width/caller.height, 0.01, 1024) });
+
 
     this.shadowed_shader = new defs.Universal_Shader (LightArray.NUM_LIGHTS, {has_shadows: false});
 
