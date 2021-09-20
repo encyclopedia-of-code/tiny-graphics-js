@@ -5,8 +5,8 @@ const { vec3, vec4, color, Mat4, Shape, Shader, Texture, Entity, Renderer } = ti
 const {Camera, LightArray, Material} = defs
 
 export
-const Test = defs.Test =
-class Test extends Renderer {
+const Debug_Matrix_Scene = defs.Debug_Matrix_Scene =
+class Debug_Matrix_Scene extends Renderer {
   init () {
     super.init();
     this.shapes = {tri: new defs.Minimal_Shape ()};
@@ -14,21 +14,16 @@ class Test extends Renderer {
     this.lightArray = new defs.LightArray({lights:[{direction_or_position: vec4(2.0, 5.0, 0.0, 0.0),
               color: color(1.0, 1.0, 1.0, 1.0), diffuse: 1, specular: 0.7, attenuation_factor: 0.01}]});
 
- //   this.uniforms.UBOs = {lightArray: this.lightArray};
-    this.shader = new defs.Test_Shader ();
+    this.shader = new defs.Debug_Shader ();
     this.plain = new Material(this.shader);
-  //  this.plain = new Material(this.shader, { color: vec4(0.76, 0.69, 0.50, 1.0) });
 
+    // ASSIGN THE MATRIX TO DISPLAY:
     const m = Mat4.identity().times(0);
     for( let i = 0; i < 4; i++ )
     for( let j = 0; j < 4; j++ )
       m[i][j] = 10*i + j;
 
-    this.entities.push(new Entity(this.shapes.tri,
-      [
-        m
-      ],
-      this.plain));
+    this.entities.push(new Entity(this.shapes.tri, [ m ], this.plain));
   }
   render_frame (renderer) {
     for (let entity of this.entities) {
@@ -80,7 +75,7 @@ class Shadows_Demo extends Renderer {
               color: color(1.0, 1.0, 1.0, 1.0), diffuse: 1, specular: 0.7, attenuation_factor: 0.01}]});
     this.camera = new Camera();
 
-    this.shadowed_shader = new defs.Universal_Shader (LightArray.NUM_LIGHTS, {has_shadows: false});
+    this.shadowed_shader = new defs.Test_Shader (LightArray.NUM_LIGHTS, {has_shadows: false});
     this.stars = new Material(this.shadowed_shader, { color: vec4(0.76, 0.69, 0.50, 1.0) });
 
     const {camera, lightArray} = this;
@@ -95,7 +90,10 @@ class Shadows_Demo extends Renderer {
   }
   render_frame (renderer) {
     if( !renderer.controls )  {
-      this.camera.emplace( Mat4.look_at( vec3(-1.0, 2.0, 1.0), vec3(0,0,-1), vec3(0,0,1) ) );
+    // 0  this.camera.emplace( Mat4.look_at( vec3(-1.0, 2.0, 1.0), vec3(0,0,-1), vec3(0,0,1) ) );
+
+      this.camera.emplace( Mat4.translation(0.0, 0.0, 2.0) );
+
       this.uniforms.camera_inverse = this.camera.fields.camera_inverse;
       this.uniforms.camera_transform = this.camera.fields.camera_world;
       this.animated_children.push( renderer.controls = new defs.Movement_Controls(
@@ -111,7 +109,7 @@ class Shadows_Demo extends Renderer {
 
     for (let entity of this.entities)
       this.submit(entity);
-    renderer.shadow_map_pass(this.uniforms);
+ // 0   renderer.shadow_map_pass(this.uniforms);
     renderer.flush(this.uniforms);
   }
 };
