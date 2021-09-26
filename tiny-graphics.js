@@ -157,12 +157,8 @@ const Shape = tiny.Shape =
               const attr_index = attribute_addresses[name].index;
               if( !(attr_index >= 0 )) throw "Attribute addresses not retrieved yet";   // TODO:  Temporary
 
-
               // TODO:  Untested with types other than GL_FLOAT.
               // attribute_addresses[name].type returns the container's type instead (like FLOAT_MAT4/FLOAT_VEC3); not it.
-
-              // if( buffer_info.attribute_is_matrix[i] )
-              // this.attribute_counter++;   // 0
 
               if( buffer_info.attribute_is_matrix[i] )
                 for( let row = 0; row < buffer_info.sizes[i]; row++ ) {
@@ -300,7 +296,7 @@ const Shader = tiny.Shader =
   class Shader {
       // See description at https://github.com/encyclopedia-of-code/tiny-graphics-js/wiki/tiny-graphics.js#shader
       copy_onto_graphics_card (context, uniforms) {
-          // Note:  Calling this twice should recompile the shader in-place with updated options (untested)
+          // TODO:  Calling this twice should recompile the shader in-place with updated options (untested)
 
           // Define what this object should store in each new WebGL Context:
           const defaults = {
@@ -328,8 +324,6 @@ const Shader = tiny.Shader =
                         // Pointers to all shader attribute variables:
                         this[ attribInfo.name ] = {
                             index     : gl.getAttribLocation (program, attribInfo.name),
-                            // FINISH:  Can't this just be "i" instead??
-                                // No, doesn't hold if unused attrs, but it'd be nice to skip this command somehow
                             size      : type_to_size_mapping[ attribInfo.type ],
                             type      : attribInfo.type,
                             normalized: false
@@ -447,36 +441,11 @@ const Shader = tiny.Shader =
               offset++;
             }
       }
-
-      // init_UBO (gl, program, ubo_binding) {
-      //   var ubo_index = -1;
-      //   for (var i = 0; i < ubo_binding.length; i++) {
-      //     ubo_index = gl.getUniformBlockIndex(program, ubo_binding[i].shader_name);
-      //     if (ubo_index !== gl.INVALID_INDEX)
-      //       gl.uniformBlockBinding(program, ubo_index, ubo_binding[i].binding_point);
-      //   }
-      // }
-
-      // Was this always unused??
-      // bind_UBO (gl, program, shader_name, binding_point) {
-      //   var ubo_index = gl.getUniformBlockIndex(program, shader_name);
-      //   gl.uniformBlockBinding(program, ubo_index, binding_point);
-      // }
-
       // Your custom Shader has to override the following functions:
       vertex_glsl_code () {}
       fragment_glsl_code () {}
       update_GPU () {}
       static default_values () {}
-      // static mapping_UBO () {
-      //   return [
-      //     {shader_name: "Camera", binding_point: 0},
-      //     {shader_name: "Lights", binding_point: 1},
-      //   ];
-      // }
-      // static assign_camera (camera_inverse, uniforms) {
-      //     Object.assign (uniforms, {camera_inverse, camera_transform: Mat4.inverse (camera_inverse)});
-      // }
   };
 
 
@@ -935,9 +904,6 @@ class Renderer extends Component {
   }
 }
 
-// var obj = {one: [1, [22, [23]], {one: "two"}, { two: {three: 3}, four: {five: 5, six: {seven: [7, 2]}, eight: 8}, nine: 9 } ] };
-
-
 const UBO = tiny.UBO =
 class UBO {
   constructor (...args) {
@@ -946,7 +912,7 @@ class UBO {
     this.init(...args);
   }
   init (fields) { }     // Abstract -- user overrides this
-  initial_values () { return {}; }        // TODO:  Unused
+  initial_values () { return {}; }        // TODO:  Unused still
   static flatten_JSON (o,p="") {
     return Object.keys (o).map (k => o[k] === null           ||
                                     typeof o[k] !== "object" ? {[p + (p ? ".":"") + k]: o[k]}
@@ -961,8 +927,8 @@ class UBO {
   get_binding_point () {
     throw `Each subclass of UBO must specify its own binding point for its corresponding GLSL program uniform block.`; }
   fill_buffer (json) {
-    // 0 if (!this.buffer_size)
-    //     throw `full_buffer() was called too early; UBO doesn't query its size until draw time the first time.`
+    if (!this.buffer_size)
+      throw `full_buffer() was called too early; UBO doesn't query its size until draw time the first time.`
     if (!this.local_buffer)
       this.local_buffer = new Float32Array(this.buffer_size/4);
     const values_to_set = UBO.uniform_names_from_JSON(json);
@@ -985,10 +951,7 @@ class UBO {
         // we can just jump ahead 4 floats for every row.
         const row_column_offset = sub_index_2 === undefined ? sub_index_1
                                                             : sub_index_1 + sub_index_2 * 4;
-
         const offset = byte_offset/4 + row_column_offset;
-
-        // FINISH:  TEST:  Row major or column major??
 
         // If we get a UBO element that is too big, just silently truncate the extra stuff, rather
         // than buffer overflowing into the next element.
@@ -1019,9 +982,7 @@ class UBO {
 
     instance.dirty = false;
     return instance;
-    // gl.bindBuffer(gl.UNIFORM_BUFFER, null);      // Unneccesary?
-    // Old implementation called its own bind() at the end:
-    // this.bind (context, this.get_binding_point ());
+    // gl.bindBuffer(gl.UNIFORM_BUFFER, null);      // TODO: Unneccesary?
   }
   bind (renderer, binding_point) {
     renderer.selected_ubos.set(binding_point, this);

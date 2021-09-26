@@ -6,185 +6,6 @@ const defs = {};
 
 export {tiny, defs};
 
-          // Summary:
-          // Drop the first column.  Append 0,0,0,1 as the last column.  Now transpose.
-          // Summary 2:
-
-const Debug_Shader = defs.Debug_Shader =
-class Debug_Shader extends Shader {
-    update_GPU (renderer, gpu_addresses, uniforms, model_transform, material) {
-      material.bind(renderer, material.get_binding_point());
-
-      renderer.context.uniform1f (gpu_addresses.animation_time, uniforms.animation_time / 1000);
-      // renderer.context.uniformMatrix4fv (gpu_addresses.model_transform, true, Matrix.flatten_2D_to_1D (model_transform));
-    }
-    static default_values () {
-      return {
-            };
-    }
-    shared_glsl_code () {           // ********* SHARED CODE, INCLUDED IN BOTH SHADERS *********
-        return "#version 300 es " + `
-                precision mediump float;
-    `;
-    }
-
-    // FINISH:  Do we still need layout index qualifiers?
-
-    vertex_glsl_code () {          // ********* VERTEX SHADER *********
-        return this.shared_glsl_code () + `
-      layout(location = 0) in vec3 position; // Position is expressed in object coordinates
-      layout(location = 1) in vec3 normal;
-      layout(location = 2) in vec2 texture_coord;
-
-      layout(location = 3) in mat4 instance_transform;
-
-      uniform float animation_time;
-
-      out vec3 VERTEX_POS;
-      out vec3 VERTEX_NORMAL;
-      out vec2 VERTEX_TEXCOORD;
-
-      out mat4 VALUE_TO_TEST;
-
-      void main() {
-        vec4 world_position = vec4( position, 1.0 );
-        gl_Position = world_position;
-
-        VERTEX_POS = vec3(world_position);
-        VALUE_TO_TEST = instance_transform;
-      }`;
-    }
-    fragment_glsl_code () {         // ********* FRAGMENT SHADER *********
-        return this.shared_glsl_code () + `
-      in vec3 VERTEX_POS;
-      in vec3 VERTEX_NORMAL;
-      in vec2 VERTEX_TEXCOORD;
-
-      in mat4 VALUE_TO_TEST;
-
-      uniform float animation_time;
-
-      out vec4 frag_color;
-
-      void main() {
-        frag_color = vec4(0.);
-        float max = 33.0;
-        float digit = 10.0;
-
-        for(int i = 0; i < 4; i++)
-        for(int j = 0; j < 4; j++) {
-          bool is_fragment_in_cell_xrange = VERTEX_POS.x*8. > float(j) && VERTEX_POS.x*8. < float(j+1);
-          bool is_fragment_in_cell_yrange = VERTEX_POS.y*8. > float(3-i) && VERTEX_POS.y*8. < float(4-i);
-
-          float flash_odd = mod (VALUE_TO_TEST[j][i] * animation_time/100., 2. );
-
-          float exact_equality_test_value = 2.0;
-          bool expression_to_test = VALUE_TO_TEST[j][i] == exact_equality_test_value;
-          float brighten = float (expression_to_test);
-
-          if (is_fragment_in_cell_xrange && is_fragment_in_cell_yrange)
-            frag_color += vec4(VALUE_TO_TEST[j][i]/max/digit, mod(VALUE_TO_TEST[j][i]/max,digit), brighten, 1.);
-        }
-      }`
-    }
-};
-
-
-const Test_Shader = defs.Test_Shader =
-class Test_Shader extends Shader {
-    update_GPU (renderer, gpu_addresses, uniforms, model_transform, material) {
-      material.bind(renderer, material.get_binding_point());
-
-      renderer.context.uniform1f (gpu_addresses.animation_time, uniforms.animation_time / 1000);
-      renderer.context.uniformMatrix4fv (gpu_addresses.model_transform, true, Matrix.flatten_2D_to_1D (model_transform));
-    }
-    static default_values () {
-      return {
-            };
-    }
-    shared_glsl_code () {           // ********* SHARED CODE, INCLUDED IN BOTH SHADERS *********
-        return "#version 300 es " + `
-                precision mediump float;
-    `;
-    }
-    vertex_glsl_code () {          // ********* VERTEX SHADER *********
-        return this.shared_glsl_code () + `
-      layout(location = 0) in vec3 position; // Position is expressed in object coordinates
-      layout(location = 1) in vec3 normal;
-      layout(location = 2) in vec2 texture_coord;
-      layout(location = 3) in mat4 instance_transform;
-
-      out mat4 VALUE_TO_TEST;
-
-      uniform float animation_time;
-      uniform mat4 model_transform;
-
-      uniform camera
-      {
-        mat4 camera_inverse;
-        mat4 projection;
-        vec3 camera_position;
-      };
-
-      out vec3 VERTEX_POS;
-      out vec3 VERTEX_NORMAL;
-      out vec2 VERTEX_TEXCOORD;
-
-      void main() {
-        mat4 world_space = model_transform;       // 0 * instance_transform;
-
-        vec4 world_position = vec4( position, 1.0 );
-        gl_Position = camera_inverse * world_position;
-
-        VALUE_TO_TEST = mat4(0.0);
-        // VALUE_TO_TEST[0] = gl_Position;
-        VALUE_TO_TEST = inverse(camera_inverse);
-
-        VERTEX_POS = vec3(world_position);
-        VERTEX_NORMAL = mat3(inverse(transpose(world_space))) * normal;
-        VERTEX_TEXCOORD = texture_coord;
-      }`;
-    }
-    fragment_glsl_code () {         // ********* FRAGMENT SHADER *********
-        return this.shared_glsl_code () + `
-      in vec3 VERTEX_POS;
-      in vec3 VERTEX_NORMAL;
-
-      in mat4 VALUE_TO_TEST;
-
-      uniform float animation_time;
-
-      out vec4 frag_color;
-
-      void main0() {
-        frag_color = vec4(0.);
-        float max = 33.0;
-        float digit = 10.0;
-
-        for(int i = 0; i < 4; i++)
-        for(int j = 0; j < 4; j++) {
-          bool is_fragment_in_cell_xrange = VERTEX_POS.x*8. > float(j) && VERTEX_POS.x*8. < float(j+1);
-          bool is_fragment_in_cell_yrange = VERTEX_POS.y*8. > float(3-i) && VERTEX_POS.y*8. < float(4-i);
-
-          float flash_odd = mod (VALUE_TO_TEST[j][i] * animation_time/100., 2. );
-
-          float exact_equality_test_value = 2.0;
-          bool expression_to_test = VALUE_TO_TEST[j][i] == exact_equality_test_value;
-          // bool expression_to_test = VALUE_TO_TEST[j][i] > 1.9;
-          float brighten = float (expression_to_test);
-
-          if (is_fragment_in_cell_xrange && is_fragment_in_cell_yrange)
-            frag_color += vec4(VALUE_TO_TEST[j][i]/max/digit, mod(VALUE_TO_TEST[j][i]/max,digit), brighten, 1.);
-        }
-      }
-
-      void main() {
-                frag_color = vec4(abs(VERTEX_NORMAL), 1. );
-      }`
-    }
-};
-
-
 const Universal_Shader = defs.Universal_Shader =
 class Universal_Shader extends Shader {
     constructor (num_lights = 2, options) {
@@ -264,7 +85,7 @@ class Universal_Shader extends Shader {
         mat4 projection;
         vec3 camera_position;
       };
-      // 0
+
       out vec3 VERTEX_POS;
       out vec3 VERTEX_NORMAL;
       out vec2 VERTEX_TEXCOORD;
@@ -420,11 +241,6 @@ class Universal_Shader extends Shader {
           return result;
         }
 
-
-      void main0() {
-        frag_color = vec4(abs(VERTEX_NORMAL), 1. );
-      }
-
       void main() {
         ${this.has_texture ? `
                 // Compute an initial (ambient) color:
@@ -484,110 +300,107 @@ class Shadow_Pass_Shader extends Shader {
     }
 };
 
-// const Funny_Shader = defs.Funny_Shader =
-//   class Funny_Shader extends Shader {
-//       update_GPU (context, gpu_addresses, uniforms, model_transform, material) {
-//           const [P, C, M] = [uniforms.projection_transform, uniforms.camera_inverse, model_transform],
-//                 PCM       = P.times (C).times (M);
-//           context.uniformMatrix4fv (gpu_addresses.projection_camera_model_transform, false,
-//                                     Matrix.flatten_2D_to_1D (PCM.transposed ()));
-//           context.uniform1f (gpu_addresses.animation_time, uniforms.animation_time / 1000);
-//       }
-//       shared_glsl_code () {
-//           return `precision mediump float;
-//                   varying vec2 f_tex_coord;
-//       `;
-//       }
-//       vertex_glsl_code () {
-//           return this.shared_glsl_code () + `
-//         attribute vec3 position;                            // Position is expressed in object coordinates.
-//         attribute vec2 texture_coord;
-//         uniform mat4 projection_camera_model_transform;
+const Debug_Shader = defs.Debug_Shader =
+class Debug_Shader extends Shader {
+    update_GPU (renderer, gpu_addresses, uniforms, model_transform, material) {
+      material.bind(renderer, material.get_binding_point());
 
-//         void main() {
-//           gl_Position = projection_camera_model_transform * vec4( position, 1.0 );  // Move vertex to final space
-//           f_tex_coord = texture_coord;                 // Supply the original texture coords for interpolation.
-//         }`;
-//       }
-//       fragment_glsl_code () {
-//           return this.shared_glsl_code () + `
-//         uniform float animation_time;
-//         void main() {
-//           float a = animation_time, u = f_tex_coord.x, v = f_tex_coord.y;
+      renderer.context.uniform1f (gpu_addresses.animation_time, uniforms.animation_time / 1000);
+      // renderer.context.uniformMatrix4fv (gpu_addresses.model_transform, true, Matrix.flatten_2D_to_1D (model_transform));
+    }
+    static default_values () {
+      return {
+            };
+    }
+    shared_glsl_code () {           // ********* SHARED CODE, INCLUDED IN BOTH SHADERS *********
+        return "#version 300 es " + `
+                precision mediump float;
+    `;
+    }
 
-//           // To color in all pixels, use an arbitrary math function based only on time and UV texture coordinates.
-//           gl_FragColor = vec4(
-//             2.0 * u * sin(17.0 * u ) + 3.0 * v * sin(11.0 * v ) + 1.0 * sin(13.0 * a),
-//             3.0 * u * sin(18.0 * u ) + 4.0 * v * sin(12.0 * v ) + 2.0 * sin(14.0 * a),
-//             4.0 * u * sin(19.0 * u ) + 5.0 * v * sin(13.0 * v ) + 3.0 * sin(15.0 * a),
-//             5.0 * u * sin(20.0 * u ) + 6.0 * v * sin(14.0 * v ) + 4.0 * sin(16.0 * a));
-//         }`;
-//       }
-//   };
+    // FINISH:  Do we still need layout index qualifiers?
 
+    vertex_glsl_code () {          // ********* VERTEX SHADER *********
+        return this.shared_glsl_code () + `
+      layout(location = 0) in vec3 position; // Position is expressed in object coordinates
+      layout(location = 1) in vec3 normal;
+      layout(location = 2) in vec2 texture_coord;
+      layout(location = 3) in mat4 instance_transform;
 
-const Basicer_Shader = defs.Basicer_Shader =
-  class Basicer_Shader extends Shader {
-    static default_values () { return {}; }
-      shared_glsl_code () {           // ********* SHARED CODE, INCLUDED IN BOTH SHADERS *********
-          return "#version 300 es " + `
-                  precision mediump float;
-      `;
-      }
-      vertex_glsl_code () {          // ********* VERTEX SHADER *********
-          return this.shared_glsl_code () + `
-        layout(location = 0) in vec3 position;
-        void main() {
-          gl_Position = vec4( position, 1.0 );
-        }`;
-      }
-      fragment_glsl_code () {         // ********* FRAGMENT SHADER *********
-          return this.shared_glsl_code () + `
-        out vec4 frag_color;
-        void main() {
-          frag_color = vec4(1.0, 0.0, 0.0, 1.0);
-        }`;
-      }
-  };
+      out vec3 VERTEX_POS;
+      out vec3 VERTEX_NORMAL;
+      out vec2 VERTEX_TEXCOORD;
+      out mat4 VALUE_TO_TEST;
+
+      uniform float animation_time;
+
+      void main() {
+        vec4 world_position = vec4( position, 1.0 );
+        gl_Position = world_position;
+
+        VERTEX_POS = vec3(world_position);
+        VERTEX_NORMAL = normal;
+        VERTEX_TEXCOORD = texture_coord;
+
+        VALUE_TO_TEST = instance_transform;
+      }`;
+    }
+    fragment_glsl_code () {         // ********* FRAGMENT SHADER *********
+        return this.shared_glsl_code () + `
+      in vec3 VERTEX_POS;
+      in vec3 VERTEX_NORMAL;
+      in vec2 VERTEX_TEXCOORD;
+
+      in mat4 VALUE_TO_TEST;
+
+      uniform float animation_time;
+
+      out vec4 frag_color;
+
+      void main() {
+        frag_color = vec4(0.);
+        float max = 33.0;
+        float digit = 10.0;
+
+        for(int i = 0; i < 4; i++)
+        for(int j = 0; j < 4; j++) {
+          bool is_fragment_in_cell_xrange = VERTEX_POS.x*8. > float(j) && VERTEX_POS.x*8. < float(j+1);
+          bool is_fragment_in_cell_yrange = VERTEX_POS.y*8. > float(3-i) && VERTEX_POS.y*8. < float(4-i);
+
+          float flash_odd = mod (VALUE_TO_TEST[j][i] * animation_time/100., 2. );
+
+          float exact_equality_test_value = 2.0;
+          bool expression_to_test = VALUE_TO_TEST[j][i] == exact_equality_test_value;
+          float brighten = float (expression_to_test);
+
+          if (is_fragment_in_cell_xrange && is_fragment_in_cell_yrange)
+            frag_color += vec4(VALUE_TO_TEST[j][i]/max/digit, mod(VALUE_TO_TEST[j][i]/max,digit), brighten, 1.);
+        }
+      }`
+    }
+};
 
 const Basic_Shader = defs.Basic_Shader =
   class Basic_Shader extends Shader {
-      // Basic_Shader is nearly the simplest way to subclass Shader, which stores and manages a GPU program.
-      update_GPU (renderer, gpu_addresses, uniforms, model_transform, material) {
-          // update_GPU():  Define how to synchronize our JavaScript's variables to the GPU's:
-          const [P, C, M] = [uniforms.projection_transform, uniforms.camera_inverse, model_transform],
-                PCM       = P.times (C).times (M);
-          renderer.context.uniformMatrix4fv (gpu_addresses.projection_camera_model_transform, true,
-                  Matrix.flatten_2D_to_1D (PCM));
-      }
-      static default_values () { return {}; }
-      shared_glsl_code () {           // ********* SHARED CODE, INCLUDED IN BOTH SHADERS *********
-          return "#version 300 es " + `
-                  precision mediump float;
-      `;
-      }
+    static default_values () { return {}; }
       vertex_glsl_code () {          // ********* VERTEX SHADER *********
-          return this.shared_glsl_code () + `
-        layout(location = 0) in vec3 position;                       // Position is expressed in object coordinates
-        layout(location = 1) in vec4 color;
-        out vec4 VERTEX_COLOR;
-        uniform mat4 projection_camera_model_transform;
-
-        void main() {
-          gl_Position = projection_camera_model_transform * vec4( position, 1.0 );   // Move vertex to final space.
-          VERTEX_COLOR = color;                                 // Use the hard-coded color of the vertex.
-        }`;
+        return "#version 300 es " + `
+          precision mediump float;
+          layout(location = 0) in vec3 position;
+          void main() {
+            gl_Position = vec4( position, 1.0 );
+          }`;
       }
       fragment_glsl_code () {         // ********* FRAGMENT SHADER *********
-          return this.shared_glsl_code () + `
-        in vec4 VERTEX_COLOR;
-        out vec4 frag_color;
-        void main() {
-          frag_color = VERTEX_COLOR;    // Directly use per-vertex colors for interpolation.
-        }`;
+        return "#version 300 es " + `
+          precision mediump float;
+          out vec4 frag_color;
+          void main() {
+            frag_color = vec4(1.0, 0.0, 0.0, 1.0);
+          }`;
       }
   };
-
+/*
 const Phong_Shader = defs.Phong_Shader =
   class Phong_Shader extends Shader {
       constructor (num_lights = 2) {
@@ -768,3 +581,4 @@ const Fake_Bump_Map = defs.Fake_Bump_Map =
           } `;
       }
   };
+*/
