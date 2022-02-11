@@ -17,7 +17,7 @@ class Shadows_Demo extends Renderer {
 
     this.camera = new Camera();
 
-    this.shadowed_shader = new defs.Basic_Shader (LightArray.NUM_LIGHTS, {has_shadows: false});
+    this.shadowed_shader = new defs.Universal_Shader (LightArray.NUM_LIGHTS, {has_shadows: false});
     this.stars = new Material(this.shadowed_shader, { color: vec4(.8, .7, .5, 1) }, { diffuse_texture: new Texture( "assets/stars.png" ) });
     //  new Material(this.shadowed_shader, { color: vec4(.8, .7, .5, 1) }, { diffuse_texture: this.sun.shadow_map[0] });
     //  new defs.Material_From_File(this.shadowed_shader, "assets/shark_cm/shark_cm.mtl" );

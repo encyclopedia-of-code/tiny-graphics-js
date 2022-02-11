@@ -53,6 +53,7 @@ const Particle_Cloud = defs.Particle_Cloud =
       }
   };
 
+/*
 const Particle_Shader = defs.Particle_Shader =
   class Particle_Shader extends defs.Textured_Phong {
       vertex_glsl_code () {         // ********* VERTEX SHADER *********
@@ -111,3 +112,4 @@ const Particle_Shader = defs.Particle_Shader =
           gl.uniform2fv (gpu.particle_square_size, particle_square_size);
       }
   };
+*/
