@@ -15,14 +15,14 @@ const Shape = tiny.Shape =
   class Shape {
       // See description at https://github.com/encyclopedia-of-code/tiny-graphics-js/wiki/tiny-graphics.js#shape
       constructor () {
-          [this.vertices, this.indices, this.local_buffers] = [[], [], []];
+          [this.vertices, this.indices, this.local_buffers] = [[], [], []];    // Just call it buffers instead?
         //  this.attribute_counter = 0;
 
 
   // TODO:  There should be seperate dirty flags per each GPU instance.
 
           this.dirty = true;
-          this.ready = true; //Since 3d models can be not ready
+          this.ready = true; // Since models loaded from files can be not ready
           this.gpu_instances = new Map ();      // Track which GPU contexts this object has copied itself onto.
       }
       fill_buffer( selection_of_attributes, buffer_hint = "STATIC_DRAW", divisor = 0 ) {
@@ -42,6 +42,7 @@ const Shape = tiny.Shape =
         }
 
         // Visit first vertex to note how big the type of each fields/attribute is.  Assume all others will match.
+        // TODO:  How will the user know about this assumption?
         // TODO:  Test single float attribute type, and perhaps the smaller matrix sizes.
         let attribute_sizes = selection_of_attributes.map( a => this.vertices[0][a].length || 1 );
         const attribute_is_matrix = selection_of_attributes.map( a => this.vertices[0][a] instanceof Matrix );
@@ -110,6 +111,7 @@ const Shape = tiny.Shape =
               }
           }
       }
+
       copy_onto_graphics_card (context, attribute_addresses, write_to_indices = true) {
           if( !this.local_buffers.length)
             return;
@@ -145,7 +147,7 @@ const Shape = tiny.Shape =
             else {
               gl.bufferData (gl.ARRAY_BUFFER, buffer_info.data, gl[buffer_info.hint]);
 
-              // TODO:  Clean this up (the resize case)
+              // TODO:  Generally check the resize process for cleanliness
               buffer_info.override = false;
             }
 
@@ -745,6 +747,101 @@ class Entity {
   }
 };
 
+
+/*
+
+Shape
+    "vertices", indices, pre_buffers
+    ready?  dirty?
+    the rest is per GPU
+
+fill_buffer
+  copy the selected vertices.fields into the correct pre_buffer, interleaved.
+  mark that pre_buffer dirty and/or resized.
+
+copy_to_gpu
+  if not already, make and store *one* VAO per context.
+  per each pre_buffer, associate the current VAO with a gpu_side v buffer (if none already), copying data to it (if dirty).
+  associate that VAO's variable pointers to the correct alignments in the buffers, and whether to reuse per instance.
+  create/copy indices gpu_side if needed.
+
+
+
+  
+flush:
+  make dummy material if (called from shadow) given a light.shadow shader 
+  for (every entity)
+    if instanced,
+      update matrix buffer if needed
+      call draw( .., matrices )
+    if single,
+      make single-length matrix buffer
+      call draw( .., 1 )
+
+draw:
+    prep shader's uniforms/textures
+    write buffers out to UBOs
+    obtain/prepare all this:
+      { webglcontext, global_transform, shape.transforms, material, shape_gpu_side, uniforms, type=TRIANGLES, instanceCount }
+
+
+idea:
+      
+      flush:
+        make dummy material if (called from shadow) given a light.shadow shader 
+        for (every renderListItem)
+          if instanced,
+            update matrix buffer if needed
+            call draw( .., matrices )
+          if single,
+            make single-length matrix buffer
+            call draw( .., 1 )
+      
+      draw:
+          prep shader's uniforms/textures
+          write buffers to UBOs
+          obtain/prepare all this:
+            { webglcontext, global_transform, shape.transforms, material, shape_gpu_side, uniforms, type=TRIANGLES, instanceCount }
+
+Shape:
+  Still ought to own indices gpu_side buffer, since that's repetitive per renderListItem
+      Shape.copy_to_gpu reduces to a few ELEMENT_ARRAY_BUFFER lines.
+        but that means instance & renderer depedency stays.
+        
+
+
+Needed to manage VAO:
+    the shape's pre-buffer metadata
+    material.shader.gpu_instances.get(renderer.context).attribute_addresses;
+
+
+*/
+        
+const RenderListItem = tiny.RenderListItem =
+class RenderListItem {
+
+  // optionally has a next RenderListItem (and a previous, so removal works)
+      // Actually, may need a next and previous per:   Next/Prev VBO, Next/Prev Material, Next/Prev Group, Next/Prev RenderListItem
+
+  
+  // has a list of matrices
+  // has an Entity?  or else { webglcontext, global_transform, shape.transforms, material, shape_gpu_side, uniforms, type=TRIANGLES, instanceCount }
+  // has a VAO
+      // pairing the shape's vertices VBO with THIS RenderListItem's matrices VBO
+      // does Shape no longer own its VAO then?
+
+  insert ( ) {
+    // traverse the linked list, either placing the new item in sequence (ideally sorted) unless
+    // an exact match exists, in which case just grow that item's matrices array.
+
+
+    // Sort order:  (Same VBOs except matrices (Same MATERIAL (Same GROUP (Identical) ) ) )
+  }
+  remove ( ) {
+    
+  }
+}
+        
 const Renderer = tiny.Renderer =
 class Renderer extends Component {
   init (...args) {
@@ -869,13 +966,13 @@ class Renderer extends Component {
       this.queued_entities = []
   }
 
-  execute_shaders (gl, shape, gpu_instance, type, instances) {
+  execute_shaders (gl, shape, gpu_instance, type, instanceCount) {
     if (shape.indices.length) {
         gl.bindBuffer (gl.ELEMENT_ARRAY_BUFFER, gpu_instance.index_buffer);
-        gl.drawElementsInstanced (gl[ type ], shape.indices.length, gl.UNSIGNED_INT, 0, instances);
-    } else gl.drawArraysInstanced (gl[ type ], 0, shape.num_vertices, instances);
+        gl.drawElementsInstanced (gl[ type ], shape.indices.length, gl.UNSIGNED_INT, 0, instanceCount);
+    } else gl.drawArraysInstanced (gl[ type ], 0, shape.num_vertices, instanceCount);
   }
-  draw (shape, uniforms, model_transform, material, type = "TRIANGLES", instances) {
+  draw (shape, uniforms, model_transform, material, type = "TRIANGLES", instanceCount) {
 
       material.shader.activate (this, uniforms, model_transform, material);
 
@@ -892,6 +989,8 @@ class Renderer extends Component {
         if (!buffer_holder || buffer_holder.dirty)
           ubo.send_to_GPU (this);
 
+
+        // FINISH:  The value passed to has() below seems incorrect; always will be false.
         // Bind the UBO if it needs it.
         if (this.bound_ubos.has(ubo) || !this.buffers.get(ubo))
           continue;
@@ -900,7 +999,7 @@ class Renderer extends Component {
       }
 
       // Run the shaders to draw every triangle now:
-      this.execute_shaders (gl, shape, gpu_instance, type, instances);
+      this.execute_shaders (gl, shape, gpu_instance, type, instanceCount);
   }
 }
 
