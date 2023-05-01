@@ -178,7 +178,7 @@ const Movement_Controls = defs.Movement_Controls =
 
           // Move in first-person.  Scale the normal camera aiming speed by dt for smoothness:
           this.first_person_flyaround (dt * r, dt * m);
-          // Al so apply third-person "arcball" camera mode if a mouse drag is occurring:
+          // Also apply third-person "arcball" camera mode if a mouse drag is occurring:
           if (this.mouse.anchor)
               this.third_person_arcball (dt * r);
 
