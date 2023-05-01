@@ -71,7 +71,7 @@ class LightArray extends UBO {
               };
     }
     get_binding_point () { return 1; }
-    activate (gl, gpu_addresses, is_shadow_pass, shadow_map_index = 0)
+    activate (gl, gpu_addresses, is_shadow_pass, shadow_map_index = 0)     // TODO: Unused/Unimplemented anywhere?
     { }
     deactivate (caller, shadow_map_index = 0)
     { }
@@ -155,7 +155,7 @@ class Shadow_Light {
                 shadow_map: null,
               };
     }
-    initialize(caller) {
+    initialize(caller) {                               // FINISH:  This function is very outdated; figure out what replaces it.
       if (!this.is_initialized) {
         const mappings = Shader.mapping_UBO();
         for (var i = 0; i < mappings.length; i++) {

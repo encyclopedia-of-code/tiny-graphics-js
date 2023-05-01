@@ -19,11 +19,11 @@ const Shape = tiny.Shape =
         //  this.attribute_counter = 0;
 
 
-  // TODO:  There should be seperate dirty flags per each GPU instance.
+  // TODO:  There should be seperate dirty flags per each GPU instance.     // ** just move .dirty to the renderer map's instance.
 
           this.dirty = true;
           this.ready = true; // Since models loaded from files can be not ready
-          this.gpu_instances = new Map ();      // Track which GPU contexts this object has copied itself onto.
+          this.gpu_instances = new Map ();      // Track which GPU contexts this object has copied itself onto.  // ** delete
       }
       fill_buffer( selection_of_attributes, buffer_hint = "STATIC_DRAW", divisor = 0 ) {
         if( !this.vertices[0] )
@@ -112,6 +112,7 @@ const Shape = tiny.Shape =
           }
       }
 
+        // ** becomes renderer::update_VAO()
       copy_onto_graphics_card (context, attribute_addresses, write_to_indices = true) {
           if( !this.local_buffers.length)
             return;
@@ -119,7 +120,7 @@ const Shape = tiny.Shape =
 
           // When this Shape sees a new GPU context (in case of multiple drawing areas), copy the Shape to the GPU. If
           // it already was copied over, get a pointer to the existing instance.
-          const existing_instance = this.gpu_instances.get (context);
+          const existing_instance = this.gpu_instances.get (context);               // ** get ( shape )
           let gpu_instance = existing_instance;
 
           // If this Shape was never used on this GPU context before, then prepare new buffer indices for this context.
@@ -130,7 +131,7 @@ const Shape = tiny.Shape =
           }
           gl.bindVertexArray( gpu_instance.VAO );
 
-          for( let index of this.local_buffers.keys() ) {
+          for( let index of this.local_buffers.keys() ) {   // ** Rename to local_buffer_infos?
 
             let buffer_info = this.local_buffers[index];
             // Only update the subset of buffers that have changed, from the selection provided.
@@ -139,7 +140,7 @@ const Shape = tiny.Shape =
             buffer_info.dirty = false;
 
             let existing_pointer = buffer_info.gpu_pointer;
-            buffer_info.gpu_pointer = buffer_info.gpu_pointer ?? gl.createBuffer();
+            buffer_info.gpu_pointer = buffer_info.gpu_pointer ?? gl.createBuffer     // ** Consult renderer map instead
             gl.bindBuffer (gl.ARRAY_BUFFER, buffer_info.gpu_pointer);
 
             if (existing_pointer !== undefined && !buffer_info.override)
@@ -148,7 +149,7 @@ const Shape = tiny.Shape =
               gl.bufferData (gl.ARRAY_BUFFER, buffer_info.data, gl[buffer_info.hint]);
 
               // TODO:  Generally check the resize process for cleanliness
-              buffer_info.override = false;
+              buffer_info.override = false;              //  FINISH: rename override to has_resized??
             }
 
             for( let i of buffer_info.attributes.keys()) {
@@ -184,7 +185,7 @@ const Shape = tiny.Shape =
           }
           if (this.indices.length && write_to_indices) {
               if ( !existing_instance)
-                  gpu_instance.index_buffer = gl.createBuffer ();
+                  gpu_instance.index_buffer = gl.createBuffer ();     // ** This goes in a map on renderer too
               gl.bindBuffer (gl.ELEMENT_ARRAY_BUFFER, gpu_instance.index_buffer);
               if (existing_instance)
                 gl.bufferSubData (gl.ELEMENT_ARRAY_BUFFER, 0, new Uint32Array (this.indices))
@@ -302,7 +303,7 @@ const Shader = tiny.Shader =
 
           // Define what this object should store in each new WebGL Context:
           const defaults = {
-              program : undefined, gpu_addresses: undefined,
+              program : undefined, gpu_addresses: undefined,     // FINISH:  Should gpu_addresses be called more specifically uniforms_addresses or does it still contain more?
               vertShdr: undefined, fragShdr: undefined
           };
           const existing_instance = this.gpu_instances.get (context);
@@ -769,11 +770,11 @@ copy_to_gpu
 
   
 flush:
-  make dummy material if (called from shadow) given a light.shadow shader 
+  make dummy material if called from shadow, ie. given a light.shadow shader 
   for (every entity)
     if instanced,
       update matrix buffer if needed
-      call draw( .., matrices )
+      call draw( .., num_matrices )
     if single,
       make single-length matrix buffer
       call draw( .., 1 )
@@ -788,18 +789,18 @@ draw:
 idea:
       
       flush:
-        make dummy material if (called from shadow) given a light.shadow shader 
+        make dummy material if called from shadow, ie. given a light.shadow shader 
         for (every renderListItem)
           if instanced,
             update matrix buffer if needed
-            call draw( .., matrices )
+            call draw( .., num_matrices )
           if single,
             make single-length matrix buffer
             call draw( .., 1 )
       
       draw:
           prep shader's uniforms/textures
-          write buffers to UBOs
+          write buffers out to UBOs
           obtain/prepare all this:
             { webglcontext, global_transform, shape.transforms, material, shape_gpu_side, uniforms, type=TRIANGLES, instanceCount }
 
@@ -807,7 +808,8 @@ Shape:
   Still ought to own indices gpu_side buffer, since that's repetitive per renderListItem
       Shape.copy_to_gpu reduces to a few ELEMENT_ARRAY_BUFFER lines.
         but that means instance & renderer depedency stays.
-        
+            I think the improvement idea here was to move ownership of indices to renderer in a map( Shape, indices ) since a map 
+            would be needed anyway if instance & renderer dependencies stay. 
 
 
 Needed to manage VAO:
@@ -972,14 +974,15 @@ class Renderer extends Component {
         gl.drawElementsInstanced (gl[ type ], shape.indices.length, gl.UNSIGNED_INT, 0, instanceCount);
     } else gl.drawArraysInstanced (gl[ type ], 0, shape.num_vertices, instanceCount);
   }
-  draw (shape, uniforms, model_transform, material, type = "TRIANGLES", instanceCount) {
+  draw (shape, uniforms, model_transform, material, type = "TRIANGLES", instanceCount) {    // FINISH why is instanceCount the only thing in camelCase
 
       material.shader.activate (this, uniforms, model_transform, material);
 
       const gl = this.context;
-      let gpu_instance = shape.gpu_instances.get (gl);
+      let gpu_instance = shape.gpu_instances.get (gl);                // ** From renderer map instead
       if( !gpu_instance || shape.dirty)
-        gpu_instance = shape.copy_onto_graphics_card (gl, material.shader.get_attribute_addresses(this) );
+        // ** this.update_VAO instead
+        gpu_instance = shape.copy_onto_graphics_card (gl, material.shader.get_attribute_addresses(this) );  // Finish: Awkward; should attribute addresses be stored as a renderer::map instead of on each shader?
       gl.bindVertexArray( gpu_instance.VAO );
       for (let binding_point of this.selected_ubos.keys()) {
         const ubo = this.selected_ubos.get(binding_point);
@@ -1003,6 +1006,9 @@ class Renderer extends Component {
   }
 }
 
+// TODO:  Classes UBO and Shape seem very similar at their core (each know where to put things in a local buffer, then do bufferData).  
+// Could Shape/vertices be specified by JSON as well to join with UBO?  Should UBO have its gl stuff moved to a renderer::map for consistency with Shape?
+
 const UBO = tiny.UBO =
 class UBO {
   constructor (...args) {
@@ -1012,7 +1018,7 @@ class UBO {
   }
   init (fields) { }     // Abstract -- user overrides this
   initial_values () { return {}; }        // TODO:  Unused still
-  static flatten_JSON (o,p="") {
+  static flatten_JSON (o,p="") {          // TODO:  Convert to a while loop with stack variable, to keep debugger from tripping on this recursive function
     return Object.keys (o).map (k => o[k] === null           ||
                                     typeof o[k] !== "object" ? {[p + (p ? ".":"") + k]: o[k]}
                                                              : UBO.flatten_JSON (o[k],p + (p ? ".":"") + k))
@@ -1024,10 +1030,10 @@ class UBO {
     return new Map( table.map (r => [fix_array_notation(r[0]), r[1] ]) );
   }
   get_binding_point () {
-    throw `Each subclass of UBO must specify its own binding point for its corresponding GLSL program uniform block.`; }
+    throw `Abstract function.  Each subclass of UBO must specify its own binding point for its corresponding GLSL program uniform block.`; }
   fill_buffer (json) {
     if (!this.buffer_size)
-      throw `full_buffer() was called too early; UBO doesn't query its size until draw time the first time.`
+      throw `UBO::fill_buffer() was called too early; UBO doesn't query its size until draw time the first time.`
     if (!this.local_buffer)
       this.local_buffer = new Float32Array(this.buffer_size/4);
     const values_to_set = UBO.uniform_names_from_JSON(json);
@@ -1036,8 +1042,8 @@ class UBO {
     for( let i = 0; i < entries.length; i++ ) {
       const [key, byte_offset] = entries[i];
       for( let [in_key, in_value] of values_to_set ) {
-        // Skip inputs we've already handled.  Skip non matches.
-        // Ignore any fields the shader side did not want when this UBO was used.
+        // Skip inputs we've already handled.  Skip non matches.  Lastly,
+        // ignore any fields the shader side did not want when this UBO was used.
         if(in_value === null || !in_key.includes(key) || byte_offset === undefined)
           continue;
 
@@ -1058,7 +1064,7 @@ class UBO {
           continue;
 
         this.local_buffer[offset] = in_value;
-        values_to_set.set(in_key, null);
+        values_to_set.set(in_key, null);                 // FINISH: change to .delete(in_key) for clarity
       }
     }
   }

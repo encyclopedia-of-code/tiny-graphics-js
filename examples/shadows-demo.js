@@ -11,9 +11,11 @@ class Shadows_Demo extends Renderer {
     super.init();
     this.shapes = {cube: new defs.Instanced_Cube_Index ()};
 
-    this.lightArray = new defs.LightArray({ambient: .1, lights:[{direction_or_position: vec4(2.0, 5.0, 0.0, 0.0),
-              color: color(1.0, 1.0, 1.0, 1.0), diffuse: 1, specular: 0.7, attenuation_factor: 0.01}]});
-        // new defs.Shadow_Light({ ..  casts_shadow: true});
+    this.lightArray = 
+        // new defs.LightArray({ambient: .1, lights:[{direction_or_position: vec4(2.0, 5.0, 0.0, 0.0),
+        //     color: color(1.0, 1.0, 1.0, 1.0), diffuse: 1, specular: 0.7, attenuation_factor: 0.01}]});
+           new defs.Shadow_Light({ ambient: .1, lights:[{direction_or_position: vec4(2.0, 5.0, 0.0, 0.0),
+              color: color(1.0, 1.0, 1.0, 1.0), diffuse: 1, specular: 0.7, attenuation_factor: 0.01, casts_shadow: true });
 
     this.camera = new Camera();
 
