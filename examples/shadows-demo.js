@@ -12,17 +12,17 @@ class Shadows_Demo extends Renderer {
     this.shapes = {cube: new defs.Instanced_Cube_Index ()};
 
     this.lightArray = 
-        // new defs.LightArray({ambient: .1, lights:[{direction_or_position: vec4(2.0, 5.0, 0.0, 0.0),
-        //     color: color(1.0, 1.0, 1.0, 1.0), diffuse: 1, specular: 0.7, attenuation_factor: 0.01}]});
-           new defs.Shadow_Light({ ambient: .1, lights:[{direction_or_position: vec4(2.0, 5.0, 0.0, 0.0),
-              color: color(1.0, 1.0, 1.0, 1.0), diffuse: 1, specular: 0.7, attenuation_factor: 0.01, casts_shadow: true });
+         new defs.LightArray({ambient: .1, lights:[{direction_or_position: vec4(2.0, 5.0, 0.0, 0.0),
+             color: color(1.0, 1.0, 1.0, 1.0), diffuse: 1, specular: 0.7, attenuation_factor: 0.01}]});
+        //   new defs.Shadow_Light({ ambient: .1, lights:[{direction_or_position: vec4(2.0, 5.0, 0.0, 0.0),
+        //      color: color(1.0, 1.0, 1.0, 1.0), diffuse: 1, specular: 0.7, attenuation_factor: 0.01, casts_shadow: true }]});
 
     this.camera = new Camera();
 
-    this.shadowed_shader = new defs.Universal_Shader (LightArray.NUM_LIGHTS, {has_shadows: true});
-    this.stars = new Material(this.shadowed_shader, { color: vec4(.8, .7, .5, 1) }, { diffuse_texture: new Texture( "assets/stars.png" ) });
-    //  new Material(this.shadowed_shader, { color: vec4(.8, .7, .5, 1) }, { diffuse_texture: this.sun.shadow_map[0] });
-    //  new defs.Material_From_File(this.shadowed_shader, "assets/shark_cm/shark_cm.mtl" );
+    this.shader = new defs.Universal_Shader (LightArray.NUM_LIGHTS, {has_shadows: false});
+    this.stars = new Material(this.shader, { color: vec4(.8, .7, .5, 1) }, { diffuse_texture: new Texture( "assets/stars.png" ) });
+    //  new Material(this.shader, { color: vec4(.8, .7, .5, 1) }, { diffuse_texture: this.sun.shadow_map[0] });
+    //  new defs.Material_From_File(this.shader, "assets/shark_cm/shark_cm.mtl" );
 
     const {camera, lightArray} = this;
     this.uniforms.UBOs = {camera, lightArray, material: this.stars};

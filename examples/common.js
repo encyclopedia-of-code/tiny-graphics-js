@@ -97,7 +97,7 @@ class Shadow_Light {
       this.ubo_layout = [{num_instances: 1,
                           data_layout: [{name:"ambient", type:"float"}]
                          },
-                         {num_instances: Light.NUM_LIGHTS,
+                         {num_instances: Shadow_Light.NUM_LIGHTS,
                           data_layout: [{name:"direction_or_position", type:"vec4"},
                                         {name:"color", type:"vec3"},
                                         {name:"diffuse", type:"float"},
@@ -106,7 +106,7 @@ class Shadow_Light {
                                         {name:"casts_shadow", type:"bool"},
                                       ]
                          },
-                         {num_instances: Light.NUM_LIGHTS * 6,
+                         {num_instances: Shadow_Light.NUM_LIGHTS * 6,
                           data_layout: [{name:"light_space_matrix", type:"Mat4"}]
                          },
                         ];
@@ -128,7 +128,7 @@ class Shadow_Light {
       }
       else {
         this.shadow_map[0] = new tiny.Shadow_Map(this.shadow_map_width, this.shadow_map_height);
-        let epsilon = 0.00756; //to be able to have +-y pointing light
+        let epsilon = 0.00756; //to be able to have +-y pointing light without breaking look_at()
         let light_view = Mat4.look_at(this.direction_or_position.to3(), vec3(0.0, 0.0, 0.0), vec3(0.0 + epsilon, 1.0, 0.0));;
         let light_projection = Mat4.orthographic(-10.0, 10.0, -10.0, 10.0, 0.01, 20.0);
         this.light_space_matrix[0] = light_projection.times(light_view);

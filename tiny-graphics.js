@@ -140,7 +140,7 @@ const Shape = tiny.Shape =
             buffer_info.dirty = false;
 
             let existing_pointer = buffer_info.gpu_pointer;
-            buffer_info.gpu_pointer = buffer_info.gpu_pointer ?? gl.createBuffer     // ** Consult renderer map instead
+            buffer_info.gpu_pointer = buffer_info.gpu_pointer ?? gl.createBuffer()     // ** Consult renderer map instead
             gl.bindBuffer (gl.ARRAY_BUFFER, buffer_info.gpu_pointer);
 
             if (existing_pointer !== undefined && !buffer_info.override)
@@ -469,7 +469,7 @@ const Texture = tiny.Texture =
       }
       copy_onto_graphics_card (context, need_initial_settings = true) {
           // Define what this object should store in each new WebGL Context:
-          const defaults = {texture_buffer_pointer: undefined};
+          const defaults = {texture_buffer_pointer: undefined};   // FINISH:  Try deleting this line
 
           const existing_instance = this.gpu_instances.get (context);
           if ( !existing_instance) test_rookie_mistake ();
@@ -850,6 +850,10 @@ class Renderer extends Component {
     this.entities = []
     this.queued_entities = []
     this.lights = []            // TODO: Needed?
+    this.max_fps = 60;
+    this.frame_delay = 1000/this.max_fps;
+    this.prev_frame_number = -1;
+    this.is_running = true;
     this.buffers = new Map();
     this.bound_ubos = new Map();
     this.selected_ubos = new Map();
@@ -890,23 +894,29 @@ class Renderer extends Component {
       // Build the canvas's matrix for converting -1 to 1 ranged coords (NCDS) into its own pixel coords:
       this.context.viewport (0, 0, width, height);
   }
+  
   frame_advance (time = 0) {
-      if ( !this.props.dont_tick) {
-          this.uniforms.animation_delta_time = time - this.prev_time | 0;
-          if (this.uniforms.animate) this.uniforms.animation_time += this.uniforms.animation_delta_time;
-          this.prev_time = time;
-      }
-
-      const gl = this.context;
-      if (gl)
-          gl.clear (gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);        // Clear the canvas's pixels and z-buffer.
-
-      const open_list = [this];
-      while (open_list.length)                           // Traverse all Scenes and their children, recursively.
-      {
-          open_list.push (...open_list[ 0 ].animated_children);
-          // Call display() to draw each registered animation:
-          open_list.shift ().render_frame (this);
+      this.first_frame_time ??= time;
+      let current_frame_number = Math.floor((time - this.first_frame_time) / this.frame_delay);
+      if (current_frame_number > this.prev_frame_number) {  
+        this.prev_frame_number = current_frame_number;
+        if ( !this.props.dont_tick) {
+            this.uniforms.animation_delta_time = time - this.prev_time | 0;
+            if (this.uniforms.animate) this.uniforms.animation_time += this.uniforms.animation_delta_time;
+            this.prev_time = time;
+        }
+  
+        const gl = this.context;
+        if (gl)
+            gl.clear (gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);        // Clear the canvas's pixels and z-buffer.
+  
+        const open_list = [this];
+        while (open_list.length)                           // Traverse all Scenes and their children, recursively.
+        {
+            open_list.push (...open_list[ 0 ].animated_children);
+            // Call display() to draw each registered animation:
+            open_list.shift ().render_frame (this);
+        }
       }
       // Now that this frame is drawn, request that render() happen again as soon as all other web page events
       // are processed:
@@ -1023,7 +1033,7 @@ class UBO {
                                     typeof o[k] !== "object" ? {[p + (p ? ".":"") + k]: o[k]}
                                                              : UBO.flatten_JSON (o[k],p + (p ? ".":"") + k))
                           .reduce ((acc,value) => Object.assign (acc,value));
-                      }
+  }
   static uniform_names_from_JSON (json) {
     const table = Object.entries( UBO.flatten_JSON(json) );
     const fix_array_notation = s => s.replaceAll (/\.(\d+)(?=\.|$)/g, (match, num) => '['+num+']' );
