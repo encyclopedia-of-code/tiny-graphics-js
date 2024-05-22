@@ -35,6 +35,14 @@ class Shadows_Demo extends Renderer {
       ],
       this.stars));
   }
+  render_controls() {
+    this.frame_rates ??= [60, 120, 0, 1, 2, 8, 16, 30];
+    this.key_triggered_button ("Framerate: ", ["&"], () => {
+       this.frame_rates.push( this.frame_rates.shift() ); 
+       this.max_fps = this.frame_rates[0];
+       this.prev_frame_number = -1 } );
+    this.live_string (box => { box.textContent = this.max_fps } );
+  }
   render_frame (renderer) {
     if( !renderer.controls )  {
       this.camera.emplace( Mat4.look_at( vec3(-1.0, 2.0, 1.0), vec3(0,-3,-1), vec3(0,1,0) ) );  // Mat4.translation(0.0, 0.0, -1.0)

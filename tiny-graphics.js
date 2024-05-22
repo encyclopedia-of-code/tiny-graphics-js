@@ -851,7 +851,6 @@ class Renderer extends Component {
     this.queued_entities = []
     this.lights = []            // TODO: Needed?
     this.max_fps = 60;
-    this.frame_delay = 1000/this.max_fps;
     this.prev_frame_number = -1;
     this.is_running = true;
     this.buffers = new Map();
@@ -897,7 +896,8 @@ class Renderer extends Component {
   
   frame_advance (time = 0) {
       this.first_frame_time ??= time;
-      let current_frame_number = Math.floor((time - this.first_frame_time) / this.frame_delay);
+      let frame_delay = 1000/this.max_fps;
+      let current_frame_number = Math.floor((time - this.first_frame_time) / frame_delay);
       if (current_frame_number > this.prev_frame_number) {  
         this.prev_frame_number = current_frame_number;
         if ( !this.props.dont_tick) {
