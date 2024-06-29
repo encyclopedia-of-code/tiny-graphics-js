@@ -15,7 +15,7 @@ const Shape = tiny.Shape =
   class Shape {
       // See description at https://github.com/encyclopedia-of-code/tiny-graphics-js/wiki/tiny-graphics.js#shape
       constructor () {
-          [this.vertices, this.indices, this.local_buffers] = [[], [], []];    // Just call it buffers instead?
+          [this.vertices, this.indices, this.buffer_infos] = [[], [], []];
         //  this.attribute_counter = 0;
 
 
@@ -25,20 +25,20 @@ const Shape = tiny.Shape =
           this.ready = true; // Since models loaded from files can be not ready
           this.gpu_instances = new Map ();      // Track which GPU contexts this object has copied itself onto.  // ** delete
       }
-      fill_buffer( selection_of_attributes, buffer_hint = "STATIC_DRAW", divisor = 0 ) {
+      build_VBO( selection_of_attributes, buffer_hint = "STATIC_DRAW", divisor = 0 ) {    // FINISH:  Rename to build_VBO
         if( !this.vertices[0] )
           return;
-
         this.dirty = true;
         // Check if this is a new call, a repeat call, or an invalid call.
-        let buffer_to_overwrite = null;
-        for( let index of this.local_buffers.keys() ) {
-          const buffer_info = this.local_buffers[index];
+        let buffer_idx_to_fill = -1;
+
+        for( let index of this.buffer_infos.keys() ) {
+          const buffer_info = this.buffer_infos[index];
           if( buffer_info.attributes[0] != selection_of_attributes[0] )
             continue;
           if( !buffer_info.attributes.every( (x,i) => x == selection_of_attributes[i] ) )
-            throw "A call to fill_buffer() has been made that did not match the grouping of attributes used in previous calls.";
-          buffer_to_overwrite = index;
+            throw "A call to build_VBO() has been made that did not match the grouping of attributes used in previous calls.";
+          buffer_idx_to_fill = index;
         }
 
         // Visit first vertex to note how big the type of each fields/attribute is.  Assume all others will match.
@@ -49,7 +49,7 @@ const Shape = tiny.Shape =
         let squared_sizes = attribute_sizes.map( (a,i) => Math.pow(a, 1 + attribute_is_matrix[i]) );
 
         // When a new buffer is requested by using a group of attributes not seen before, make a buffer.
-        if( !buffer_to_overwrite ) {
+        if( buffer_idx_to_fill == -1 ) {
           // TODO:  This part assumes a vertex type of FLOAT.  May need to override.
           const stride = squared_sizes.reduce( (acc,x) => acc + x * 4, 0 );
 
@@ -59,21 +59,21 @@ const Shape = tiny.Shape =
               offsets[index] = offset;
               offset += 4*squared_sizes[index];
           }
-          buffer_to_overwrite = this.local_buffers.push(
+          buffer_idx_to_fill = this.buffer_infos.push(
             {attributes:  [ ...selection_of_attributes ],
               sizes: attribute_sizes, attribute_is_matrix, offsets, stride, divisor, hint: buffer_hint,
               vertices_length: this.vertices.length, override: false,
               data: new Float32Array (stride/4 * this.vertices.length) }) - 1;
         }
         // If a buffer already exists but we need a bigger one to hold all our data
-        else if (this.local_buffers[buffer_to_overwrite].vertices_length < this.vertices.length) {
+        else if (this.buffer_infos[buffer_idx_to_fill].vertices_length < this.vertices.length) {
           const stride = squared_sizes.reduce( (acc,x) => acc + x * 4, 0 );
-          this.local_buffers[buffer_to_overwrite].vertices_length = this.vertices.length;
-          this.local_buffers[buffer_to_overwrite].override = true;
-          this.local_buffers[buffer_to_overwrite].data = new Float32Array (stride/4 * this.vertices.length);
+          this.buffer_infos[buffer_idx_to_fill].vertices_length = this.vertices.length;
+          this.buffer_infos[buffer_idx_to_fill].override = true;
+          this.buffer_infos[buffer_idx_to_fill].data = new Float32Array (stride/4 * this.vertices.length);
         }
 
-        const buffer = this.local_buffers[buffer_to_overwrite];
+        const buffer = this.buffer_infos[buffer_idx_to_fill];
 
         // Fill in the selected buffer locally with the user's updated values from each vertex field.
         let pos = 0;
@@ -81,32 +81,24 @@ const Shape = tiny.Shape =
           for (let a of selection_of_attributes.keys()){
 
             const attr = selection_of_attributes[a];
+            const value = (attribute_sizes[a] == 1) ? [ v[attr] ] : v[attr];
 
-            if(attribute_sizes[a] == 1) {
-              if( buffer.data[pos] != v[attr] )
-                buffer.dirty = true;
-              buffer.data[pos] = v[attr];
-              pos++;
-            }
-            else if( attribute_is_matrix[a] ) {
-              if(v[attr].length != 4)
-                throw "TODO: Is this ever reached?";
-
-              for (let i=0; i < v[attr].length; i++) {
-                for (let j=0; j < v[attr].length; j++) {
+            if( attribute_is_matrix[a] ) {
+              for (let i=0; i < 4; i++) {
+                for (let j=0; j < 4; j++) {
                   // GLSL wants column major matrices.
-                  if( buffer.data[pos] != v[attr][j][i] )
+                  if( buffer.data[pos] != value[j][i] )
                     buffer.dirty = true;
-                  buffer.data[pos] = v[attr][j][i];
+                  buffer.data[pos] = value[j][i];
                   pos++;
                 }
               }
             }
             else
-              for (let i=0; i < attribute_sizes[a]; i++) {
-                if( buffer.data[pos] != v[attr][i] )
+              for (let i=0; i < attribute_sizes[a]; i++) {     // TODO:  Not padding; Test for alignment problems if vec2 or vec3
+                if( buffer.data[pos] != value[i] )
                   buffer.dirty = true;
-                buffer.data[pos] = v[attr][i];
+                buffer.data[pos] = value[i];
                 pos++;
               }
           }
@@ -114,7 +106,7 @@ const Shape = tiny.Shape =
 
         // ** becomes renderer::update_VAO()
       copy_onto_graphics_card (context, attribute_addresses, write_to_indices = true) {
-          if( !this.local_buffers.length)
+          if( !this.buffer_infos.length)
             return;
           const gl = context;
 
@@ -131,9 +123,9 @@ const Shape = tiny.Shape =
           }
           gl.bindVertexArray( gpu_instance.VAO );
 
-          for( let index of this.local_buffers.keys() ) {   // ** Rename to local_buffer_infos?
+          for( let index of this.buffer_infos.keys() ) { 
 
-            let buffer_info = this.local_buffers[index];
+            let buffer_info = this.buffer_infos[index];
             // Only update the subset of buffers that have changed, from the selection provided.
             if( !buffer_info.dirty)
               continue;
@@ -435,9 +427,7 @@ const Shader = tiny.Shader =
           let offset = 0;
           for (const [name, sampler] of material.samplers.entries())
             if (sampler && sampler.ready) {
-
-              //  TODO: The following comment describes a change that doesn't exist yet.  Should it?
-              // Select texture unit offset for the fragment shader Sampler2D uniform called "samplers.name":
+              // Select texture unit offset for the fragment shader Sampler2D uniform that is called the current name.
               context.uniform1i (gpu_instance.gpu_addresses[name], offset);
               // For this draw, use the texture image from correct the GPU buffer:
               sampler.activate (context, offset);
@@ -610,10 +600,9 @@ const Component = tiny.Component =
           // Finally, run the user's code for setting up their scene:
           this.init ();
       }
-      static types_used_before = new Set ();
 
 
-      // FINISH:  Should the matrices below start out null since they are intented to alias onto Camera?
+      // FINISH:  Who uses this and how?  Should the matrices below start out null since they are intended to alias onto Camera?
       static default_uniforms () {
           return {
               UBOs                : new Map(),
@@ -625,6 +614,7 @@ const Component = tiny.Component =
               animation_delta_time: 0
           };
       }
+      static types_used_before = new Set ();
       static initialize_CSS (classType, rules) {
           if (Component.types_used_before.has (classType))
               return;
@@ -700,6 +690,7 @@ const Component = tiny.Component =
           this.make_context (canvas);
           // Start WebGL main loop - render() will re-queue itself for continuous calls.
           this.event = window.requestAnimFrame (this.frame_advance.bind (this));
+          // FINISH:  The above two lines would crash for Components that are not Renderers.
 
           if (overridden_options.make_controls) {
               this.embedded_controls_area           = this.program_stuff.appendChild (document.createElement ("div"));
@@ -756,7 +747,7 @@ Shape
     ready?  dirty?
     the rest is per GPU
 
-fill_buffer
+build_VBO
   copy the selected vertices.fields into the correct pre_buffer, interleaved.
   mark that pre_buffer dirty and/or resized.
 
@@ -880,7 +871,7 @@ class Renderer extends Component {
       window.requestAnimFrame = (w =>
         w.requestAnimationFrame || w.webkitRequestAnimationFrame
         || w.mozRequestAnimationFrame || w.oRequestAnimationFrame || w.msRequestAnimationFrame
-        || function (callback) { w.setTimeout (callback, 1000 / 60); }) (window);
+        || function (callback) { w.setTimeout (callback, 1000 / this.max_fps); }) (window);
   }
   set_canvas_size (dimensions = [1080, 600]) {
       // We must change size in CSS, wait for style re-flow, and then change size again within canvas attributes.
@@ -893,7 +884,6 @@ class Renderer extends Component {
       // Build the canvas's matrix for converting -1 to 1 ranged coords (NCDS) into its own pixel coords:
       this.context.viewport (0, 0, width, height);
   }
-  
   frame_advance (time = 0) {
       this.first_frame_time ??= time;
       let frame_delay = 1000/this.max_fps;
@@ -905,16 +895,14 @@ class Renderer extends Component {
             if (this.uniforms.animate) this.uniforms.animation_time += this.uniforms.animation_delta_time;
             this.prev_time = time;
         }
-  
-        const gl = this.context;
-        if (gl)
-            gl.clear (gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);        // Clear the canvas's pixels and z-buffer.
-  
+        // Clear the canvas's pixels and z-buffer.
+        if (this.context)
+            this.context.clear (this.context.COLOR_BUFFER_BIT | this.context.DEPTH_BUFFER_BIT);
+
+        // Traverse all Scenes and their children, recursively. Call render_frame to draw each registered animation.
         const open_list = [this];
-        while (open_list.length)                           // Traverse all Scenes and their children, recursively.
-        {
+        while (open_list.length) {
             open_list.push (...open_list[ 0 ].animated_children);
-            // Call display() to draw each registered animation:
             open_list.shift ().render_frame (this);
         }
       }
@@ -922,7 +910,7 @@ class Renderer extends Component {
       // are processed:
       this.event = window.requestAnimFrame (this.frame_advance.bind (this));
   }
-  submit (object) {
+  submit (object) {                   // FINISH.
     if (object instanceof Entity)
       this.queued_entities.push(object);
   }
@@ -939,7 +927,7 @@ class Renderer extends Component {
         }
       }
       else {
-        light.bind(this.context, undefined, true);
+        light.bind(this.context, undefined, true);         // FINISH:  One says activate, the other says bind.
         this.flush([], false, light.shadow_map_shader);
         light.deactivate(caller);
       }
@@ -951,13 +939,14 @@ class Renderer extends Component {
                     new Material("shadow_pass_material", alternative_shader) :
                     undefined;
 
+    // FINISH:  We're overwriting vertices below?  Even if we've already called build_VBO with the previous values, isn't that confusing?
     for(let entity of this.queued_entities){
       if( entity.transforms instanceof tiny.Matrix ) {
         // Single matrix case
         if (entity.dirty && entity.shape.ready) {
           entity.shape.vertices = [{instance_transform: entity.transforms}];
           //Ideally use a shader with just a uniform matrix where you pass global.times(model)?
-          entity.shape.fill_buffer(["instance_transform"], undefined, 1);
+          entity.shape.build_VBO(["instance_transform"], undefined, 1);
           if( !alternative_shader)
             entity.dirty = false;
         }
@@ -966,7 +955,7 @@ class Renderer extends Component {
       else {
         if (entity.dirty && entity.shape.ready) {
           entity.shape.vertices = Array(entity.transforms.length).fill(0).map( (x,i) => ({instance_transform: entity.transforms[i]}));
-          entity.shape.fill_buffer(["instance_transform"], undefined, 1);
+          entity.shape.build_VBO(["instance_transform"], undefined, 1);
           if( !alternative_shader)
             entity.dirty = false;
         }
@@ -1099,7 +1088,7 @@ class UBO {
     return instance;
     // gl.bindBuffer(gl.UNIFORM_BUFFER, null);      // TODO: Unneccesary?
   }
-  bind (renderer, binding_point) {
+  bind (renderer, binding_point) {    // why not move to renderer
     renderer.selected_ubos.set(binding_point, this);
   }
 }

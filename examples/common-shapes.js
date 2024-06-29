@@ -33,7 +33,7 @@ const Triangle = defs.Triangle =
           // Next, describe how to connect whole triangles out of individual vertices.  Say a list of indices of vertex entries in your desired order. Every three indices in "this.indices" traces out one triangle.
           this.indices              = [0, 1, 2];
 
-          this.fill_buffer ("position", "normal", "texture_coord")
+          this.build_VBO ("position", "normal", "texture_coord")
       }
   };
 
@@ -422,7 +422,7 @@ const Instanced_Shape = defs.Instanced_Shape =
           this.vertices[1] = { position: vec3 (1, 0, 0), color: color (0, 1, 0, 1) };
           this.vertices[2] = { position: vec3 (0, 1, 0), color: color (0, 0, 1, 1) };
 
-          this.fill_buffer( ["position", "color"] );
+          this.build_VBO( ["position", "color"] );
 
           this.single_triangle = this.vertices;
       }
@@ -442,7 +442,7 @@ const Instanced_Shape = defs.Instanced_Shape =
           this.vertices[5] = { position: vec3 (0.5, 0.5, 0), color: color (0, 1, 1, 1) };
           this.num_vertices = this.vertices.length
 
-          this.fill_buffer( ["position", "color"] );
+          this.build_VBO( ["position", "color"] );
 
           this.single_triangle = this.vertices;
       }
@@ -461,7 +461,7 @@ const Instanced_Shape = defs.Instanced_Shape =
 
           this.indices = [0, 1, 2, 1, 2, 3];
 
-          this.fill_buffer( ["position", "color"] );
+          this.build_VBO( ["position", "color"] );
 
           this.single_triangle = this.vertices;
       }
@@ -520,7 +520,7 @@ const Instanced_Cube_Index = defs.Instanced_Cube_Index =
                           20, 21, 22, 23, 24, 25, 26, 27, 28, 29,
                           30, 31, 32, 33, 34, 35];
 
-          this.fill_buffer( ["position", "normal", "texture_coord"] );
+          this.build_VBO( ["position", "normal", "texture_coord"] );
 
           this.num_vertices = 36; // FINISH: For now, until hammering out multiple vaos per shape.
           this.single_cube = this.vertices;
@@ -539,7 +539,7 @@ const Minimal_Shape = defs.Minimal_Shape =
           this.vertices[2] = { position: vec3 (0, 1, 0), color: color (0, 0, 1, 1) };
 
           this.num_vertices = 3; // FINISH: For now, until hammering out multiple vaos per shape.
-          this.fill_buffer( ["position", "color"] );
+          this.build_VBO( ["position", "color"] );
       }
   };
 
@@ -553,7 +553,7 @@ const Minimal_Shape = defs.Minimal_Shape =
           this.vertices[2] = { position: vec3 (0, 1, 0)};
 
           this.num_vertices = 3; // FINISH: For now, until hammering out multiple vaos per shape.
-          this.fill_buffer( ["position"] );
+          this.build_VBO( ["position"] );
       }
   };
 
@@ -684,7 +684,7 @@ const Minimal_Shape = defs.Minimal_Shape =
         this.normalize_positions( false );
 
         //Deduce it from the obj data!
-        this.fill_buffer( selection_of_attributes );
+        this.build_VBO( selection_of_attributes );
 
         this.ready = true;
       }

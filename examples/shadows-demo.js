@@ -93,7 +93,7 @@ class Debug_Matrix_Scene extends Renderer {
   }
   render_frame (renderer) {
     for (let entity of this.entities) {
-      entity.apply_transform(Mat4.rotation( renderer.uniforms.animation_time/1000, 0,0,1));
+      entity.apply_transform(Mat4.rotation( renderer.uniforms.animation_time/1000, 0,0,1));   // OOPS?
       this.submit(entity);
     }
     this.lightArray.bind(this, this.lightArray.get_binding_point());
