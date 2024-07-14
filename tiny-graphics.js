@@ -930,10 +930,10 @@ class UBO  {
       offset += size[1];
     }
 
-    //Check if the final offset is divisiable by 16, if not add remaining chunk space to last element.
-    if (offset % 16 != 0) {
-      buffer_layout[buffer_layout.length-1].chunk_length += 16 - offset % 16;
-      offset += 16 - offset % 16;
+    const remaining_chunk_space = offset % 16;
+    if ( remaining_chunk_space ) {
+      buffer_layout[buffer_layout.length-1].chunk_length += 16 - remaining_chunk_space;
+      offset += 16 - remaining_chunk_space;
     }
 
     return offset;
