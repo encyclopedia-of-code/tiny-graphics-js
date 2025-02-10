@@ -470,8 +470,7 @@ const Instanced_Shape = defs.Instanced_Shape =
 const Instanced_Cube_Index = defs.Instanced_Cube_Index =
   class Instanced_Cube_Index extends tiny.Shape {
       // A truly minimal Cube
-      constructor () {
-          super();
+      init () {
           // Describe the where the points of a triangle are in space, and also describe their colors:
           this.vertices[0] = { position: vec3 (-0.5, -0.5, -0.5), normal: vec3( 0.0, 0.0, -1.0), texture_coord: Vector.create (0.0, 0.0) }
           this.vertices[1] = { position: vec3 (0.5, -0.5, -0.5),  normal: vec3(0.0, 0.0, -1.0 ), texture_coord: Vector.create (1.0, 0.0) }

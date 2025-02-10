@@ -11,185 +11,23 @@ export const tiny = {...math, ...widgets, math, widgets };
 // Pull these names into this module's scope for convenience:
 const {Vector3, vec3, color, Matrix, Mat4, Keyboard_Manager} = tiny;
 
+
 const Shape = tiny.Shape =
   class Shape {
       // See description at https://github.com/encyclopedia-of-code/tiny-graphics-js/wiki/tiny-graphics.js#shape
       constructor () {
-          [this.vertices, this.indices, this.buffer_infos] = [[], [], []];
-        //  this.attribute_counter = 0;
+          [this.vertices, this.indices] = [[], []];
+          // TODO:  For model loader, switch to a "waiting" flag instead of the opposite "ready"
+          // this.ready = true; // Since models loaded from files can be not ready
+          this.init();
 
-
-  // TODO:  There should be seperate dirty flags per each GPU instance.     // ** just move .dirty to the renderer map's instance.
-
-          this.dirty = true;
-          this.ready = true; // Since models loaded from files can be not ready
-          this.gpu_instances = new Map ();      // Track which GPU contexts this object has copied itself onto.  // ** delete
-      }
-      build_VBO( selection_of_attributes, buffer_hint = "STATIC_DRAW", divisor = 0 ) {    // FINISH:  Rename to build_VBO
-        if( !this.vertices[0] )
-          return;
-        this.dirty = true;
-        // Check if this is a new call, a repeat call, or an invalid call.
-        let buffer_idx_to_fill = -1;
-
-        for( let index of this.buffer_infos.keys() ) {
-          const buffer_info = this.buffer_infos[index];
-          if( buffer_info.attributes[0] != selection_of_attributes[0] )
-            continue;
-          if( !buffer_info.attributes.every( (x,i) => x == selection_of_attributes[i] ) )
-            throw "A call to build_VBO() has been made that did not match the grouping of attributes used in previous calls.";
-          buffer_idx_to_fill = index;
-        }
-
-        // Visit first vertex to note how big the type of each fields/attribute is.  Assume all others will match.
-        // TODO:  How will the user know about this assumption?
-        // TODO:  Test single float attribute type, and perhaps the smaller matrix sizes.
-        let attribute_sizes = selection_of_attributes.map( a => this.vertices[0][a].length || 1 );
-        const attribute_is_matrix = selection_of_attributes.map( a => this.vertices[0][a] instanceof Matrix );
-        let squared_sizes = attribute_sizes.map( (a,i) => Math.pow(a, 1 + attribute_is_matrix[i]) );
-
-        // When a new buffer is requested by using a group of attributes not seen before, make a buffer.
-        if( buffer_idx_to_fill == -1 ) {
-          // TODO:  This part assumes a vertex type of FLOAT.  May need to override.
-          const stride = squared_sizes.reduce( (acc,x) => acc + x * 4, 0 );
-
-          const offsets = [];
-          let offset = 0;
-          for( let index = 0; index < selection_of_attributes.length; index++ ) {
-              offsets[index] = offset;
-              offset += 4*squared_sizes[index];
-          }
-          buffer_idx_to_fill = this.buffer_infos.push(
-            {attributes:  [ ...selection_of_attributes ],
-              sizes: attribute_sizes, attribute_is_matrix, offsets, stride, divisor, hint: buffer_hint,
-              vertices_length: this.vertices.length, override: false,
-              data: new Float32Array (stride/4 * this.vertices.length) }) - 1;
-        }
-        // If a buffer already exists but we need a bigger one to hold all our data
-        else if (this.buffer_infos[buffer_idx_to_fill].vertices_length < this.vertices.length) {
-          const stride = squared_sizes.reduce( (acc,x) => acc + x * 4, 0 );
-          this.buffer_infos[buffer_idx_to_fill].vertices_length = this.vertices.length;
-          this.buffer_infos[buffer_idx_to_fill].override = true;
-          this.buffer_infos[buffer_idx_to_fill].data = new Float32Array (stride/4 * this.vertices.length);
-        }
-
-        const buffer = this.buffer_infos[buffer_idx_to_fill];
-
-        // Fill in the selected buffer locally with the user's updated values from each vertex field.
-        let pos = 0;
-        for (let v of this.vertices)
-          for (let a of selection_of_attributes.keys()){
-
-            const attr = selection_of_attributes[a];
-            const value = (attribute_sizes[a] == 1) ? [ v[attr] ] : v[attr];
-
-            if( attribute_is_matrix[a] ) {
-              for (let i=0; i < 4; i++) {
-                for (let j=0; j < 4; j++) {
-                  // GLSL wants column major matrices.
-                  if( buffer.data[pos] != value[j][i] )
-                    buffer.dirty = true;
-                  buffer.data[pos] = value[j][i];
-                  pos++;
-                }
-              }
-            }
-            else
-              for (let i=0; i < attribute_sizes[a]; i++) {     // TODO:  Not padding; Test for alignment problems if vec2 or vec3
-                if( buffer.data[pos] != value[i] )
-                  buffer.dirty = true;
-                buffer.data[pos] = value[i];
-                pos++;
-              }
-          }
+          if(! this.VBO_plans)
+            // If no VBO layout is specified, assume all vertex fields should be in just one, interleaved.
+            this.VBO_plans = [{attributes: [...Object.keys(this.vertices)] }];
+          this.VBO_plans = this.VBO_plans.map( vbo_plan =>
+             Renderer.build_VBO_plan (this.vertices, vbo_plan) );
       }
 
-        // ** becomes renderer::update_VAO()
-      copy_onto_graphics_card (context, attribute_addresses, write_to_indices = true) {
-          if( !this.buffer_infos.length)
-            return;
-          const gl = context;
-
-          // When this Shape sees a new GPU context (in case of multiple drawing areas), copy the Shape to the GPU. If
-          // it already was copied over, get a pointer to the existing instance.
-          const existing_instance = this.gpu_instances.get (context);               // ** get ( shape )
-          let gpu_instance = existing_instance;
-
-          // If this Shape was never used on this GPU context before, then prepare new buffer indices for this context.
-          if(!existing_instance) {
-            test_rookie_mistake ();
-            const defaults = { VAO: gl.createVertexArray () };
-            gpu_instance = this.gpu_instances.set (context, defaults).get (context);
-          }
-          gl.bindVertexArray( gpu_instance.VAO );
-
-          for( let index of this.buffer_infos.keys() ) { 
-
-            let buffer_info = this.buffer_infos[index];
-            // Only update the subset of buffers that have changed, from the selection provided.
-            if( !buffer_info.dirty)
-              continue;
-            buffer_info.dirty = false;
-
-            let existing_pointer = buffer_info.gpu_pointer;
-            buffer_info.gpu_pointer = buffer_info.gpu_pointer ?? gl.createBuffer()     // ** Consult renderer map instead
-            gl.bindBuffer (gl.ARRAY_BUFFER, buffer_info.gpu_pointer);
-
-            if (existing_pointer !== undefined && !buffer_info.override)
-              gl.bufferSubData (gl.ARRAY_BUFFER, 0, buffer_info.data)
-            else {
-              gl.bufferData (gl.ARRAY_BUFFER, buffer_info.data, gl[buffer_info.hint]);
-
-              // TODO:  Generally check the resize process for cleanliness
-              buffer_info.override = false;              //  FINISH: rename override to has_resized??
-            }
-
-            for( let i of buffer_info.attributes.keys()) {
-
-              const name = buffer_info.attributes[i];
-              if( !attribute_addresses[name] )
-                continue;
-              const attr_index = attribute_addresses[name].index;
-              if( !(attr_index >= 0 )) throw "Attribute addresses not retrieved yet";   // TODO:  Temporary
-
-              // TODO:  Untested with types other than GL_FLOAT.
-              // attribute_addresses[name].type returns the container's type instead (like FLOAT_MAT4/FLOAT_VEC3); not it.
-
-              if( buffer_info.attribute_is_matrix[i] )
-                for( let row = 0; row < buffer_info.sizes[i]; row++ ) {
-                  gl.vertexAttribPointer(attr_index+row, buffer_info.sizes[i], gl.FLOAT, false, buffer_info.stride, buffer_info.offsets[i] + row * buffer_info.sizes[i] * 4);
-                  gl.vertexAttribDivisor(attr_index+row, buffer_info.divisor);
-                  gl.enableVertexAttribArray (attr_index+row);
-                }
-
-              else {
-                if( attribute_addresses[name].size != buffer_info.sizes[i])
-                  throw "Wrong primitive size provided in the VBO vs the shader attribute.";
-
-                // TODO: Support normalization of attributes; allow the user to specify.
-                // This assumes some stuff about the shader: Vertex fields are interleaved; vertex fields are
-                // in the same order that they'll appear in the shader (using offset keyword).
-                gl.vertexAttribPointer(attr_index, buffer_info.sizes[i], gl.FLOAT, false, buffer_info.stride, buffer_info.offsets[i]);
-                gl.vertexAttribDivisor(attr_index, buffer_info.divisor);
-                gl.enableVertexAttribArray (attr_index);
-              }
-            }
-          }
-          if (this.indices.length && write_to_indices) {
-              if ( !existing_instance)
-                  gpu_instance.index_buffer = gl.createBuffer ();     // ** This goes in a map on renderer too
-              gl.bindBuffer (gl.ELEMENT_ARRAY_BUFFER, gpu_instance.index_buffer);
-              if (existing_instance)
-                gl.bufferSubData (gl.ELEMENT_ARRAY_BUFFER, 0, new Uint32Array (this.indices))
-              else
-                gl.bufferData (gl.ELEMENT_ARRAY_BUFFER, new Uint32Array (this.indices), gl["STATIC_DRAW"]);
-          }
-
-          // TODO:  Don't need the below line?
-          gl.bindVertexArray(null);
-          this.dirty = false;
-          return gpu_instance;
-      }
       // NOTE: All the below functions make a further assumption: that your vertex buffer includes fields called
       // "position" and "normal" stored at each point, instead of just any arbitrary fields.
 
@@ -744,12 +582,12 @@ class Entity {
 
 Shape
     "vertices", indices, pre_buffers
-    ready?  dirty?
+    ready, version
     the rest is per GPU
 
-build_VBO
+build_VBO_plans
   copy the selected vertices.fields into the correct pre_buffer, interleaved.
-  mark that pre_buffer dirty and/or resized.
+  mark that pre_buffer dirty and/or resized by changing version
 
 copy_to_gpu
   if not already, make and store *one* VAO per context.
@@ -759,9 +597,9 @@ copy_to_gpu
 
 
 
-  
+
 flush:
-  make dummy material if called from shadow, ie. given a light.shadow shader 
+  make dummy material if called from shadow, ie. given a light.shadow shader
   for (every entity)
     if instanced,
       update matrix buffer if needed
@@ -774,13 +612,13 @@ draw:
     prep shader's uniforms/textures
     write buffers out to UBOs
     obtain/prepare all this:
-      { webglcontext, global_transform, shape.transforms, material, shape_gpu_side, uniforms, type=TRIANGLES, instanceCount }
+      { webglcontext, global_transform, shape.transforms, material, shape_gpu_side, uniforms, type=TRIANGLES,  }
 
 
 idea:
-      
+
       flush:
-        make dummy material if called from shadow, ie. given a light.shadow shader 
+        make dummy material if called from shadow, ie. given a light.shadow shader
         for (every renderListItem)
           if instanced,
             update matrix buffer if needed
@@ -788,19 +626,19 @@ idea:
           if single,
             make single-length matrix buffer
             call draw( .., 1 )
-      
+
       draw:
           prep shader's uniforms/textures
           write buffers out to UBOs
           obtain/prepare all this:
-            { webglcontext, global_transform, shape.transforms, material, shape_gpu_side, uniforms, type=TRIANGLES, instanceCount }
+            { webglcontext, global_transform, shape.transforms, material, shape_gpu_side, uniforms, type=TRIANGLES, instance_count }
 
 Shape:
   Still ought to own indices gpu_side buffer, since that's repetitive per renderListItem
       Shape.copy_to_gpu reduces to a few ELEMENT_ARRAY_BUFFER lines.
         but that means instance & renderer depedency stays.
-            I think the improvement idea here was to move ownership of indices to renderer in a map( Shape, indices ) since a map 
-            would be needed anyway if instance & renderer dependencies stay. 
+            I think the improvement idea here was to move ownership of indices to renderer in a map( Shape, indices ) since a map
+            would be needed anyway if instance & renderer dependencies stay.
 
 
 Needed to manage VAO:
@@ -809,21 +647,23 @@ Needed to manage VAO:
 
 
 */
-        
+
 const RenderListItem = tiny.RenderListItem =
 class RenderListItem {
-
-  // optionally has a next RenderListItem (and a previous, so removal works)
-      // Actually, may need a next and previous per:   Next/Prev VBO, Next/Prev Material, Next/Prev Group, Next/Prev RenderListItem
-
-  
-  // has a list of matrices
-  // has an Entity?  or else { webglcontext, global_transform, shape.transforms, material, shape_gpu_side, uniforms, type=TRIANGLES, instanceCount }
-  // has a VAO
-      // pairing the shape's vertices VBO with THIS RenderListItem's matrices VBO
-      // does Shape no longer own its VAO then?
+  constructor (shape, material) {
+      // To draw, just need all this plus { webglcontext, uniforms}:
+    this.shape = shape;
+    this.material = material;
+    this.model_transforms = [];
+    this.global_transform = Mat4.identity();
+    this.type = TRIANGLES;
+    this.instance_count = 1;
+      // Linked list to other RenderListItems:
+    const neighbors = {next, prev, next_group, prev_group, next_material, prev_material, next_VBO, prev_VBO};
+  }
 
   insert ( ) {
+    // recursive?
     // traverse the linked list, either placing the new item in sequence (ideally sorted) unless
     // an exact match exists, in which case just grow that item's matrices array.
 
@@ -831,10 +671,11 @@ class RenderListItem {
     // Sort order:  (Same VBOs except matrices (Same MATERIAL (Same GROUP (Identical) ) ) )
   }
   remove ( ) {
-    
+    // recursive?
+
   }
 }
-        
+
 const Renderer = tiny.Renderer =
 class Renderer extends Component {
   init (...args) {
@@ -844,11 +685,16 @@ class Renderer extends Component {
     this.max_fps = 60;
     this.prev_frame_number = -1;
     this.is_running = true;
-    this.buffers = new Map();
+    this.UBOs = new Map(); // UBO_Plan -> ubo_ptr for this context
+    this.VAOs = new Map(); // RenderListItem -> vao_ptr for this context
+    this.VBOs = new Map(); // VBO_plan -> vbo_ptr for this context
+    // this.VBO_plans = {}; // vao_ptr -> VBO_plan
+    this.index_buffers = new Map();  // Shape -> EBO_ptr for this context
     this.bound_ubos = new Map();
-    this.selected_ubos = new Map();
+    this.requested_ubos = new Map();
     super.init(...args);
   }
+
   make_context (canvas, background_color = color (0, 0, 0, 1), dimensions) {
       this.canvas              = canvas;
       this.context = canvas.getContext("webgl2");
@@ -888,7 +734,7 @@ class Renderer extends Component {
       this.first_frame_time ??= time;
       let frame_delay = 1000/this.max_fps;
       let current_frame_number = Math.floor((time - this.first_frame_time) / frame_delay);
-      if (current_frame_number > this.prev_frame_number) {  
+      if (current_frame_number > this.prev_frame_number) {
         this.prev_frame_number = current_frame_number;
         if ( !this.props.dont_tick) {
             this.uniforms.animation_delta_time = time - this.prev_time | 0;
@@ -935,79 +781,245 @@ class Renderer extends Component {
   }
   flush (uniforms, clear_entities = true, alternative_shader = undefined) {
 
+    throw "rewrite this";
+
     const shadow_pass_material = alternative_shader ?
                     new Material("shadow_pass_material", alternative_shader) :
                     undefined;
 
-    // FINISH:  We're overwriting vertices below?  Even if we've already called build_VBO with the previous values, isn't that confusing?
+    // FINISH:  We're overwriting vertices below?  Even if we've already called build_VBO_plans with the previous values, isn't that confusing?
     for(let entity of this.queued_entities){
       if( entity.transforms instanceof tiny.Matrix ) {
         // Single matrix case
         if (entity.dirty && entity.shape.ready) {
           entity.shape.vertices = [{instance_transform: entity.transforms}];
           //Ideally use a shader with just a uniform matrix where you pass global.times(model)?
-          entity.shape.build_VBO(["instance_transform"], undefined, 1);
+          entity.shape.build_VBO_plans(["instance_transform"], undefined, 1);
           if( !alternative_shader)
             entity.dirty = false;
         }
-        this.draw(entity.shape, uniforms, entity.model_transform, shadow_pass_material || entity.material, undefined, 1);
+        this.draw(entity.shape, uniforms, entity.model_transform, shadow_pass_material, undefined, 1);
       }
       else {
         if (entity.dirty && entity.shape.ready) {
           entity.shape.vertices = Array(entity.transforms.length).fill(0).map( (x,i) => ({instance_transform: entity.transforms[i]}));
-          entity.shape.build_VBO(["instance_transform"], undefined, 1);
+          entity.shape.build_VBO_plans(["instance_transform"], undefined, 1);
           if( !alternative_shader)
             entity.dirty = false;
         }
-        this.draw(entity.shape, uniforms, entity.model_transform, shadow_pass_material || entity.material, undefined, entity.transforms.length);
+        this.draw(entity.shape, uniforms, entity.model_transform, shadow_pass_material, undefined, entity.transforms.length);
       }
     }
 
     if (clear_entities)
       this.queued_entities = []
   }
+  build_VBO_plan( entries, destination_object, buffer_hint = "STATIC_DRAW", divisor = 0 ) {
+    if( !entries[0] )
+      return;
 
-  execute_shaders (gl, shape, gpu_instance, type, instanceCount) {
-    if (shape.indices.length) {
-        gl.bindBuffer (gl.ELEMENT_ARRAY_BUFFER, gpu_instance.index_buffer);
-        gl.drawElementsInstanced (gl[ type ], shape.indices.length, gl.UNSIGNED_INT, 0, instanceCount);
-    } else gl.drawArraysInstanced (gl[ type ], 0, shape.num_vertices, instanceCount);
+    // Preview the first entry to see what our VBO data source is like.
+    // Each entry is either a matrix or a dictionary (of vertex fields).
+    if (entries[0] instanceof Matrix) {
+       const attribute_sizes = [4], attribute_is_matrix = true, full_sizes = [16];     // Model matrix case
+    }
+    else {
+      // Vertex field case.  Measure each field so we can interleave them.
+      const attribute_sizes = destination_object.attributes.map( a => entries[0][a].length || 1 );
+      const attribute_is_matrix = destination_object.attributes.map( a => entries[0][a] instanceof Matrix );
+      const full_sizes = attribute_sizes.map( (a,i) => Math.pow(a, 1 + attribute_is_matrix[i]) );
+    }
+
+    // Allocate a big enough buffer if none exists or if the vertex list has grown.
+    if (! destination_object.vertices_length >= entries.length) {
+      if( !destination_object.vertices_length) {
+        // No buffer existed.
+        // TODO:  Test single float attribute type, and perhaps the smaller matrix sizes.
+        // TODO:  This part assumes a vertex type of FLOAT.  May need to generalize.
+        const stride = full_sizes.reduce( (acc,x) => acc + x * 4, 0 );
+
+        const offsets = [];
+        let offset = 0;
+        for( let index = 0; index < destination_object.attributes.length; index++ ) {
+            offsets[index] = offset;
+            offset += 4*full_sizes[index];
+        }
+        Object.assign(destination_object, {
+          sizes: attribute_sizes, attribute_is_matrix, offsets, stride, divisor, hint: buffer_hint,
+          vertices_length: entries.length, has_resized: false, version: 0,
+          data: new Float32Array (stride/4 * entries.length) });
+      }
+      else Object.assign(destination_object, {
+        vertices_length: entries.length, version: destination_object.version + 1,
+        data: new Float32Array (destination_object.stride/4 * entries.length),
+        has_resized: true
+      })
+    }
+
+    // Fill in the selected buffer locally with the user's updated values from each vertex field.
+    let pos = 0, next_version = destination_object.version + 1;
+    for (let v of entries)
+      if( attribute_is_matrix[a] ) {
+        for (let i=0; i < 4; i++) {
+          for (let j=0; j < 4; j++) {
+            // GLSL wants column major matrices.
+            if( destination_object.data[pos] != v[j][i] )
+              destination_object.version = next_version;
+            destination_object.data[pos] = v[j][i];
+            pos++;
+          }
+        }
+      }
+      else {
+        for (let a of destination_object.attributes.keys()){
+          const attr = destination_object.attributes[a];
+          const value = (attribute_sizes[a] == 1) ? [ v[attr] ] : v[attr];
+          for (let i=0; i < attribute_sizes[a]; i++) {     // TODO:  Not padding; Test for alignment problems if vec2 or vec3; and vec1 too which may not be handled correctly elsewhere.
+            if( destination_object.data[pos] != value[i] )
+              destination_object.version = next_version;
+            destination_object.data[pos] = value[i];
+            pos++;
+          }
+        }
+      }
+    return destination_object;
   }
-  draw (shape, uniforms, model_transform, material, type = "TRIANGLES", instanceCount) {    // FINISH why is instanceCount the only thing in camelCase
+  update_VAO(renderListItem, attribute_addresses) {
+    if(renderListItem.shape.version < 0)
+      throw "build_VBO_plans() not called yet for that shape!";
+    const gl = this.context;
+    const VAO = this.VAOs.get(renderListItem);
+    if (!VAO) {
+      VAO = gl.createvertexarray();
+      this.VAOs.set(renderListItem, VAO);
+    }
+    gl.bindVertexArray( VAO );
 
-      material.shader.activate (this, uniforms, model_transform, material);
+         // VBO_plan is { attributes, data, offsets, sizes, stride, dirty, has_resized, hint, divisor }
+    for( let VBO_plan of [ ...renderListItem.shape.VBO_plans, renderListItem.matrix_VBO_plan ] ) {
 
-      const gl = this.context;
-      let gpu_instance = shape.gpu_instances.get (gl);                // ** From renderer map instead
-      if( !gpu_instance || shape.dirty)
-        // ** this.update_VAO instead
-        gpu_instance = shape.copy_onto_graphics_card (gl, material.shader.get_attribute_addresses(this) );  // Finish: Awkward; should attribute addresses be stored as a renderer::map instead of on each shader?
-      gl.bindVertexArray( gpu_instance.VAO );
-      for (let binding_point of this.selected_ubos.keys()) {
-        const ubo = this.selected_ubos.get(binding_point);
-        const buffer_holder = this.buffers.get(ubo);
+      // Only update the subset of buffers that have changed, from the selection provided.
+      if( !VBO_plan.dirty)
+        continue;
+      VBO_plan.dirty = false;
 
-        // Send the buffer if dirty.
-        if (!buffer_holder || buffer_holder.dirty)
-          ubo.send_to_GPU (this);
+      let existing = this.VBOs.get( VBO_plan );
+      vbo = existing_pointer ?? gl.createBuffer();
+      this.VBOs.set( VBO_plan, vbo );
+      gl.bindBuffer (gl.ARRAY_BUFFER, vbo);
 
+      if (existing && !VBO_plan.has_resized)
+        gl.bufferSubData (gl.ARRAY_BUFFER, 0, VBO_plan.data)
+      else {
+        gl.bufferData (gl.ARRAY_BUFFER, VBO_plan.data, gl[VBO_plan.hint]);
 
-        // FINISH:  The value passed to has() below seems incorrect; always will be false.
-        // Bind the UBO if it needs it.
-        if (this.bound_ubos.has(ubo) || !this.buffers.get(ubo))
-          continue;
-        gl.bindBufferBase (gl.UNIFORM_BUFFER, binding_point, this.buffers.get(ubo).buffer);
-        this.bound_ubos.set (binding_point, ubo);
+        VBO_plan.has_resized = false;
       }
 
-      // Run the shaders to draw every triangle now:
-      this.execute_shaders (gl, shape, gpu_instance, type, instanceCount);
+      for( let i of VBO_plan.attributes.keys()) {
+
+        const name = VBO_plan.attributes[i];
+        if( !attribute_addresses[name] )
+          continue;
+        const attr_index = attribute_addresses[name].index;
+        if( !(attr_index >= 0 )) throw "Attribute addresses not retrieved yet";   // TODO:  Temporary
+
+        // TODO:  Untested with numeric types other than GL_FLOAT.
+        // attribute_addresses[name].type returns the container's type instead (like FLOAT_MAT4/FLOAT_VEC3); not it.
+
+        if( VBO_plan.attribute_is_matrix[i] )
+          for( let row = 0; row < VBO_plan.sizes[i]; row++ ) {
+            gl.vertexAttribPointer(attr_index+row, VBO_plan.sizes[i], gl.FLOAT, false, VBO_plan.stride, VBO_plan.offsets[i] + row * VBO_plan.sizes[i] * 4);
+            gl.vertexAttribDivisor(attr_index+row, VBO_plan.divisor);
+            gl.enableVertexAttribArray (attr_index+row);
+          }
+
+        else {
+          if( attribute_addresses[name].size != VBO_plan.sizes[i])
+            throw "Wrong primitive size provided in the VBO vs the shader attribute.";
+
+          // TODO: Support normalization of attributes; allow the user to specify.
+          // This assumes some stuff about the shader: Vertex fields are interleaved; vertex fields are
+          // in the same order that they'll appear in the shader (using offset keyword).
+          gl.vertexAttribPointer(attr_index, VBO_plan.sizes[i], gl.FLOAT, false, VBO_plan.stride, VBO_plan.offsets[i]);
+          gl.vertexAttribDivisor(attr_index, VBO_plan.divisor);
+          gl.enableVertexAttribArray (attr_index);
+        }
+      }
+    }
+    gl.bindVertexArray(null);
+  }
+  bind_UBO (ubo_plan, binding_point) {
+    this.requested_ubos.set(binding_point, ubo_plan);
+  }
+  draw (uniforms, overridden_material) {
+    const material = overridden_material ?? renderListItem.material;
+    const shape = renderListItem.shape;
+    material.shader.activate (this, uniforms, renderListItem.global_transform, material);
+
+    const gl = this.context;
+    const VAO = this.VAOs.get( renderListItem );
+
+    // FINISH:  Need to check renderListItem.model_transforms version, and update if they change.
+    // FINISH:  Check the version of each VBO_Plan that we'll use
+    if( !VAO || shape.version > renderListItem.shape_version) {
+      test_rookie_mistake();
+      this.update_VAO (renderListItem, material.shader.get_attribute_addresses(this) );  // Finish: Awkward; store a renderer::map of Shader -> attribute addresses instead.
+      // FINISH: Maybe part of the same fix: Move Shader, Texture, and Shadow_Map instances into renderer maps.
+    }
+    gl.bindVertexArray( VAO );
+
+    // FINISH:  Need to check shape.indices version, so we don't re-send indices every frame
+    if (shape.indices.length) {
+        const existing = this.index_buffers.get (shape);
+        index_buffer = existing ?? gl.createBuffer();
+        this.index_buffers.set(index_buffer);
+        gl.bindBuffer (gl.ELEMENT_ARRAY_BUFFER, index_buffer );
+        if (existing)
+          gl.bufferSubData (gl.ELEMENT_ARRAY_BUFFER, 0, new Uint32Array (shape.indices))
+        else
+          gl.bufferData (gl.ELEMENT_ARRAY_BUFFER, new Uint32Array (shape.indices), gl["STATIC_DRAW"]);
+    }
+
+    for (let binding_point of this.requested_ubos.keys()) {
+      const ubo_plan = this.requested_ubos.get(binding_point);
+      const existing = this.UBOs.get(ubo_plan);
+      const ubo = existing ?? gl.createBuffer();
+      this.UBOs.set(ubo_plan, ubo);
+
+      // FINISH:  Need to check UBO version, so we don't re-send buffer every frame
+      if (ubo_plan.buffer_size && ubo_plan.ready) {
+        ubo_plan.fill_buffer(ubo_plan.fields);
+        gl.bindBuffer(gl.UNIFORM_BUFFER, ubo);
+        if(! existing) {
+          test_rookie_mistake ();
+          gl.bufferData (gl.UNIFORM_BUFFER, ubo_plan.buffer_size, gl.DYNAMIC_DRAW);
+        }
+        gl.bufferSubData(gl.UNIFORM_BUFFER, 0, ubo_plan.local_buffer);
+        // gl.bindBuffer(gl.UNIFORM_BUFFER, null);      // TODO: Unneccesary?
+      }
+
+      if (! this.bound_ubos.has(ubo) && this.UBOs.get(ubo_plan) )
+        gl.bindBufferBase (gl.UNIFORM_BUFFER, binding_point, ubo);
+      this.bound_ubos.set (binding_point, ubo);
+    }
+
+    // Run the shaders to draw every triangle now:
+    this.execute_shaders (gl, shape, this.index_buffers.get(shape), type, instance_count);
+  }
+  execute_shaders (gl, shape, index_buffer, type, instance_count) {
+    if (shape.indices.length) {
+        gl.bindBuffer (gl.ELEMENT_ARRAY_BUFFER, index_buffer);
+        gl.drawElementsInstanced (gl[ type ], shape.indices.length, gl.UNSIGNED_INT, 0, instance_count);
+    } else gl.drawArraysInstanced (gl[ type ], 0, shape.num_vertices, instance_count);
   }
 }
 
-// TODO:  Classes UBO and Shape seem very similar at their core (each know where to put things in a local buffer, then do bufferData).  
-// Could Shape/vertices be specified by JSON as well to join with UBO?  Should UBO have its gl stuff moved to a renderer::map for consistency with Shape?
+// TODO:  Classes UBO and Shape seem very similar at their core (each know where to put things in a local buffer prepared for bufferData).
+// Could Shape/vertices be specified by JSON as well to join with UBO?
 
+
+//FINISH: Rename to UBO_Plan
 const UBO = tiny.UBO =
 class UBO {
   constructor (...args) {
@@ -1066,29 +1078,5 @@ class UBO {
         values_to_set.set(in_key, null);                 // FINISH: change to .delete(in_key) for clarity
       }
     }
-  }
-  send_to_GPU (renderer) {
-    if (!this.buffer_size || !this.ready)
-      return;
-
-    // FINISH:  Implement dirty flag when a UBO is changed---so it knows to re-send.
-    this.fill_buffer(this.fields);
-    let instance = renderer.buffers.get(this), existing = instance;
-    const gl = renderer.context;
-    if(! instance) {
-      test_rookie_mistake ();
-      instance = renderer.buffers.set(this, {dirty:true, buffer: gl.createBuffer()}).get(this);
-    }
-    gl.bindBuffer(gl.UNIFORM_BUFFER, instance.buffer);
-    if(! existing)
-      gl.bufferData (gl.UNIFORM_BUFFER, this.buffer_size, gl.DYNAMIC_DRAW);
-    gl.bufferSubData(gl.UNIFORM_BUFFER, 0, this.local_buffer);
-
-    instance.dirty = false;
-    return instance;
-    // gl.bindBuffer(gl.UNIFORM_BUFFER, null);      // TODO: Unneccesary?
-  }
-  bind (renderer, binding_point) {    // why not move to renderer
-    renderer.selected_ubos.set(binding_point, this);
   }
 }
