@@ -12,7 +12,7 @@ class Shadows_Demo extends Renderer {
     this.shapes = {cube: new defs.Instanced_Cube_Index()};
     // this.shapes = {cube: new defs.Minimaler_Shape()};
 
-    this.lightArray = 
+    this.lightArray =
          new defs.LightArray({ambient: .1, lights:[{direction_or_position: vec4(2.0, 5.0, 0.0, 0.0),
              color: color(1.0, 1.0, 1.0, 1.0), diffuse: 1, specular: 0.7, attenuation_factor: 0.01}]});
         //   new defs.Shadow_Light({ ambient: .1, lights:[{direction_or_position: vec4(2.0, 5.0, 0.0, 0.0),
@@ -32,6 +32,7 @@ class Shadows_Demo extends Renderer {
       renderListItem.model_transforms.push( Mat4.translation(0.0, -2.0, 0.0).times(Mat4.scale(5, .5, 5))
          , Mat4.identity()
       );
+      renderListItem.instance_count = renderListItem.model_transforms.length;
       renderListItem.update_matrices();
     }
 
@@ -49,7 +50,7 @@ class Shadows_Demo extends Renderer {
   render_controls() {
     this.frame_rates ??= [60, 120, 0, 1, 2, 8, 16, 30];
     this.key_triggered_button ("Framerate: ", ["&"], () => {
-       this.frame_rates.push( this.frame_rates.shift() ); 
+       this.frame_rates.push( this.frame_rates.shift() );
        this.max_fps = this.frame_rates[0];
        this.prev_frame_number = -1 } );
     this.live_string (box => { box.textContent = this.max_fps } );

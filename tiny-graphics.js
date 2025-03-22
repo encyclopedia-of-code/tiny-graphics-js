@@ -743,7 +743,7 @@ class RenderListItem {
       // Linked list to other RenderListItems:
     // const neighbors = {next, prev, next_group, prev_group, next_material, prev_material, next_VBO, prev_VBO};
   }
-  update_matrices() { Shape.build_VBO_plan (this.model_transforms, this.matrix_VBO_plan) }
+  update_matrices() { Shape.build_VBO_plan (this.model_transforms, this.matrix_VBO_plan, "STATIC_DRAW", 1) }
 
 
   insert ( ) {
