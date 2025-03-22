@@ -1,7 +1,7 @@
 import {tiny, defs} from './common.js';
 
                                                   // Pull these names into this module's scope for convenience:
-const { vec3, vec4, color, Mat4, Shape, Shader, Texture, Entity, Renderer } = tiny;
+const { vec3, vec4, color, Mat4, Shape, Shader, Texture, RenderListItem, Renderer } = tiny;
 const {Camera, LightArray, Material} = defs
 
 export
@@ -9,7 +9,8 @@ const Shadows_Demo = defs.Shadows_Demo =
 class Shadows_Demo extends Renderer {
   init () {
     super.init();
-    this.shapes = {cube: new defs.Instanced_Cube_Index ()};
+    this.shapes = {cube: new defs.Instanced_Cube_Index()};
+    // this.shapes = {cube: new defs.Minimaler_Shape()};
 
     this.lightArray = 
          new defs.LightArray({ambient: .1, lights:[{direction_or_position: vec4(2.0, 5.0, 0.0, 0.0),
@@ -19,21 +20,31 @@ class Shadows_Demo extends Renderer {
 
     this.camera = new Camera();
 
-    this.shader = new defs.Universal_Shader (LightArray.NUM_LIGHTS, {has_shadows: false});
+     this.shader = new defs.Universal_Shader (LightArray.NUM_LIGHTS, {has_shadows: false});
+   // this.shader = new defs.Basic_Shader();
     this.stars = new Material(this.shader, { color: vec4(.8, .7, .5, 1) }, { diffuse_texture: new Texture( "assets/stars.png" ) });
     //  new Material(this.shader, { color: vec4(.8, .7, .5, 1) }, { diffuse_texture: this.sun.shadow_map[0] });
     //  new defs.Material_From_File(this.shader, "assets/shark_cm/shark_cm.mtl" );
 
+    this.renderList.push(new RenderListItem(this.shapes.cube, this.stars) );
+    // this.renderList.push(new RenderListItem(this.shapes.cube, new Material(this.shader) ) );
+    for( let renderListItem of this.renderList) {
+      renderListItem.model_transforms.push( Mat4.translation(0.0, -2.0, 0.0).times(Mat4.scale(5, .5, 5))
+         , Mat4.identity()
+      );
+      renderListItem.update_matrices();
+    }
+
     const {camera, lightArray} = this;
     this.uniforms.UBOs = {camera, lightArray, material: this.stars};
 
-    this.entities.push(new Entity(this.shapes.cube,
-      // new Entity(new defs.Shape_From_File("assets/shark_cm/shark_cm.obj"),
-      [
-        Mat4.translation(0.0, -2.0, 0.0).times(Mat4.scale(5, .5, 5))
-        , Mat4.identity()
-      ],
-      this.stars));
+  //   this.entities.push(new Entity(this.shapes.cube,
+  //     // new Entity(new defs.Shape_From_File("assets/shark_cm/shark_cm.obj"),
+  //     [
+  //       Mat4.translation(0.0, -2.0, 0.0).times(Mat4.scale(5, .5, 5))
+  //       , Mat4.identity()
+  //     ],
+  //     this.stars));
   }
   render_controls() {
     this.frame_rates ??= [60, 120, 0, 1, 2, 8, 16, 30];
@@ -51,22 +62,20 @@ class Shadows_Demo extends Renderer {
 
       this.uniforms.camera_inverse = this.camera.fields.camera_inverse;
       this.uniforms.camera_transform = this.camera.fields.camera_world;
-      this.animated_children.push( renderer.controls = new defs.Movement_Controls( { uniforms: this.uniforms },
-// FINISH:
-         // Can't do on first frame:    () => {this.camera.fill_buffer(this.camera.fields)}
-         // Yuck:
-              () => {if(this.buffers.get(this.camera)) this.buffers.get(this.camera).dirty = true;}
-              ) );
+      this.animated_children.push( renderer.controls = new defs.Movement_Controls( { uniforms: this.uniforms } ) );
       renderer.controls.add_mouse_controls( renderer.canvas );
     }
-    this.camera.bind(this, this.camera.get_binding_point());
-    this.lightArray.bind(this, this.lightArray.get_binding_point());
+    this.bind_UBO(this.camera, this.camera.get_binding_point());
+    this.bind_UBO(this.lightArray, this.lightArray.get_binding_point());
+
+    for( let renderListItem of this.renderList)
+      this.draw(renderListItem, this.uniforms);
 
 // FINISH: Extra shape draw didn't work due to sharing transforms VBO: this.shapes.cube.draw( renderer, .. undefined, 1);
-    for (let entity of this.entities)
-      this.submit(entity);
-    renderer.shadow_map_pass(this.uniforms);
-    renderer.flush(this.uniforms);
+//    for (let entity of this.entities)
+//      this.submit(entity);
+//    renderer.shadow_map_pass(this.uniforms);
+//    renderer.flush(this.uniforms);
   }
 };
 

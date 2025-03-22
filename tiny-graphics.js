@@ -20,14 +20,80 @@ const Shape = tiny.Shape =
           // TODO:  For model loader, switch to a "waiting" flag instead of the opposite "ready"
           // this.ready = true; // Since models loaded from files can be not ready
           this.init();
+          this.indices_version = 0;
 
           if(! this.VBO_plans)
             // If no VBO layout is specified, assume all vertex fields should be in just one, interleaved.
-            this.VBO_plans = [{attributes: [...Object.keys(this.vertices)] }];
-          this.VBO_plans = this.VBO_plans.map( vbo_plan =>
-             Renderer.build_VBO_plan (this.vertices, vbo_plan) );
+            this.VBO_plans = [{attributes: [...Object.keys(this.vertices[0])] }];
+          for( let vbo_plan of this.VBO_plans )
+            Shape.build_VBO_plan (this.vertices, vbo_plan);
       }
+      static build_VBO_plan( entries, destination_object, buffer_hint = "STATIC_DRAW", divisor = 0 ) {
+        if( !entries[0] )
+          return;
 
+        let attribute_sizes, attribute_is_matrix, full_sizes;
+        // Preview the first entry to see what our VBO data source is like.
+        // Each entry is either a matrix or a dictionary (of vertex fields).
+        if (entries[0] instanceof Matrix) {
+           attribute_sizes = [4], attribute_is_matrix = [true], full_sizes = [16];     // Model matrix case
+        }
+        else {
+          // Vertex field case.  Measure each field so we can interleave them.
+          attribute_sizes = destination_object.attributes.map( a => entries[0][a].length || 1 );
+          attribute_is_matrix = destination_object.attributes.map( a => entries[0][a] instanceof Matrix );
+          full_sizes = attribute_sizes.map( (a,i) => Math.pow(a, 1 + attribute_is_matrix[i]) );
+        }
+
+        // Allocate a big enough buffer if none exists or if the vertex list has grown.
+        if( !destination_object.vertex_count) {
+          // No buffer existed.
+          // TODO:  Test single float attribute type, and perhaps the smaller matrix sizes.
+          // TODO:  This part assumes a vertex type of FLOAT.  May need to generalize.
+          const stride = full_sizes.reduce( (acc,x) => acc + x * 4, 0 );
+
+          const offsets = [];
+          let offset = 0;
+          for( let index = 0; index < destination_object.attributes.length; index++ ) {
+              offsets[index] = offset;
+              offset += 4*full_sizes[index];
+          }
+          Object.assign(destination_object, {
+            sizes: attribute_sizes, attribute_is_matrix, offsets, stride, divisor, hint: buffer_hint,
+            vertex_count: entries.length, has_resized: false, version: 0,
+            data: new Float32Array (stride/4 * entries.length) });
+        }
+        if (destination_object.vertex_count < entries.length)
+          Object.assign(destination_object, {
+            vertex_count: entries.length, version: destination_object.version + 1,
+            data: new Float32Array (destination_object.stride/4 * entries.length),
+            has_resized: true
+          })
+
+        // Fill in the selected buffer locally with the user's updated values from each vertex field.
+        let pos = 0, next_version = destination_object.version + 1;
+        for (let v of entries)
+          for (let a of destination_object.attributes.keys()) {
+            const attr = destination_object.attributes[a];
+                // TODO:  Not padding; Test for alignment problems if vec2 or vec3;
+                // and vec1 too which may not be handled correctly elsewhere.
+            const vector = (attribute_sizes[a] == 1) ? [ v[attr] ] : v[attr];
+            function set_element (value) {
+                if( destination_object.data[pos] != value )
+                  destination_object.version = next_version;
+                destination_object.data[pos] = value;
+                pos++;
+            }
+            if( attribute_is_matrix[a] ) {
+                for (let i=0; i < 4; i++)
+                  for (let j=0; j < 4; j++)
+                    set_element (v[j][i]);   // GLSL wants column major matrices.
+            }
+            else for (let i=0; i < attribute_sizes[a]; i++)
+                    set_element(vector[i]);
+          }
+        return destination_object;
+      }
       // NOTE: All the below functions make a further assumption: that your vertex buffer includes fields called
       // "position" and "normal" stored at each point, instead of just any arbitrary fields.
 
@@ -182,7 +248,7 @@ const Shader = tiny.Shader =
                     const UBO_index = gl.getUniformBlockIndex(program, UBO_name);
                     this.UBOs_to_block_index.set (uniforms.UBOs[UBO_name], UBO_index)
 
-                    if (! uniforms.UBOs[UBO_name].initialized)
+                    if (! uniforms.UBOs[UBO_name].initialized)     // FINISH: initialized doesn't exist
                       uniforms.UBOs[UBO_name].buffer_size = UBO_size;
 
                     const indices = gl.getActiveUniformBlockParameter(program, i, gl.UNIFORM_BLOCK_ACTIVE_UNIFORM_INDICES);
@@ -250,25 +316,31 @@ const Shader = tiny.Shader =
       get_attribute_addresses(renderer) {
         return this.gpu_instances.get(renderer.context).attribute_addresses;
       }
-      activate (renderer, uniforms, model_transform, material) {
+      activate (renderer, uniforms, group_transform, material) {
           // Track which GPU contexts this object has copied itself onto:
           const context = renderer.context;
           if ( !this.gpu_instances) this.gpu_instances =  new Map ();
           const gpu_instance = this.gpu_instances.get (context) || this.copy_onto_graphics_card (context, uniforms);
 
-          // TODO:  Cache this
-          context.useProgram (gpu_instance.program);
+          const previous_program = renderer.gpu_versions.get("Program");
+          renderer.gpu_versions.set("Program", gpu_instance.program);
+          if(previous_program != gpu_instance.program )
+            context.useProgram (gpu_instance.program);
 
           // --- Send over all the values needed by this particular shader to the GPU: ---
-          this.update_GPU (renderer, gpu_instance.gpu_addresses, uniforms, model_transform, material);
+          this.update_GPU (renderer, gpu_instance.gpu_addresses, uniforms, group_transform, material);
 
           let offset = 0;
           for (const [name, sampler] of material.samplers.entries())
             if (sampler && sampler.ready) {
-              // Select texture unit offset for the fragment shader Sampler2D uniform that is called the current name.
-              context.uniform1i (gpu_instance.gpu_addresses[name], offset);
+
+              const current_sampler2D_name = gpu_instance.gpu_addresses[name];
+              const previous_texture_offset = renderer.gpu_versions.get("Texture offset_"+current_sampler2D_name);
+              renderer.gpu_versions.set("Texture offset_"+current_sampler2D_name, offset);
+              if(previous_texture_offset != offset )
+                context.uniform1i (current_sampler2D_name, offset);
               // For this draw, use the texture image from correct the GPU buffer:
-              sampler.activate (context, offset);
+              sampler.activate (renderer, offset);
               offset++;
             }
       }
@@ -325,17 +397,26 @@ const Texture = tiny.Texture =
               gl.generateMipmap (gl.TEXTURE_2D);
           return gpu_instance;
       }
-      activate (context, texture_unit = 0) {
+      activate (renderer, texture_unit = 0) {
           if ( !this.ready)
               return;          // Terminate draw requests until the image file is actually loaded over the network.
+          const context = renderer.context;
           const gpu_instance = this.gpu_instances.get (context) || this.copy_onto_graphics_card (context);
-          context.activeTexture (context[ "TEXTURE" + texture_unit ]);
-          context.bindTexture (context.TEXTURE_2D, gpu_instance.texture_buffer_pointer);
+          const previous_texture_unit = renderer.gpu_versions.get("Texture unit");
+          const field_ID = context[ "TEXTURE" + texture_unit ];
+          renderer.gpu_versions.set("Texture unit", field_ID);
+          const previous_pointer = renderer.gpu_versions.get("Texture buffer pointer");
+          const pointer = gpu_instance.texture_buffer_pointer;
+          renderer.gpu_versions.set("Texture buffer pointer", pointer);
+          if(previous_texture_unit != field_ID || previous_pointer != pointer) {
+            context.activeTexture (field_ID);
+            context.bindTexture (context.TEXTURE_2D, pointer);
+          }
       }
   };
 
-  const Shadow_Map = tiny.Shadow_Map =
-  class Shadow_Map {
+const Shadow_Map = tiny.Shadow_Map =
+class Shadow_Map {
       constructor (width, height, min_filter = "NEAREST", mag_filter = "NEAREST") {
           Object.assign (this, {width, height, min_filter, mag_filter, ready:true});
 
@@ -655,12 +736,15 @@ class RenderListItem {
     this.shape = shape;
     this.material = material;
     this.model_transforms = [];
-    this.global_transform = Mat4.identity();
-    this.type = TRIANGLES;
+    this.matrix_VBO_plan = {attributes: ["model_transform"] };
+    this.group_transform = Mat4.identity();
+    this.type = "TRIANGLES";
     this.instance_count = 1;
       // Linked list to other RenderListItems:
-    const neighbors = {next, prev, next_group, prev_group, next_material, prev_material, next_VBO, prev_VBO};
+    // const neighbors = {next, prev, next_group, prev_group, next_material, prev_material, next_VBO, prev_VBO};
   }
+  update_matrices() { Shape.build_VBO_plan (this.model_transforms, this.matrix_VBO_plan) }
+
 
   insert ( ) {
     // recursive?
@@ -679,8 +763,7 @@ class RenderListItem {
 const Renderer = tiny.Renderer =
 class Renderer extends Component {
   init (...args) {
-    this.entities = []
-    this.queued_entities = []
+    this.renderList = []
     this.lights = []            // TODO: Needed?
     this.max_fps = 60;
     this.prev_frame_number = -1;
@@ -688,13 +771,11 @@ class Renderer extends Component {
     this.UBOs = new Map(); // UBO_Plan -> ubo_ptr for this context
     this.VAOs = new Map(); // RenderListItem -> vao_ptr for this context
     this.VBOs = new Map(); // VBO_plan -> vbo_ptr for this context
-    // this.VBO_plans = {}; // vao_ptr -> VBO_plan
+    this.gpu_versions = new Map(); // VBO_plan, UBO_plan, or EBO_ptr -> version number existing on GPU for this context
     this.index_buffers = new Map();  // Shape -> EBO_ptr for this context
-    this.bound_ubos = new Map();
     this.requested_ubos = new Map();
     super.init(...args);
   }
-
   make_context (canvas, background_color = color (0, 0, 0, 1), dimensions) {
       this.canvas              = canvas;
       this.context = canvas.getContext("webgl2");
@@ -780,7 +861,6 @@ class Renderer extends Component {
     }
   }
   flush (uniforms, clear_entities = true, alternative_shader = undefined) {
-
     throw "rewrite this";
 
     const shadow_pass_material = alternative_shader ?
@@ -814,97 +894,30 @@ class Renderer extends Component {
     if (clear_entities)
       this.queued_entities = []
   }
-  build_VBO_plan( entries, destination_object, buffer_hint = "STATIC_DRAW", divisor = 0 ) {
-    if( !entries[0] )
-      return;
-
-    // Preview the first entry to see what our VBO data source is like.
-    // Each entry is either a matrix or a dictionary (of vertex fields).
-    if (entries[0] instanceof Matrix) {
-       const attribute_sizes = [4], attribute_is_matrix = true, full_sizes = [16];     // Model matrix case
-    }
-    else {
-      // Vertex field case.  Measure each field so we can interleave them.
-      const attribute_sizes = destination_object.attributes.map( a => entries[0][a].length || 1 );
-      const attribute_is_matrix = destination_object.attributes.map( a => entries[0][a] instanceof Matrix );
-      const full_sizes = attribute_sizes.map( (a,i) => Math.pow(a, 1 + attribute_is_matrix[i]) );
-    }
-
-    // Allocate a big enough buffer if none exists or if the vertex list has grown.
-    if (! destination_object.vertices_length >= entries.length) {
-      if( !destination_object.vertices_length) {
-        // No buffer existed.
-        // TODO:  Test single float attribute type, and perhaps the smaller matrix sizes.
-        // TODO:  This part assumes a vertex type of FLOAT.  May need to generalize.
-        const stride = full_sizes.reduce( (acc,x) => acc + x * 4, 0 );
-
-        const offsets = [];
-        let offset = 0;
-        for( let index = 0; index < destination_object.attributes.length; index++ ) {
-            offsets[index] = offset;
-            offset += 4*full_sizes[index];
-        }
-        Object.assign(destination_object, {
-          sizes: attribute_sizes, attribute_is_matrix, offsets, stride, divisor, hint: buffer_hint,
-          vertices_length: entries.length, has_resized: false, version: 0,
-          data: new Float32Array (stride/4 * entries.length) });
-      }
-      else Object.assign(destination_object, {
-        vertices_length: entries.length, version: destination_object.version + 1,
-        data: new Float32Array (destination_object.stride/4 * entries.length),
-        has_resized: true
-      })
-    }
-
-    // Fill in the selected buffer locally with the user's updated values from each vertex field.
-    let pos = 0, next_version = destination_object.version + 1;
-    for (let v of entries)
-      if( attribute_is_matrix[a] ) {
-        for (let i=0; i < 4; i++) {
-          for (let j=0; j < 4; j++) {
-            // GLSL wants column major matrices.
-            if( destination_object.data[pos] != v[j][i] )
-              destination_object.version = next_version;
-            destination_object.data[pos] = v[j][i];
-            pos++;
-          }
-        }
-      }
-      else {
-        for (let a of destination_object.attributes.keys()){
-          const attr = destination_object.attributes[a];
-          const value = (attribute_sizes[a] == 1) ? [ v[attr] ] : v[attr];
-          for (let i=0; i < attribute_sizes[a]; i++) {     // TODO:  Not padding; Test for alignment problems if vec2 or vec3; and vec1 too which may not be handled correctly elsewhere.
-            if( destination_object.data[pos] != value[i] )
-              destination_object.version = next_version;
-            destination_object.data[pos] = value[i];
-            pos++;
-          }
-        }
-      }
-    return destination_object;
-  }
   update_VAO(renderListItem, attribute_addresses) {
-    if(renderListItem.shape.version < 0)
-      throw "build_VBO_plans() not called yet for that shape!";
     const gl = this.context;
-    const VAO = this.VAOs.get(renderListItem);
-    if (!VAO) {
-      VAO = gl.createvertexarray();
-      this.VAOs.set(renderListItem, VAO);
-    }
-    gl.bindVertexArray( VAO );
+    const existing = this.VAOs.get (renderListItem);
+    const VAO  = existing ?? gl.createVertexArray();
+    this.VAOs.set (renderListItem, VAO);
+    if (!existing) test_rookie_mistake();
 
-         // VBO_plan is { attributes, data, offsets, sizes, stride, dirty, has_resized, hint, divisor }
+    const previous_VAO = this.gpu_versions.get("VAO");
+    this.gpu_versions.set("VAO", VAO);
+    if(previous_VAO != VAO )
+      gl.bindVertexArray( VAO );
+
+         // VBO_plan is { attributes, data, offsets, sizes, stride, hint, vertex_count, has_resized, version, divisor }
     for( let VBO_plan of [ ...renderListItem.shape.VBO_plans, renderListItem.matrix_VBO_plan ] ) {
 
-      // Only update the subset of buffers that have changed, from the selection provided.
-      if( !VBO_plan.dirty)
-        continue;
-      VBO_plan.dirty = false;
+      if( VBO_plan.version < 0 )
+        throw "This VBO is blank somehow; build_VBO_plans() was never called for it.";
 
-      let existing = this.VBOs.get( VBO_plan );
-      vbo = existing_pointer ?? gl.createBuffer();
+      if( this.gpu_versions.get(VBO_plan) >= VBO_plan.version  )
+        continue;
+      this.gpu_versions.set(VBO_plan, VBO_plan.version);
+
+      const existing = this.VBOs.get( VBO_plan );
+      const vbo = existing ?? gl.createBuffer();
       this.VBOs.set( VBO_plan, vbo );
       gl.bindBuffer (gl.ARRAY_BUFFER, vbo);
 
@@ -917,7 +930,6 @@ class Renderer extends Component {
       }
 
       for( let i of VBO_plan.attributes.keys()) {
-
         const name = VBO_plan.attributes[i];
         if( !attribute_addresses[name] )
           continue;
@@ -947,38 +959,38 @@ class Renderer extends Component {
         }
       }
     }
-    gl.bindVertexArray(null);
   }
   bind_UBO (ubo_plan, binding_point) {
     this.requested_ubos.set(binding_point, ubo_plan);
   }
-  draw (uniforms, overridden_material) {
+  draw (renderListItem, uniforms, overridden_material) {
     const material = overridden_material ?? renderListItem.material;
     const shape = renderListItem.shape;
-    material.shader.activate (this, uniforms, renderListItem.global_transform, material);
+    material.shader.activate (this, uniforms, renderListItem.group_transform, material);
 
     const gl = this.context;
-    const VAO = this.VAOs.get( renderListItem );
-
-    // FINISH:  Need to check renderListItem.model_transforms version, and update if they change.
-    // FINISH:  Check the version of each VBO_Plan that we'll use
-    if( !VAO || shape.version > renderListItem.shape_version) {
-      test_rookie_mistake();
-      this.update_VAO (renderListItem, material.shader.get_attribute_addresses(this) );  // Finish: Awkward; store a renderer::map of Shader -> attribute addresses instead.
+      // FINISH: Awkward; store a renderer::map of Shader -> attribute addresses instead.
       // FINISH: Maybe part of the same fix: Move Shader, Texture, and Shadow_Map instances into renderer maps.
-    }
-    gl.bindVertexArray( VAO );
+    this.update_VAO (renderListItem, material.shader.get_attribute_addresses(this) );
 
-    // FINISH:  Need to check shape.indices version, so we don't re-send indices every frame
     if (shape.indices.length) {
         const existing = this.index_buffers.get (shape);
-        index_buffer = existing ?? gl.createBuffer();
-        this.index_buffers.set(index_buffer);
-        gl.bindBuffer (gl.ELEMENT_ARRAY_BUFFER, index_buffer );
-        if (existing)
-          gl.bufferSubData (gl.ELEMENT_ARRAY_BUFFER, 0, new Uint32Array (shape.indices))
-        else
-          gl.bufferData (gl.ELEMENT_ARRAY_BUFFER, new Uint32Array (shape.indices), gl["STATIC_DRAW"]);
+        const EBO = existing ?? gl.createBuffer();
+        this.index_buffers.set(shape, EBO);
+
+        const previous_EBO = this.gpu_versions.get("EBO");
+        this.gpu_versions.set("EBO", EBO);
+        if(previous_EBO != EBO )
+          gl.bindBuffer (gl.ELEMENT_ARRAY_BUFFER, EBO);
+
+        if( ! this.gpu_versions.get(EBO) >= shape.indices_version ) {
+          this.gpu_versions.set(EBO, shape.indices_version);
+
+          if (existing)
+            gl.bufferSubData (gl.ELEMENT_ARRAY_BUFFER, 0, new Uint32Array (shape.indices))
+          else
+            gl.bufferData (gl.ELEMENT_ARRAY_BUFFER, new Uint32Array (shape.indices), gl["STATIC_DRAW"]);
+        }
     }
 
     for (let binding_point of this.requested_ubos.keys()) {
@@ -987,31 +999,41 @@ class Renderer extends Component {
       const ubo = existing ?? gl.createBuffer();
       this.UBOs.set(ubo_plan, ubo);
 
-      // FINISH:  Need to check UBO version, so we don't re-send buffer every frame
+      const ID = "Bound_UBO_" + binding_point;
+      const previous_bound_ubo = this.gpu_versions.get(ID);
+      this.gpu_versions.set(ID, ubo);
+      if(previous_bound_ubo != ubo )
+        gl.bindBufferBase (gl.UNIFORM_BUFFER, binding_point, ubo);
+
       if (ubo_plan.buffer_size && ubo_plan.ready) {
         ubo_plan.fill_buffer(ubo_plan.fields);
+
+        if( this.gpu_versions.get(ubo_plan) >= ubo_plan.version )
+          continue;
+        this.gpu_versions.set(ubo_plan, ubo_plan.version);
+
         gl.bindBuffer(gl.UNIFORM_BUFFER, ubo);
         if(! existing) {
           test_rookie_mistake ();
           gl.bufferData (gl.UNIFORM_BUFFER, ubo_plan.buffer_size, gl.DYNAMIC_DRAW);
         }
         gl.bufferSubData(gl.UNIFORM_BUFFER, 0, ubo_plan.local_buffer);
-        // gl.bindBuffer(gl.UNIFORM_BUFFER, null);      // TODO: Unneccesary?
       }
-
-      if (! this.bound_ubos.has(ubo) && this.UBOs.get(ubo_plan) )
-        gl.bindBufferBase (gl.UNIFORM_BUFFER, binding_point, ubo);
-      this.bound_ubos.set (binding_point, ubo);
     }
 
     // Run the shaders to draw every triangle now:
-    this.execute_shaders (gl, shape, this.index_buffers.get(shape), type, instance_count);
+    this.execute_shaders (gl, shape, this.index_buffers.get(shape), renderListItem.type, renderListItem.instance_count);
   }
   execute_shaders (gl, shape, index_buffer, type, instance_count) {
-    if (shape.indices.length) {
-        gl.bindBuffer (gl.ELEMENT_ARRAY_BUFFER, index_buffer);
-        gl.drawElementsInstanced (gl[ type ], shape.indices.length, gl.UNSIGNED_INT, 0, instance_count);
-    } else gl.drawArraysInstanced (gl[ type ], 0, shape.num_vertices, instance_count);
+
+    // const arrayBufferSize = gl.getBufferParameter(gl.ARRAY_BUFFER, gl.BUFFER_SIZE);
+    // const elementArrayBufferSize = gl.getBufferParameter(gl.ELEMENT_ARRAY_BUFFER, gl.BUFFER_SIZE);
+    // const uniformBufferSize = gl.getBufferParameter(gl.UNIFORM_BUFFER, gl.BUFFER_SIZE)
+    
+    if (shape.indices.length)
+       gl.drawElementsInstanced (gl[ type ], shape.indices.length, gl.UNSIGNED_INT, 0, instance_count);
+    else
+       gl.drawArraysInstanced (gl[ type ], 0, shape.num_vertices, instance_count);
   }
 }
 
@@ -1019,12 +1041,12 @@ class Renderer extends Component {
 // Could Shape/vertices be specified by JSON as well to join with UBO?
 
 
-//FINISH: Rename to UBO_Plan
-const UBO = tiny.UBO =
-class UBO {
+const UBO_Plan = tiny.UBO_Plan =
+class UBO_Plan {
   constructor (...args) {
     this.element_offsets = new Map();
     this.ready = true;        // For async loaded entries
+    this.version = -1;
     this.init(...args);
   }
   init (fields) { }     // Abstract -- user overrides this
@@ -1032,23 +1054,29 @@ class UBO {
   static flatten_JSON (o,p="") {          // TODO:  Convert to a while loop with stack variable, to keep debugger from tripping on this recursive function
     return Object.keys (o).map (k => o[k] === null           ||
                                     typeof o[k] !== "object" ? {[p + (p ? ".":"") + k]: o[k]}
-                                                             : UBO.flatten_JSON (o[k],p + (p ? ".":"") + k))
+                                                             : UBO_Plan.flatten_JSON (o[k],p + (p ? ".":"") + k))
                           .reduce ((acc,value) => Object.assign (acc,value));
   }
   static uniform_names_from_JSON (json) {
-    const table = Object.entries( UBO.flatten_JSON(json) );
+    const table = Object.entries( UBO_Plan.flatten_JSON(json) );
     const fix_array_notation = s => s.replaceAll (/\.(\d+)(?=\.|$)/g, (match, num) => '['+num+']' );
     return new Map( table.map (r => [fix_array_notation(r[0]), r[1] ]) );
   }
   get_binding_point () {
-    throw `Abstract function.  Each subclass of UBO must specify its own binding point for its corresponding GLSL program uniform block.`; }
+    throw `Abstract function.  Each subclass of UBO_Plan must specify its own binding point for its corresponding GLSL program uniform block.`; }
   fill_buffer (json) {
     if (!this.buffer_size)
-      throw `UBO::fill_buffer() was called too early; UBO doesn't query its size until draw time the first time.`
+      throw `UBO_Plan::fill_buffer() was called too early; UBO_Plan doesn't query its size until draw time the first time.`
     if (!this.local_buffer)
       this.local_buffer = new Float32Array(this.buffer_size/4);
-    const values_to_set = UBO.uniform_names_from_JSON(json);
+    const values_to_set = UBO_Plan.uniform_names_from_JSON(json);
 
+    function set_element (value) {
+        if( destination_object.data[pos] != value )
+          destination_object.version = next_version;
+        destination_object.data[pos] = value;
+        pos++;
+    }
     const entries = [...this.element_offsets];
     for( let i = 0; i < entries.length; i++ ) {
       const [key, byte_offset] = entries[i];
@@ -1058,7 +1086,7 @@ class UBO {
         if(in_value === null || !in_key.includes(key) || byte_offset === undefined)
           continue;
 
-        // Handle assigning vecs and mats to UBO entries:
+        // Handle assigning vecs and mats to UBO_Plan entries:
         const suffix = in_key.substr(key.length, in_key.length);
         const sub_index_1 =  parseInt(suffix[1]) || 0,
               sub_index_2 =  suffix[4] ? parseInt(suffix[4]) : undefined;
@@ -1069,7 +1097,7 @@ class UBO {
                                                             : sub_index_1 + sub_index_2 * 4;
         const offset = byte_offset/4 + row_column_offset;
 
-        // If we get a UBO element that is too big, just silently truncate the extra stuff, rather
+        // If we get an entry that is too big, just silently truncate the extra stuff, rather
         // than buffer overflowing into the next element.
         if(entries[i+1] ? offset >= entries[i+1][1]/4 : offset >= this.buffer_size/4)
           continue;
@@ -1078,5 +1106,6 @@ class UBO {
         values_to_set.set(in_key, null);                 // FINISH: change to .delete(in_key) for clarity
       }
     }
+    this.version++;
   }
 }

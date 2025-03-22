@@ -519,10 +519,7 @@ const Instanced_Cube_Index = defs.Instanced_Cube_Index =
                           20, 21, 22, 23, 24, 25, 26, 27, 28, 29,
                           30, 31, 32, 33, 34, 35];
 
-          this.build_VBO( ["position", "normal", "texture_coord"] );
-
           this.num_vertices = 36; // FINISH: For now, until hammering out multiple vaos per shape.
-          this.single_cube = this.vertices;
       }
   };
 
@@ -530,29 +527,25 @@ const Instanced_Cube_Index = defs.Instanced_Cube_Index =
 const Minimal_Shape = defs.Minimal_Shape =
   class Minimal_Shape extends tiny.Shape {
       // A truly minimal triangle, with three vertices each holding a 3D position and a color.
-      constructor () {
-          super();
+      init () {
           // Describe the where the points of a triangle are in space, and also describe their colors:
           this.vertices[0] = { position: vec3 (0, 0, 0), color: color (1, 0, 0, 1) };
           this.vertices[1] = { position: vec3 (1, 0, 0), color: color (0, 1, 0, 1) };
           this.vertices[2] = { position: vec3 (0, 1, 0), color: color (0, 0, 1, 1) };
 
           this.num_vertices = 3; // FINISH: For now, until hammering out multiple vaos per shape.
-          this.build_VBO( ["position", "color"] );
       }
   };
 
   const Minimaler_Shape = defs.Minimaler_Shape =
   class Minimaler_Shape extends tiny.Shape {
-      constructor () {
-          super();
+      init () {
           // Describe the where the points of a triangle are in space, and also describe their colors:
           this.vertices[0] = { position: vec3 (0, 0, 0)};
           this.vertices[1] = { position: vec3 (1, 0, 0)};
           this.vertices[2] = { position: vec3 (0, 1, 0)};
 
           this.num_vertices = 3; // FINISH: For now, until hammering out multiple vaos per shape.
-          this.build_VBO( ["position"] );
       }
   };
 

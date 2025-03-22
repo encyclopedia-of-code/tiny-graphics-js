@@ -3,14 +3,14 @@ import {defs as shapes} from './common-shapes.js';
 import {defs as shaders} from './common-shaders.js';
 import {defs as components} from './common-components.js';
 
-const {vec3, vec4, Mat4, Shader, UBO} = tiny;
+const {vec3, vec4, Mat4, Shader, UBO_Plan} = tiny;
 
 const defs = { ...shapes, ...shaders, ...components };
 
 export {tiny, defs};
 
 const Camera = defs.Camera =
-class Camera extends UBO {
+class Camera extends UBO_Plan {
     init(fields) {
       this.fields = Object.assign(Camera.default_values(), fields);
     }
@@ -40,7 +40,7 @@ class Camera extends UBO {
   };
 
 const LightArray = defs.LightArray =
-class LightArray extends UBO {
+class LightArray extends UBO_Plan {
 
     static NUM_LIGHTS = 2;
     static global_index = 0;
@@ -207,7 +207,7 @@ class Shadow_Light {
   };
 
 const Material = defs.Material =
-class Material extends UBO {
+class Material extends UBO_Plan {
     init(shader = undefined, fields = {}, samplers = {}) {
       Object.assign (this, {shader, samplers: new Map(Object.entries(samplers))} );
       this.fields = Object.assign(shader.constructor.default_values(), fields);
@@ -216,7 +216,7 @@ class Material extends UBO {
 };
 
 const Material_From_File = defs.Material_From_File =
-class Material_From_File extends UBO {
+class Material_From_File extends UBO_Plan {
     init(shader = undefined, filename, arg_fields = {}, arg_samplers = {}) {
       Object.assign (this, shader, filename, arg_fields, {arg_samplers: new Map(arg_samplers)} );
       this.ready = false;
