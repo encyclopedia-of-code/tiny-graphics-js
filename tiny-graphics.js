@@ -633,102 +633,6 @@ const Component = tiny.Component =
   };
 
 
-const Entity = tiny.Entity =
-class Entity {
-  constructor(shape, transforms, material) {
-    this.dirty = true
-    this.shape = shape;
-    this.model_transform = Mat4.identity();
-    this.transforms = transforms;
-    this.material = material;
-  }
-  set_shape(shape) {
-    this.shape = shape;
-    this.dirty = true;
-  }
-  set_transforms(transforms) {
-    this.transforms = transforms;
-    this.dirty = true;
-  }
-  apply_transform(model_transform) {
-    this.model_transform = model_transform;
-  }
-  set_material(material) {
-    this.material = material;
-  }
-};
-
-
-/*
-
-Shape
-    "vertices", indices, pre_buffers
-    ready, version
-    the rest is per GPU
-
-build_VBO_plans
-  copy the selected vertices.fields into the correct pre_buffer, interleaved.
-  mark that pre_buffer dirty and/or resized by changing version
-
-copy_to_gpu
-  if not already, make and store *one* VAO per context.
-  per each pre_buffer, associate the current VAO with a gpu_side v buffer (if none already), copying data to it (if dirty).
-  associate that VAO's variable pointers to the correct alignments in the buffers, and whether to reuse per instance.
-  create/copy indices gpu_side if needed.
-
-
-
-
-flush:
-  make dummy material if called from shadow, ie. given a light.shadow shader
-  for (every entity)
-    if instanced,
-      update matrix buffer if needed
-      call draw( .., num_matrices )
-    if single,
-      make single-length matrix buffer
-      call draw( .., 1 )
-
-draw:
-    prep shader's uniforms/textures
-    write buffers out to UBOs
-    obtain/prepare all this:
-      { webglcontext, global_transform, shape.transforms, material, shape_gpu_side, uniforms, type=TRIANGLES,  }
-
-
-idea:
-
-      flush:
-        make dummy material if called from shadow, ie. given a light.shadow shader
-        for (every renderListItem)
-          if instanced,
-            update matrix buffer if needed
-            call draw( .., num_matrices )
-          if single,
-            make single-length matrix buffer
-            call draw( .., 1 )
-
-      draw:
-          prep shader's uniforms/textures
-          write buffers out to UBOs
-          obtain/prepare all this:
-            { webglcontext, global_transform, shape.transforms, material, shape_gpu_side, uniforms, type=TRIANGLES, instance_count }
-
-Shape:
-  Still ought to own indices gpu_side buffer, since that's repetitive per renderListItem
-      Shape.copy_to_gpu reduces to a few ELEMENT_ARRAY_BUFFER lines.
-        but that means instance & renderer depedency stays.
-            I think the improvement idea here was to move ownership of indices to renderer in a map( Shape, indices ) since a map
-            would be needed anyway if instance & renderer dependencies stay.
-
-
-Needed to manage VAO:
-    the shape's pre-buffer metadata
-    material.shader.gpu_instances.get(renderer.context).attribute_addresses;
-
-
-*/
-
 const RenderListItem = tiny.RenderListItem =
 class RenderListItem {
   constructor (shape, material) {
@@ -740,10 +644,20 @@ class RenderListItem {
     this.group_transform = Mat4.identity();
     this.type = "TRIANGLES";
     this.instance_count = 1;
-      // Linked list to other RenderListItems:
+      // Linked list to other RenderListItems for insertion / removal:
     // const neighbors = {next, prev, next_group, prev_group, next_material, prev_material, next_VBO, prev_VBO};
+    //        Problem: Linked lists are slow to identify where to insert / delete, even if the operation is fast.
+    //        Idea:  Rather than insertion sort, which fixed arrays of items aren't really great at, would sorting
+    //        in place (by material/VAO/group) after the fact be preferable via bubble sort or something?
+    //        (See Perplexity file) Best options: A. Fixed array.  Binary insertion sort for new items, with manual
+    //        batching when items obviously will belong together; for deletions, binary search and then shift.
+    //        B.  Balanced binary search tree.  Would support more chaotic mass insertions/deletions per frame.
+    //        Nevermind, will use linked list and secondary dictionary.  See perplexity file.
   }
-  update_matrices() { Shape.build_VBO_plan (this.model_transforms, this.matrix_VBO_plan, "STATIC_DRAW", 1) }
+  update_matrices() {
+    this.instance_count = this.model_transforms.length;
+    Shape.build_VBO_plan (this.model_transforms, this.matrix_VBO_plan, "STATIC_DRAW", 1)
+  }
 
 
   insert ( ) {
@@ -764,7 +678,6 @@ const Renderer = tiny.Renderer =
 class Renderer extends Component {
   init (...args) {
     this.renderList = []
-    this.lights = []            // TODO: Needed?
     this.max_fps = 60;
     this.prev_frame_number = -1;
     this.is_running = true;
@@ -773,8 +686,7 @@ class Renderer extends Component {
     this.VBOs = new Map(); // VBO_plan -> vbo_ptr for this context
     this.gpu_versions = new Map(); // VBO_plan, UBO_plan, or EBO_ptr -> version number existing on GPU for this context
     this.index_buffers = new Map();  // Shape -> EBO_ptr for this context
-    this.requested_ubos = new Map();
-    super.init(...args);
+    this.selected_UBOs = new Map();
   }
   make_context (canvas, background_color = color (0, 0, 0, 1), dimensions) {
       this.canvas              = canvas;
@@ -830,7 +742,7 @@ class Renderer extends Component {
         const open_list = [this];
         while (open_list.length) {
             open_list.push (...open_list[ 0 ].animated_children);
-            open_list.shift ().render_frame (this);
+            open_list.shift ().render_frame ();
         }
       }
       // Now that this frame is drawn, request that render() happen again as soon as all other web page events
@@ -894,6 +806,17 @@ class Renderer extends Component {
     if (clear_entities)
       this.queued_entities = []
   }
+  /*
+  flush:
+    make dummy material if called from shadow, ie. given a light.shadow shader
+    for (every entity)
+      if instanced,
+        update matrix buffer if needed
+        call draw( .., num_matrices )
+      if single,
+        make single-length matrix buffer
+        call draw( .., 1 )
+  */
   update_VAO(renderListItem, attribute_addresses) {
     const gl = this.context;
     const existing = this.VAOs.get (renderListItem);
@@ -905,6 +828,27 @@ class Renderer extends Component {
     this.gpu_versions.set("VAO", VAO);
     if(previous_VAO != VAO )
       gl.bindVertexArray( VAO );
+
+    const shape = renderListItem.shape;
+    if (shape.indices.length) {
+        const existing = this.index_buffers.get (shape);
+        const EBO = existing ?? gl.createBuffer();
+        this.index_buffers.set(shape, EBO);
+
+        const previous_EBO = this.gpu_versions.get("Active_EBO");
+        this.gpu_versions.set("Active_EBO", EBO);
+        if(previous_EBO != EBO )
+          gl.bindBuffer (gl.ELEMENT_ARRAY_BUFFER, EBO);
+
+        if( ! (this.gpu_versions.get(EBO) >= shape.indices_version) ) {
+          this.gpu_versions.set(EBO, shape.indices_version);
+
+          if (existing)
+            gl.bufferSubData (gl.ELEMENT_ARRAY_BUFFER, 0, new Uint32Array (shape.indices))
+          else
+            gl.bufferData (gl.ELEMENT_ARRAY_BUFFER, new Uint32Array (shape.indices), gl["STATIC_DRAW"]);
+        }
+    }
 
          // VBO_plan is { attributes, data, offsets, sizes, stride, hint, vertex_count, has_resized, version, divisor }
     for( let VBO_plan of [ ...renderListItem.shape.VBO_plans, renderListItem.matrix_VBO_plan ] ) {
@@ -925,7 +869,6 @@ class Renderer extends Component {
         gl.bufferSubData (gl.ARRAY_BUFFER, 0, VBO_plan.data)
       else {
         gl.bufferData (gl.ARRAY_BUFFER, VBO_plan.data, gl[VBO_plan.hint]);
-
         VBO_plan.has_resized = false;
       }
 
@@ -960,12 +903,8 @@ class Renderer extends Component {
       }
     }
   }
-  bind_UBO (ubo_plan, binding_point) {
-    this.requested_ubos.set(binding_point, ubo_plan);
-  }
   draw (renderListItem, uniforms, overridden_material) {
     const material = overridden_material ?? renderListItem.material;
-    const shape = renderListItem.shape;
     material.shader.activate (this, uniforms, renderListItem.group_transform, material);
 
     const gl = this.context;
@@ -973,28 +912,8 @@ class Renderer extends Component {
       // FINISH: Maybe part of the same fix: Move Shader, Texture, and Shadow_Map instances into renderer maps.
     this.update_VAO (renderListItem, material.shader.get_attribute_addresses(this) );
 
-    if (shape.indices.length) {
-        const existing = this.index_buffers.get (shape);
-        const EBO = existing ?? gl.createBuffer();
-        this.index_buffers.set(shape, EBO);
-
-        const previous_EBO = this.gpu_versions.get("EBO");
-        this.gpu_versions.set("EBO", EBO);
-        if(previous_EBO != EBO )
-          gl.bindBuffer (gl.ELEMENT_ARRAY_BUFFER, EBO);
-
-        if( ! this.gpu_versions.get(EBO) >= shape.indices_version ) {
-          this.gpu_versions.set(EBO, shape.indices_version);
-
-          if (existing)
-            gl.bufferSubData (gl.ELEMENT_ARRAY_BUFFER, 0, new Uint32Array (shape.indices))
-          else
-            gl.bufferData (gl.ELEMENT_ARRAY_BUFFER, new Uint32Array (shape.indices), gl["STATIC_DRAW"]);
-        }
-    }
-
-    for (let binding_point of this.requested_ubos.keys()) {
-      const ubo_plan = this.requested_ubos.get(binding_point);
+    for (let binding_point of this.selected_UBOs.keys()) {
+      const ubo_plan = this.selected_UBOs.get(binding_point);
       const existing = this.UBOs.get(ubo_plan);
       const ubo = existing ?? gl.createBuffer();
       this.UBOs.set(ubo_plan, ubo);
@@ -1022,14 +941,14 @@ class Renderer extends Component {
     }
 
     // Run the shaders to draw every triangle now:
-    this.execute_shaders (gl, shape, this.index_buffers.get(shape), renderListItem.type, renderListItem.instance_count);
+    this.execute_shaders (gl, renderListItem.shape, renderListItem.type, renderListItem.instance_count);
   }
-  execute_shaders (gl, shape, index_buffer, type, instance_count) {
+  execute_shaders (gl, shape, type, instance_count) {
 
     // const arrayBufferSize = gl.getBufferParameter(gl.ARRAY_BUFFER, gl.BUFFER_SIZE);
     // const elementArrayBufferSize = gl.getBufferParameter(gl.ELEMENT_ARRAY_BUFFER, gl.BUFFER_SIZE);
     // const uniformBufferSize = gl.getBufferParameter(gl.UNIFORM_BUFFER, gl.BUFFER_SIZE)
-    
+
     if (shape.indices.length)
        gl.drawElementsInstanced (gl[ type ], shape.indices.length, gl.UNSIGNED_INT, 0, instance_count);
     else

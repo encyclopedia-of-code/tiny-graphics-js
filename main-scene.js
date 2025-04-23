@@ -27,7 +27,7 @@ import {Particle_Demo}
                     from "./examples/particle-demo.js";
 import {Scene_To_Texture_Demo}
                     from "./examples/scene-to-texture-demo.js";
-import {Shadows_Demo, Debug_Matrix_Scene, Minimal_Demo}
+import {Shadows_Demo, Prove_Column_Major_Scene, Minimal_Demo}
                     from "./examples/shadows-demo.js";
 import {Text_Demo}
                     from "./examples/text-demo.js";
@@ -45,14 +45,14 @@ Object.assign (defs,
                {Parametric_Surfaces},
                {Particle_Demo},
                {Scene_To_Texture_Demo},
-               {Shadows_Demo, Debug_Matrix_Scene, Minimal_Demo},
+               {Shadows_Demo, Prove_Column_Major_Scene, Minimal_Demo},
                {Text_Demo},
                {Transforms_Sandbox_Base, Transforms_Sandbox}
 );
 
 // ******************** SELECT THE DEMO TO DISPLAY:
 
-const main_scene        = Shadows_Demo;
+const main_scene        = Instanced_Cubes_Demo;
 const additional_scenes = [];
 
 export {main_scene, additional_scenes, defs};

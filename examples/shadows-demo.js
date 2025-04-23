@@ -22,6 +22,7 @@ class Shadows_Demo extends Renderer {
 
      this.shader = new defs.Universal_Shader (LightArray.NUM_LIGHTS, {has_shadows: false});
    // this.shader = new defs.Basic_Shader();
+    //
     this.stars = new Material(this.shader, { color: vec4(.8, .7, .5, 1) }, { diffuse_texture: new Texture( "assets/stars.png" ) });
     //  new Material(this.shader, { color: vec4(.8, .7, .5, 1) }, { diffuse_texture: this.sun.shadow_map[0] });
     //  new defs.Material_From_File(this.shader, "assets/shark_cm/shark_cm.mtl" );
@@ -32,20 +33,11 @@ class Shadows_Demo extends Renderer {
       renderListItem.model_transforms.push( Mat4.translation(0.0, -2.0, 0.0).times(Mat4.scale(5, .5, 5))
          , Mat4.identity()
       );
-      renderListItem.instance_count = renderListItem.model_transforms.length;
       renderListItem.update_matrices();
     }
 
     const {camera, lightArray} = this;
     this.uniforms.UBOs = {camera, lightArray, material: this.stars};
-
-  //   this.entities.push(new Entity(this.shapes.cube,
-  //     // new Entity(new defs.Shape_From_File("assets/shark_cm/shark_cm.obj"),
-  //     [
-  //       Mat4.translation(0.0, -2.0, 0.0).times(Mat4.scale(5, .5, 5))
-  //       , Mat4.identity()
-  //     ],
-  //     this.stars));
   }
   render_controls() {
     this.frame_rates ??= [60, 120, 0, 1, 2, 8, 16, 30];
@@ -55,40 +47,35 @@ class Shadows_Demo extends Renderer {
        this.prev_frame_number = -1 } );
     this.live_string (box => { box.textContent = this.max_fps } );
   }
-  render_frame (renderer) {
-    if( !renderer.controls )  {
+  render_frame () {
+    if( !this.controls )  {
       this.camera.emplace( Mat4.look_at( vec3(-1.0, 2.0, 1.0), vec3(0,-3,-1), vec3(0,1,0) ) );  // Mat4.translation(0.0, 0.0, -1.0)
       this.camera.fields.projection = Mat4.perspective(Math.PI/2, this.width/this.height, 0.01, 500);
 
-
       this.uniforms.camera_inverse = this.camera.fields.camera_inverse;
       this.uniforms.camera_transform = this.camera.fields.camera_world;
-      this.animated_children.push( renderer.controls = new defs.Movement_Controls( { uniforms: this.uniforms } ) );
-      renderer.controls.add_mouse_controls( renderer.canvas );
+      this.controls = new defs.Movement_Controls( { uniforms: this.uniforms } );
+      this.controls.add_mouse_controls( this.canvas );
+      this.animated_children.push( this.controls );
     }
-    this.bind_UBO(this.camera, this.camera.get_binding_point());
-    this.bind_UBO(this.lightArray, this.lightArray.get_binding_point());
+
+    this.selected_UBOs.set(this.camera.get_binding_point(), this.camera);
+    this.selected_UBOs.set(this.lightArray.get_binding_point(), this.lightArray);
 
     for( let renderListItem of this.renderList)
       this.draw(renderListItem, this.uniforms);
 
-// FINISH: Extra shape draw didn't work due to sharing transforms VBO: this.shapes.cube.draw( renderer, .. undefined, 1);
-//    for (let entity of this.entities)
-//      this.submit(entity);
 //    renderer.shadow_map_pass(this.uniforms);
 //    renderer.flush(this.uniforms);
   }
 };
 
 export
-const Debug_Matrix_Scene = defs.Debug_Matrix_Scene =
-class Debug_Matrix_Scene extends Renderer {
+const Prove_Column_Major_Scene = defs.Prove_Column_Major_Scene =
+class Prove_Column_Major_Scene extends Renderer {
   init () {
     super.init();
     this.shapes = {tri: new defs.Minimal_Shape ()};
-
-    this.lightArray = new defs.LightArray({lights:[{direction_or_position: vec4(2.0, 5.0, 0.0, 0.0),
-              color: color(1.0, 1.0, 1.0, 1.0), diffuse: 1, specular: 0.7, attenuation_factor: 0.01}]});
 
     this.shader = new defs.Debug_Shader ();
     this.plain = new Material(this.shader);
@@ -99,15 +86,15 @@ class Debug_Matrix_Scene extends Renderer {
     for( let j = 0; j < 4; j++ )
       m[i][j] = 10*i + j;
 
-    this.entities.push(new Entity(this.shapes.tri, [ m ], this.plain));
-  }
-  render_frame (renderer) {
-    for (let entity of this.entities) {
-      entity.apply_transform(Mat4.rotation( renderer.uniforms.animation_time/1000, 0,0,1));   // OOPS?
-      this.submit(entity);
+    this.renderList.push(new RenderListItem(this.shapes.tri, this.plain) );
+    for( let renderListItem of this.renderList) {
+      renderListItem.model_transforms.push(m);
+      renderListItem.update_matrices();
     }
-    this.lightArray.bind(this, this.lightArray.get_binding_point());
-    renderer.flush(this.uniforms);
+  }
+  render_frame () {
+    for( let renderListItem of this.renderList)
+      this.draw(renderListItem, this.uniforms);
   }
 };
 
@@ -118,23 +105,17 @@ class Minimal_Demo extends Renderer {
     super.init();
     this.shapes = {tri: new defs.Minimal_Shape ()};
 
-    this.lightArray = new defs.LightArray({lights:[{direction_or_position: vec4(2.0, 5.0, 0.0, 0.0),
-              color: color(1.0, 1.0, 1.0, 1.0), diffuse: 1, specular: 0.7, attenuation_factor: 0.01}]});
-
     this.basic_shader = new defs.Basic_Shader ();
     this.dummy = new Material(this.basic_shader);
 
-    this.entities.push(new Entity(this.shapes.tri,
-      [
-        Mat4.identity()
-      ],
-      this.dummy));
-  }
-  render_frame (renderer) {
-    for (let entity of this.entities) {
-      entity.apply_transform(Mat4.rotation( renderer.uniforms.animation_time/1000, 0,0,1));
-      this.submit(entity);
+    this.renderList.push(new RenderListItem(this.shapes.tri, this.dummy) );
+    for( let renderListItem of this.renderList) {
+      renderListItem.model_transforms.push(Mat4.identity());
+      renderListItem.update_matrices();
     }
-    renderer.flush(this.uniforms);
+  }
+  render_frame () {
+    for( let renderListItem of this.renderList)
+      this.draw(renderListItem, this.uniforms);
   }
 };
