@@ -819,10 +819,10 @@ class Renderer extends Component {
   */
   update_VAO(renderListItem, attribute_addresses) {
     const gl = this.context;
-    const existing = this.VAOs.get (renderListItem);
-    const VAO  = existing ?? gl.createVertexArray();
+    const existing_VAO = this.VAOs.get (renderListItem);
+    const VAO  = existing_VAO ?? gl.createVertexArray();
     this.VAOs.set (renderListItem, VAO);
-    if (!existing) test_rookie_mistake();
+    if (!existing_VAO) test_rookie_mistake();
 
     const previous_VAO = this.gpu_versions.get("VAO");
     this.gpu_versions.set("VAO", VAO);
@@ -831,19 +831,19 @@ class Renderer extends Component {
 
     const shape = renderListItem.shape;
     if (shape.indices.length) {
-        const existing = this.index_buffers.get (shape);
-        const EBO = existing ?? gl.createBuffer();
+        const existing_EBO = this.index_buffers.get (shape);
+        const EBO = existing_EBO ?? gl.createBuffer();
         this.index_buffers.set(shape, EBO);
 
         const previous_EBO = this.gpu_versions.get("Active_EBO");
         this.gpu_versions.set("Active_EBO", EBO);
-        if(previous_EBO != EBO )
+        if( !existing_VAO)
           gl.bindBuffer (gl.ELEMENT_ARRAY_BUFFER, EBO);
 
         if( ! (this.gpu_versions.get(EBO) >= shape.indices_version) ) {
           this.gpu_versions.set(EBO, shape.indices_version);
 
-          if (existing)
+          if (existing_EBO)
             gl.bufferSubData (gl.ELEMENT_ARRAY_BUFFER, 0, new Uint32Array (shape.indices))
           else
             gl.bufferData (gl.ELEMENT_ARRAY_BUFFER, new Uint32Array (shape.indices), gl["STATIC_DRAW"]);
@@ -856,21 +856,13 @@ class Renderer extends Component {
       if( VBO_plan.version < 0 )
         throw "This VBO is blank somehow; build_VBO_plans() was never called for it.";
 
-      if( this.gpu_versions.get(VBO_plan) >= VBO_plan.version  )
+      if( existing_VAO && this.gpu_versions.get(VBO_plan) >= VBO_plan.version  )
         continue;
-      this.gpu_versions.set(VBO_plan, VBO_plan.version);
 
       const existing = this.VBOs.get( VBO_plan );
       const vbo = existing ?? gl.createBuffer();
       this.VBOs.set( VBO_plan, vbo );
       gl.bindBuffer (gl.ARRAY_BUFFER, vbo);
-
-      if (existing && !VBO_plan.has_resized)
-        gl.bufferSubData (gl.ARRAY_BUFFER, 0, VBO_plan.data)
-      else {
-        gl.bufferData (gl.ARRAY_BUFFER, VBO_plan.data, gl[VBO_plan.hint]);
-        VBO_plan.has_resized = false;
-      }
 
       for( let i of VBO_plan.attributes.keys()) {
         const name = VBO_plan.attributes[i];
@@ -900,6 +892,18 @@ class Renderer extends Component {
           gl.vertexAttribDivisor(attr_index, VBO_plan.divisor);
           gl.enableVertexAttribArray (attr_index);
         }
+      }
+
+      if( this.gpu_versions.get(VBO_plan) >= VBO_plan.version  )
+        continue;
+
+      this.gpu_versions.set(VBO_plan, VBO_plan.version);
+
+      if (existing && !VBO_plan.has_resized)
+        gl.bufferSubData (gl.ARRAY_BUFFER, 0, VBO_plan.data)
+      else {
+        gl.bufferData (gl.ARRAY_BUFFER, VBO_plan.data, gl[VBO_plan.hint]);
+        VBO_plan.has_resized = false;
       }
     }
   }

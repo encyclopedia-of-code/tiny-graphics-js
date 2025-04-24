@@ -25,10 +25,11 @@ class Instanced_Cubes_Demo extends Renderer {
  //   this.renderList.push(new RenderListItem(this.shapes.cube, this.fire) );
  //   this.renderList.push(new RenderListItem(this.shapes.cube, this.water) );
 
-    for( let renderListItem of this.renderList) {
+    for( let i=0; i<2; i++ ) {
+      const renderListItem = this.renderList[i];
       renderListItem.model_transforms.push(
-        ...Array(1000).fill(0).map( (x,i) =>
-              Mat4.translation(... vec3(Math.random()* 2 - 1, Math.random(),  Math.random()*2 - 1)
+        ...Array(1000).fill(0).map( (x,j) =>
+              Mat4.translation(... vec3(Math.random()* 2 - 1, 2*i+1,  Math.random()*2 - 1)
                                   .times_pairwise(vec3(20, 2, 20))))
       );
       renderListItem.update_matrices();
@@ -60,10 +61,10 @@ class Instanced_Cubes_Demo extends Renderer {
 //    this.selected_UBOs.set(this.camera.get_binding_point(), this.camera);
 //    this.selected_UBOs.set(this.lightArray.get_binding_point(), this.lightArray);
 
-    this.draw( this.renderList[1], this.uniforms);
+//    this.draw( this.renderList[0], this.uniforms);
 
-//     for( let renderListItem of this.renderList)
-//       this.draw(renderListItem, this.uniforms);
+     for( let renderListItem of this.renderList)
+       this.draw(renderListItem, this.uniforms);
 
 //     if (this.uniforms.animation_time/500 % 2 < 1)
 //       this.entities[0].set_material(this.fire);
