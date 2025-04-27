@@ -33,7 +33,6 @@ const Vector = math.Vector =
       to_string () { return "[vector " + this.join (", ") + "]"; }
   };
 
-
 const Vector3 = math.Vector3 =
   class Vector3 extends Float32Array {
       // **Vector3** is a specialization of Vector only for size 3, for performance reasons.
@@ -234,7 +233,6 @@ const Matrix = math.Matrix =
           super (0);
           this.push (...args);
       }
-
       // TODO:  This doesn't work, right?  Copies all rows by reference...
       set (M) {
           this.length = 0;

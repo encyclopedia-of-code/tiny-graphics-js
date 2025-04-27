@@ -18,8 +18,14 @@ class Shader_Without_UBOs  extends Shader {
       return {};
     }
     update_GPU (renderer, gpu_addresses, uniforms, group_transform, material) {
-      renderer.context.uniform1f (gpu_addresses.animation_time, uniforms.animation_time / 1000);
-      renderer.context.uniformMatrix4fv (gpu_addresses.group_transform, true, Matrix.flatten_2D_to_1D (group_transform));
+      if( this.previous_animation_time != gpu_addresses.animation_time ) {
+        this.previous_animation_time = gpu_addresses.animation_time;
+     // renderer.context.uniform1f (gpu_addresses.animation_time, uniforms.animation_time / 1000);
+      }
+      if( this.previous_group_matrix != gpu_addresses.group_transform ) {
+        this.previous_group_matrix = gpu_addresses.group_transform;
+        renderer.context.uniformMatrix4fv (gpu_addresses.group_transform, true, Matrix.flatten_2D_to_1D (group_transform));
+      }
     }
     shared_glsl_code () {           // ********* SHARED CODE, INCLUDED IN BOTH SHADERS *********
         return "#version 300 es " + `
@@ -152,8 +158,14 @@ class Universal_Shader extends Shader {
 
       //this.ubo_binding[0].binding_point, gpu_addresses);
 
-      renderer.context.uniform1f (gpu_addresses.animation_time, uniforms.animation_time / 1000);
-      renderer.context.uniformMatrix4fv (gpu_addresses.group_transform, true, Matrix.flatten_2D_to_1D (group_transform));
+      if( this.previous_animation_time != gpu_addresses.animation_time ) {
+        this.previous_animation_time = gpu_addresses.animation_time;
+     // renderer.context.uniform1f (gpu_addresses.animation_time, uniforms.animation_time / 1000);
+      }
+      if( this.previous_group_matrix != gpu_addresses.group_transform ) {
+        this.previous_group_matrix = gpu_addresses.group_transform;
+        renderer.context.uniformMatrix4fv (gpu_addresses.group_transform, true, Matrix.flatten_2D_to_1D (group_transform));
+      }
     }
     static default_values () {
       return {

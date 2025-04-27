@@ -192,252 +192,227 @@ const test_rookie_mistake = function () {
 
 
 const Shader = tiny.Shader =
-  class Shader {
-      // See description at https://github.com/encyclopedia-of-code/tiny-graphics-js/wiki/tiny-graphics.js#shader
-      copy_onto_graphics_card (context, uniforms) {
-          // TODO:  Calling this twice should recompile the shader in-place with updated options (untested)
+class Shader {
+    // See description at https://github.com/encyclopedia-of-code/tiny-graphics-js/wiki/tiny-graphics.js#shader
+    copy_onto_graphics_card (renderer, uniforms) {
+      // TODO:  Calling this twice should recompile the shader in-place with updated options (untested)
 
-          // Define what this object should store in each new WebGL Context:
-          const defaults = {
-              program : undefined, gpu_addresses: undefined,     // FINISH:  Should gpu_addresses be called more specifically uniforms_addresses or does it still contain more?
-              vertShdr: undefined, fragShdr: undefined
-          };
-          const existing_instance = this.gpu_instances.get (context);
-          if ( !existing_instance) test_rookie_mistake ();
+      const gl       = renderer.context;
+      const existing = renderer.shaders.get (this);
+      const instance  = existing ?? { program: gl.createProgram(),
+                                      vertex_shader: gl.createShader (gl.VERTEX_SHADER),
+                                      fragment_shader: gl.createShader (gl.FRAGMENT_SHADER) };
+      renderer.shaders.set (this, instance);
+      if (!existing) test_rookie_mistake();
+      else {
+        gl.detachShader (existing.program, existing.vertex_shader);
+        gl.detachShader (existing.program, existing.fragment_shader);
+      }
+      const {program, vertex_shader,fragment_shader} = instance;
 
-          // If this Shader was never used on this GPU context before, then prepare new buffer indices for this
-          // context.
-          const gpu_instance = existing_instance || this.gpu_instances.set (context, defaults).get (context);
-
-          class Attributes_Addresses {
-            // Attributes_Addresses: Helper inner class. Retrieve the GPU addresses of each attribute.
-              constructor (program, gl) {
-                    // Assume per-vertex attributes will each be a set of 1 to 4 floats:
-                    const type_to_size_mapping = {0x1406: 1, 0x8B50: 2, 0x8B51: 3, 0x8B52: 4};
-                    const numAttribs = gl.getProgramParameter (program, gl.ACTIVE_ATTRIBUTES);
-                    // https://github.com/greggman/twgl.js/blob/master/dist/twgl-full.js for another example:
-                    for (let i = 0; i < numAttribs; i++) {
-                        const attribInfo = gl.getActiveAttrib (program, i);
-                        if (!attribInfo)
-                          break;
-                        // Pointers to all shader attribute variables:
-                        this[ attribInfo.name ] = {
-                            index     : gl.getAttribLocation (program, attribInfo.name),
-                            size      : type_to_size_mapping[ attribInfo.type ],
-                            type      : attribInfo.type,
-                            normalized: false
-                        };
-                    }
-                  }
-              }
-
-          class Uniforms_Addresses {
-            // Uniforms_Addresses: Helper inner class. Retrieve the GPU addresses of each uniform variable in
-            // the shader based on their names.  Store these pointers for later.
-              constructor (program, gl) {
-                                          // TODO: Store fewer of the following on this if possible (local scope instead).
-                  this.indices_to_blockname = new Map();
-                  this.indices_to_offsets = new Map();
-                  this.UBOs_to_block_index = new Map();
-                  this.num_blocks = gl.getProgramParameter(program, gl.ACTIVE_UNIFORM_BLOCKS);
-                  for (let i = 0; i < this.num_blocks; i++ ) {
-                    const UBO_name = gl.getActiveUniformBlockName(program, i);
-                    if (!uniforms.UBOs[UBO_name])
-                      continue;
-                    const UBO_size = gl.getActiveUniformBlockParameter(program, i, gl.UNIFORM_BLOCK_DATA_SIZE);
-                    const UBO_index = gl.getUniformBlockIndex(program, UBO_name);
-                    this.UBOs_to_block_index.set (uniforms.UBOs[UBO_name], UBO_index)
-
-                    if (! uniforms.UBOs[UBO_name].initialized)     // FINISH: initialized doesn't exist
-                      uniforms.UBOs[UBO_name].buffer_size = UBO_size;
-
-                    const indices = gl.getActiveUniformBlockParameter(program, i, gl.UNIFORM_BLOCK_ACTIVE_UNIFORM_INDICES);
-                    const offsets = gl.getActiveUniforms(program, indices, gl.UNIFORM_OFFSET);
-                    for (let i = 0; i < indices.length; i++) {
-                      this.indices_to_blockname.set(indices[i], UBO_name);
-                      this.indices_to_offsets.set(indices[i], offsets[i]);
-                    }
-                  }
-                  const num_uniforms = gl.getProgramParameter (program, gl.ACTIVE_UNIFORMS);
-
-                  for (let i = 0; i < num_uniforms; ++i) {
-                      const full_name = gl.getActiveUniform (program, i).name;
-
-                      if (this.indices_to_blockname.get(i)) {
-                          // Belongs to a UBO
-                        const name = this.indices_to_blockname.get(i);
-                        const offset = this.indices_to_offsets.get(i);
-
-                        // TODO: Skip loop iterations instead if initialized, according to how many offsets this UBO is known to occupy?
-                        // Would save a lot of GL calls when the UBO is used in the next shader.
-
-                        if (uniforms.UBOs[name] && ! uniforms.UBOs[name].initialized)
-                          uniforms.UBOs[name].element_offsets.set (full_name, offset);
-                      }
-                      else // Loose uniform
-                          this[ full_name ] = gl.getUniformLocation (program, full_name);
-                  }
+      class Attribute_Addresses {
+        // Attributes_Addresses: Helper inner class. Retrieve the GPU addresses of each attribute.
+          constructor (program, gl) {
+                // Assume per-vertex attributes will each be a set of 1 to 4 floats:
+                const type_to_size_mapping = {0x1406: 1, 0x8B50: 2, 0x8B51: 3, 0x8B52: 4};
+                const numAttribs = gl.getProgramParameter (program, gl.ACTIVE_ATTRIBUTES);
+                // https://github.com/greggman/twgl.js/blob/master/dist/twgl-full.js for another example:
+                for (let i = 0; i < numAttribs; i++) {
+                    const attribInfo = gl.getActiveAttrib (program, i);
+                    if (!attribInfo)
+                      break;
+                    // Pointers to all shader attribute variables:
+                    this[ attribInfo.name ] = {
+                        index     : gl.getAttribLocation (program, attribInfo.name),
+                        size      : type_to_size_mapping[ attribInfo.type ],
+                        type      : attribInfo.type,
+                        normalized: false
+                    };
+                }
               }
           }
 
-          const gl       = context;
-          const program  = gpu_instance.program || context.createProgram ();
-          const vertShdr = gpu_instance.vertShdr || gl.createShader (gl.VERTEX_SHADER);
-          const fragShdr = gpu_instance.fragShdr || gl.createShader (gl.FRAGMENT_SHADER);
+      class Uniform_Addresses {
+        // Uniforms_Addresses: Helper inner class. Retrieve the GPU addresses of each uniform variable in
+        // the shader based on their names.  Store these pointers for later.
+          constructor (program, gl) {
+                                      // TODO: Store fewer of the following on this if possible (local scope instead).
+              this.indices_to_blockname = new Map();
+              this.indices_to_offsets = new Map();
+              this.UBOs_to_block_index = new Map();
+              this.num_blocks = gl.getProgramParameter(program, gl.ACTIVE_UNIFORM_BLOCKS);
+              for (let i = 0; i < this.num_blocks; i++ ) {
+                const UBO_name = gl.getActiveUniformBlockName(program, i);
+                if (!uniforms.UBOs[UBO_name])
+                  continue;
+                const UBO_size = gl.getActiveUniformBlockParameter(program, i, gl.UNIFORM_BLOCK_DATA_SIZE);
+                const UBO_index = gl.getUniformBlockIndex(program, UBO_name);
+                this.UBOs_to_block_index.set (uniforms.UBOs[UBO_name], UBO_index)
 
-          if (gpu_instance.vertShdr) gl.detachShader (program, vertShdr);
-          if (gpu_instance.fragShdr) gl.detachShader (program, fragShdr);
+                if (! uniforms.UBOs[UBO_name].initialized)     // FINISH: initialized doesn't exist
+                  uniforms.UBOs[UBO_name].buffer_size = UBO_size;
 
-          gl.shaderSource (vertShdr, this.vertex_glsl_code ());
-          gl.compileShader (vertShdr);
-          if ( !gl.getShaderParameter (vertShdr, gl.COMPILE_STATUS))
-              throw "Vertex shader compile error: " + gl.getShaderInfoLog (vertShdr);
+                const indices = gl.getActiveUniformBlockParameter(program, i, gl.UNIFORM_BLOCK_ACTIVE_UNIFORM_INDICES);
+                const offsets = gl.getActiveUniforms(program, indices, gl.UNIFORM_OFFSET);
+                for (let i = 0; i < indices.length; i++) {
+                  this.indices_to_blockname.set(indices[i], UBO_name);
+                  this.indices_to_offsets.set(indices[i], offsets[i]);
+                }
+              }
+              const num_uniforms = gl.getProgramParameter (program, gl.ACTIVE_UNIFORMS);
 
-          gl.shaderSource (fragShdr, this.fragment_glsl_code ());
-          gl.compileShader (fragShdr);
-          if ( !gl.getShaderParameter (fragShdr, gl.COMPILE_STATUS))
-              throw "Fragment shader compile error: " + gl.getShaderInfoLog (fragShdr);
+              for (let i = 0; i < num_uniforms; ++i) {
+                  const full_name = gl.getActiveUniform (program, i).name;
 
-          gl.attachShader (program, vertShdr);
-          gl.attachShader (program, fragShdr);
-          gl.linkProgram (program);
-          if ( !gl.getProgramParameter (program, gl.LINK_STATUS))
-              throw "Shader linker error: " + gl.getProgramInfoLog (program);
+                  if (this.indices_to_blockname.get(i)) {
+                      // Belongs to a UBO
+                    const name = this.indices_to_blockname.get(i);
+                    const offset = this.indices_to_offsets.get(i);
 
-          const gpu_addresses = new Uniforms_Addresses (program, gl);
-          const attribute_addresses = new Attributes_Addresses (program, gl);
+                    // TODO: Skip loop iterations instead if initialized, according to how many offsets this UBO is known to occupy?
+                    // Would save a lot of GL calls when the UBO is used in the next shader.
 
-          for (let [ubo, index] of gpu_addresses.UBOs_to_block_index.entries())
-            gl.uniformBlockBinding(program, index, ubo.get_binding_point());
-
-          Object.assign (gpu_instance, {program, vertShdr, fragShdr, gpu_addresses, attribute_addresses});
-          return gpu_instance;
+                    if (uniforms.UBOs[name] && ! uniforms.UBOs[name].initialized)
+                      uniforms.UBOs[name].element_offsets.set (full_name, offset);
+                  }
+                  else // Loose uniform
+                      this[ full_name ] = gl.getUniformLocation (program, full_name);
+              }
+          }
       }
-      get_attribute_addresses(renderer) {
-        return this.gpu_instances.get(renderer.context).attribute_addresses;
-      }
-      activate (renderer, uniforms, group_transform, material) {
-          // Track which GPU contexts this object has copied itself onto:
-          const context = renderer.context;
-          if ( !this.gpu_instances) this.gpu_instances =  new Map ();
-          const gpu_instance = this.gpu_instances.get (context) || this.copy_onto_graphics_card (context, uniforms);
 
-          const previous_program = renderer.gpu_versions.get("Program");
-          renderer.gpu_versions.set("Program", gpu_instance.program);
-          if(previous_program != gpu_instance.program )
-            context.useProgram (gpu_instance.program);
+      gl.shaderSource (vertex_shader, this.vertex_glsl_code ());
+      gl.compileShader (vertex_shader);
+      if ( !gl.getShaderParameter (vertex_shader, gl.COMPILE_STATUS))
+          throw "Vertex shader compile error: " + gl.getShaderInfoLog (vertex_shader);
 
-          // --- Send over all the values needed by this particular shader to the GPU: ---
-          this.update_GPU (renderer, gpu_instance.gpu_addresses, uniforms, group_transform, material);
+      gl.shaderSource (fragment_shader, this.fragment_glsl_code ());
+      gl.compileShader (fragment_shader);
+      if ( !gl.getShaderParameter (fragment_shader, gl.COMPILE_STATUS))
+          throw "Fragment shader compile error: " + gl.getShaderInfoLog (fragment_shader);
 
-          let offset = 0;
-          for (const [name, sampler] of material.samplers.entries())
-            if (sampler && sampler.ready) {
+      gl.attachShader (program, vertex_shader);
+      gl.attachShader (program, fragment_shader);
+      gl.linkProgram (program);
+      if ( !gl.getProgramParameter (program, gl.LINK_STATUS))
+          throw "Shader linker error: " + gl.getProgramInfoLog (program);
 
-              const current_sampler2D_name = gpu_instance.gpu_addresses[name];
-              const previous_texture_offset = renderer.gpu_versions.get("Texture offset_"+current_sampler2D_name);
-              renderer.gpu_versions.set("Texture offset_"+current_sampler2D_name, offset);
-              if(previous_texture_offset != offset )
-                context.uniform1i (current_sampler2D_name, offset);
-              // For this draw, use the texture image from correct the GPU buffer:
-              sampler.activate (renderer, offset);
-              offset++;
-            }
-      }
-      // Your custom Shader has to override the following functions:
-      vertex_glsl_code () {}
-      fragment_glsl_code () {}
-      update_GPU () {}
-      static default_values () {}
-  };
+      const uniform_addresses = new Uniform_Addresses (program, gl);
+      renderer.uniform_addresses.set(this, uniform_addresses);
+      renderer.attribute_addresses.set(this, new Attribute_Addresses (program, gl));
+
+      for (let [ubo, index] of uniform_addresses.UBOs_to_block_index.entries())
+        gl.uniformBlockBinding(program, index, ubo.get_binding_point());
+
+      Object.assign (instance, {program, vertex_shader, fragment_shader});
+      return instance;
+    }
+    activate (renderer, uniforms, group_transform, material) {    // FINISH: Move to renderer?
+      // copy_to_GPU if needed
+      // useProgram if needed
+      // send loose uniforms with polymorphism (update_GPU)
+      // bind samplers and set texture offset
+        const instance = renderer.shaders.get(this) || this.copy_onto_graphics_card (renderer, uniforms);
+        const uniform_addresses = renderer.uniform_addresses.get(this);
+
+        const previous_program = renderer.gpu_versions.get("Program");
+        renderer.gpu_versions.set("Program", instance.program);
+        if(previous_program != instance.program )
+          renderer.context.useProgram (instance.program);
+
+          // TODO: Confirm that there are cases where update_GPU can't be changed to once-per-frame.
+
+        // --- Send over all the values needed by this particular shader to the GPU: ---
+        this.update_GPU (renderer, uniform_addresses, uniforms, group_transform, material);
+
+        let offset = 0;
+        for (const [name, sampler] of material.samplers.entries())
+          if (sampler && sampler.ready) {
+
+            const current_sampler2D_name = uniform_addresses[name];
+            const previous_texture_offset = renderer.gpu_versions.get("Texture offset_"+current_sampler2D_name);
+            renderer.gpu_versions.set("Texture offset_"+current_sampler2D_name, offset);
+            if(previous_texture_offset != offset )
+              renderer.context.uniform1i (current_sampler2D_name, offset);
+            // For this draw, use the texture image from correct the GPU buffer:
+            sampler.activate (renderer, offset);
+            offset++;
+          }
+    }
+    // Your custom Shader has to override the following functions:
+    vertex_glsl_code () {}
+    fragment_glsl_code () {}
+    update_GPU () {}
+    static default_values () {}
+};
 
 
 const Texture = tiny.Texture =
-  class Texture {
-      // See description at https://github.com/encyclopedia-of-code/tiny-graphics-js/wiki/tiny-graphics.js#texture
-      constructor (filename, min_filter = "LINEAR_MIPMAP_LINEAR") {
-          Object.assign (this, {filename, min_filter});
+class Texture {
+  // See description at https://github.com/encyclopedia-of-code/tiny-graphics-js/wiki/tiny-graphics.js#texture
+  constructor (filename, min_filter = "LINEAR_MIPMAP_LINEAR") {
+      Object.assign (this, {filename, min_filter});
 
-          if ( !this.gpu_instances) this.gpu_instances = new Map ();     // Track which GPU contexts this object has
-                                                                         // copied itself onto.
+      // Create a new HTML Image object:
+      this.image             = new Image ();
+      this.image.onload      = () => this.ready = true;
+      this.image.crossOrigin = "Anonymous";           // Avoid a browser warning.
+      this.image.src         = filename;
+  }
+  copy_onto_graphics_card (renderer, need_initial_settings = true) {
+      const gl = renderer.context;
+      const existing = renderer.textures.get (this);
+      const texture_buffer  = existing ?? gl.createTexture();
+      renderer.textures.set (this, texture_buffer);
+      if (!existing) test_rookie_mistake();
 
-          // Create a new HTML Image object:
-          this.image             = new Image ();
-          this.image.onload      = () => this.ready = true;
-          this.image.crossOrigin = "Anonymous";           // Avoid a browser warning.
-          this.image.src         = filename;
+      gl.bindTexture (gl.TEXTURE_2D, texture_buffer);
+
+      if (need_initial_settings) {
+          gl.pixelStorei (gl.UNPACK_FLIP_Y_WEBGL, true);
+          // Always use bi-linear sampling when zoomed out.
+          gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+          // Apply user-defined sampling method when zoomed in.
+          gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl[ this.min_filter ]);
       }
-      copy_onto_graphics_card (context, need_initial_settings = true) {
-          // Define what this object should store in each new WebGL Context:
-          const defaults = {texture_buffer_pointer: undefined};   // FINISH:  Try deleting this line
-
-          const existing_instance = this.gpu_instances.get (context);
-          if ( !existing_instance) test_rookie_mistake ();
-
-          // If this Texture was never used on this GPU context before, then prepare new buffer indices for this
-          // context.
-          const gpu_instance = existing_instance || this.gpu_instances.set (context, defaults).get (context);
-
-          if ( !gpu_instance.texture_buffer_pointer) gpu_instance.texture_buffer_pointer = context.createTexture ();
-
-          const gl = context;
-          gl.bindTexture (gl.TEXTURE_2D, gpu_instance.texture_buffer_pointer);
-
-          if (need_initial_settings) {
-              gl.pixelStorei (gl.UNPACK_FLIP_Y_WEBGL, true);
-              // Always use bi-linear sampling when zoomed out.
-              gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-              // Apply user-defined sampling method when zoomed in.
-              gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl[ this.min_filter ]);
-          }
-          gl.texImage2D (gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this.image);
-          if (this.min_filter === "LINEAR_MIPMAP_LINEAR")
-            // For tri-linear sampling (the default), generate the necessary "mips" of the texture and store them
-            // on the GPU.
-              gl.generateMipmap (gl.TEXTURE_2D);
-          return gpu_instance;
+      gl.texImage2D (gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this.image);
+      if (this.min_filter === "LINEAR_MIPMAP_LINEAR")
+        // For tri-linear sampling (the default), generate the necessary "mips" of the texture and store them
+        // on the GPU.
+          gl.generateMipmap (gl.TEXTURE_2D);
+      return texture_buffer;
+  }
+  activate (renderer, texture_unit = 0) {
+      if ( !this.ready)
+          return;          // Terminate draw requests until the image file is actually loaded over the network.
+      const gl = renderer.context;
+      const texture_buffer = renderer.textures.get (this) || this.copy_onto_graphics_card (renderer);
+      const previous_texture_unit = renderer.gpu_versions.get("Texture unit");
+      const field_ID = gl[ "TEXTURE" + texture_unit ];
+      renderer.gpu_versions.set("Texture unit", field_ID);
+      const previous_buffer = renderer.gpu_versions.get("Texture buffer pointer");
+      renderer.gpu_versions.set("Texture buffer pointer", texture_buffer);
+      if(previous_texture_unit != field_ID || previous_buffer != texture_buffer) {
+        gl.activeTexture (field_ID);
+        gl.bindTexture (gl.TEXTURE_2D, texture_buffer);
       }
-      activate (renderer, texture_unit = 0) {
-          if ( !this.ready)
-              return;          // Terminate draw requests until the image file is actually loaded over the network.
-          const context = renderer.context;
-          const gpu_instance = this.gpu_instances.get (context) || this.copy_onto_graphics_card (context);
-          const previous_texture_unit = renderer.gpu_versions.get("Texture unit");
-          const field_ID = context[ "TEXTURE" + texture_unit ];
-          renderer.gpu_versions.set("Texture unit", field_ID);
-          const previous_pointer = renderer.gpu_versions.get("Texture buffer pointer");
-          const pointer = gpu_instance.texture_buffer_pointer;
-          renderer.gpu_versions.set("Texture buffer pointer", pointer);
-          if(previous_texture_unit != field_ID || previous_pointer != pointer) {
-            context.activeTexture (field_ID);
-            context.bindTexture (context.TEXTURE_2D, pointer);
-          }
-      }
-  };
+  }
+};
 
 const Shadow_Map = tiny.Shadow_Map =
 class Shadow_Map {
       constructor (width, height, min_filter = "NEAREST", mag_filter = "NEAREST") {
           Object.assign (this, {width, height, min_filter, mag_filter, ready:true});
-
-          if ( !this.gpu_instances) this.gpu_instances = new Map ();     // Track which GPU contexts this object has
-                                                                         // copied itself onto.
       }
-      copy_onto_graphics_card (context) {
+      copy_onto_graphics_card (renderer) {
+          const gl = renderer.context;
+          const existing = renderer.shadow_maps.get (this);
+          const instance  = existing ?? {fbo_pointer: gl.createFramebuffer(), texture_buffer: gl.createTexture()};
+          renderer.shadow_maps.set (this, instance);
+          if (!existing) test_rookie_mistake();
 
-          const existing_instance = this.gpu_instances.get (context);
-          if ( !existing_instance) test_rookie_mistake ();
-
-          // If this Shadow_Map was never used on this GPU context before, then prepare new buffer indices for this
-          // context.
-          const gpu_instance = existing_instance || this.gpu_instances.set (context, {}).get (context);
-
-          if ( !gpu_instance.fbo_pointer) gpu_instance.fbo_pointer = context.createFramebuffer ();
-          if ( !gpu_instance.texture_buffer_pointer) gpu_instance.texture_buffer_pointer = context.createTexture ();
-
-          const gl = context;
-          gl.bindTexture (gl.TEXTURE_2D, gpu_instance.texture_buffer_pointer);
-          gl.bindFramebuffer(gl.FRAMEBUFFER, gpu_instance.fbo_pointer);
+          gl.bindTexture (gl.TEXTURE_2D, instance.texture_buffer);
+          gl.bindFramebuffer(gl.FRAMEBUFFER, instance.fbo_pointer);
 
           gl.pixelStorei (gl.UNPACK_FLIP_Y_WEBGL, true);
 
@@ -457,7 +432,7 @@ class Shadow_Map {
           gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl[ "CLAMP_TO_EDGE" ]);
           gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl[ "CLAMP_TO_EDGE" ]);
           //onto the fbo
-          gl.framebufferTexture2D (gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, gpu_instance.texture_buffer_pointer, 0);
+          gl.framebufferTexture2D (gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, instance.texture_buffer, 0);
 
           gl.drawBuffers ([gl.NONE]);
           gl.readBuffer (gl.NONE);
@@ -465,28 +440,34 @@ class Shadow_Map {
           gl.bindFramebuffer (gl.FRAMEBUFFER, null);
           gl.bindTexture( gl.TEXTURE_2D, null);
 
-          return gpu_instance;
+          return instance;
       }
-      activate (gl, texture_unit = 0, treat_as_fbo = false) {
-          const gpu_instance = this.gpu_instances.get (gl) || this.copy_onto_graphics_card (gl);
+      activate (renderer, texture_unit = 0, treat_as_fbo = false) {
+          const gl = renderer.context;
+          const instance = renderer.shadow_maps.get(this) || this.copy_onto_graphics_card (renderer);
+
+          // TODO: The below gl calls are done without checking cached values.
+          // The FBO parts seemingly couldn't be cached, but the rest could, as in Texture.
+          // If bindTexture(null) below is needed, then not that.
 
           if( treat_as_fbo ) {
             gl.viewport (0, 0, this.width, this.height);
-            gl.bindFramebuffer (gl.FRAMEBUFFER, gpu_instance.fbo_pointer);
+            gl.bindFramebuffer (gl.FRAMEBUFFER, instance.fbo_pointer);
             gl.clear (gl.DEPTH_BUFFER_BIT);
           }
           else {
             gl.activeTexture (gl[ "TEXTURE" + texture_unit ]);
             gl.uniform1i (this.draw_sampler_address, texture_unit);
           }
-          gl.bindTexture (gl.TEXTURE_2D, gpu_instance.texture_buffer_pointer);
+          gl.bindTexture (gl.TEXTURE_2D, instance.texture_buffer);
       }
-      deactivate (caller, treat_as_fbo = false) {
+      deactivate (renderer, treat_as_fbo = false) {
+        const gl = renderer.context;
         if (treat_as_fbo) {
-          caller.context.viewport(0, 0, caller.width, caller.height);
-          caller.context.bindFramebuffer (caller.context.FRAMEBUFFER, null);
+          gl.viewport(0, 0, renderer.width, renderer.height);
+          gl.bindFramebuffer (gl.FRAMEBUFFER, null);
         }
-        caller.context.bindTexture( caller.context.TEXTURE_2D, null);
+        gl.bindTexture( gl.TEXTURE_2D, null);
       }
   };
 
@@ -681,12 +662,22 @@ class Renderer extends Component {
     this.max_fps = 60;
     this.prev_frame_number = -1;
     this.is_running = true;
-    this.UBOs = new Map(); // UBO_Plan -> ubo_ptr for this context
-    this.VAOs = new Map(); // RenderListItem -> vao_ptr for this context
-    this.VBOs = new Map(); // VBO_plan -> vbo_ptr for this context
-    this.gpu_versions = new Map(); // VBO_plan, UBO_plan, or EBO_ptr -> version number existing on GPU for this context
-    this.index_buffers = new Map();  // Shape -> EBO_ptr for this context
-    this.selected_UBOs = new Map();
+
+      // FINISH: Move Texture and Shadow_Map instances into renderer maps.
+
+    // All the below maps belonging to this Renderer describe associations that exist only for this Renderer's context.
+    this.UBOs = new Map(); // UBO_Plan -> ubo_ptr
+    this.VAOs = new Map(); // RenderListItem -> vao_ptr
+    this.VBOs = new Map(); // VBO_plan -> vbo_ptr
+    this.gpu_versions = new Map(); // VBO_plan, UBO_plan, EBO_ptr -> version number existing on GPU
+        // Other values: Bound_UBO_#, Program, VAO, Active_EBO -> Their respective objects
+    this.index_buffers = new Map();  // Shape -> EBO_ptr
+    this.selected_UBOs = new Map(); // binding point integer -> UBO_plan
+    this.shaders = new Map();  // Shader -> { program, vertex_shader, fragment_shader }
+    this.attribute_addresses = new Map();  // Shader -> Attribute_Addresses
+    this.uniform_addresses = new Map();  // Shader -> Uniform_Addresses
+    this.textures = new Map();  // Texture -> texture buffer
+    this.shadow_maps = new Map();  // Shadow_Map -> texture buffer
   }
   make_context (canvas, background_color = color (0, 0, 0, 1), dimensions) {
       this.canvas              = canvas;
@@ -912,9 +903,7 @@ class Renderer extends Component {
     material.shader.activate (this, uniforms, renderListItem.group_transform, material);
 
     const gl = this.context;
-      // FINISH: Awkward; store a renderer::map of Shader -> attribute addresses instead.
-      // FINISH: Maybe part of the same fix: Move Shader, Texture, and Shadow_Map instances into renderer maps.
-    this.update_VAO (renderListItem, material.shader.get_attribute_addresses(this) );
+    this.update_VAO( renderListItem, this.attribute_addresses.get( material.shader ) );
 
     for (let binding_point of this.selected_UBOs.keys()) {
       const ubo_plan = this.selected_UBOs.get(binding_point);
@@ -987,19 +976,19 @@ class UBO_Plan {
   }
   get_binding_point () {
     throw `Abstract function.  Each subclass of UBO_Plan must specify its own binding point for its corresponding GLSL program uniform block.`; }
+  set_element(offset, value) {
+    if( this.local_buffer[offset].toFixed(3) != value.toFixed(3) )
+      this.version = this.next_version;
+    this.local_buffer[offset] = value;
+  }
   fill_buffer (json) {
     if (!this.buffer_size)
       throw `UBO_Plan::fill_buffer() was called too early; UBO_Plan doesn't query its size until draw time the first time.`
     if (!this.local_buffer)
       this.local_buffer = new Float32Array(this.buffer_size/4);
     const values_to_set = UBO_Plan.uniform_names_from_JSON(json);
+    this.next_version = this.version+1;
 
-    function set_element (value) {
-        if( destination_object.data[pos] != value )
-          destination_object.version = next_version;
-        destination_object.data[pos] = value;
-        pos++;
-    }
     const entries = [...this.element_offsets];
     for( let i = 0; i < entries.length; i++ ) {
       const [key, byte_offset] = entries[i];
@@ -1017,7 +1006,7 @@ class UBO_Plan {
         // GLSL doesn't support 3D arrays and beyond, and aligns Mat3s like Mat4s, so assume
         // we can just jump ahead 4 floats for every row.
         const row_column_offset = sub_index_2 === undefined ? sub_index_1
-                                                            : sub_index_1 + sub_index_2 * 4;
+                                                            : sub_index_1 + sub_index_2 * 4;  // Column major
         const offset = byte_offset/4 + row_column_offset;
 
         // If we get an entry that is too big, just silently truncate the extra stuff, rather
@@ -1025,10 +1014,9 @@ class UBO_Plan {
         if(entries[i+1] ? offset >= entries[i+1][1]/4 : offset >= this.buffer_size/4)
           continue;
 
-        this.local_buffer[offset] = in_value;
-        values_to_set.set(in_key, null);                 // FINISH: change to .delete(in_key) for clarity
+        this.set_element(offset, in_value);
+        values_to_set.delete(in_key, null);
       }
     }
-    this.version++;
   }
 }
