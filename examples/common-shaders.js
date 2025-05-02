@@ -158,12 +158,13 @@ class Universal_Shader extends Shader {
 
       //this.ubo_binding[0].binding_point, gpu_addresses);
 
-      if( this.previous_animation_time != gpu_addresses.animation_time ) {
-        this.previous_animation_time = gpu_addresses.animation_time;
+      if( this.previous_animation_time != uniforms.animation_time ) {
+        this.previous_animation_time = uniforms.animation_time;
      // renderer.context.uniform1f (gpu_addresses.animation_time, uniforms.animation_time / 1000);
       }
-      if( this.previous_group_matrix != gpu_addresses.group_transform ) {
-        this.previous_group_matrix = gpu_addresses.group_transform;
+      if( !this.previous_group_matrix || !this.previous_group_matrix.equals(group_transform) ) {
+        if( !this.previous_group_matrix ) this.previous_group_matrix = Mat4.of(...group_transform);
+        else this.previous_group_matrix.set(group_transform);
         renderer.context.uniformMatrix4fv (gpu_addresses.group_transform, true, Matrix.flatten_2D_to_1D (group_transform));
       }
     }

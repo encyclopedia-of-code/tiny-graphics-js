@@ -229,14 +229,14 @@ const color   = math.color = Vector4.create;
 const Matrix = math.Matrix =
   class Matrix extends Array {
       // See description at https://github.com/encyclopedia-of-code/tiny-graphics-js/wiki/tiny-graphics-math.js#matrix
-      constructor (...args) {
-          super (0);
-          this.push (...args);
-      }
-      // TODO:  This doesn't work, right?  Copies all rows by reference...
+//       constructor (...args) {
+//           super(0);
+//           this.push (...args);
+//           // for (let row of args) this.push(Array.isArray(row) ? row.slice() : row.constructor.from(row));
+//       }
       set (M) {
           this.length = 0;
-          this.push (...M);
+          for (let row of M) this.push(Array.isArray(row) ? row.slice() : row.constructor.from(row));
       }
       set_identity (m, n) {
           this.length = 0;
