@@ -79,6 +79,7 @@ class LightArray extends UBO_Plan {
 
 const Shadow_Light = defs.Shadow_Light =
 class Shadow_Light {
+        // TODO:  Since this is going to be a UBO_Plan, which is supposed to just be a container object without GL ties, it follows that some other object should be in charge of storing the GL stuff here that a Shadow_light needs to be associated with (a Shadow_Map and a shadowed Shader).
 
     static NUM_LIGHTS = 2;
     static global_index = 0;

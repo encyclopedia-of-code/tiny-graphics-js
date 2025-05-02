@@ -194,7 +194,7 @@ const test_rookie_mistake = function () {
 const Shader = tiny.Shader =
 class Shader {
     // See description at https://github.com/encyclopedia-of-code/tiny-graphics-js/wiki/tiny-graphics.js#shader
-    copy_onto_graphics_card (renderer, uniforms) {
+    copy_onto_graphics_card (renderer) {
       // TODO:  Calling this twice should recompile the shader in-place with updated options (untested)
 
       const gl       = renderer.context;
@@ -233,50 +233,47 @@ class Shader {
           }
 
       class Uniform_Addresses {
-        // Uniforms_Addresses: Helper inner class. Retrieve the GPU addresses of each uniform variable in
+        // Uniform_Addresses: Helper inner class. Retrieve the GPU addresses of each uniform variable in
         // the shader based on their names.  Store these pointers for later.
-          constructor (program, gl) {
-                                      // TODO: Store fewer of the following on this if possible (local scope instead).
-              this.indices_to_blockname = new Map();
-              this.indices_to_offsets = new Map();
-              this.UBOs_to_block_index = new Map();
-              this.num_blocks = gl.getProgramParameter(program, gl.ACTIVE_UNIFORM_BLOCKS);
-              for (let i = 0; i < this.num_blocks; i++ ) {
+          constructor (program, gl, given_info = new Map() ) {
+              const indices_to_blockname = new Map();
+              const indices_to_offsets = new Map();
+              this.uniform_block_info = new Map();  // block_name -> { buffer_size, element_offsets}
+              const num_blocks = gl.getProgramParameter(program, gl.ACTIVE_UNIFORM_BLOCKS);
+              for (let i = 0; i < num_blocks; i++ ) {
                 const UBO_name = gl.getActiveUniformBlockName(program, i);
-                if (!uniforms.UBOs[UBO_name])
-                  continue;
                 const UBO_size = gl.getActiveUniformBlockParameter(program, i, gl.UNIFORM_BLOCK_DATA_SIZE);
                 const UBO_index = gl.getUniformBlockIndex(program, UBO_name);
-                this.UBOs_to_block_index.set (uniforms.UBOs[UBO_name], UBO_index)
+                gl.uniformBlockBinding(program, UBO_index, UBO_index);   // By convention, force block indices to match binding points.
 
-                if (! uniforms.UBOs[UBO_name].initialized)     // FINISH: initialized doesn't exist
-                  uniforms.UBOs[UBO_name].buffer_size = UBO_size;
+                if( !given_info.get(UBO_name) )
+                  this.uniform_block_info.set(UBO_name, { buffer_size: UBO_size, element_offsets: new Map() });
 
                 const indices = gl.getActiveUniformBlockParameter(program, i, gl.UNIFORM_BLOCK_ACTIVE_UNIFORM_INDICES);
                 const offsets = gl.getActiveUniforms(program, indices, gl.UNIFORM_OFFSET);
                 for (let i = 0; i < indices.length; i++) {
-                  this.indices_to_blockname.set(indices[i], UBO_name);
-                  this.indices_to_offsets.set(indices[i], offsets[i]);
+                  indices_to_blockname.set(indices[i], UBO_name);
+                  indices_to_offsets.set(indices[i], offsets[i]);
                 }
               }
+
               const num_uniforms = gl.getProgramParameter (program, gl.ACTIVE_UNIFORMS);
 
               for (let i = 0; i < num_uniforms; ++i) {
-                  const full_name = gl.getActiveUniform (program, i).name;
 
-                  if (this.indices_to_blockname.get(i)) {
-                      // Belongs to a UBO
-                    const name = this.indices_to_blockname.get(i);
-                    const offset = this.indices_to_offsets.get(i);
+                  if (indices_to_blockname.get(i)) { // Belongs to a UBO
+                    const name = indices_to_blockname.get(i);
+                    if( given_info.get(name) )
+                      continue;
+                    const full_name = gl.getActiveUniform (program, i).name;
+                    const offset = indices_to_offsets.get(i);
 
-                    // TODO: Skip loop iterations instead if initialized, according to how many offsets this UBO is known to occupy?
-                    // Would save a lot of GL calls when the UBO is used in the next shader.
-
-                    if (uniforms.UBOs[name] && ! uniforms.UBOs[name].initialized)
-                      uniforms.UBOs[name].element_offsets.set (full_name, offset);
+                    this.uniform_block_info.get(name).element_offsets.set(full_name, offset);
                   }
-                  else // Loose uniform
+                  else { // Loose uniform
+                      const full_name = gl.getActiveUniform (program, i).name;
                       this[ full_name ] = gl.getUniformLocation (program, full_name);
+                  }
               }
           }
       }
@@ -297,12 +294,8 @@ class Shader {
       if ( !gl.getProgramParameter (program, gl.LINK_STATUS))
           throw "Shader linker error: " + gl.getProgramInfoLog (program);
 
-      const uniform_addresses = new Uniform_Addresses (program, gl);
-      renderer.uniform_addresses.set(this, uniform_addresses);
+      renderer.uniform_addresses.set(this, new Uniform_Addresses (program, gl));
       renderer.attribute_addresses.set(this, new Attribute_Addresses (program, gl));
-
-      for (let [ubo, index] of uniform_addresses.UBOs_to_block_index.entries())
-        gl.uniformBlockBinding(program, index, ubo.get_binding_point());
 
       Object.assign (instance, {program, vertex_shader, fragment_shader});
       return instance;
@@ -312,8 +305,7 @@ class Shader {
       // useProgram if needed
       // send loose uniforms with polymorphism (update_GPU)
       // bind samplers and set texture offset
-        const instance = renderer.shaders.get(this) || this.copy_onto_graphics_card (renderer, uniforms);
-        const uniform_addresses = renderer.uniform_addresses.get(this);
+        const instance = renderer.shaders.get(this) || this.copy_onto_graphics_card (renderer);
 
         const previous_program = renderer.gpu_versions.get("Program");
         renderer.gpu_versions.set("Program", instance.program);
@@ -323,17 +315,17 @@ class Shader {
           // TODO: Confirm that there are cases where update_GPU can't be changed to once-per-frame.
 
         // --- Send over all the values needed by this particular shader to the GPU: ---
-        this.update_GPU (renderer, uniform_addresses, uniforms, group_transform, material);
+        this.update_GPU (renderer, uniforms, group_transform, material);
 
         let offset = 0;
         for (const [name, sampler] of material.samplers.entries())
           if (sampler && sampler.ready) {
 
-            const current_sampler2D_name = uniform_addresses[name];
-            const previous_texture_offset = renderer.gpu_versions.get("Texture offset_"+current_sampler2D_name);
-            renderer.gpu_versions.set("Texture offset_"+current_sampler2D_name, offset);
+            const current_sampler2D_index = renderer.uniform_addresses[name];
+            const previous_texture_offset = renderer.gpu_versions.get("Texture offset_"+current_sampler2D_index);
+            renderer.gpu_versions.set("Texture offset_"+current_sampler2D_index, offset);
             if(previous_texture_offset != offset )
-              renderer.context.uniform1i (current_sampler2D_name, offset);
+              renderer.context.uniform1i (current_sampler2D_index, offset);
             // For this draw, use the texture image from correct the GPU buffer:
             sampler.activate (renderer, offset);
             offset++;
@@ -917,20 +909,17 @@ class Renderer extends Component {
       if(previous_bound_ubo != ubo )
         gl.bindBufferBase (gl.UNIFORM_BUFFER, binding_point, ubo);
 
-      if (ubo_plan.buffer_size && ubo_plan.ready) {
-        ubo_plan.fill_buffer(ubo_plan.fields);
+      ubo_plan.fill_buffer(ubo_plan.fields, this.uniform_addresses.get(material.shader).uniform_block_info.get( ubo_plan.constructor.name ));
+      if( !ubo_plan.local_buffer || this.gpu_versions.get(ubo_plan) >= ubo_plan.version )
+        continue;
+      this.gpu_versions.set(ubo_plan, ubo_plan.version);
 
-        if( this.gpu_versions.get(ubo_plan) >= ubo_plan.version )
-          continue;
-        this.gpu_versions.set(ubo_plan, ubo_plan.version);
-
-        gl.bindBuffer(gl.UNIFORM_BUFFER, ubo);
-        if(! existing) {
-          test_rookie_mistake ();
-          gl.bufferData (gl.UNIFORM_BUFFER, ubo_plan.buffer_size, gl.DYNAMIC_DRAW);
-        }
-        gl.bufferSubData(gl.UNIFORM_BUFFER, 0, ubo_plan.local_buffer);
+      gl.bindBuffer(gl.UNIFORM_BUFFER, ubo);
+      if(! existing) {
+        test_rookie_mistake ();
+        gl.bufferData (gl.UNIFORM_BUFFER, ubo_plan.local_buffer.length * 4, gl.DYNAMIC_DRAW);
       }
+      gl.bufferSubData(gl.UNIFORM_BUFFER, 0, ubo_plan.local_buffer);
     }
 
     // Run the shaders to draw every triangle now:
@@ -981,15 +970,17 @@ class UBO_Plan {
       this.version = this.next_version;
     this.local_buffer[offset] = value;
   }
-  fill_buffer (json) {
-    if (!this.buffer_size)
-      throw `UBO_Plan::fill_buffer() was called too early; UBO_Plan doesn't query its size until draw time the first time.`
+  fill_buffer (json, uniform_block_info) {
+    if (!uniform_block_info.buffer_size)
+      throw `Can't call UBO_Plan::fill_buffer() before uniform block info is queried at draw time.`
+    if (!this.ready)
+      return;     // Don't make a buffer out of this.fields until any async requests to fill in this.fields are done.
     if (!this.local_buffer)
-      this.local_buffer = new Float32Array(this.buffer_size/4);
+      this.local_buffer = new Float32Array(uniform_block_info.buffer_size);
     const values_to_set = UBO_Plan.uniform_names_from_JSON(json);
     this.next_version = this.version+1;
 
-    const entries = [...this.element_offsets];
+    const entries = [...uniform_block_info.element_offsets];
     for( let i = 0; i < entries.length; i++ ) {
       const [key, byte_offset] = entries[i];
       for( let [in_key, in_value] of values_to_set ) {

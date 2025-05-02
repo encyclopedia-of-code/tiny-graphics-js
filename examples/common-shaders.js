@@ -17,7 +17,8 @@ class Shader_Without_UBOs  extends Shader {
     static default_values () {
       return {};
     }
-    update_GPU (renderer, gpu_addresses, uniforms, group_transform, material) {
+    update_GPU (renderer, uniforms, group_transform, material) {
+      const gpu_addresses = renderer.uniform_addresses.get(this);
       if( this.previous_animation_time != gpu_addresses.animation_time ) {
         this.previous_animation_time = gpu_addresses.animation_time;
      // renderer.context.uniform1f (gpu_addresses.animation_time, uniforms.animation_time / 1000);
@@ -139,8 +140,9 @@ class Universal_Shader extends Shader {
     //  // this.init_UBO (context, instance.program, this.ubo_binding);
     //   return instance;
     // }
-    update_GPU (renderer, gpu_addresses, uniforms, group_transform, material) {
+    update_GPU (renderer, uniforms, group_transform, material) {
      //   material.initialize(context, this.ubo_layout);
+      const gpu_addresses = renderer.uniform_addresses.get(this);
 
 
 
@@ -193,7 +195,7 @@ class Universal_Shader extends Shader {
       uniform float animation_time;
       uniform mat4 group_transform;
 
-      uniform camera
+      uniform Camera
       {
         mat4 camera_inverse;
         mat4 projection;
@@ -221,7 +223,7 @@ class Universal_Shader extends Shader {
     }
     fragment_glsl_code () {         // ********* FRAGMENT SHADER *********
         return this.shared_glsl_code () + `
-      uniform camera
+      uniform Camera
       {
         mat4 camera_inverse;
         mat4 projection;
@@ -240,7 +242,7 @@ class Universal_Shader extends Shader {
 
       const int N_LIGHTS = ${this.num_lights};
 
-      uniform lightArray
+      uniform LightArray
       {
         float ambient;
         Light lights[N_LIGHTS];
@@ -254,7 +256,7 @@ class Universal_Shader extends Shader {
               uniform sampler2D shadow_maps[NUM_SHADOW_MAPS]; //since point lights have up to 6 samplers`
               : ``}
 
-      uniform material
+      uniform Material
       {
         vec4 color;
         vec3 diffuse;
@@ -375,7 +377,9 @@ class Universal_Shader extends Shader {
 
 const Shadow_Pass_Shader = defs.Shadow_Pass_Shader =
 class Shadow_Pass_Shader extends Shader {
-    update_GPU (context, gpu_addresses, uniforms, model_transform, material) {
+    update_GPU (context, uniforms, model_transform, material) {
+
+      const gpu_addresses = renderer.uniform_addresses.get(this);
 
       if(uniforms.light_space_matrix)
         context.uniformMatrix4fv (gpu_addresses.light_space_matrix, true, Matrix.flatten_2D_to_1D (uniforms.light_space_matrix));
@@ -394,7 +398,7 @@ class Shadow_Pass_Shader extends Shader {
     uniform mat4 model_transform;
     uniform mat4 light_space_matrix;
 
-    uniform camera
+    uniform Camera
     {
       mat4 camera_inverse;
       mat4 projection;
@@ -415,7 +419,9 @@ class Shadow_Pass_Shader extends Shader {
 
 const Debug_Shader = defs.Debug_Shader =
 class Debug_Shader extends Shader {
-    update_GPU (renderer, gpu_addresses, uniforms, matrix, material) {
+    update_GPU (renderer, uniforms, matrix, material) {
+      const gpu_addresses = renderer.uniform_addresses.get(this);
+
       renderer.selected_UBOs.set(material.get_binding_point(), material);
 
       renderer.context.uniform1f (gpu_addresses.animation_time, uniforms.animation_time / 1000);

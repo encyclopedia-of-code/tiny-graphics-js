@@ -23,7 +23,7 @@ class Instanced_Cubes_Demo extends Renderer {
  //   this.renderList.push(new RenderListItem(this.shapes.cube, new Material(this.shader)) );
 
     this.renderList.push(new RenderListItem(this.shapes.cube, this.fire) );
-    this.renderList.push(new RenderListItem(this.shapes.cube, this.fire) );
+    this.renderList.push(new RenderListItem(this.shapes.cube, this.water) );
 
     for( let i=0; i<2; i++ ) {
       const renderListItem = this.renderList[i];
@@ -61,7 +61,7 @@ render_frame () {
     this.selected_UBOs.set(this.camera.get_binding_point(), this.camera);
     this.selected_UBOs.set(this.lightArray.get_binding_point(), this.lightArray);
 
-    this.draw( this.renderList[0], this.uniforms);
+    // this.draw( this.renderList[0], this.uniforms);
 
      for( let renderListItem of this.renderList)
        this.draw(renderListItem, this.uniforms);
