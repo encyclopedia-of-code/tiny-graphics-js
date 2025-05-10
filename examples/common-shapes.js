@@ -18,6 +18,9 @@ const Triangle = defs.Triangle =
           // Vertex positions: the three point locations of an imaginary triangle.
           // "Normal" vectors:  Vectors that point away from the triangle face.  They're needed so the graphics engine can know if the shape is pointed at light or not, and then color it accordingly.
           // Texture coordinates: Points in the seperate 2D X/Y pixel space belonging to any 2D images we might like to paint the shape with.
+         
+          const positions = [[0,0,0], [1,0,0], [0,1,0]];
+        
           this.vertices[0] = { position: vec3 (0, 0, 0),
                                normal: vec3 (0, 0, 1),
                                texture_coord: vec2 (0, 0) };

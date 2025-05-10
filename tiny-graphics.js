@@ -79,7 +79,7 @@ const Shape = tiny.Shape =
                 // and vec1 too which may not be handled correctly elsewhere.
             const vector = (attribute_sizes[a] == 1) ? [ v[attr] ] : v[attr];
             function set_element (value) {
-                if( destination_object.data[pos] != value )
+                if( destination_object.data[pos].toFixed(5) != value.toFixed(5) )
                   destination_object.version = next_version;
                 destination_object.data[pos] = value;
                 pos++;
@@ -194,8 +194,10 @@ const test_rookie_mistake = function () {
 const Shader = tiny.Shader =
 class Shader {
     // See description at https://github.com/encyclopedia-of-code/tiny-graphics-js/wiki/tiny-graphics.js#shader
-    copy_onto_graphics_card (renderer) {
+    copy_onto_graphics_card (renderer, given_info = new Map()) {
       // TODO:  Calling this twice should recompile the shader in-place with updated options (untested)
+      // TODO:  The given_info argument may be supplied with another uniform_addresses.get(shader).uniform_block_info
+      // to skip some repeat gl initialization calls.
 
       const gl       = renderer.context;
       const existing = renderer.shaders.get (this);
@@ -208,7 +210,7 @@ class Shader {
         gl.detachShader (existing.program, existing.vertex_shader);
         gl.detachShader (existing.program, existing.fragment_shader);
       }
-      const {program, vertex_shader,fragment_shader} = instance;
+      const {program, vertex_shader, fragment_shader} = instance;
 
       class Attribute_Addresses {
         // Attributes_Addresses: Helper inner class. Retrieve the GPU addresses of each attribute.
@@ -235,7 +237,7 @@ class Shader {
       class Uniform_Addresses {
         // Uniform_Addresses: Helper inner class. Retrieve the GPU addresses of each uniform variable in
         // the shader based on their names.  Store these pointers for later.
-          constructor (program, gl, given_info = new Map() ) {
+          constructor (program) {
               const indices_to_blockname = new Map();
               const indices_to_offsets = new Map();
               this.uniform_block_info = new Map();  // block_name -> { buffer_size, element_offsets}
@@ -258,19 +260,18 @@ class Shader {
               }
 
               const num_uniforms = gl.getProgramParameter (program, gl.ACTIVE_UNIFORMS);
-
               for (let i = 0; i < num_uniforms; ++i) {
-
-                  if (indices_to_blockname.get(i)) { // Belongs to a UBO
+                  if (indices_to_blockname.get(i)) {  // Belongs to a UBO
                     const name = indices_to_blockname.get(i);
                     if( given_info.get(name) )
                       continue;
                     const full_name = gl.getActiveUniform (program, i).name;
+                    const dot_path = full_name.replace(/\[(\d+)\]/g, '.$1'); // 'lights[0].color' => 'lights.0.color'
                     const offset = indices_to_offsets.get(i);
 
-                    this.uniform_block_info.get(name).element_offsets.set(full_name, offset);
+                    this.uniform_block_info.get(name).element_offsets.set(dot_path, offset);
                   }
-                  else { // Loose uniform
+                  else {  // Loose uniform
                       const full_name = gl.getActiveUniform (program, i).name;
                       this[ full_name ] = gl.getUniformLocation (program, full_name);
                   }
@@ -303,7 +304,7 @@ class Shader {
     activate (renderer, uniforms, group_transform, material) {    // FINISH: Move to renderer?
       // copy_to_GPU if needed
       // useProgram if needed
-      // send loose uniforms with polymorphism (update_GPU)
+      // send loose uniforms with polymorphism (this.update_GPU)
       // bind samplers and set texture offset
         const instance = renderer.shaders.get(this) || this.copy_onto_graphics_card (renderer);
 
@@ -312,9 +313,7 @@ class Shader {
         if(previous_program != instance.program )
           renderer.context.useProgram (instance.program);
 
-          // TODO: Confirm that there are cases where update_GPU can't be changed to once-per-frame.
-
-        // --- Send over all the values needed by this particular shader to the GPU: ---
+        // TODO: Confirm that there are cases where update_GPU can't be batched to once-per-frame.
         this.update_GPU (renderer, uniforms, group_transform, material);
 
         let offset = 0;
@@ -909,7 +908,7 @@ class Renderer extends Component {
       if(previous_bound_ubo != ubo )
         gl.bindBufferBase (gl.UNIFORM_BUFFER, binding_point, ubo);
 
-      ubo_plan.fill_buffer(ubo_plan.fields, this.uniform_addresses.get(material.shader).uniform_block_info.get( ubo_plan.constructor.name ));
+      ubo_plan.fill_buffer(this.uniform_addresses.get(material.shader).uniform_block_info.get( ubo_plan.constructor.name ));
       if( !ubo_plan.local_buffer || this.gpu_versions.get(ubo_plan) >= ubo_plan.version )
         continue;
       this.gpu_versions.set(ubo_plan, ubo_plan.version);
@@ -926,11 +925,6 @@ class Renderer extends Component {
     this.execute_shaders (gl, renderListItem.shape, renderListItem.type, renderListItem.instance_count);
   }
   execute_shaders (gl, shape, type, instance_count) {
-
-    // const arrayBufferSize = gl.getBufferParameter(gl.ARRAY_BUFFER, gl.BUFFER_SIZE);
-    // const elementArrayBufferSize = gl.getBufferParameter(gl.ELEMENT_ARRAY_BUFFER, gl.BUFFER_SIZE);
-    // const uniformBufferSize = gl.getBufferParameter(gl.UNIFORM_BUFFER, gl.BUFFER_SIZE)
-
     if (shape.indices.length)
        gl.drawElementsInstanced (gl[ type ], shape.indices.length, gl.UNSIGNED_INT, 0, instance_count);
     else
@@ -951,63 +945,54 @@ class UBO_Plan {
     this.init(...args);
   }
   init (fields) { }     // Abstract -- user overrides this
-  initial_values () { return {}; }        // TODO:  Unused still
-  static flatten_JSON (o,p="") {          // TODO:  Convert to a while loop with stack variable, to keep debugger from tripping on this recursive function
-    return Object.keys (o).map (k => o[k] === null           ||
-                                    typeof o[k] !== "object" ? {[p + (p ? ".":"") + k]: o[k]}
-                                                             : UBO_Plan.flatten_JSON (o[k],p + (p ? ".":"") + k))
-                          .reduce ((acc,value) => Object.assign (acc,value));
-  }
-  static uniform_names_from_JSON (json) {
-    const table = Object.entries( UBO_Plan.flatten_JSON(json) );
-    const fix_array_notation = s => s.replaceAll (/\.(\d+)(?=\.|$)/g, (match, num) => '['+num+']' );
-    return new Map( table.map (r => [fix_array_notation(r[0]), r[1] ]) );
-  }
   get_binding_point () {
     throw `Abstract function.  Each subclass of UBO_Plan must specify its own binding point for its corresponding GLSL program uniform block.`; }
+  traverse_fields() {
+    const out = {};
+    const stack = [{ value: this.fields, path: [] }];
+
+    while (stack.length) {
+      const { value, path } = stack.pop();
+
+      if ( typeof value === 'number' || value instanceof Float32Array || value instanceof Matrix ) {
+        out[path.join('.')] = value;  // We found a leaf node.  Finalize the path array into a string.
+        continue;
+      }
+      else if (Array.isArray(value)) {
+        for (let i = 0; i < value.length; ++i)
+          stack.push({ value: value[i], path: path.concat(i) });
+      } else if (typeof value === 'object' && value !== null) {
+        for (const key of Object.keys(value))
+          stack.push({ value: value[key], path: path.concat(key) });
+      }
+    }
+    return out;
+  }
   set_element(offset, value) {
-    if( this.local_buffer[offset].toFixed(3) != value.toFixed(3) )
+    if( this.local_buffer[offset].toFixed(5) != value.toFixed(5) )
       this.version = this.next_version;
     this.local_buffer[offset] = value;
   }
-  fill_buffer (json, uniform_block_info) {
+  fill_buffer (uniform_block_info) {
     if (!uniform_block_info.buffer_size)
       throw `Can't call UBO_Plan::fill_buffer() before uniform block info is queried at draw time.`
     if (!this.ready)
       return;     // Don't make a buffer out of this.fields until any async requests to fill in this.fields are done.
     if (!this.local_buffer)
-      this.local_buffer = new Float32Array(uniform_block_info.buffer_size);
-    const values_to_set = UBO_Plan.uniform_names_from_JSON(json);
+      this.local_buffer = new Float32Array( uniform_block_info.buffer_size/4 );
     this.next_version = this.version+1;
 
-    const entries = [...uniform_block_info.element_offsets];
-    for( let i = 0; i < entries.length; i++ ) {
-      const [key, byte_offset] = entries[i];
-      for( let [in_key, in_value] of values_to_set ) {
-        // Skip inputs we've already handled.  Skip non matches.  Lastly,
-        // ignore any fields the shader side did not want when this UBO was used.
-        if(in_value === null || !in_key.includes(key) || byte_offset === undefined)
-          continue;
+    for (const [dot_path, value] of Object.entries( this.traverse_fields() )) {
+      const offset = uniform_block_info.element_offsets.get( dot_path );
+      if (offset === undefined) continue;  // Skip entries of this.fields that don't exist in the GLSL UBO
 
-        // Handle assigning vecs and mats to UBO_Plan entries:
-        const suffix = in_key.substr(key.length, in_key.length);
-        const sub_index_1 =  parseInt(suffix[1]) || 0,
-              sub_index_2 =  suffix[4] ? parseInt(suffix[4]) : undefined;
-
-        // GLSL doesn't support 3D arrays and beyond, and aligns Mat3s like Mat4s, so assume
-        // we can just jump ahead 4 floats for every row.
-        const row_column_offset = sub_index_2 === undefined ? sub_index_1
-                                                            : sub_index_1 + sub_index_2 * 4;  // Column major
-        const offset = byte_offset/4 + row_column_offset;
-
-        // If we get an entry that is too big, just silently truncate the extra stuff, rather
-        // than buffer overflowing into the next element.
-        if(entries[i+1] ? offset >= entries[i+1][1]/4 : offset >= this.buffer_size/4)
-          continue;
-
-        this.set_element(offset, in_value);
-        values_to_set.delete(in_key, null);
-      }
+      if (value instanceof Matrix)
+        // Turn any matrices column major for GLSL.
+        value.forEach ((r, i) => r.forEach ((x, j) => this.set_element( offset/4 + 4*i+j,  value[j][i]) ));
+      else if (value instanceof Float32Array)
+        for (let i=0; i<value.length; i++) this.set_element( offset/4 + i,  value[i]);
+      else
+        this.set_element(offset/4, value);
     }
   }
 }
