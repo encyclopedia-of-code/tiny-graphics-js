@@ -179,7 +179,7 @@ const test_rookie_mistake = function () {
     if (test_rookie_mistake.counter++ > 200)
         throw `Error: You are sending a lot of object definitions to the GPU, probably by mistake!  Many are likely
         duplicates, which you don't want since sending each one is very slow.  TO FIX THIS: Avoid ever declaring a
-        Shape, Shader, or Texture with "new" anywhere that's called repeatedly (such as inside render_frame()).
+        Shape, Shader, UBO, or Texture with "new" anywhere that's called repeatedly (such as inside render_frame()).
         You don't want simple definitions to be re-created and re-transmitted every frame.  Your scene's constructor is
         a better option; it's only called once.  Call "new" there instead, then keep the result as a class member.  If
         you somehow have a deformable shape that must really be updated every frame, then refer to the documentation of
@@ -249,7 +249,8 @@ class Shader {
                 gl.uniformBlockBinding(program, UBO_index, UBO_index);   // By convention, force block indices to match binding points.
 
                 if( !given_info.get(UBO_name) )
-                  this.uniform_block_info.set(UBO_name, { buffer_size: UBO_size, element_offsets: new Map() });
+                  this.uniform_block_info.set(UBO_name, 
+                        { buffer_size: UBO_size, element_offsets: new Map(), next_offsets: new Map() });
 
                 const indices = gl.getActiveUniformBlockParameter(program, i, gl.UNIFORM_BLOCK_ACTIVE_UNIFORM_INDICES);
                 const offsets = gl.getActiveUniforms(program, indices, gl.UNIFORM_OFFSET);
@@ -260,6 +261,7 @@ class Shader {
               }
 
               const num_uniforms = gl.getProgramParameter (program, gl.ACTIVE_UNIFORMS);
+              let previous_offset;
               for (let i = 0; i < num_uniforms; ++i) {
                   if (indices_to_blockname.get(i)) {  // Belongs to a UBO
                     const name = indices_to_blockname.get(i);
@@ -268,8 +270,10 @@ class Shader {
                     const full_name = gl.getActiveUniform (program, i).name;
                     const dot_path = full_name.replace(/\[(\d+)\]/g, '.$1'); // 'lights[0].color' => 'lights.0.color'
                     const offset = indices_to_offsets.get(i);
-
                     this.uniform_block_info.get(name).element_offsets.set(dot_path, offset);
+                    if( previous_offset !== undefined )
+                      this.uniform_block_info.get(name).next_offsets.set(previous_offset, offset);
+                    previous_offset = offset;
                   }
                   else {  // Loose uniform
                       const full_name = gl.getActiveUniform (program, i).name;
@@ -932,16 +936,13 @@ class Renderer extends Component {
   }
 }
 
-// TODO:  Classes UBO and Shape seem very similar at their core (each know where to put things in a local buffer prepared for bufferData).
-// Could Shape/vertices be specified by JSON as well to join with UBO?
-
-
 const UBO_Plan = tiny.UBO_Plan =
 class UBO_Plan {
   constructor (...args) {
     this.element_offsets = new Map();
     this.ready = true;        // For async loaded entries
     this.version = -1;
+    this.type = Float32Array;   // User must override this manually before fill_buffer if they want a int/uint based UBO.
     this.init(...args);
   }
   init (fields) { }     // Abstract -- user overrides this
@@ -954,7 +955,7 @@ class UBO_Plan {
     while (stack.length) {
       const { value, path } = stack.pop();
 
-      if ( typeof value === 'number' || value instanceof Float32Array || value instanceof Matrix ) {
+      if ( typeof value === 'number' || value instanceof this.type || value instanceof Matrix ) {
         out[path.join('.')] = value;  // We found a leaf node.  Finalize the path array into a string.
         continue;
       }
@@ -969,27 +970,31 @@ class UBO_Plan {
     return out;
   }
   set_element(offset, value) {
+    if( offset >= this.buffer_boundary )
+      throw "A UBO field was too big for its GLSL variable."
     if( this.local_buffer[offset].toFixed(5) != value.toFixed(5) )
       this.version = this.next_version;
     this.local_buffer[offset] = value;
   }
   fill_buffer (uniform_block_info) {
     if (!uniform_block_info.buffer_size)
-      throw `Can't call UBO_Plan::fill_buffer() before uniform block info is queried at draw time.`
+      throw `Can't call UBO_Plan::fill_buffer() before uniform block info for ${this.constructor.name} is queried at draw time.`
     if (!this.ready)
       return;     // Don't make a buffer out of this.fields until any async requests to fill in this.fields are done.
     if (!this.local_buffer)
-      this.local_buffer = new Float32Array( uniform_block_info.buffer_size/4 );
+      this.local_buffer = new this.type( uniform_block_info.buffer_size/4 );
     this.next_version = this.version+1;
 
     for (const [dot_path, value] of Object.entries( this.traverse_fields() )) {
       const offset = uniform_block_info.element_offsets.get( dot_path );
       if (offset === undefined) continue;  // Skip entries of this.fields that don't exist in the GLSL UBO
 
+      this.buffer_boundary = uniform_block_info.next_offsets.get( offset )/4 || uniform_block_info.buffer_size/4;
+
       if (value instanceof Matrix)
         // Turn any matrices column major for GLSL.
         value.forEach ((r, i) => r.forEach ((x, j) => this.set_element( offset/4 + 4*i+j,  value[j][i]) ));
-      else if (value instanceof Float32Array)
+      else if (value instanceof this.type)
         for (let i=0; i<value.length; i++) this.set_element( offset/4 + i,  value[i]);
       else
         this.set_element(offset/4, value);
