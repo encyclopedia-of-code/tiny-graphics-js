@@ -6,46 +6,173 @@ const defs = {};
 
 export {tiny, defs};
 
-const Universal_Shader = defs.Universal_Shader =
-class Universal_Shader extends Shader {
-    constructor (num_lights = 2, options) {
-      super ();
+const Shader_Without_UBOs = defs.Shader_Without_UBOs  =
+class Shader_Without_UBOs  extends Shader {
+    constructor (num_lights = 1, options) {
+      super();
       const defaults = { has_instancing: true, has_shadows: true, has_texture: true };
       Object.assign (this, defaults, options, {num_lights});
 
-      this.ubo_binding = [
-        {shader_name: "Material",  binding_point: 2},
-      ];
+    }
+    static default_values () {
+      return {};
+    }
+    update_GPU (renderer, uniforms, group_transform, material) {
+      const gpu_addresses = renderer.uniform_addresses.get(this);
+      if( this.previous_animation_time != gpu_addresses.animation_time ) {
+        this.previous_animation_time = gpu_addresses.animation_time;
+     // renderer.context.uniform1f (gpu_addresses.animation_time, uniforms.animation_time / 1000);
+      }
+      if( this.previous_group_matrix != gpu_addresses.group_transform ) {
+        this.previous_group_matrix = gpu_addresses.group_transform;
+        renderer.context.uniformMatrix4fv (gpu_addresses.group_transform, true, Matrix.flatten_2D_to_1D (group_transform));
+      }
+    }
+    shared_glsl_code () {           // ********* SHARED CODE, INCLUDED IN BOTH SHADERS *********
+        return "#version 300 es " + `
+                precision mediump float;
+    `;
+    }
+    vertex_glsl_code () {          // ********* VERTEX SHADER *********
+        return this.shared_glsl_code () + `
+      layout(location = 0) in vec3 position; // Position is expressed in object coordinates
+      layout(location = 1) in vec3 normal;
+      layout(location = 2) in vec2 texture_coord;
+      ${this.has_instancing ? `
+              layout(location = 3) in mat4 model_transform;`
+              : ``}
 
-      this.ubo_layout = [
-        {num_instances: 1,
-          data_layout:[{name:"color", type:"vec4"},
-                      {name:"diffuse", type:"vec3"},
-                      {name:"specular", type:"vec3"},
-                      {name:"smoothness", type:"float"}]
+      uniform float animation_time;
+      uniform mat4 group_transform;
+
+      out vec3 VERTEX_POS;
+      out vec3 VERTEX_NORMAL;
+      out vec2 VERTEX_TEXCOORD;
+
+      void main() {
+        ${this.has_instancing ? `
+                mat4 world_space = group_transform * model_transform;`
+                :
+                `mat4 world_space = group_transform;`}
+
+        mat4 modelview = mat4(
+            0.56,  0.00,  0.00,  0.00,
+            0.00,  0.97, -0.24, -0.24,
+            0.00, -0.24, -0.97, -0.97,
+            0.00,  0.00, 20.60, 20.62
+        );
+
+        vec4 world_position = world_space * vec4( position, 1.0 );
+        gl_Position = modelview * world_position;
+        VERTEX_POS = vec3(world_position);
+        VERTEX_NORMAL = mat3(inverse(transpose(world_space))) * normal;
+        VERTEX_TEXCOORD = texture_coord;
+      }`;
+    }
+    fragment_glsl_code () {         // ********* FRAGMENT SHADER *********
+        return this.shared_glsl_code () + `
+      in vec3 VERTEX_POS;
+      in vec3 VERTEX_NORMAL;
+      in vec2 VERTEX_TEXCOORD;
+
+      out vec4 frag_color;
+
+      // ***** PHONG SHADING HAPPENS HERE: *****
+      vec3 phong_model_lights( vec3 N, vec3 vertex_worldspace) {
+          vec3 camera_position = vec3(0.0, 5.0, 20.0);
+          vec4 light_direction_or_position = vec4(1.0, 2.0, 1.0, 0.0);
+          float smoothness = 32.0;
+          float attenuation_factor = 0.1;
+          vec3 light_color = vec3(1.0, 1.0, 1.0);
+          vec3 light_diffuse = vec3(1.0, 1.0, 1.0);
+          vec3 light_specular = vec3(1.0, 1.0, 1.0);
+          vec3 E = normalize( camera_position - vertex_worldspace );
+          vec3 surface_to_light_vector = light_direction_or_position.xyz -
+                                          light_direction_or_position.w * vertex_worldspace;
+          float distance_to_light = length( surface_to_light_vector );
+
+          vec3 L = normalize( surface_to_light_vector );
+          vec3 H = normalize( L + E );
+
+            // Compute diffuse and specular components of Phong Reflection Model.
+          float diffuse  =      max( dot( N, L ), 0.0 );
+          float specular = pow( max( dot( N, H ), 0.0 ), smoothness );     // Use Blinn's "halfway vector" method.
+
+          float attenuation = 1.0 / (1.0 + attenuation_factor * distance_to_light * distance_to_light );
+
+          vec3 light_contribution = vec3(1.,1.,1.) * diffuse * light_diffuse * diffuse
+                                                  + specular * light_specular * specular;
+          light_contribution *= light_color.xyz;
+
+          return attenuation * light_contribution;
         }
-        ];
+
+      void main() {
+                // Compute the final color with contributions from lights:
+                frag_color = vec4(0.0, 0.0, 0.0, 1.0);
+                frag_color.xyz = phong_model_lights( normalize( VERTEX_NORMAL ), VERTEX_POS );
+      }`
     }
-    copy_onto_graphics_card (context) {
-      const instance = super.copy_onto_graphics_card (context);
-      this.init_UBO (context, this.gpu_instances.get(context).program, this.ubo_binding);
-      return instance;
+};
+
+const Universal_Shader = defs.Universal_Shader  =
+class Universal_Shader extends Shader {
+    constructor (num_lights = 2, options) {
+      super();
+      const defaults = { has_instancing: true, has_shadows: true, has_texture: true };
+      Object.assign (this, defaults, options, {num_lights});
+
+      // this.ubo_binding = [
+      //   {shader_name: "Material",  binding_point: 2},
+      // ];
+
+      // this.ubo_layout = [
+      //   {num_instances: 1,
+      //     data_layout:[{name:"color", type:"vec4"},
+      //                 {name:"diffuse", type:"vec3"},
+      //                 {name:"specular", type:"vec3"},
+      //                 {name:"smoothness", type:"float"}]
+      //   }
+      //   ];
     }
-    update_GPU (context, gpu_addresses, uniforms, model_transform, material) {
-      material.initialize(context, this.ubo_layout);
+    // copy_onto_graphics_card (context, uniforms) {
+    //   const instance = super.copy_onto_graphics_card (context, uniforms);
+    //  // this.init_UBO (context, instance.program, this.ubo_binding);
+    //   return instance;
+    // }
+    update_GPU (renderer, uniforms, group_transform, material) {
+     //   material.initialize(context, this.ubo_layout);
+      const gpu_addresses = renderer.uniform_addresses.get(this);
+
+
+
+      // FINISH:  Move lightArray bind out of demo to here instead of the below?  And will shadows use a fully separate lightArray?
+
+      if( false )
       if (this.has_shadows)
         for (let light of uniforms.lights)
           if (!light.supports_shadow)
             throw `Simpler lights do not have compatible UBO layouts to use with shadowed shaders!`;
           else if (light.casts_shadow)
-            light.bind(context, gpu_addresses);
-      material.bind(this.ubo_binding[0].binding_point, gpu_addresses);
-      context.uniformMatrix4fv (gpu_addresses.model_transform, true, Matrix.flatten_2D_to_1D (model_transform));
+            light.bind(renderer, gpu_addresses);
+
+      renderer.selected_UBOs.set(material.get_binding_point(), material);
+
+      //this.ubo_binding[0].binding_point, gpu_addresses);
+
+      if( this.previous_animation_time != uniforms.animation_time ) {
+        this.previous_animation_time = uniforms.animation_time;
+     // renderer.context.uniform1f (gpu_addresses.animation_time, uniforms.animation_time / 1000);
+      }
+      if( !this.previous_group_matrix || !this.previous_group_matrix.equals(group_transform) ) {
+        if( !this.previous_group_matrix ) this.previous_group_matrix = Mat4.of(...group_transform);
+        else this.previous_group_matrix.set(group_transform);
+        renderer.context.uniformMatrix4fv (gpu_addresses.group_transform, true, Matrix.flatten_2D_to_1D (group_transform));
+      }
     }
     static default_values () {
       return {
               color: vec4 (1.0, 1.0, 1.0, 1.0),
-              ambient: 0.0,
               diffuse: vec3(1.0, 1.0, 1.0),
               specular: vec3 (1.0, 1.0, 1.0),
               smoothness: 32.0
@@ -62,12 +189,13 @@ class Universal_Shader extends Shader {
       layout(location = 1) in vec3 normal;
       layout(location = 2) in vec2 texture_coord;
       ${this.has_instancing ? `
-        layout(location = 3) in mat4 instance_transform;`
-        : ``}
+              layout(location = 3) in mat4 model_transform;`
+              : ``}
 
-      uniform mat4 model_transform;
+      uniform float animation_time;
+      uniform mat4 group_transform;
 
-      layout (std140) uniform Camera
+      uniform Camera
       {
         mat4 camera_inverse;
         mat4 projection;
@@ -80,11 +208,14 @@ class Universal_Shader extends Shader {
 
       void main() {
         ${this.has_instancing ? `
-          mat4 world_space = model_transform * instance_transform;`
-          :
-          `mat4 world_space = model_transform;`}
+                mat4 world_space = group_transform * model_transform;`
+                :
+                `mat4 world_space = group_transform;`}
+
+     //        vec4 world_position = vec4( position, 1.0 );
         vec4 world_position = world_space * vec4( position, 1.0 );
         gl_Position = projection * camera_inverse * world_position;
+      //           gl_Position = camera_inverse * world_position;
         VERTEX_POS = vec3(world_position);
         VERTEX_NORMAL = mat3(inverse(transpose(world_space))) * normal;
         VERTEX_TEXCOORD = texture_coord;
@@ -92,7 +223,7 @@ class Universal_Shader extends Shader {
     }
     fragment_glsl_code () {         // ********* FRAGMENT SHADER *********
         return this.shared_glsl_code () + `
-      layout (std140) uniform Camera
+      uniform Camera
       {
         mat4 camera_inverse;
         mat4 projection;
@@ -111,21 +242,21 @@ class Universal_Shader extends Shader {
 
       const int N_LIGHTS = ${this.num_lights};
 
-      layout (std140) uniform Lights
+      uniform LightArray
       {
         float ambient;
         Light lights[N_LIGHTS];
         ${this.has_shadows ? `
-          mat4 light_space_matrix[N_LIGHTS * 6];`
-          : ``}
+                mat4 light_space_matrix[N_LIGHTS * 6];`
+                : ``}
       };
 
       ${this.has_shadows ? `
-        const int NUM_SHADOW_MAPS = N_LIGHTS * 6;
-        uniform sampler2D shadow_maps[NUM_SHADOW_MAPS]; //since point lights have up to 6 samplers`
-        : ``}
+              const int NUM_SHADOW_MAPS = N_LIGHTS * 6;
+              uniform sampler2D shadow_maps[NUM_SHADOW_MAPS]; //since point lights have up to 6 samplers`
+              : ``}
 
-      layout (std140) uniform Material
+      uniform Material
       {
         vec4 color;
         vec3 diffuse;
@@ -133,8 +264,8 @@ class Universal_Shader extends Shader {
         float smoothness;
       };
       ${this.has_texture ? `
-      uniform sampler2D diffuse_texture;`
-      : ``}
+              uniform sampler2D diffuse_texture;`
+              : ``}
 
       in vec3 VERTEX_POS;
       in vec3 VERTEX_NORMAL;
@@ -143,52 +274,55 @@ class Universal_Shader extends Shader {
       out vec4 frag_color;
 
       ${this.has_shadows ? `
-      float ShadowCalculation(vec4 fragPosLightSpace, int index, vec3 N, vec3 L )
-      {
-        // perform perspective divide
-        vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
+              float ShadowCalculation(vec4 fragPosLightSpace, int index, vec3 N, vec3 L )
+              {
+                // perform perspective divide
+                vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
 
-        // transform to [0,1] range
-        projCoords = projCoords * 0.5 + 0.5;
+                // transform to [0,1] range
+                projCoords = projCoords * 0.5 + 0.5;
 
-        // Workaround for unsupported TEXTURE_BORDER_COLOR setting in WebGL2
-        if( projCoords.x < 0.0 || projCoords.y < 0.0 || projCoords.x > 1.0 || projCoords.y > 1.0 )
-          return 0.0;
+                // Workaround for unsupported TEXTURE_BORDER_COLOR setting in WebGL2
+                if( projCoords.x < 0.0 || projCoords.y < 0.0 || projCoords.x > 1.0 || projCoords.y > 1.0 )
+                  return 0.0;
 
-        // get closest depth value from light's perspective (using [0,1] range fragPosLight as coords)
-        // float closestDepth = texture(shadow_maps[i*6], projCoords.xy).r;
-        float closestDepth = texture(shadow_maps[0], projCoords.xy).r;
+                // get closest depth value from light's perspective (using [0,1] range fragPosLight as coords)
+                // float closestDepth = texture(shadow_maps[i*6], projCoords.xy).r;
+                float closestDepth = texture(shadow_maps[0], projCoords.xy).r;
 
-        // get depth of current fragment from light's perspective
-        float currentDepth = projCoords.z;
+                // get depth of current fragment from light's perspective
+                float currentDepth = projCoords.z;
 
-        // calculate bias (based on depth map resolution and slope)
-        float bias = max(0.05 * (1.0 - dot(N, L)), 0.005);
+                // calculate bias (based on depth map resolution and slope)
+                float bias = max(0.05 * (1.0 - dot(N, L)), 0.005);
 
-        // WITHOUT PCF - check whether current frag pos is in shadow
-        // float shadow = currentDepth - bias > closestDepth  ? 1.0 : 0.0;
+                // WITHOUT PCF - check whether current frag pos is in shadow
+                // float shadow = currentDepth - bias > closestDepth  ? 1.0 : 0.0;
 
-        // PCF
-        float shadow = 0.0;
-        vec2 temp = vec2(textureSize(shadow_maps[0], 0));
-        vec2 texelSize = 1.0 / temp;
-        for(int x = -1; x <= 1; ++x)
-            for(int y = -1; y <= 1; ++y) {
-                float pcfDepth = texture(shadow_maps[0], projCoords.xy + vec2(x, y) * texelSize).r;
-                shadow += currentDepth - bias > pcfDepth  ? 1.0 : 0.0;
-            }
-        shadow /= 9.0;
+                // PCF
+                float shadow = 0.0;
+                vec2 temp = vec2(textureSize(shadow_maps[0], 0));
+                vec2 texelSize = 1.0 / temp;
+                for(int x = -1; x <= 1; ++x)
+                    for(int y = -1; y <= 1; ++y) {
+                        float pcfDepth = texture(shadow_maps[0], projCoords.xy + vec2(x, y) * texelSize).r;
+                        shadow += currentDepth - bias > pcfDepth  ? 1.0 : 0.0;
+                    }
+                shadow /= 9.0;
 
-        // keep the shadow at 0.0 when outside the far_plane region of the light's frustum.
-        if(projCoords.z > 1.0)
-            shadow = 0.0;
-        return shadow;
-      }`
-      : ``}
+                // keep the shadow at 0.0 when outside the far_plane region of the light's frustum.
+                if(projCoords.z > 1.0)
+                    shadow = 0.0;
+                return shadow;
+              }`
+
+
+              : ``}
 
       // ***** PHONG SHADING HAPPENS HERE: *****
       vec3 phong_model_lights( vec3 N, vec3 vertex_worldspace
-                            ${this.has_texture ? `, vec4 texture_color` : ``}
+                            ${this.has_texture ?
+                                    `, vec4 texture_color` : ``}
                             ) {
           vec3 E = normalize( camera_position - vertex_worldspace );
           vec3 result = vec3( 0.0 );
@@ -205,42 +339,47 @@ class Universal_Shader extends Shader {
             float specular = pow( max( dot( N, H ), 0.0 ), smoothness );     // Use Blinn's "halfway vector" method.
             float attenuation = 1.0 / (1.0 + lights[i].attenuation_factor * distance_to_light * distance_to_light );
 
-            vec3 light_contribution = ${this.has_texture ? `texture_color.xyz` : `vec3(1,1,1)`}
+            // FINISH:  Why is diffuse multiplied in twice? Ditto specular
+            vec3 light_contribution = ${this.has_texture ?
+                                              `texture_color.xyz` : `vec3(1.,1.,1.)`}
                                                       * diffuse * lights[i].diffuse * diffuse
                                                     + specular * lights[i].specular * specular;
             light_contribution *= lights[i].color.xyz;
 
             ${this.has_shadows ? `
-            vec4 fragPosLightSpace = light_space_matrix[i * 6] * vec4 (VERTEX_POS, 1.0);
-            float shadow = ShadowCalculation(fragPosLightSpace, i, N, L);
-            result += attenuation * (1.0 - shadow) * light_contribution;`
-            :
-            `result += attenuation * light_contribution;`}
+                    vec4 fragPosLightSpace = light_space_matrix[i * 6] * vec4 (VERTEX_POS, 1.0);
+                    float shadow = ShadowCalculation(fragPosLightSpace, i, N, L);
+                    result += attenuation * (1.0 - shadow) * light_contribution;`
+                    :
+                    `result += attenuation * light_contribution;`}
           }
           return result;
         }
+
       void main() {
         ${this.has_texture ? `
-        // Compute an initial (ambient) color:
-        vec4 tex_color = texture( diffuse_texture, VERTEX_TEXCOORD );
-        frag_color = vec4( ( tex_color.xyz + color.xyz ) * ambient, color.w * tex_color.w );
-        // Compute the final color with contributions from lights:
-        frag_color.xyz += phong_model_lights( normalize( VERTEX_NORMAL ), VERTEX_POS, tex_color);
-        `
-        :
-        `
-        // Compute an initial (ambient) color:
-        frag_color = vec4( color.xyz * ambient, color.w );
-        // Compute the final color with contributions from lights:
-        frag_color.xyz += phong_model_lights( normalize( VERTEX_NORMAL ), VERTEX_POS );
-        `}
+                // Compute an initial (ambient) color:
+                vec4 tex_color = texture( diffuse_texture, VERTEX_TEXCOORD );
+                frag_color = vec4( ( tex_color.xyz + color.xyz ) * ambient, color.w * tex_color.w );
+                // Compute the final color with contributions from lights:
+                frag_color.xyz += phong_model_lights( normalize( VERTEX_NORMAL ), VERTEX_POS, tex_color);
+                `
+                :
+                `
+                // Compute an initial (ambient) color:
+                frag_color = vec4( color.xyz * ambient, color.w );
+                // Compute the final color with contributions from lights:
+                frag_color.xyz += phong_model_lights( normalize( VERTEX_NORMAL ), VERTEX_POS );
+                `}
       }`
     }
 };
 
 const Shadow_Pass_Shader = defs.Shadow_Pass_Shader =
 class Shadow_Pass_Shader extends Shader {
-    update_GPU (context, gpu_addresses, uniforms, model_transform, material) {
+    update_GPU (context, uniforms, model_transform, material) {
+
+      const gpu_addresses = renderer.uniform_addresses.get(this);
 
       if(uniforms.light_space_matrix)
         context.uniformMatrix4fv (gpu_addresses.light_space_matrix, true, Matrix.flatten_2D_to_1D (uniforms.light_space_matrix));
@@ -259,7 +398,7 @@ class Shadow_Pass_Shader extends Shader {
     uniform mat4 model_transform;
     uniform mat4 light_space_matrix;
 
-    layout (std140) uniform Camera
+    uniform Camera
     {
       mat4 camera_inverse;
       mat4 projection;
@@ -278,108 +417,108 @@ class Shadow_Pass_Shader extends Shader {
     }
 };
 
-// const Funny_Shader = defs.Funny_Shader =
-//   class Funny_Shader extends Shader {
-//       update_GPU (context, gpu_addresses, uniforms, model_transform, material) {
-//           const [P, C, M] = [uniforms.projection_transform, uniforms.camera_inverse, model_transform],
-//                 PCM       = P.times (C).times (M);
-//           context.uniformMatrix4fv (gpu_addresses.projection_camera_model_transform, false,
-//                                     Matrix.flatten_2D_to_1D (PCM.transposed ()));
-//           context.uniform1f (gpu_addresses.animation_time, uniforms.animation_time / 1000);
-//       }
-//       shared_glsl_code () {
-//           return `precision mediump float;
-//                   varying vec2 f_tex_coord;
-//       `;
-//       }
-//       vertex_glsl_code () {
-//           return this.shared_glsl_code () + `
-//         attribute vec3 position;                            // Position is expressed in object coordinates.
-//         attribute vec2 texture_coord;
-//         uniform mat4 projection_camera_model_transform;
+const Debug_Shader = defs.Debug_Shader =
+class Debug_Shader extends Shader {
+    update_GPU (renderer, uniforms, matrix, material) {
+      const gpu_addresses = renderer.uniform_addresses.get(this);
 
-//         void main() {
-//           gl_Position = projection_camera_model_transform * vec4( position, 1.0 );  // Move vertex to final space
-//           f_tex_coord = texture_coord;                 // Supply the original texture coords for interpolation.
-//         }`;
-//       }
-//       fragment_glsl_code () {
-//           return this.shared_glsl_code () + `
-//         uniform float animation_time;
-//         void main() {
-//           float a = animation_time, u = f_tex_coord.x, v = f_tex_coord.y;
+      renderer.selected_UBOs.set(material.get_binding_point(), material);
 
-//           // To color in all pixels, use an arbitrary math function based only on time and UV texture coordinates.
-//           gl_FragColor = vec4(
-//             2.0 * u * sin(17.0 * u ) + 3.0 * v * sin(11.0 * v ) + 1.0 * sin(13.0 * a),
-//             3.0 * u * sin(18.0 * u ) + 4.0 * v * sin(12.0 * v ) + 2.0 * sin(14.0 * a),
-//             4.0 * u * sin(19.0 * u ) + 5.0 * v * sin(13.0 * v ) + 3.0 * sin(15.0 * a),
-//             5.0 * u * sin(20.0 * u ) + 6.0 * v * sin(14.0 * v ) + 4.0 * sin(16.0 * a));
-//         }`;
-//       }
-//   };
+      renderer.context.uniform1f (gpu_addresses.animation_time, uniforms.animation_time / 1000);
+    }
+    static default_values () {
+      return {
+            };
+    }
+    shared_glsl_code () {           // ********* SHARED CODE, INCLUDED IN BOTH SHADERS *********
+        return "#version 300 es " + `
+                precision mediump float;
+    `;
+    }
 
+    // FINISH:  Do we still need layout index qualifiers?
 
-const Basicer_Shader = defs.Basicer_Shader =
-  class Basicer_Shader extends Shader {
-      shared_glsl_code () {           // ********* SHARED CODE, INCLUDED IN BOTH SHADERS *********
-          return "#version 300 es " + `
-                  precision mediump float;
-      `;
-      }
-      vertex_glsl_code () {          // ********* VERTEX SHADER *********
-          return this.shared_glsl_code () + `
-        layout(location = 0) in vec3 position;
-        void main() {
-          gl_Position = vec4( position, 1.0 );
-        }`;
-      }
-      fragment_glsl_code () {         // ********* FRAGMENT SHADER *********
-          return this.shared_glsl_code () + `
-        out vec4 frag_color;
-        void main() {
-          frag_color = vec4(1.0, 0.0, 0.0, 1.0);
-        }`;
-      }
-  };
+    vertex_glsl_code () {          // ********* VERTEX SHADER *********
+        return this.shared_glsl_code () + `
+      layout(location = 0) in vec3 position; // Position is expressed in object coordinates
+      layout(location = 1) in vec3 normal;
+      layout(location = 2) in vec2 texture_coord;
+      layout(location = 3) in mat4 model_transform;
+
+      out vec3 VERTEX_POS;
+      out vec3 VERTEX_NORMAL;
+      out vec2 VERTEX_TEXCOORD;
+      out mat4 VALUE_TO_TEST;
+
+      uniform float animation_time;
+
+      void main() {
+        vec4 world_position = vec4( position, 1.0 );
+        gl_Position = world_position;
+
+        VERTEX_POS = vec3(world_position);
+        VERTEX_NORMAL = normal;
+        VERTEX_TEXCOORD = texture_coord;
+
+        VALUE_TO_TEST = model_transform;
+      }`;
+    }
+    fragment_glsl_code () {         // ********* FRAGMENT SHADER *********
+        return this.shared_glsl_code () + `
+      in vec3 VERTEX_POS;
+      in vec3 VERTEX_NORMAL;
+      in vec2 VERTEX_TEXCOORD;
+
+      in mat4 VALUE_TO_TEST;
+
+      uniform float animation_time;
+
+      out vec4 frag_color;
+
+      void main() {
+        frag_color = vec4(0.);
+        float max = 33.0;
+        float digit = 10.0;
+
+        for(int i = 0; i < 4; i++)
+        for(int j = 0; j < 4; j++) {
+          bool is_fragment_in_cell_xrange = VERTEX_POS.x*8. > float(j) && VERTEX_POS.x*8. < float(j+1);
+          bool is_fragment_in_cell_yrange = VERTEX_POS.y*8. > float(3-i) && VERTEX_POS.y*8. < float(4-i);
+
+          float flash_odd = mod (VALUE_TO_TEST[j][i] * animation_time/100., 2. );
+
+          float exact_equality_test_value = 22.0;
+          bool expression_to_test = VALUE_TO_TEST[j][i] == exact_equality_test_value;
+          float brighten = float (expression_to_test);
+
+          if (is_fragment_in_cell_xrange && is_fragment_in_cell_yrange)
+            frag_color += vec4(VALUE_TO_TEST[j][i]/max/digit, mod(VALUE_TO_TEST[j][i]/max,digit), brighten, 1.);
+        }
+      }`
+    }
+};
 
 const Basic_Shader = defs.Basic_Shader =
   class Basic_Shader extends Shader {
-      // Basic_Shader is nearly the simplest way to subclass Shader, which stores and manages a GPU program.
-      update_GPU (context, gpu_addresses, uniforms, model_transform, material) {
-          // update_GPU():  Define how to synchronize our JavaScript's variables to the GPU's:
-          const [P, C, M] = [uniforms.projection_transform, uniforms.camera_inverse, model_transform],
-                PCM       = P.times (C).times (M);
-          context.uniformMatrix4fv (gpu_addresses.projection_camera_model_transform, false,
-                                    Matrix.flatten_2D_to_1D (PCM.transposed ()));
-      }
-      shared_glsl_code () {           // ********* SHARED CODE, INCLUDED IN BOTH SHADERS *********
-          return "#version 300 es " + `
-                  precision mediump float;
-      `;
-      }
+    static default_values () { return {}; }
       vertex_glsl_code () {          // ********* VERTEX SHADER *********
-          return this.shared_glsl_code () + `
-        layout(location = 0) in vec3 position;                       // Position is expressed in object coordinates
-        layout(location = 1) in vec4 color;
-        out vec4 VERTEX_COLOR;
-        uniform mat4 projection_camera_model_transform;
-
-        void main() {
-          gl_Position = projection_camera_model_transform * vec4( position, 1.0 );      // Move vertex to final space.
-          VERTEX_COLOR = color;                                 // Use the hard-coded color of the vertex.
-        }`;
+        return "#version 300 es " + `
+          precision mediump float;
+          layout(location = 0) in vec3 position;
+          void main() {
+            gl_Position = vec4( position, 1.0 );
+          }`;
       }
       fragment_glsl_code () {         // ********* FRAGMENT SHADER *********
-          return this.shared_glsl_code () + `
-        in vec4 VERTEX_COLOR;
-        out vec4 frag_color;
-        void main() {
-          frag_color = VERTEX_COLOR;    // Directly use per-vertex colors for interpolation.
-        }`;
+        return "#version 300 es " + `
+          precision mediump float;
+          out vec4 frag_color;
+          void main() {
+            frag_color = vec4(1.0, 0.0, 0.0, 1.0);
+          }`;
       }
   };
-
+/*
 const Phong_Shader = defs.Phong_Shader =
   class Phong_Shader extends Shader {
       constructor (num_lights = 2) {
@@ -560,3 +699,4 @@ const Fake_Bump_Map = defs.Fake_Bump_Map =
           } `;
       }
   };
+*/

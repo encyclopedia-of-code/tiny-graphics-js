@@ -3,121 +3,83 @@ import {defs as shapes} from './common-shapes.js';
 import {defs as shaders} from './common-shaders.js';
 import {defs as components} from './common-components.js';
 
-const {vec3, vec4, Mat4, Shader, UBO} = tiny;
+const {vec3, vec4, Mat4, Shader, UBO_Plan} = tiny;
 
 const defs = { ...shapes, ...shaders, ...components };
 
 export {tiny, defs};
 
 const Camera = defs.Camera =
-  class Camera {
-    constructor(eye_point = vec3 (0.0, 0.0, 0.0), at_point = vec3 (0.0, 0.0, -1.0), up_point = vec3 (0.0, 1.0, 0.0),  fov_y = Math.PI/4, aspect = 1080/600, near = 0.01, far = 1024) {
-
-      this.position = eye_point;
-      this.at_point = at_point;
-      this.up_point = up_point;
-
-      this.camera_inverse = Mat4.look_at (this.position, this.at_point, this.up_point);
-      this.camera_world = Mat4.inverse (this.camera_inverse);
-
-      this.ubo_layout = [{num_instances: 1,
-                          data_layout:[{name:"camera_inverse", type:"Mat4"},
-                                       {name:"projection", type:"Mat4"},
-                                       {name:"camera_position", type:"vec3"}]
-                         }
-                        ];
-      this.is_initialized = false;
+class Camera extends UBO_Plan {
+    init(fields) {
+      this.fields = Object.assign(Camera.default_values(), fields);
     }
-    initialize(caller) {
-      if (!this.is_initialized) {
-        this.proj = Mat4.perspective(Math.PI/2, caller.width/caller.height, 0.01, 1024);
+    static default_values () {
+      return { projection:      Mat4.identity(),
+               camera_inverse:  Mat4.identity(),
+               camera_world:    Mat4.identity(),
+               camera_position: vec3(0,0,0) }
+    }
+    get_binding_point () { return 0; }
+    post_multiply (matrix) {
+      this.fields.camera_world.post_multiply( matrix );
+      this.fields.camera_inverse = Mat4.inverse(camera_world);
+      this.fields.camera_position = vec3(this.fields.camera_world[0][3], this.fields.camera_world[1][3], this.fields.camera_world[2][3]);
+    }
+    pre_multply (inverse_matrix) {
+      this.fields.camera_inverse.pre_multply( inverse_matrix );
+      this.fields.camera_world = Mat4.inverse(camera_inverse);
+      this.fields.camera_position = vec3(this.fields.camera_world[0][3], this.fields.camera_world[1][3], this.fields.camera_world[2][3]);
 
-        const mappings = Shader.mapping_UBO();
-        for (var i = 0; i < mappings.length; i++) {
-          if (mappings[i].shader_name == "Camera") {
-            UBO.create(caller.context, "Camera", this.ubo_layout);
-            UBO.Cache["Camera"].bind(mappings[i].binding_point);
-            break;
-          }
-        }
-        this.is_initialized = true;
-      }
-
-      UBO.Cache["Camera"].update("camera_inverse", this.camera_inverse);
-      UBO.Cache["Camera"].update("projection", this.proj);
-      this.position = vec3(this.camera_world[0][3], this.camera_world[1][3], this.camera_world[2][3]);
-      UBO.Cache["Camera"].update("camera_position", this.position);
+    }
+    emplace(camera_inverse) {
+      this.fields.camera_inverse = camera_inverse;
+      this.fields.camera_world = Mat4.inverse(camera_inverse);
+      this.fields.camera_position = vec3(this.fields.camera_world[0][3], this.fields.camera_world[1][3], this.fields.camera_world[2][3]);
     }
   };
 
-
-  const Light = defs.Light =
-  class Light {
+const LightArray = defs.LightArray =
+class LightArray extends UBO_Plan {
 
     static NUM_LIGHTS = 2;
     static global_index = 0;
     static global_ambient = 0.4;
 
-    constructor(options) {
-
-      const defaults = Light.default_values();
-      Object.assign(this, defaults, options);
-
-      this.index = Light.global_index;
-      Light.global_index++;
-
-      this.ubo_layout = [{num_instances: 1,
-                          data_layout: [{name:"ambient", type:"float"}]
-                         },
-                         {num_instances: Light.NUM_LIGHTS,
-                          data_layout: [{name:"direction_or_position", type:"vec4"},
-                                        {name:"color", type:"vec3"},
-                                        {name:"diffuse", type:"float"},
-                                        {name:"specular", type:"float"},
-                                        {name:"attenuation_factor", type:"float"}
-                                      ]
-                         }
-                        ];
+    init(fields) {
+      this.fields = Object.assign(LightArray.default_values(), fields);
     }
     static default_values () {
       return {
-                direction_or_position: vec4 (0.0, 0.0, 0.0, 0.0),
-                color: vec3 (1.0, 1.0, 1.0, 1.0),
-                diffuse: 1.0,
-                specular: 1.0,
-                attenuation_factor: 0.0
+                ambient: 0,
+                lights: [
+                          {
+                            direction_or_position: vec4 (0.0, 0.0, 0.0, 0.0),
+                            color: vec3 (1.0, 1.0, 1.0, 1.0),
+                            diffuse: 1.0,
+                            specular: 1.0,
+                            attenuation_factor: 0.0
+                          },
+                          {
+                            direction_or_position: vec4 (0.0, -1.0, 0.0, 1.0),
+                            color: vec3 (1.0, 1.0, 1.0, 1.0),
+                            diffuse: 1.0,
+                            specular: 1.0,
+                            attenuation_factor: 0.0
+                          }
+                        ]
               };
     }
-    initialize(caller) {
-      if (!this.is_initialized) {
-        const mappings = Shader.mapping_UBO();
-        for (var i = 0; i < mappings.length; i++) {
-          if (mappings[i].shader_name == "Lights") {
-            if (this.index == 0) {
-              //Only one UBO shared amongst all of the lights, have ID 0 cretate it
-              UBO.create(caller.context, "Lights", this.ubo_layout);
-              UBO.Cache["Lights"].bind(mappings[i].binding_point);
-              UBO.Cache["Lights"].update("ambient", Light.global_ambient);
-            }
-            UBO.Cache["Lights"].update("direction_or_position", this.direction_or_position, this.index);
-            UBO.Cache["Lights"].update("color", this.color, this.index);
-            UBO.Cache["Lights"].update("diffuse", this.diffuse, this.index);
-            UBO.Cache["Lights"].update("specular", this.specular, this.index);
-            UBO.Cache["Lights"].update("attenuation_factor", this.attenuation_factor, this.index);
-            break;
-          }
-        }
-        this.is_initialized = true;
-      }
-    }
-    bind (gl, gpu_addresses, is_shadow_pass, shadow_map_index = 0)
+    get_binding_point () { return 1; }
+    activate (gl, gpu_addresses, is_shadow_pass, shadow_map_index = 0)     // TODO: Unused/Unimplemented anywhere?
     { }
     deactivate (caller, shadow_map_index = 0)
     { }
   };
 
 const Shadow_Light = defs.Shadow_Light =
-  class Shadow_Light {
+class Shadow_Light {
+        // TODO:  Since this is going to be a UBO_Plan, which is supposed to just be a container object without GL ties, it follows that some other object should be in charge of storing the GL stuff here that a Shadow_light needs to be associated with (a Shadow_Map and a shadowed Shader).
 
     static NUM_LIGHTS = 2;
     static global_index = 0;
@@ -136,7 +98,7 @@ const Shadow_Light = defs.Shadow_Light =
       this.ubo_layout = [{num_instances: 1,
                           data_layout: [{name:"ambient", type:"float"}]
                          },
-                         {num_instances: Light.NUM_LIGHTS,
+                         {num_instances: Shadow_Light.NUM_LIGHTS,
                           data_layout: [{name:"direction_or_position", type:"vec4"},
                                         {name:"color", type:"vec3"},
                                         {name:"diffuse", type:"float"},
@@ -145,7 +107,7 @@ const Shadow_Light = defs.Shadow_Light =
                                         {name:"casts_shadow", type:"bool"},
                                       ]
                          },
-                         {num_instances: Light.NUM_LIGHTS * 6,
+                         {num_instances: Shadow_Light.NUM_LIGHTS * 6,
                           data_layout: [{name:"light_space_matrix", type:"Mat4"}]
                          },
                         ];
@@ -167,7 +129,7 @@ const Shadow_Light = defs.Shadow_Light =
       }
       else {
         this.shadow_map[0] = new tiny.Shadow_Map(this.shadow_map_width, this.shadow_map_height);
-        let epsilon = 0.00756; //to be able to have +-y pointing light
+        let epsilon = 0.00756; //to be able to have +-y pointing light without breaking look_at()
         let light_view = Mat4.look_at(this.direction_or_position.to3(), vec3(0.0, 0.0, 0.0), vec3(0.0 + epsilon, 1.0, 0.0));;
         let light_projection = Mat4.orthographic(-10.0, 10.0, -10.0, 10.0, 0.01, 20.0);
         this.light_space_matrix[0] = light_projection.times(light_view);
@@ -178,6 +140,9 @@ const Shadow_Light = defs.Shadow_Light =
       this.are_textures_bound = false;
     }
     static default_values () {
+
+      // TODO:  Each Light should not really compile its own Shader!!  Too many identical Shaders stored on GPU.
+
       return {
                 direction_or_position: vec4 (0.0, 0.0, 0.0, 0.0),
                 color: vec3 (1.0, 1.0, 1.0, 1.0),
@@ -191,7 +156,7 @@ const Shadow_Light = defs.Shadow_Light =
                 shadow_map: null,
               };
     }
-    initialize(caller) {
+    initialize(caller) {                               // FINISH:  This function is very outdated; figure out what replaces it.
       if (!this.is_initialized) {
         const mappings = Shader.mapping_UBO();
         for (var i = 0; i < mappings.length; i++) {
@@ -225,84 +190,42 @@ const Shadow_Light = defs.Shadow_Light =
       this.shadow_map[shadow_map_index].deactivate(caller, true);
     }
     bind (gl, gpu_addresses, is_shadow_pass, shadow_map_index = 0) {
+      if( !this.shadow_map[shadow_map_index])
+        return;
       if (is_shadow_pass) {
           //apply shadow frustum offset through UBOs for camera matrix and distance parameters??
         this.shadow_map_shader.activate(gl, {light_space_matrix: this.light_space_matrix[shadow_map_index]}, Mat4.identity(), undefined);
         this.shadow_map[shadow_map_index].activate(gl, 0, true);
         return;
       }
-      for (let i = 0; i < 6; i++) {
-        if( !this.shadow_map[i])
-          continue;
-        this.shadow_map.index = this.index * 6 + i;
-        let name = "shadow_maps[" + this.shadow_map.index + "]";
-        this.shadow_map[i].draw_sampler_address = gpu_addresses[name];
-        this.shadow_map[i].texture_unit = Shadow_Light.GLOBAL_TEXTURE_OFFSET + this.shadow_map.index;
-        this.shadow_map[i].activate (gl, this.shadow_map[i].texture_unit, false);
-      }
+      const map = this.shadow_map[i];
+      map.index = this.index * 6 + shadow_map_index;
+      let name = "shadow_maps[" + map.index + "]";
+      map.draw_sampler_address = gpu_addresses[name];
+      map.texture_unit = Shadow_Light.GLOBAL_TEXTURE_OFFSET + map.index;
+      map.activate (gl, map.texture_unit, false);
     }
   };
 
 const Material = defs.Material =
-  class Material {
-    constructor(name = "None", shader = undefined, data = {}, samplers = {}) {
-      this.name = name;
-      this.shader = shader;
-      const defaults = shader.constructor.default_values();
-      this.data = Object.assign({}, defaults, data);
-      this.samplers = samplers;
-      this.is_initialized = false;
-      this.ready = true;
-
+class Material extends UBO_Plan {
+    init(shader = undefined, fields = {}, samplers = {}) {
+      Object.assign (this, {shader, samplers: new Map(Object.entries(samplers))} );
+      this.fields = Object.assign(shader.constructor.default_values(), fields);
     }
-
-    initialize(gl, ubo_layout) {
-      if (this.ready && !this.is_initialized) {
-        UBO.create(gl, this.name, ubo_layout);
-        ubo_layout[0].data_layout.forEach(x => UBO.Cache[this.name].update(x.name, this.data[x.name]));
-        this.is_initialized = true;
-      }
-    }
-
-    bind(binding_point, gpu_addresses) {
-      if(!this.is_initialized)
-        return;
-
-      //Bind Material Data
-      UBO.Cache[this.name].bind(binding_point);
-
-      if ( this.samplers == {} )
-        return;
-
-      //Bind Material Samplers
-      const gl = UBO.Cache[this.name].gl;
-      var offset = 0;
-      for (const [name, sampler] of Object.entries(this.samplers)) {
-        if (sampler && sampler.ready) {
-          // Select texture unit offset for the fragment shader Sampler2D uniform called "samplers.name":
-          gl.uniform1i (gpu_addresses[name], offset);
-          // For this draw, use the texture image from correct the GPU buffer:
-          sampler.activate (gl, offset);
-          offset++;
-        }
-      }
-
-    }
+    get_binding_point () { return 2; }
 };
 
 const Material_From_File = defs.Material_From_File =
-  class Material_From_File extends Material {
-    constructor(name = "None", shader = undefined, filename, data = {}, samplers = {}) {
-      super(name, shader);
-      //this.data is shader defaults
-      //this.samplers is {}
-      this.arg_data = data;
-      this.arg_samplers = samplers;
+class Material_From_File extends UBO_Plan {
+    init(shader = undefined, filename, arg_fields = {}, arg_samplers = {}) {
+      Object.assign (this, shader, filename, arg_fields, {arg_samplers: new Map(arg_samplers)} );
       this.ready = false;
 
       this.directory = filename.substring(0, filename.lastIndexOf('/') + 1);
       this.load_file( filename );
     }
+    get_binding_point () { return 2; }
     load_file( filename ) {
       // Request the external file and wait for it to load.
       return fetch( filename )
@@ -400,101 +323,11 @@ const Material_From_File = defs.Material_From_File =
           }
         }
 
-        //this.data is shader defaults
         //shader defaults <- mtl file <- argument data
-        this.data = Object.assign({}, this.data, this.MTL[first_material_name].data, this.arg_data);
+        this.fields = Object.assign(shader.constructor.default_values(), this.MTL[first_material_name].data, this.arg_fields);
         //mtl file <- argument sampler
-        this.samplers = Object.assign({}, this.MTL[first_material_name].samplers, this.arg_samplers);
+        this.samplers = Object.assign(this.MTL[first_material_name].samplers, this.arg_samplers);
         this.ready = true;
-    }
-  };
 
-const Entity = defs.Entity =
-  class Entity {
-    constructor(shape, transforms, material) {
-      this.dirty = true
-      this.shape = shape;
-      this.model_transform = Mat4.identity();
-      this.transforms = transforms;
-      this.material = material;
-    }
-    set_shape(shape) {
-      this.shape = shape;
-      this.dirty = true;
-    }
-    set_transforms(transforms) {
-      this.transforms = transforms;
-      this.dirty = true;
-    }
-    apply_transform(model_transform) {
-      this.model_transform = model_transform;
-    }
-    set_material(material) {
-      this.material = material;
-    }
-  };
-
-  const Renderer = defs.Renderer =
-  class Renderer {
-    constructor() {
-      this.entities = []
-      this.lights = []
-    }
-    submit (object) {
-      if (object instanceof Entity)
-        this.entities.push(object);
-    }
-    shadow_map_pass (caller, lights) {
-      for (let light of lights) {
-        if (!light.casts_shadow)
-          continue;
-        if (light.is_point_light)
-        {
-          for (let i = 0; i < 6; i++) {
-            light.activate(caller.context, undefined, i);
-            this.flush(caller, [], false, light.shadow_map_shader);
-            light.deactivate(caller, i);
-          }
-        }
-        else {
-          light.bind(caller.context, undefined, true);
-          this.flush(caller, [], false, light.shadow_map_shader);
-          light.deactivate(caller);
-        }
-      }
-    }
-
-    //$$$$$$$$$$$$$$$$$$$$$$$$$$ PASS THE LIGHTS TO THE SHADER SO IT CAN BIND THEM
-    flush (caller, lights = [], clear_entities = true, alternative_shader = undefined) {
-
-      const shadow_pass_material = alternative_shader ?
-                      new Material("shadow_pass_material", alternative_shader) :
-                      undefined;
-
-      for(let entity of this.entities){
-        if( entity.transforms instanceof tiny.Matrix ) {
-          // Single matrix case
-          if (entity.dirty && entity.shape.ready) {
-            entity.shape.vertices = [{instance_transform: entity.transforms}];
-            //Ideally use a shader with just a uniform matrix where you pass global.times(model)?
-            entity.shape.fill_buffer(["instance_transform"], undefined, 1);
-            if( !alternative_shader)
-              entity.dirty = false;
-          }
-          entity.shape.draw(caller, {lights}, entity.model_transform, shadow_pass_material || entity.material, undefined, 1);
-        }
-        else {
-          if (entity.dirty && entity.shape.ready) {
-            entity.shape.vertices = Array(entity.transforms.length).fill(0).map( (x,i) => ({instance_transform: entity.transforms[i]}));
-            entity.shape.fill_buffer(["instance_transform"], undefined, 1);
-            if( !alternative_shader)
-              entity.dirty = false;
-          }
-          entity.shape.draw(caller, {lights}, entity.model_transform, shadow_pass_material || entity.material, undefined, entity.transforms.length);
-        }
-      }
-
-      if (clear_entities)
-        this.entities = []
     }
   };

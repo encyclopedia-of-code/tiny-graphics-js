@@ -19,6 +19,9 @@ export class Parametric_Surfaces extends Component
 
       this.init_shared_objects();
 
+
+      // TODO:  Should a loop like below exist in the core library, to loop through all document_children and call their render_layout()?
+
       for( let i = 0; i < this.num_sections; i++ )
       {
         const inner_div = div.appendChild( document.createElement( "div" ) );
@@ -53,7 +56,7 @@ export class Parametric_Surfaces extends Component
       this.movement_controls = new defs.Movement_Controls( { uniforms: this.uniforms } );
       this.animated_children.push( this.movement_controls );
   }
-  render_animation( caller )
+  render_frame( caller )
     {
       caller.controls = this.movement_controls;
 
@@ -77,7 +80,7 @@ class Parametric_Surfaces_Section extends Component
       const handler_at_index = this[ "init_section_" + this.section_index ];
       handler_at_index.call( this );
     }
-  render_animation( caller )
+  render_frame( caller )
     {
                         // Part I:  All sections do this every frame:
       this.r = Mat4.rotation( -.5*Math.sin( this.uniforms.animation_time/5000 ),   1,1,1 );

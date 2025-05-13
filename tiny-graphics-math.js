@@ -33,7 +33,6 @@ const Vector = math.Vector =
       to_string () { return "[vector " + this.join (", ") + "]"; }
   };
 
-
 const Vector3 = math.Vector3 =
   class Vector3 extends Float32Array {
       // **Vector3** is a specialization of Vector only for size 3, for performance reasons.
@@ -230,13 +229,9 @@ const color   = math.color = Vector4.create;
 const Matrix = math.Matrix =
   class Matrix extends Array {
       // See description at https://github.com/encyclopedia-of-code/tiny-graphics-js/wiki/tiny-graphics-math.js#matrix
-      constructor (...args) {
-          super (0);
-          this.push (...args);
-      }
       set (M) {
           this.length = 0;
-          this.push (...M);
+          for (let row of M) this.push(Array.isArray(row) ? row.slice() : row.constructor.from(row));
       }
       set_identity (m, n) {
           this.length = 0;

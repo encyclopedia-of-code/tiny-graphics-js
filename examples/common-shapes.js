@@ -18,6 +18,9 @@ const Triangle = defs.Triangle =
           // Vertex positions: the three point locations of an imaginary triangle.
           // "Normal" vectors:  Vectors that point away from the triangle face.  They're needed so the graphics engine can know if the shape is pointed at light or not, and then color it accordingly.
           // Texture coordinates: Points in the seperate 2D X/Y pixel space belonging to any 2D images we might like to paint the shape with.
+         
+          const positions = [[0,0,0], [1,0,0], [0,1,0]];
+        
           this.vertices[0] = { position: vec3 (0, 0, 0),
                                normal: vec3 (0, 0, 1),
                                texture_coord: vec2 (0, 0) };
@@ -33,7 +36,7 @@ const Triangle = defs.Triangle =
           // Next, describe how to connect whole triangles out of individual vertices.  Say a list of indices of vertex entries in your desired order. Every three indices in "this.indices" traces out one triangle.
           this.indices              = [0, 1, 2];
 
-          this.fill_buffer ("position", "normal", "texture_coord")
+          this.build_VBO ("position", "normal", "texture_coord")
       }
   };
 
@@ -422,7 +425,7 @@ const Instanced_Shape = defs.Instanced_Shape =
           this.vertices[1] = { position: vec3 (1, 0, 0), color: color (0, 1, 0, 1) };
           this.vertices[2] = { position: vec3 (0, 1, 0), color: color (0, 0, 1, 1) };
 
-          this.fill_buffer( ["position", "color"] );
+          this.build_VBO( ["position", "color"] );
 
           this.single_triangle = this.vertices;
       }
@@ -442,7 +445,7 @@ const Instanced_Shape = defs.Instanced_Shape =
           this.vertices[5] = { position: vec3 (0.5, 0.5, 0), color: color (0, 1, 1, 1) };
           this.num_vertices = this.vertices.length
 
-          this.fill_buffer( ["position", "color"] );
+          this.build_VBO( ["position", "color"] );
 
           this.single_triangle = this.vertices;
       }
@@ -461,7 +464,7 @@ const Instanced_Shape = defs.Instanced_Shape =
 
           this.indices = [0, 1, 2, 1, 2, 3];
 
-          this.fill_buffer( ["position", "color"] );
+          this.build_VBO( ["position", "color"] );
 
           this.single_triangle = this.vertices;
       }
@@ -470,8 +473,7 @@ const Instanced_Shape = defs.Instanced_Shape =
 const Instanced_Cube_Index = defs.Instanced_Cube_Index =
   class Instanced_Cube_Index extends tiny.Shape {
       // A truly minimal Cube
-      constructor () {
-          super();
+      init () {
           // Describe the where the points of a triangle are in space, and also describe their colors:
           this.vertices[0] = { position: vec3 (-0.5, -0.5, -0.5), normal: vec3( 0.0, 0.0, -1.0), texture_coord: Vector.create (0.0, 0.0) }
           this.vertices[1] = { position: vec3 (0.5, -0.5, -0.5),  normal: vec3(0.0, 0.0, -1.0 ), texture_coord: Vector.create (1.0, 0.0) }
@@ -520,9 +522,7 @@ const Instanced_Cube_Index = defs.Instanced_Cube_Index =
                           20, 21, 22, 23, 24, 25, 26, 27, 28, 29,
                           30, 31, 32, 33, 34, 35];
 
-          this.fill_buffer( ["position", "normal", "texture_coord"] );
-
-          this.single_cube = this.vertices;
+          this.num_vertices = 36; // FINISH: For now, until hammering out multiple vaos per shape.
       }
   };
 
@@ -530,27 +530,25 @@ const Instanced_Cube_Index = defs.Instanced_Cube_Index =
 const Minimal_Shape = defs.Minimal_Shape =
   class Minimal_Shape extends tiny.Shape {
       // A truly minimal triangle, with three vertices each holding a 3D position and a color.
-      constructor () {
-          super();
+      init () {
           // Describe the where the points of a triangle are in space, and also describe their colors:
           this.vertices[0] = { position: vec3 (0, 0, 0), color: color (1, 0, 0, 1) };
           this.vertices[1] = { position: vec3 (1, 0, 0), color: color (0, 1, 0, 1) };
           this.vertices[2] = { position: vec3 (0, 1, 0), color: color (0, 0, 1, 1) };
 
-          this.fill_buffer( ["position", "color"] );
+          this.num_vertices = 3; // FINISH: For now, until hammering out multiple vaos per shape.
       }
   };
 
   const Minimaler_Shape = defs.Minimaler_Shape =
   class Minimaler_Shape extends tiny.Shape {
-      constructor () {
-          super();
+      init () {
           // Describe the where the points of a triangle are in space, and also describe their colors:
           this.vertices[0] = { position: vec3 (0, 0, 0)};
           this.vertices[1] = { position: vec3 (1, 0, 0)};
           this.vertices[2] = { position: vec3 (0, 1, 0)};
 
-          this.fill_buffer( ["position"] );
+          this.num_vertices = 3; // FINISH: For now, until hammering out multiple vaos per shape.
       }
   };
 
@@ -681,7 +679,7 @@ const Minimal_Shape = defs.Minimal_Shape =
         this.normalize_positions( false );
 
         //Deduce it from the obj data!
-        this.fill_buffer( selection_of_attributes );
+        this.build_VBO( selection_of_attributes );
 
         this.ready = true;
       }
