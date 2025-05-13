@@ -28,72 +28,72 @@ const Shape = tiny.Shape =
           for( let vbo_plan of this.VBO_plans )
             Shape.build_VBO_plan (this.vertices, vbo_plan);
       }
-      static build_VBO_plan( entries, destination_object, buffer_hint = "STATIC_DRAW", divisor = 0 ) {
-        if( !entries[0] )
-          return;
+      static build_VBO_plan( entries, destination, buffer_hint = "STATIC_DRAW", divisor = 0 ) {
+        if (!entries[0]) return;
 
-        let attribute_sizes, attribute_is_matrix, full_sizes;
+        // --- Step 1: Attribute Metadata ---
         // Preview the first entry to see what our VBO data source is like.
-        // Each entry is either a matrix or a dictionary (of vertex fields).
-        if (entries[0] instanceof Matrix) {
-           attribute_sizes = [4], attribute_is_matrix = [true], full_sizes = [16];     // Model matrix case
-        }
-        else {
-          // Vertex field case.  Measure each field so we can interleave them.
-          attribute_sizes = destination_object.attributes.map( a => entries[0][a].length || 1 );
-          attribute_is_matrix = destination_object.attributes.map( a => entries[0][a] instanceof Matrix );
-          full_sizes = attribute_sizes.map( (a,i) => Math.pow(a, 1 + attribute_is_matrix[i]) );
+        // Each VBO entry is either a matrix or a dictionary (of vertex fields).
+        const attributes = destination.attributes;
+        const first = entries[0];
+        const is_matrix_array = first instanceof Matrix;
+
+        const attributes_meta = attributes.map(attr => {
+              const first_value = is_matrix_array ? first : first[attr];
+              const is_matrix = first_value instanceof Matrix;
+              const size = is_matrix ? 4 : (first_value.length || 1);
+              const full_size = is_matrix ? 16 : size;
+              return { attr, is_matrix, size, full_size };
+            });
+
+        // --- Step 2: Stride and Offsets ---
+        let accumulator = 0;
+        const offsets = [];
+        attributes_meta.forEach(meta => {
+          offsets.push(accumulator);
+          accumulator += 4 * meta.full_size;
+        });
+        const stride = accumulator;
+
+        // --- Step 3: Allocate (or Re-allocate) Buffer If Needed ---
+        const vertex_count = entries.length;
+        if (!destination.vertex_count || destination.vertex_count < vertex_count) {
+          Object.assign(destination, {
+            sizes: attributes_meta.map(m => m.size),
+            attribute_is_matrix: attributes_meta.map(m => m.is_matrix),
+            offsets, stride, divisor, buffer_hint, vertex_count,
+            has_resized: true,
+            version: (destination.version || 0) + 1,
+            data: new Float32Array((stride / 4) * vertex_count)
+          });
         }
 
-        // Allocate a big enough buffer if none exists or if the vertex list has grown.
-        if( !destination_object.vertex_count) {
-          // No buffer existed.
-          // TODO:  Test single float attribute type, and perhaps the smaller matrix sizes.
-          // TODO:  This part assumes a vertex type of FLOAT.  May need to generalize.
-          const stride = full_sizes.reduce( (acc,x) => acc + x * 4, 0 );
-
-          const offsets = [];
-          let offset = 0;
-          for( let index = 0; index < destination_object.attributes.length; index++ ) {
-              offsets[index] = offset;
-              offset += 4*full_sizes[index];
-          }
-          Object.assign(destination_object, {
-            sizes: attribute_sizes, attribute_is_matrix, offsets, stride, divisor, hint: buffer_hint,
-            vertex_count: entries.length, has_resized: false, version: 0,
-            data: new Float32Array (stride/4 * entries.length) });
+        // --- Step 4: Buffer Filling ---
+        let pos = 0, next_version = destination.version + 1;
+        function set_element(value) {
+          if (destination.data[pos].toFixed(5) != value.toFixed(5))
+            destination.version = next_version;
+          destination.data[pos] = value;
+          pos++;
         }
-        if (destination_object.vertex_count < entries.length)
-          Object.assign(destination_object, {
-            vertex_count: entries.length, version: destination_object.version + 1,
-            data: new Float32Array (destination_object.stride/4 * entries.length),
-            has_resized: true
-          })
 
-        // Fill in the selected buffer locally with the user's updated values from each vertex field.
-        let pos = 0, next_version = destination_object.version + 1;
-        for (let v of entries)
-          for (let a of destination_object.attributes.keys()) {
-            const attr = destination_object.attributes[a];
-                // TODO:  Not padding; Test for alignment problems if vec2 or vec3;
-                // and vec1 too which may not be handled correctly elsewhere.
-            const vector = (attribute_sizes[a] == 1) ? [ v[attr] ] : v[attr];
-            function set_element (value) {
-                if( destination_object.data[pos].toFixed(5) != value.toFixed(5) )
-                  destination_object.version = next_version;
-                destination_object.data[pos] = value;
-                pos++;
-            }
-            if( attribute_is_matrix[a] ) {
-                for (let i=0; i < 4; i++)
-                  for (let j=0; j < 4; j++)
-                    set_element (v[j][i]);   // GLSL wants column major matrices.
-            }
-            else for (let i=0; i < attribute_sizes[a]; i++)
-                    set_element(vector[i]);
-          }
-        return destination_object;
+        for (const v of entries)
+          attributes_meta.forEach( meta => {
+            const value = is_matrix_array ? v : v[meta.attr];
+            if (meta.is_matrix)
+              // Write as column-major for GLSL.
+              for (let i = 0; i < 4; i++)
+                for (let j = 0; j < 4; j++)
+                  set_element(value[j][i]);
+            else if (meta.size > 1)
+              for (let i = 0; i < meta.size; i++)
+                set_element(value[i]);
+            else
+              set_element(value);
+          });
+        return destination;
       }
+
       // NOTE: All the below functions make a further assumption: that your vertex buffer includes fields called
       // "position" and "normal" stored at each point, instead of just any arbitrary fields.
 
@@ -249,7 +249,7 @@ class Shader {
                 gl.uniformBlockBinding(program, UBO_index, UBO_index);   // By convention, force block indices to match binding points.
 
                 if( !given_info.get(UBO_name) )
-                  this.uniform_block_info.set(UBO_name, 
+                  this.uniform_block_info.set(UBO_name,
                         { buffer_size: UBO_size, element_offsets: new Map(), next_offsets: new Map() });
 
                 const indices = gl.getActiveUniformBlockParameter(program, i, gl.UNIFORM_BLOCK_ACTIVE_UNIFORM_INDICES);
@@ -836,7 +836,7 @@ class Renderer extends Component {
         }
     }
 
-         // VBO_plan is { attributes, data, offsets, sizes, stride, hint, vertex_count, has_resized, version, divisor }
+         // VBO_plan is { attributes, data, offsets, sizes, stride, buffer_hint, vertex_count, has_resized, version, divisor }
     for( let VBO_plan of [ ...renderListItem.shape.VBO_plans, renderListItem.matrix_VBO_plan ] ) {
 
       if( VBO_plan.version < 0 )
@@ -887,10 +887,9 @@ class Renderer extends Component {
 
       if (existing && !VBO_plan.has_resized)
         gl.bufferSubData (gl.ARRAY_BUFFER, 0, VBO_plan.data)
-      else {
-        gl.bufferData (gl.ARRAY_BUFFER, VBO_plan.data, gl[VBO_plan.hint]);
-        VBO_plan.has_resized = false;
-      }
+      else
+        gl.bufferData (gl.ARRAY_BUFFER, VBO_plan.data, gl[VBO_plan.buffer_hint]);
+      VBO_plan.has_resized = false;
     }
   }
   draw (renderListItem, uniforms, overridden_material) {
@@ -932,7 +931,7 @@ class Renderer extends Component {
     if (shape.indices.length)
        gl.drawElementsInstanced (gl[ type ], shape.indices.length, gl.UNSIGNED_INT, 0, instance_count);
     else
-       gl.drawArraysInstanced (gl[ type ], 0, shape.num_vertices, instance_count);
+       gl.drawArraysInstanced (gl[ type ], 0, shape.vertices.length, instance_count);
   }
 }
 
