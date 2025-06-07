@@ -17,14 +17,18 @@ class Shader_Without_UBOs  extends Shader {
     static default_values () {
       return {};
     }
-    update_GPU (renderer, uniforms, group_transform, material) {
+    update_GPU (renderer, group_transform, material) {
       const gpu_addresses = renderer.uniform_addresses.get(this);
-      if( this.previous_animation_time != gpu_addresses.animation_time ) {
-        this.previous_animation_time = gpu_addresses.animation_time;
-     // renderer.context.uniform1f (gpu_addresses.animation_time, uniforms.animation_time / 1000);
+
+      renderer.state.selected_UBOs.set(material.get_binding_point(), material);
+
+      if( this.previous_animation_time != renderer.state.animation_time ) {
+        this.previous_animation_time = renderer.state.animation_time;
+        renderer.context.uniform1f (gpu_addresses.animation_time, renderer.state.animation_time / 1000);
       }
-      if( this.previous_group_matrix != gpu_addresses.group_transform ) {
-        this.previous_group_matrix = gpu_addresses.group_transform;
+      if( !this.previous_group_matrix || !this.previous_group_matrix.equals(group_transform) ) {
+        if( !this.previous_group_matrix ) this.previous_group_matrix = Mat4.of(...group_transform);
+        else this.previous_group_matrix.set(group_transform);
         renderer.context.uniformMatrix4fv (gpu_addresses.group_transform, true, Matrix.flatten_2D_to_1D (group_transform));
       }
     }
@@ -122,23 +126,23 @@ class Universal_Shader extends Shader {
       const defaults = { has_instancing: true, has_shadows: true, has_texture: true };
       Object.assign (this, defaults, options, {num_lights});
     }
-    update_GPU (renderer, uniforms, group_transform, material) {
+    update_GPU (renderer, group_transform, material) {
       const gpu_addresses = renderer.uniform_addresses.get(this);
 
       // FINISH:  Move lightArray bind out of demo to here instead of the below?  And will shadows use a fully separate lightArray?
       if( false )
       if (this.has_shadows)
-        for (let light of uniforms.lights)
+        for (let light of renderer.state.lights)
           if (!light.supports_shadow)
             throw `Simpler lights do not have compatible UBO layouts to use with shadowed shaders!`;
           else if (light.casts_shadow)
             light.bind(renderer, gpu_addresses);
 
-      renderer.selected_UBOs.set(material.get_binding_point(), material);
+      renderer.state.selected_UBOs.set(material.get_binding_point(), material);
 
-      if( this.previous_animation_time != uniforms.animation_time ) {
-        this.previous_animation_time = uniforms.animation_time;
-     // renderer.context.uniform1f (gpu_addresses.animation_time, uniforms.animation_time / 1000);
+      if( this.previous_animation_time != renderer.state.animation_time ) {
+        this.previous_animation_time = renderer.state.animation_time;
+        renderer.context.uniform1f (gpu_addresses.animation_time, renderer.state.animation_time / 1000);
       }
       if( !this.previous_group_matrix || !this.previous_group_matrix.equals(group_transform) ) {
         if( !this.previous_group_matrix ) this.previous_group_matrix = Mat4.of(...group_transform);
@@ -398,7 +402,7 @@ class Debug_Shader extends Shader {
     update_GPU (renderer, uniforms, matrix, material) {
       const gpu_addresses = renderer.uniform_addresses.get(this);
 
-      renderer.selected_UBOs.set(material.get_binding_point(), material);
+      renderer.state.selected_UBOs.set(material.get_binding_point(), material);
 
       renderer.context.uniform1f (gpu_addresses.animation_time, uniforms.animation_time / 1000);
     }

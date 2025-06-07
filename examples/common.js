@@ -3,7 +3,7 @@ import {defs as shapes} from './common-shapes.js';
 import {defs as shaders} from './common-shaders.js';
 import {defs as components} from './common-components.js';
 
-const {vec3, vec4, Mat4, Shader, UBO_Plan} = tiny;
+const {vec3, vec4, Mat4, UBO_Plan} = tiny;
 
 const defs = { ...shapes, ...shaders, ...components };
 
@@ -32,7 +32,7 @@ class Camera extends UBO_Plan {
       this.fields.camera_position = vec3(this.fields.camera_world[0][3], this.fields.camera_world[1][3], this.fields.camera_world[2][3]);
 
     }
-    emplace(camera_inverse) {
+    assign(camera_inverse) {
       this.fields.camera_inverse = camera_inverse;
       this.fields.camera_world = Mat4.inverse(camera_inverse);
       this.fields.camera_position = vec3(this.fields.camera_world[0][3], this.fields.camera_world[1][3], this.fields.camera_world[2][3]);

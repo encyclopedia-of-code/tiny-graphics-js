@@ -1,6 +1,6 @@
 import {tiny} from '../tiny-graphics.js';
 // Pull these names into this module's scope for convenience:
-const {Vector, Vector3, vec, vec3, vec4, color, Matrix, Mat4, Shape, Shader, Component, Texture, UBO} = tiny;
+const {vec, vec3, vec4, Mat4, Component} = tiny;
 
 import {defs as shapes} from './common-shapes.js';
 import {defs as shaders} from './common-shaders.js';
@@ -10,7 +10,7 @@ export {tiny, defs};
 
 const Movement_Controls = defs.Movement_Controls =
   class Movement_Controls extends Component {
-    constructor(props, update_callback = () => {})
+    constructor(props)
       {
         super(props);
         this.reset();
@@ -23,18 +23,17 @@ const Movement_Controls = defs.Movement_Controls =
           radians_per_frame       : 1 / 200,
           meters_per_frame        : 20,
           speed_multiplier        : 1,
-          mouse_enabled_canvases  : new Set (),
-          will_take_over_uniforms : true,
+          mouse_enabled_canvases  : new Set ()
           };
-        Object.assign( this, defaults, { update_callback });
+        Object.assign( this, defaults);
       }
       set_recipient (matrix_closure, inverse_closure) {
           this.matrix  = matrix_closure;
           this.inverse = inverse_closure;
       }
       reset () {
-          this.set_recipient (() => this.uniforms.camera_transform,
-                              () => this.uniforms.camera_inverse);
+          this.set_recipient (() => this.state.camera.fields.camera_world,
+                              () => this.state.camera.fields.camera_inverse);
       }
       add_mouse_controls (canvas) {
           if (this.mouse_enabled_canvases.has (canvas))
@@ -119,7 +118,7 @@ const Movement_Controls = defs.Movement_Controls =
           }, "black");
           this.new_line ();
           this.key_triggered_button ("Attach to global camera", ["Shift", "R"],
-                                     () => { this.will_take_over_uniforms = true; }, "blue");
+                                     () => { this.reset(); }, "blue");
           this.new_line ();
       }
       first_person_flyaround (radians_per_frame, meters_per_frame, leeway = 70) {
@@ -167,22 +166,13 @@ const Movement_Controls = defs.Movement_Controls =
       render_frame (caller) {
           const m  = this.speed_multiplier * this.meters_per_frame,
                 r  = this.speed_multiplier * this.radians_per_frame,
-                dt = this.uniforms.animation_delta_time / 1000;
-
-          // TODO:  Once there is a way to test it, remove the below, because uniforms are no longer inaccessible
-          // outside this function, so we could just tell this class to take over the uniforms' matrix anytime.
-                // if (this.will_take_over_uniforms) {
-                //     this.reset ();
-                //     this.will_take_over_uniforms = false;
-                // }
+                dt = this.state.animation_delta_time / 1000;
 
           // Move in first-person.  Scale the normal camera aiming speed by dt for smoothness:
           this.first_person_flyaround (dt * r, dt * m);
           // Also apply third-person "arcball" camera mode if a mouse drag is occurring:
           if (this.mouse.anchor)
               this.third_person_arcball (dt * r);
-
-          this.update_callback();
 
           // Log some values:
           this.pos    = this.matrix ().times (vec4 (0, 0, 0, 1));

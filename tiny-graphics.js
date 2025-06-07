@@ -304,7 +304,7 @@ class Shader {
       Object.assign (instance, {program, vertex_shader, fragment_shader});
       return instance;
     }
-    activate (renderer, uniforms, group_transform, material) {    // FINISH: Move to renderer?
+    activate (renderer, group_transform, material) {    // FINISH: Move to renderer?
       // copy_to_GPU if needed
       // useProgram if needed
       // send loose uniforms with polymorphism (this.update_GPU)
@@ -317,7 +317,7 @@ class Shader {
           renderer.context.useProgram (instance.program);
 
         // TODO: Confirm that there are cases where update_GPU can't be batched to once-per-frame.
-        this.update_GPU (renderer, uniforms, group_transform, material);
+        this.update_GPU (renderer, group_transform, material);
 
         let offset = 0;
         for (const [name, sampler] of material.samplers.entries())
@@ -477,9 +477,7 @@ const Component = tiny.Component =
           Component.initialize_CSS (Component, rules);
 
           this.props = props;
-          if (this.props.uniforms) this.uniforms = this.props.uniforms;
-          else this.uniforms = Component.default_uniforms ();
-
+          this.state = Object.create(this.props);      // Shadow all properties given by the parent, so that parent is read-only.
           this.animated_children  = [];
           this.document_children  = [];
           // Set up how we'll handle key presses for the scene's control panel:
@@ -493,20 +491,6 @@ const Component = tiny.Component =
           this.key_controls       = new Keyboard_Manager (document, callback_behavior);
           // Finally, run the user's code for setting up their scene:
           this.init ();
-      }
-
-
-      // FINISH:  Who uses this and how?  Should the matrices below start out null since they are intended to alias onto Camera?
-      static default_uniforms () {
-          return {
-              UBOs                : new Map(),
-              camera_inverse      : Mat4.identity (),
-              camera_transform    : Mat4.identity (),
-              projection_transform: Mat4.identity (),
-              animate             : true,
-              animation_time      : 0,
-              animation_delta_time: 0
-          };
       }
       static types_used_before = new Set ();
       static initialize_CSS (classType, rules) {
@@ -611,14 +595,14 @@ const Component = tiny.Component =
 const RenderListItem = tiny.RenderListItem =
 class RenderListItem {
   constructor (shape, material) {
-      // To draw, just need all this plus { webglcontext, uniforms}:
+      // To draw, just need all this for Renderer:
     this.shape = shape;
     this.material = material;
     this.model_transforms = [];
     this.matrix_VBO_plan = {attributes: ["model_transform"] };
     this.group_transform = Mat4.identity();
     this.type = "TRIANGLES";
-    this.instance_count = 1;
+    this.instance_count = 0;
       // Linked list to other RenderListItems for insertion / removal:
     // const neighbors = {next, prev, next_group, prev_group, next_material, prev_material, next_VBO, prev_VBO};
     //        Problem: Linked lists are slow to identify where to insert / delete, even if the operation is fast.
@@ -630,6 +614,8 @@ class RenderListItem {
     //        Nevermind, will use linked list and secondary dictionary.  See perplexity file.
   }
   update_matrices() {
+    if (!this.model_transforms.length)     // The user may specify no matrices for the single instance case.
+      this.model_transforms.push( Mat4.identity() );
     this.instance_count = this.model_transforms.length;
     Shape.build_VBO_plan (this.model_transforms, this.matrix_VBO_plan, "STATIC_DRAW", 1)
   }
@@ -657,7 +643,6 @@ class Renderer extends Component {
     this.prev_frame_number = -1;
     this.is_running = true;
 
-      // FINISH: Move Texture and Shadow_Map instances into renderer maps.
 
     // All the below maps belonging to this Renderer describe associations that exist only for this Renderer's context.
     this.UBOs = new Map(); // UBO_Plan -> ubo_ptr
@@ -666,12 +651,17 @@ class Renderer extends Component {
     this.gpu_versions = new Map(); // VBO_plan, UBO_plan, EBO_ptr -> version number existing on GPU
         // Other values: Bound_UBO_#, Program, VAO, Active_EBO -> Their respective objects
     this.index_buffers = new Map();  // Shape -> EBO_ptr
-    this.selected_UBOs = new Map(); // binding point integer -> UBO_plan
     this.shaders = new Map();  // Shader -> { program, vertex_shader, fragment_shader }
     this.attribute_addresses = new Map();  // Shader -> Attribute_Addresses
     this.uniform_addresses = new Map();  // Shader -> Uniform_Addresses
     this.textures = new Map();  // Texture -> texture buffer
     this.shadow_maps = new Map();  // Shadow_Map -> texture buffer
+
+    this.state = { animate   : true,
+              animation_time : 0,
+         animation_delta_time: 0,
+                selected_UBOs: new Map()   // binding point integer -> UBO_plan
+    };
   }
   make_context (canvas, background_color = color (0, 0, 0, 1), dimensions) {
       this.canvas              = canvas;
@@ -715,8 +705,8 @@ class Renderer extends Component {
       if (current_frame_number > this.prev_frame_number) {
         this.prev_frame_number = current_frame_number;
         if ( !this.props.dont_tick) {
-            this.uniforms.animation_delta_time = time - ( this.prev_time || 0 );
-            if (this.uniforms.animate) this.uniforms.animation_time += this.uniforms.animation_delta_time;
+            this.state.animation_delta_time = time - ( this.prev_time || 0 );
+            if (this.state.animate) this.state.animation_time += this.state.animation_delta_time;
             this.prev_time = time;
         }
         // Clear the canvas's pixels and z-buffer.
@@ -733,10 +723,6 @@ class Renderer extends Component {
       // Now that this frame is drawn, request that render() happen again as soon as all other web page events
       // are processed:
       this.event = window.requestAnimFrame (this.frame_advance.bind (this));
-  }
-  submit (object) {                   // FINISH.
-    if (object instanceof Entity)
-      this.queued_entities.push(object);
   }
   shadow_map_pass (uniforms) {
     for (let light of uniforms.UBOs.lightArray.fields.lights) {
@@ -891,14 +877,14 @@ class Renderer extends Component {
       VBO_plan.has_resized = false;
     }
   }
-  draw (renderListItem, uniforms, overridden_material) {
+  draw (renderListItem, overridden_material) {
     const material = overridden_material ?? renderListItem.material;
-    material.shader.activate (this, uniforms, renderListItem.group_transform, material);
+    material.shader.activate (this, renderListItem.group_transform, material);
 
     const gl = this.context;
     this.update_VAO( renderListItem, this.attribute_addresses.get( material.shader ) );
 
-    for (let [binding_point, ubo_plan] of this.selected_UBOs.entries()) {
+    for (let [binding_point, ubo_plan] of this.state.selected_UBOs.entries()) {
       const existing = this.UBOs.get(ubo_plan);
       const ubo = existing ?? gl.createBuffer();
       this.UBOs.set(ubo_plan, ubo);
