@@ -17,8 +17,7 @@ const Shape = tiny.Shape =
       // See description at https://github.com/encyclopedia-of-code/tiny-graphics-js/wiki/tiny-graphics.js#shape
       constructor () {
           [this.vertices, this.indices] = [[], []];
-          // TODO:  For model loader, switch to a "waiting" flag instead of the opposite "ready"
-          // this.ready = true; // Since models loaded from files can be not ready
+          this.waiting = false; // Since models loaded from files can be not ready
           this.init();
           this.indices_version = 0;
 
@@ -716,7 +715,7 @@ class Renderer extends Component {
       if (current_frame_number > this.prev_frame_number) {
         this.prev_frame_number = current_frame_number;
         if ( !this.props.dont_tick) {
-            this.uniforms.animation_delta_time = time - this.prev_time | 0;
+            this.uniforms.animation_delta_time = time - ( this.prev_time || 0 );
             if (this.uniforms.animate) this.uniforms.animation_time += this.uniforms.animation_delta_time;
             this.prev_time = time;
         }
@@ -850,7 +849,7 @@ class Renderer extends Component {
       this.VBOs.set( VBO_plan, vbo );
       gl.bindBuffer (gl.ARRAY_BUFFER, vbo);
 
-      for( let i of VBO_plan.attributes.keys()) {
+      for( let [i,name] of VBO_plan.attributes.entries()) {
         const name = VBO_plan.attributes[i];
         if( !attribute_addresses[name] )
           continue;
@@ -899,8 +898,7 @@ class Renderer extends Component {
     const gl = this.context;
     this.update_VAO( renderListItem, this.attribute_addresses.get( material.shader ) );
 
-    for (let binding_point of this.selected_UBOs.keys()) {
-      const ubo_plan = this.selected_UBOs.get(binding_point);
+    for (let [binding_point, ubo_plan] of this.selected_UBOs.entries()) {
       const existing = this.UBOs.get(ubo_plan);
       const ubo = existing ?? gl.createBuffer();
       this.UBOs.set(ubo_plan, ubo);

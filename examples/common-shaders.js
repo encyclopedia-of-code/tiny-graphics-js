@@ -121,33 +121,11 @@ class Universal_Shader extends Shader {
       super();
       const defaults = { has_instancing: true, has_shadows: true, has_texture: true };
       Object.assign (this, defaults, options, {num_lights});
-
-      // this.ubo_binding = [
-      //   {shader_name: "Material",  binding_point: 2},
-      // ];
-
-      // this.ubo_layout = [
-      //   {num_instances: 1,
-      //     data_layout:[{name:"color", type:"vec4"},
-      //                 {name:"diffuse", type:"vec3"},
-      //                 {name:"specular", type:"vec3"},
-      //                 {name:"smoothness", type:"float"}]
-      //   }
-      //   ];
     }
-    // copy_onto_graphics_card (context, uniforms) {
-    //   const instance = super.copy_onto_graphics_card (context, uniforms);
-    //  // this.init_UBO (context, instance.program, this.ubo_binding);
-    //   return instance;
-    // }
     update_GPU (renderer, uniforms, group_transform, material) {
-     //   material.initialize(context, this.ubo_layout);
       const gpu_addresses = renderer.uniform_addresses.get(this);
 
-
-
       // FINISH:  Move lightArray bind out of demo to here instead of the below?  And will shadows use a fully separate lightArray?
-
       if( false )
       if (this.has_shadows)
         for (let light of uniforms.lights)
@@ -157,8 +135,6 @@ class Universal_Shader extends Shader {
             light.bind(renderer, gpu_addresses);
 
       renderer.selected_UBOs.set(material.get_binding_point(), material);
-
-      //this.ubo_binding[0].binding_point, gpu_addresses);
 
       if( this.previous_animation_time != uniforms.animation_time ) {
         this.previous_animation_time = uniforms.animation_time;
