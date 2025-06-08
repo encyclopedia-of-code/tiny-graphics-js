@@ -97,24 +97,15 @@ const Shape = tiny.Shape =
       // "position" and "normal" stored at each point, instead of just any arbitrary fields.
 
       static insert_transformed_copy_into (recipient, args, points_transform = Mat4.identity ()) {
-          // Here if you try to bypass making a temporary shape and instead directly insert new data into the
-          // recipient, you'll run into trouble when the recursion tree stops at different depths.
-          const temp_shape = new this (...args);
-          recipient.indices.push (...temp_shape.indices.map (i => i + recipient.arrays.position.length));
-          // Copy each array from temp_shape into the recipient shape:
-          for (let a in temp_shape.arrays) {
-              // Apply points_transform to all points added during this call:
-              if (a === "position" || a === "tangents")
-                  recipient.arrays[ a ].push (
-                    ...temp_shape.arrays[ a ].map (p => points_transform.times (p.to4 (1)).to3 ()));
-              // Do the same for normals, but use the inverse transpose matrix as math requires:
-              else if (a === "normal")
-                  recipient.arrays[ a ].push (...temp_shape.arrays[ a ].map (n =>
-                                                                               Mat4.inverse (
-                                                                                 points_transform.transposed ())
-                                                                                   .times (n.to4 (1)).to3 ()));
-              // All other arrays get copied in unmodified:
-              else recipient.arrays[ a ].push (...temp_shape.arrays[ a ]);
+          // Append one of these shapes onto recipient's vertex list. Transform points/normals as desired when inserting.
+          // For transforming normals, the math requires the inverse transpose matrix.
+          const dummy_instance = new this (...args);
+          recipient.indices.push (...dummy_instance.indices.map (i => i + recipient.vertices.length));
+          for (let v of dummy_instance.vertices) {
+            const inverse_transpose = Mat4.inverse( points_transform.transposed() );
+            const position = points_transform .times (v.position.to4(1)).to3();
+            const normal   = inverse_transpose.times (v.normal  .to4(1)).to3();
+            recipient.vertices.push( Object.assign( { ...v, position, normal } ) );
           }
       }
       make_flat_shaded_version () {

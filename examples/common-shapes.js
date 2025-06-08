@@ -145,8 +145,7 @@ const Cube = defs.Cube =
       // **Cube** A closed 3D shape, and the first example of a compound shape (a Shape constructed
       // out of other Shapes).  A cube inserts six Square strips into its own arrays, using six
       // different matrices as offsets for each square.
-      constructor () {
-          super ("position", "normal", "texture_coord");
+      init () {
           // Loop 3 times (for each axis), and inside loop twice (for opposing cube sides):
           for (var i = 0; i < 3; i++)
               for (var j = 0; j < 2; j++) {
