@@ -38,12 +38,13 @@ class Instanced_Cubes_Demo extends Renderer {
            {direction_or_position: vec4(5.0, 10.0, 0.0, 0.0),
              color: vec3(1.0, 1.0, 1.0), diffuse: 0.5, specular: 1.0, attenuation_factor: 0.001}
          ]});
-    this.state.camera = new Camera();
 }
 render_frame () {
     if( !this.controls )  {
-      this.state.camera.assign( Mat4.look_at( vec3(0.0, 5.0, 20.0), vec3(0,0,0), vec3(0,1,0) ) );
-      this.state.camera.fields.projection = Mat4.perspective(Math.PI/2, this.width/this.height, 0.01, 500);
+      this.state.camera = new Camera( {
+                            camera_inverse: Mat4.look_at( vec3(0.0, 5.0, 20.0), vec3(0,0,0), vec3(0,1,0) ),
+                            projection: Mat4.perspective(Math.PI/2, this.width/this.height, 0.01, 500)
+                           } );
       this.controls = new defs.Movement_Controls( this.state );
       this.controls.add_mouse_controls( this.canvas );
       this.animated_children.push( this.controls );

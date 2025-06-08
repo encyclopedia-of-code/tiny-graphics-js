@@ -12,30 +12,24 @@ export {tiny, defs};
 const Camera = defs.Camera =
 class Camera extends UBO_Plan {
     init(fields) {
-      this.fields = Object.assign(Camera.default_values(), fields);
+      this.fields = { projection: Mat4.identity(),
+                    camera_world: Mat4.identity(),
+                  camera_inverse: Mat4.identity() };
+     this.assign(fields);
     }
-    static default_values () {
-      return { projection:      Mat4.identity(),
-               camera_inverse:  Mat4.identity(),
-               camera_world:    Mat4.identity(),
-               camera_position: vec3(0,0,0) }
+    assign(fields) {
+      const temp = { camera_world: fields?.camera_world || fields?.camera_inverse && Mat4.inverse(fields.camera_inverse),
+                   camera_inverse: fields?.camera_inverse || fields?.camera_world && Mat4.inverse(fields.camera_world) };
+      Object.assign( this.fields, fields, temp.camera_world ? temp : {} );
+      this.fields.camera_position = vec3(this.fields.camera_world[0][3], this.fields.camera_world[1][3],
+                                         this.fields.camera_world[2][3]);
     }
     get_binding_point () { return 0; }
     post_multiply (matrix) {
-      this.fields.camera_world.post_multiply( matrix );
-      this.fields.camera_inverse = Mat4.inverse(camera_world);
-      this.fields.camera_position = vec3(this.fields.camera_world[0][3], this.fields.camera_world[1][3], this.fields.camera_world[2][3]);
+      this.assign( { camera_world: this.camera_world.times(matrix) } );
     }
-    pre_multply (inverse_matrix) {
-      this.fields.camera_inverse.pre_multply( inverse_matrix );
-      this.fields.camera_world = Mat4.inverse(camera_inverse);
-      this.fields.camera_position = vec3(this.fields.camera_world[0][3], this.fields.camera_world[1][3], this.fields.camera_world[2][3]);
-
-    }
-    assign(camera_inverse) {
-      this.fields.camera_inverse = camera_inverse;
-      this.fields.camera_world = Mat4.inverse(camera_inverse);
-      this.fields.camera_position = vec3(this.fields.camera_world[0][3], this.fields.camera_world[1][3], this.fields.camera_world[2][3]);
+    pre_multiply (matrix) {
+      this.assign( { camera_inverse: matrix.times(this.camera_world) } );
     }
   };
 
