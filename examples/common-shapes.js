@@ -10,17 +10,13 @@ const Triangle = defs.Triangle =
   class Triangle extends Shape {
       // **Triangle** The simplest possible 2D Shape – one triangle.  It stores 3 corner vertices, each with sufficient data to shade them.
 
-      constructor () {
-          super ();
-
+      init () {
           // Multiple data fields live at our triangle's corner points, besides just a position.  We will describe one "vertex" as the combination of a position, a normal vector, and lastly a coordinate in texture image space in case a texture image is applied.
 
           // Vertex positions: the three point locations of an imaginary triangle.
           // "Normal" vectors:  Vectors that point away from the triangle face.  They're needed so the graphics engine can know if the shape is pointed at light or not, and then color it accordingly.
           // Texture coordinates: Points in the seperate 2D X/Y pixel space belonging to any 2D images we might like to paint the shape with.
-         
-          const positions = [[0,0,0], [1,0,0], [0,1,0]];
-        
+
           this.vertices[0] = { position: vec3 (0, 0, 0),
                                normal: vec3 (0, 0, 1),
                                texture_coord: vec2 (0, 0) };
@@ -35,8 +31,6 @@ const Triangle = defs.Triangle =
 
           // Next, describe how to connect whole triangles out of individual vertices.  Say a list of indices of vertex entries in your desired order. Every three indices in "this.indices" traces out one triangle.
           this.indices              = [0, 1, 2];
-
-          this.build_VBO ("position", "normal", "texture_coord")
       }
   };
 
@@ -47,62 +41,69 @@ const Square = defs.Square =
       // interior edges don't make any important seams.  In these cases there's no reason not
       // to re-use data of the common vertices between triangles.  This makes all the vertex
       // arrays (position, normals, etc) smaller and more cache friendly.
-      constructor () {
-          super ("position", "normal", "texture_coord");
-          // Specify the 4 square corner locations, and match those up with normal vectors:
-          this.arrays.position      = Vector3.cast ([-1, -1, 0], [1, -1, 0], [-1, 1, 0], [1, 1, 0]);
-          this.arrays.normal        = Vector3.cast ([0, 0, 1], [0, 0, 1], [0, 0, 1], [0, 0, 1]);
-          // Arrange the vertices into a square shape in texture space too:
-          this.arrays.texture_coord = Vector.create ([0, 0], [1, 0], [0, 1], [1, 1]);
+      init () {
+          // Specify the 4 square corner locations, and match those up with normal vectors.
+          // Arrange the vertices into a square shape in texture space too.
+          this.vertices[0] = { position: vec3 (-1, -1, 0), normal: vec3 (0, 0, 1), texture_coord: vec2 (0, 0) };
+          this.vertices[1] = { position: vec3 ( 1, -1, 0), normal: vec3 (0, 0, 1), texture_coord: vec2 (1, 0) };
+          this.vertices[2] = { position: vec3 (-1,  1, 0), normal: vec3 (0, 0, 1), texture_coord: vec2 (0, 1) };
+          this.vertices[3] = { position: vec3 ( 1,  1, 0), normal: vec3 (0, 0, 1), texture_coord: vec2 (1, 1) };
+
           // Use two triangles this time, indexing into four distinct vertices:
           this.indices.push (0, 1, 2, 1, 3, 2);
       }
   };
 
-
 const Tetrahedron = defs.Tetrahedron =
   class Tetrahedron extends Shape {
       // **Tetrahedron** demonstrates flat vs smooth shading (a boolean argument selects
-      // which one).  It is also our first 3D, non-planar shape.  Four triangles share
-      // corners with each other.  Unless we store duplicate points at each corner
+      // which one). It is also our first 3D, non-planar shape. Four triangles share
+      // corners with each other. Unless we store duplicate points at each corner
       // (storing the same position at each, but different normal vectors), the lighting
-      // will look "off".  To get crisp seams at the edges we need the repeats.
-      constructor (using_flat_shading) {
-          super ("position", "normal", "texture_coord");
-          var a = 1 / Math.sqrt (3);
-          if ( !using_flat_shading) {
-              // Method 1:  A tetrahedron with shared vertices.  Compact, performs better,
+      // will look "off". To get crisp seams at the edges we need the repeats.
+      init(using_flat_shading) {
+          var a = 1 / Math.sqrt(3);
+
+          if (!using_flat_shading) {
+              // Method 1: A tetrahedron with shared vertices. Compact, performs better,
               // but can't produce flat shading or discontinuous seams in textures.
-              this.arrays.position      = Vector.create ([0, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, 1]);
-              this.arrays.normal        = Vector.create ([-a, -a, -a], [1, 0, 0], [0, 1, 0], [0, 0, 1]);
-              this.arrays.texture_coord = Vector.create ([0, 0], [1, 0], [0, 1], [1, 1]);
-              // Notice the repeats in the index list.  Vertices are shared
+              this.vertices = [
+                  { position: vec3(0, 0, 0), normal: vec3(-a, -a, -a), texture_coord: vec2(0, 0) },
+                  { position: vec3(1, 0, 0), normal: vec3(1, 0, 0),    texture_coord: vec2(1, 0) },
+                  { position: vec3(0, 1, 0), normal: vec3(0, 1, 0),    texture_coord: vec2(0, 1) },
+                  { position: vec3(0, 0, 1), normal: vec3(0, 0, 1),    texture_coord: vec2(1, 1) }
+              ];
+              // Notice the repeats in the index list. Vertices are shared
               // and appear in multiple triangles with this method.
-              this.indices.push (0, 1, 2, 0, 1, 3, 0, 2, 3, 1, 2, 3);
+              this.indices.push(0, 1, 2, 0, 1, 3, 0, 2, 3, 1, 2, 3);
           } else {
-              // Method 2:  A tetrahedron with four independent triangles.
-              this.arrays.position = Vector.create ([0, 0, 0], [1, 0, 0], [0, 1, 0],
-                                                  [0, 0, 0], [1, 0, 0], [0, 0, 1],
-                                                  [0, 0, 0], [0, 1, 0], [0, 0, 1],
-                                                  [0, 0, 1], [1, 0, 0], [0, 1, 0]);
-
-              // The essence of flat shading:  This time, values of normal vectors can
-              // be constant per whole triangle.  Repeat them for all three vertices.
-              this.arrays.normal = Vector.create ([0, 0, -1], [0, 0, -1], [0, 0, -1],
-                                                [0, -1, 0], [0, -1, 0], [0, -1, 0],
-                                                [-1, 0, 0], [-1, 0, 0], [-1, 0, 0],
-                                                [a, a, a], [a, a, a], [a, a, a]);
-
+              // Method 2: A tetrahedron with four independent triangles.
+              // The essence of flat shading: This time, values of normal vectors can
+              // be constant per whole triangle. Repeat them for all three vertices.
               // Each face in Method 2 also gets its own set of texture coords (half the
               // image is mapped onto each face).  We couldn't do this with shared
               // vertices since this features abrupt transitions when approaching the
               // same point from different directions.
-              this.arrays.texture_coord = Vector.create ([0, 0], [1, 0], [1, 1],
-                                                       [0, 0], [1, 0], [1, 1],
-                                                       [0, 0], [1, 0], [1, 1],
-                                                       [0, 0], [1, 0], [1, 1]);
+              this.vertices = [
+                  // Face 1
+                  { position: vec3(0, 0, 0), normal: vec3(0, 0, -1), texture_coord: vec2(0, 0) },
+                  { position: vec3(1, 0, 0), normal: vec3(0, 0, -1), texture_coord: vec2(1, 0) },
+                  { position: vec3(0, 1, 0), normal: vec3(0, 0, -1), texture_coord: vec2(1, 1) },
+                  // Face 2
+                  { position: vec3(0, 0, 0), normal: vec3(0, -1, 0), texture_coord: vec2(0, 0) },
+                  { position: vec3(1, 0, 0), normal: vec3(0, -1, 0), texture_coord: vec2(1, 0) },
+                  { position: vec3(0, 0, 1), normal: vec3(0, -1, 0), texture_coord: vec2(1, 1) },
+                  // Face 3
+                  { position: vec3(0, 0, 0), normal: vec3(-1, 0, 0), texture_coord: vec2(0, 0) },
+                  { position: vec3(0, 1, 0), normal: vec3(-1, 0, 0), texture_coord: vec2(1, 0) },
+                  { position: vec3(0, 0, 1), normal: vec3(-1, 0, 0), texture_coord: vec2(1, 1) },
+                  // Face 4
+                  { position: vec3(0, 0, 1), normal: vec3(a, a, a), texture_coord: vec2(0, 0) },
+                  { position: vec3(1, 0, 0), normal: vec3(a, a, a), texture_coord: vec2(1, 0) },
+                  { position: vec3(0, 1, 0), normal: vec3(a, a, a), texture_coord: vec2(1, 1) }
+              ];
               // Notice all vertices are unique this time.
-              this.indices.push (0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11);
+              this.indices.push(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11);
           }
       }
   };
@@ -111,8 +112,7 @@ const Windmill = defs.Windmill =
   class Windmill extends Shape {
       // **Windmill**  As our shapes get more complicated, we begin using matrices and flow
       // control (including loops) to generate non-trivial point clouds and connect them.
-      constructor (num_blades) {
-          super ("position", "normal", "texture_coord");
+      init (num_blades=5) {
           // A for loop to automatically generate the triangles:
           for (let i = 0; i < num_blades; i++) {
               // Rotate around a few degrees in the XZ plane to place each new point:
@@ -122,16 +122,17 @@ const Windmill = defs.Windmill =
               const triangle = [newPoint,                      // Store that XZ position as point 1.
                   newPoint.plus ([0, 1, 0]),    // Store it again but with higher y coord as point 2.
                   vec3 (0, 0, 0)];          // All triangles touch this location -- point 3.
+              const tex_coords = [ [0, 0], [0, 1], [1, 0] ];
 
-              this.arrays.position.push (...triangle);
               // Rotate our base triangle's normal (0,0,1) to get the new one.  Careful!  Normal vectors are not
               // points; their perpendicularity constraint gives them a mathematical quirk that when applying
               // matrices you have to apply the transposed inverse of that matrix instead.  But right now we've
               // got a pure rotation matrix, where the inverse and transpose operations cancel out, so it's ok.
               var newNormal = spin.times (vec4 (0, 0, 1, 0)).to3 ();
               // Propagate the same normal to all three vertices:
-              this.arrays.normal.push (newNormal, newNormal, newNormal);
-              this.arrays.texture_coord.push (...Vector.create ([0, 0], [0, 1], [1, 0]));
+              for( let i=0; i<3; i++ )
+                this.vertices.push( { position: triangle[i], normal: newNormal, texture_coord: tex_coords[i] } );
+
               // Procedurally connect the 3 new vertices into triangles:
               this.indices.push (3 * i, 3 * i + 1, 3 * i + 2);
           }
@@ -521,8 +522,6 @@ const Instanced_Cube_Index = defs.Instanced_Cube_Index =
                           10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
                           20, 21, 22, 23, 24, 25, 26, 27, 28, 29,
                           30, 31, 32, 33, 34, 35];
-
-          this.num_vertices = 36; // FINISH: For now, until hammering out multiple vaos per shape.
       }
   };
 
@@ -535,24 +534,19 @@ const Minimal_Shape = defs.Minimal_Shape =
           this.vertices[0] = { position: vec3 (0, 0, 0), color: color (1, 0, 0, 1) };
           this.vertices[1] = { position: vec3 (1, 0, 0), color: color (0, 1, 0, 1) };
           this.vertices[2] = { position: vec3 (0, 1, 0), color: color (0, 0, 1, 1) };
-
-          this.num_vertices = 3; // FINISH: For now, until hammering out multiple vaos per shape.
       }
   };
 
-  const Minimaler_Shape = defs.Minimaler_Shape =
+const Minimaler_Shape = defs.Minimaler_Shape =
   class Minimaler_Shape extends tiny.Shape {
       init () {
-          // Describe the where the points of a triangle are in space, and also describe their colors:
           this.vertices[0] = { position: vec3 (0, 0, 0)};
           this.vertices[1] = { position: vec3 (1, 0, 0)};
           this.vertices[2] = { position: vec3 (0, 1, 0)};
-
-          this.num_vertices = 3; // FINISH: For now, until hammering out multiple vaos per shape.
       }
   };
 
-  const Shape_From_File = defs.Shape_From_File =
+const Shape_From_File = defs.Shape_From_File =
   class Shape_From_File extends tiny.Shape
   {                                   // **Shape_From_File** is a versatile standalone Shape that imports
                                       // all its arrays' data from an .obj 3D model file.

@@ -15,10 +15,10 @@ const {Vector3, vec3, color, Matrix, Mat4, Keyboard_Manager} = tiny;
 const Shape = tiny.Shape =
   class Shape {
       // See description at https://github.com/encyclopedia-of-code/tiny-graphics-js/wiki/tiny-graphics.js#shape
-      constructor () {
+      constructor (...args) {
           [this.vertices, this.indices] = [[], []];
           this.waiting = false; // Since models loaded from files can be not ready
-          this.init();
+          this.init(...args);
           this.indices_version = 0;
 
           if(! this.VBO_plans)
@@ -637,7 +637,7 @@ class RenderListItem {
 
 const Renderer = tiny.Renderer =
 class Renderer extends Component {
-  init (...args) {
+  init () {
     this.renderList = []
     this.max_fps = 60;
     this.prev_frame_number = -1;

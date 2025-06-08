@@ -9,7 +9,8 @@ const Instanced_Cubes_Demo = defs.Instanced_Cubes_Demo =
 class Instanced_Cubes_Demo extends Renderer {
   init () {
     super.init();
-    this.shapes = {cube: new defs.Instanced_Cube_Index()};
+    // this.shapes = {cube: new defs.Instanced_Cube_Index()};
+    this.shapes = {cube: new defs.Windmill(20)};
 
      this.shader = new defs.Universal_Shader (LightArray.NUM_LIGHTS, {has_shadows: false, has_texture: false});
     // this.shader = new defs.Shader_Without_UBOs (1, {has_shadows: false, has_texture: false});
