@@ -33,10 +33,6 @@ class Camera extends UBO_Plan {
       this.assign( { camera_inverse: inverted_matrix.times(this.fields.camera_inverse) } );
     }
   };
-  // If opposite is provided, adjust both matrices simultaneously to avoid a call to Mat4.inverse().
-  //    if( opposite)
-  //      this.assign( { camera_world: this.camera_world.times(matrix), camera_inverse: opposite.times(this.camera_inverse) } );
-  //    else
 
 const LightArray = defs.LightArray =
 class LightArray extends UBO_Plan {

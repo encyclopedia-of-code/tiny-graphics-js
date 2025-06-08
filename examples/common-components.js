@@ -51,16 +51,16 @@ const Movement_Controls = defs.Movement_Controls =
       render_explanation (document_builder, document_element = document_builder.document_region) { }
       render_controls () {
           this.control_panel.innerHTML += "Click and drag the scene to <br> spin your viewpoint around it.<br>";
-          this.key_triggered_button ("Up", [" "], () => this.thrust[ 1 ] = -1, undefined, () => this.thrust[ 1 ] = 0);
-          this.key_triggered_button ("Forward", ["w"], () => this.thrust[ 2 ] = 1, undefined,
-                                     () => this.thrust[ 2 ] = 0);
-          this.new_line ();
-          this.key_triggered_button ("Left", ["a"], () => this.thrust[ 0 ] = 1, undefined, () => this.thrust[ 0 ] = 0);
-          this.key_triggered_button ("Back", ["s"], () => this.thrust[ 2 ] = -1, undefined, () => this.thrust[ 2 ] = 0);
-          this.key_triggered_button ("Right", ["d"], () => this.thrust[ 0 ] = -1, undefined,
-                                     () => this.thrust[ 0 ] = 0);
-          this.new_line ();
-          this.key_triggered_button ("Down", ["z"], () => this.thrust[ 1 ] = 1, undefined, () => this.thrust[ 1 ] = 0);
+          [ { label: "Up",      keys: [" "], idx: 1, val: -1 },
+            { label: "Forward", keys: ["w"], idx: 2, val: 1 },
+            { label: "Left",    keys: ["a"], idx: 0, val: 1 },
+            { label: "Back",    keys: ["s"], idx: 2, val: -1 },
+            { label: "Right",   keys: ["d"], idx: 0, val: -1 },
+            { label: "Down",    keys: ["z"], idx: 1, val: 1 }
+          ].forEach(({ label, keys, idx, val }, i) => {
+            this.key_triggered_button(label, keys, () => this.thrust[idx] = val, undefined, () => this.thrust[idx] = 0);
+            if ([1, 4].includes(i)) this.new_line();
+          });
 
           const speed_controls        = this.control_panel.appendChild (document.createElement ("span"));
           speed_controls.style.margin = "30px";
@@ -81,7 +81,7 @@ const Movement_Controls = defs.Movement_Controls =
             box => box.textContent = "Position: " + this.pos[ 0 ].toFixed (2) + ", " + this.pos[ 1 ].toFixed (2)
                                      + ", " + this.pos[ 2 ].toFixed (2));
           this.new_line ();
-          // The facing directions are surprisingly affected by the left hand rule:
+          // The facing directions actually follow the left hand rule:
           this.live_string (box => box.textContent = "Facing: " + ((this.z_axis[ 0 ] > 0 ? "West " : "East ")
                                                      + (this.z_axis[ 1 ] > 0 ? "Down " : "Up ") +
                                                      (this.z_axis[ 2 ] > 0 ? "North" : "South")));
@@ -96,18 +96,14 @@ const Movement_Controls = defs.Movement_Controls =
                   Mat4.look_at (vec3 (0, 0, 10), vec3 (0, 0, 0), vec3 (0, 1, 0)) } )
           }, "black");
           this.new_line ();
-          this.key_triggered_button ("from right", ["2"], () => {
-              this.recipient.assign( { camera_inverse:
-                  Mat4.look_at (vec3 (10, 0, 0), vec3 (0, 0, 0), vec3 (0, 1, 0)) } )
-          }, "black");
-          this.key_triggered_button ("from rear", ["3"], () => {
-              this.recipient.assign( { camera_inverse:
-                  Mat4.look_at (vec3 (0, 0, -10), vec3 (0, 0, 0), vec3 (0, 1, 0)) } )
-          }, "black");
-          this.key_triggered_button ("from left", ["4"], () => {
-              this.recipient.assign( { camera_inverse:
-                  Mat4.look_at (vec3 (-10, 0, 0), vec3 (0, 0, 0), vec3 (0, 1, 0)) } )
-          }, "black");
+          [ { label: "from right", keys: ["2"], pos: vec3(10,0,0) },
+            { label: "from rear",  keys: ["3"], pos: vec3(0,0,-10) },
+            { label: "from left",  keys: ["4"], pos: vec3(-10,0,0) }
+          ].forEach(({ label, keys, pos }) => {
+            this.key_triggered_button(label, keys, () => {
+              this.recipient.assign({ camera_inverse: Mat4.look_at(pos, vec3(0,0,0), vec3(0,1,0)) });
+            }, "black");
+          });
           this.new_line ();
           this.key_triggered_button ("Attach to global camera", ["Shift", "R"],
                                      () => { this.reset(); }, "blue");
