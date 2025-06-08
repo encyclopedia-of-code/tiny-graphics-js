@@ -724,6 +724,7 @@ class Renderer extends Component {
       // are processed:
       this.event = window.requestAnimFrame (this.frame_advance.bind (this));
   }
+/*
   shadow_map_pass (uniforms) {
     for (let light of uniforms.UBOs.lightArray.fields.lights) {
       if (!light.casts_shadow)
@@ -742,51 +743,11 @@ class Renderer extends Component {
         light.deactivate(caller);
       }
     }
-  }
-  flush (uniforms, clear_entities = true, alternative_shader = undefined) {
-    throw "rewrite this";
 
+    // make dummy material if called from shadow, ie. given a light.shadow shader
     const shadow_pass_material = alternative_shader ?
                     new Material("shadow_pass_material", alternative_shader) :
                     undefined;
-
-    // FINISH:  We're overwriting vertices below?  Even if we've already called build_VBO_plans with the previous values, isn't that confusing?
-    for(let entity of this.queued_entities){
-      if( entity.transforms instanceof tiny.Matrix ) {
-        // Single matrix case
-        if (entity.dirty && entity.shape.ready) {
-          entity.shape.vertices = [{instance_transform: entity.transforms}];
-          //Ideally use a shader with just a uniform matrix where you pass global.times(model)?
-          entity.shape.build_VBO_plans(["instance_transform"], undefined, 1);
-          if( !alternative_shader)
-            entity.dirty = false;
-        }
-        this.draw(entity.shape, uniforms, entity.model_transform, shadow_pass_material, undefined, 1);
-      }
-      else {
-        if (entity.dirty && entity.shape.ready) {
-          entity.shape.vertices = Array(entity.transforms.length).fill(0).map( (x,i) => ({instance_transform: entity.transforms[i]}));
-          entity.shape.build_VBO_plans(["instance_transform"], undefined, 1);
-          if( !alternative_shader)
-            entity.dirty = false;
-        }
-        this.draw(entity.shape, uniforms, entity.model_transform, shadow_pass_material, undefined, entity.transforms.length);
-      }
-    }
-
-    if (clear_entities)
-      this.queued_entities = []
-  }
-  /*
-  flush:
-    make dummy material if called from shadow, ie. given a light.shadow shader
-    for (every entity)
-      if instanced,
-        update matrix buffer if needed
-        call draw( .., num_matrices )
-      if single,
-        make single-length matrix buffer
-        call draw( .., 1 )
   */
   update_VAO(renderListItem, attribute_addresses) {
     const gl = this.context;

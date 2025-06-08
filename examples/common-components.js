@@ -25,7 +25,7 @@ const Movement_Controls = defs.Movement_Controls =
           speed_multiplier        : 1,
           mouse_enabled_canvases  : new Set ()
           };
-        Object.assign( this, defaults);
+        Object.assign( this, defaults );
       }
       set_recipient (matrix_closure, inverse_closure) {
           this.matrix  = matrix_closure;
