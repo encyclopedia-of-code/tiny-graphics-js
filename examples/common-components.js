@@ -110,26 +110,20 @@ const Movement_Controls = defs.Movement_Controls =
           this.new_line ();
       }
       first_person_flyaround (radians_per_frame, meters_per_frame, leeway = 70) {
-          // Compare mouse's location to all four corners of a dead box:
-          const offsets_from_dead_box = {
-              plus : [this.mouse.from_center[ 0 ] + leeway, this.mouse.from_center[ 1 ] + leeway],
-              minus: [this.mouse.from_center[ 0 ] - leeway, this.mouse.from_center[ 1 ] - leeway]
-          };
-          // Apply a camera rotation movement, but only when the mouse is
-          // past a minimum distance (leeway) from the canvas's center:
-          if ( !this.look_around_locked)
-            // If steering, steer according to "mouse_from_center" vector, but don't
-            // start increasing until outside a leeway window from the center.
-              for (let i = 0; i < 2; i++) {
-                  // The &&'s in the next line might zero the vectors out:
-                  let o        = offsets_from_dead_box,
-                      velocity = ((o.minus[ i ] > 0 && o.minus[ i ]) || (o.plus[ i ] < 0 && o.plus[ i ])) *
-                                 radians_per_frame;
-                  // On X step, rotate around Y axis, and vice versa.
-                  this.recipient.pre_multiply (Mat4.rotation (velocity, i, 1 - i, 0))
-              }
+            // Apply a camera rotation movement according to "mouse_from_center" vector, but only start
+            // increasing once the mouse is past a minimum distance (dead box/leeway) from the canvas's center.
+          const getVelocity = (v) => { if (v < -leeway) return (v + leeway) * radians_per_frame;
+                                       if (v > leeway)  return (v - leeway) * radians_per_frame;
+                                       return 0; };
+          if (!this.look_around_locked) {
+              // Apply camera rotation for both axes
+              this.mouse.from_center.forEach((v, i) => {
+                  const velocity = getVelocity(v);
+                  // On X step, rotate around Y axis; on Y step, rotate around X axis
+                  this.recipient.pre_multiply(Mat4.rotation(velocity, i, 1 - i, 0));
+              });
+          }
           this.recipient.pre_multiply (Mat4.rotation (.1 * this.roll, 0, 0, 1));
-          // Now apply translation movement of the camera, in the newest local coordinate frame.
           this.recipient.pre_multiply (Mat4.translation (...this.thrust.times(meters_per_frame)) );
       }
       third_person_arcball (radians_per_frame) {
