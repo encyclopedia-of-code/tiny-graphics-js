@@ -18,6 +18,7 @@ class Camera extends UBO_Plan {
      this.assign(fields);
     }
     assign(fields) {
+      // If only one matrix is provided, invert it to fill in the other.
       const temp = { camera_world: fields?.camera_world || fields?.camera_inverse && Mat4.inverse(fields.camera_inverse),
                    camera_inverse: fields?.camera_inverse || fields?.camera_world && Mat4.inverse(fields.camera_world) };
       Object.assign( this.fields, fields, temp.camera_world ? temp : {} );
@@ -26,12 +27,16 @@ class Camera extends UBO_Plan {
     }
     get_binding_point () { return 0; }
     post_multiply (matrix) {
-      this.assign( { camera_world: this.camera_world.times(matrix) } );
+        this.assign( { camera_world: this.fields.camera_world.times(matrix) } );
     }
-    pre_multiply (matrix) {
-      this.assign( { camera_inverse: matrix.times(this.camera_world) } );
+    pre_multiply (inverted_matrix) {
+      this.assign( { camera_inverse: inverted_matrix.times(this.fields.camera_inverse) } );
     }
   };
+  // If opposite is provided, adjust both matrices simultaneously to avoid a call to Mat4.inverse().
+  //    if( opposite)
+  //      this.assign( { camera_world: this.camera_world.times(matrix), camera_inverse: opposite.times(this.camera_inverse) } );
+  //    else
 
 const LightArray = defs.LightArray =
 class LightArray extends UBO_Plan {

@@ -13,7 +13,8 @@ const Movement_Controls = defs.Movement_Controls =
     constructor(props)
       {
         super(props);
-        this.reset();
+        this.recipient = this.state.camera;
+
         const defaults = {
           roll                    : 0,
           look_around_locked      : true,
@@ -26,14 +27,6 @@ const Movement_Controls = defs.Movement_Controls =
           mouse_enabled_canvases  : new Set ()
           };
         Object.assign( this, defaults );
-      }
-      set_recipient (matrix_closure, inverse_closure) {
-          this.matrix  = matrix_closure;
-          this.inverse = inverse_closure;
-      }
-      reset () {
-          this.set_recipient (() => this.state.camera.fields.camera_world,
-                              () => this.state.camera.fields.camera_inverse);
       }
       add_mouse_controls (canvas) {
           if (this.mouse_enabled_canvases.has (canvas))
@@ -94,27 +87,26 @@ const Movement_Controls = defs.Movement_Controls =
                                                      (this.z_axis[ 2 ] > 0 ? "North" : "South")));
           this.new_line ();
           this.key_triggered_button ("Go to world origin", ["r"], () => {
-              this.matrix ().set_identity (4, 4);
-              this.inverse ().set_identity (4, 4);
+              this.recipient.assign( { camera_world: Mat4.identity() } )
           }, "orange");
           this.new_line ();
 
           this.key_triggered_button ("Look at origin from front", ["1"], () => {
-              this.inverse ().set (Mat4.look_at (vec3 (0, 0, 10), vec3 (0, 0, 0), vec3 (0, 1, 0)));
-              this.matrix ().set (Mat4.inverse (this.inverse ()));
+              this.recipient.assign( { camera_inverse:
+                  Mat4.look_at (vec3 (0, 0, 10), vec3 (0, 0, 0), vec3 (0, 1, 0)) } )
           }, "black");
           this.new_line ();
           this.key_triggered_button ("from right", ["2"], () => {
-              this.inverse ().set (Mat4.look_at (vec3 (10, 0, 0), vec3 (0, 0, 0), vec3 (0, 1, 0)));
-              this.matrix ().set (Mat4.inverse (this.inverse ()));
+              this.recipient.assign( { camera_inverse:
+                  Mat4.look_at (vec3 (10, 0, 0), vec3 (0, 0, 0), vec3 (0, 1, 0)) } )
           }, "black");
           this.key_triggered_button ("from rear", ["3"], () => {
-              this.inverse ().set (Mat4.look_at (vec3 (0, 0, -10), vec3 (0, 0, 0), vec3 (0, 1, 0)));
-              this.matrix ().set (Mat4.inverse (this.inverse ()));
+              this.recipient.assign( { camera_inverse:
+                  Mat4.look_at (vec3 (0, 0, -10), vec3 (0, 0, 0), vec3 (0, 1, 0)) } )
           }, "black");
           this.key_triggered_button ("from left", ["4"], () => {
-              this.inverse ().set (Mat4.look_at (vec3 (-10, 0, 0), vec3 (0, 0, 0), vec3 (0, 1, 0)));
-              this.matrix ().set (Mat4.inverse (this.inverse ()));
+              this.recipient.assign( { camera_inverse:
+                  Mat4.look_at (vec3 (-10, 0, 0), vec3 (0, 0, 0), vec3 (0, 1, 0)) } )
           }, "black");
           this.new_line ();
           this.key_triggered_button ("Attach to global camera", ["Shift", "R"],
@@ -138,30 +130,22 @@ const Movement_Controls = defs.Movement_Controls =
                       velocity = ((o.minus[ i ] > 0 && o.minus[ i ]) || (o.plus[ i ] < 0 && o.plus[ i ])) *
                                  radians_per_frame;
                   // On X step, rotate around Y axis, and vice versa.
-                  this.matrix ().post_multiply (Mat4.rotation (-velocity, i, 1 - i, 0));
-                  this.inverse ().pre_multiply (Mat4.rotation (+velocity, i, 1 - i, 0));
+                  this.recipient.pre_multiply (Mat4.rotation (velocity, i, 1 - i, 0))
               }
-          this.matrix ().post_multiply (Mat4.rotation (-.1 * this.roll, 0, 0, 1));
-          this.inverse ().pre_multiply (Mat4.rotation (+.1 * this.roll, 0, 0, 1));
+          this.recipient.pre_multiply (Mat4.rotation (.1 * this.roll, 0, 0, 1));
           // Now apply translation movement of the camera, in the newest local coordinate frame.
-          this.matrix ().post_multiply (Mat4.translation (...this.thrust.times (-meters_per_frame)));
-          this.inverse ().pre_multiply (Mat4.translation (...this.thrust.times (+meters_per_frame)));
+          this.recipient.pre_multiply (Mat4.translation (...this.thrust.times(meters_per_frame)) );
       }
       third_person_arcball (radians_per_frame) {
           // Spin the scene around a point on an axis determined by user mouse drag:
           const dragging_vector = this.mouse.from_center.minus (this.mouse.anchor);
           if (dragging_vector.norm () <= 0)
               return;
-          this.matrix ().post_multiply (Mat4.translation (0, 0, -25));
-          this.inverse ().pre_multiply (Mat4.translation (0, 0, +25));
-
+          this.recipient.pre_multiply (Mat4.translation (0, 0, 25));
           const rotation = Mat4.rotation (radians_per_frame * dragging_vector.norm (),
                                           dragging_vector[ 1 ], dragging_vector[ 0 ], 0);
-          this.matrix ().post_multiply (rotation);
-          this.inverse ().pre_multiply (rotation);
-
-          this.matrix ().post_multiply (Mat4.translation (0, 0, +25));
-          this.inverse ().pre_multiply (Mat4.translation (0, 0, -25));
+          this.recipient.pre_multiply (rotation);
+          this.recipient.pre_multiply (Mat4.translation (0, 0, -25));
       }
       render_frame (caller) {
           const m  = this.speed_multiplier * this.meters_per_frame,
@@ -175,7 +159,7 @@ const Movement_Controls = defs.Movement_Controls =
               this.third_person_arcball (dt * r);
 
           // Log some values:
-          this.pos    = this.matrix ().times (vec4 (0, 0, 0, 1));
-          this.z_axis = this.matrix ().times (vec4 (0, 0, 1, 0));
+          this.pos    = this.recipient.fields.camera_world.times (vec4 (0, 0, 0, 1));
+          this.z_axis = this.recipient.fields.camera_world.times (vec4 (0, 0, 1, 0));
       }
   };
