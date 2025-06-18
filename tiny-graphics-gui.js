@@ -1,10 +1,6 @@
-import {tiny} from './tiny-graphics.js';
+import * as tiny from './tiny-graphics.js';
 
-export const widgets = {};
-
-
-const Controls_Widget = widgets.Controls_Widget =
-  class Controls_Widget {
+export class Controls_Widget {
       // See description at:
       // https://github.com/encyclopedia-of-code/tiny-graphics-js/wiki/tiny-graphics-gui.js#controls_widget
       constructor (component, options = {}) {
@@ -92,9 +88,7 @@ const Controls_Widget = widgets.Controls_Widget =
       }
   };
 
-
-const Keyboard_Manager = widgets.Keyboard_Manager =
-  class Keyboard_Manager {
+export class Keyboard_Manager {
       // See description at:
       // https://github.com/encyclopedia-of-code/tiny-graphics-js/wiki/tiny-graphics-gui.js#keyboard_manager
       constructor (target = document, callback_behavior = (callback, event) => callback (event)) {
@@ -136,9 +130,7 @@ const Keyboard_Manager = widgets.Keyboard_Manager =
       }
   };
 
-
-const Code_Manager = widgets.Code_Manager =
-  class Code_Manager {
+export class Code_Manager {
       // See description at:
       // https://github.com/encyclopedia-of-code/tiny-graphics-js/wiki/tiny-graphics-gui.js#code_manager
       constructor (code) {
@@ -171,9 +163,7 @@ const Code_Manager = widgets.Code_Manager =
       }
   };
 
-
-const Code_Widget = widgets.Code_Widget =
-  class Code_Widget {
+export class Code_Widget {
       // See description at:
       // https://github.com/encyclopedia-of-code/tiny-graphics-js/wiki/tiny-graphics-gui.js#code_widget
       constructor (component, options = {}) {
@@ -193,7 +183,7 @@ const Code_Widget = widgets.Code_Widget =
             .then (module => {
 
                 const code_in_focus = options.code_in_focus || component.constructor;
-                this.build_reader (component.embedded_code_nav_area, code_in_focus, module.defs);
+                this.build_reader (component.embedded_code_nav_area, code_in_focus, module);
                 if ( !options.hide_navigator)
                     this.build_navigator (component.embedded_code_nav_area, code_in_focus);
             });
@@ -309,9 +299,7 @@ const Code_Widget = widgets.Code_Widget =
       }
   };
 
-
-const Editor_Widget = widgets.Editor_Widget =
-  class Editor_Widget {
+export class Editor_Widget {
       // See description at:
       // https://github.com/encyclopedia-of-code/tiny-graphics-js/wiki/tiny-graphics-gui.js#editor_widget
       constructor (component, options = {}) {

@@ -1,15 +1,9 @@
-import {tiny} from '../tiny-graphics.js';
-// Pull these names into this module's scope for convenience:
-const {vec, vec3, vec4, Mat4, Component} = tiny;
+import * as tiny from '../tiny-graphics.js';
+import { vec, vec3, vec4, Mat4, Component } from '../tiny-graphics.js';
+import * as shapes from './common-shapes.js';
+import * as shaders from './common-shaders.js';
 
-import {defs as shapes} from './common-shapes.js';
-import {defs as shaders} from './common-shaders.js';
-
-const defs = {};
-export {tiny, defs};
-
-const Movement_Controls = defs.Movement_Controls =
-  class Movement_Controls extends Component {
+export class Movement_Controls extends Component {
     constructor(props)
       {
         super(props);

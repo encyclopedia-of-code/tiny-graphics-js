@@ -1,7 +1,4 @@
-export const math = {};
-
-const Vector = math.Vector =
-  class Vector extends Float32Array {
+export class Vector extends Float32Array {
       // See description at https://github.com/encyclopedia-of-code/tiny-graphics-js/wiki/tiny-graphics-math.js
       static create (...arr) {
           return new Vector (arr);
@@ -33,8 +30,7 @@ const Vector = math.Vector =
       to_string () { return "[vector " + this.join (", ") + "]"; }
   };
 
-const Vector3 = math.Vector3 =
-  class Vector3 extends Float32Array {
+export class Vector3 extends Float32Array {
       // **Vector3** is a specialization of Vector only for size 3, for performance reasons.
       // See description at https://github.com/encyclopedia-of-code/tiny-graphics-js/wiki/tiny-graphics-math.js#vector3
       static create (x, y, z) {
@@ -119,8 +115,7 @@ const Vector3 = math.Vector3 =
       to_string () { return "[vec3 " + this.join (", ") + "]"; }
   };
 
-const Vector4 = math.Vector4 =
-  class Vector4 extends Float32Array {
+export class Vector4 extends Float32Array {
       // **Vector4** is a specialization of Vector only for size 4, for performance reasons.
       // See description at https://github.com/encyclopedia-of-code/tiny-graphics-js/wiki/tiny-graphics-math.js#vector4
       static create (x, y, z, w) {
@@ -215,19 +210,18 @@ const Vector4 = math.Vector4 =
   };
 
 // See description at https://github.com/encyclopedia-of-code/tiny-graphics-js/wiki/tiny-graphics-math.js#shorthand
-const vec     = math.vec  = Vector.create;
-const vec2    = math.vec2 = Vector.create;
-const vec3    = math.vec3 = Vector3.create;
-const vec4    = math.vec4 = Vector4.create;
-const unsafe3 = math.unsafe3 = Vector3.unsafe;
-const unsafe4 = math.unsafe4 = Vector4.unsafe;
-const color   = math.color = Vector4.create;
+export const vec     = Vector.create;
+export const vec2    = Vector.create;
+export const vec3    = Vector3.create;
+export const vec4    = Vector4.create;
+export const unsafe3 = Vector3.unsafe;
+export const unsafe4 = Vector4.unsafe;
+export const color   =  Vector4.create;
 
 
 // Part II: Matrices:   *************************************************************************************
 
-const Matrix = math.Matrix =
-  class Matrix extends Array {
+export class Matrix extends Array {
       // See description at https://github.com/encyclopedia-of-code/tiny-graphics-js/wiki/tiny-graphics-math.js#matrix
       set (M) {
           this.length = 0;
@@ -291,8 +285,7 @@ const Matrix = math.Matrix =
   };
 
 
-const Mat4 = math.Mat4 =
-  class Mat4 extends Matrix {
+export class Mat4 extends Matrix {
       // See description at https://github.com/encyclopedia-of-code/tiny-graphics-js/wiki/tiny-graphics-math.js#mat4
       load_identity (target) {
           for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) this[ i ][ j ] = i === j ? 1 : 0;

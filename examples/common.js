@@ -1,16 +1,10 @@
-import {tiny} from '../tiny-graphics.js';
-import {defs as shapes} from './common-shapes.js';
-import {defs as shaders} from './common-shaders.js';
-import {defs as components} from './common-components.js';
+import { vec3, vec4, Mat4, UBO_Plan } from '../tiny-graphics.js';
+export * from '../tiny-graphics.js';
+export * from './common-shapes.js';
+export * from './common-shaders.js';
+export * from './common-components.js';
 
-const {vec3, vec4, Mat4, UBO_Plan} = tiny;
-
-const defs = { ...shapes, ...shaders, ...components };
-
-export {tiny, defs};
-
-const Camera = defs.Camera =
-class Camera extends UBO_Plan {
+export class Camera extends UBO_Plan {
     init(fields) {
       this.fields = { projection: Mat4.identity(),
                     camera_world: Mat4.identity(),
@@ -34,8 +28,7 @@ class Camera extends UBO_Plan {
     }
   };
 
-const LightArray = defs.LightArray =
-class LightArray extends UBO_Plan {
+export class LightArray extends UBO_Plan {
 
     static NUM_LIGHTS = 2;
     static global_index = 0;
@@ -72,8 +65,7 @@ class LightArray extends UBO_Plan {
     { }
   };
 
-const Shadow_Light = defs.Shadow_Light =
-class Shadow_Light {
+export class Shadow_Light {
         // TODO:  Since this is going to be a UBO_Plan, which is supposed to just be a container object without GL ties, it follows that some other object should be in charge of storing the GL stuff here that a Shadow_light needs to be associated with (a Shadow_Map and a shadowed Shader).
 
     static NUM_LIGHTS = 2;
@@ -202,8 +194,7 @@ class Shadow_Light {
     }
   };
 
-const Material = defs.Material =
-class Material extends UBO_Plan {
+export class Material extends UBO_Plan {
     init(shader = undefined, fields = {}, samplers = {}) {
       Object.assign (this, {shader, samplers: new Map(Object.entries(samplers))} );
       this.fields = Object.assign(shader.constructor.default_values(), fields);
@@ -211,8 +202,7 @@ class Material extends UBO_Plan {
     get_binding_point () { return 2; }
 };
 
-const Material_From_File = defs.Material_From_File =
-class Material_From_File extends UBO_Plan {
+export class Material_From_File extends UBO_Plan {
     init(shader = undefined, filename, arg_fields = {}, arg_samplers = {}) {
       Object.assign (this, shader, filename, arg_fields, {arg_samplers: new Map(arg_samplers)} );
       this.ready = false;

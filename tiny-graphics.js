@@ -1,19 +1,14 @@
 // tiny-graphics.js - A file that shows how to organize a complete graphics program, refactoring common WebGL steps.
 // By Garett.
 
-// To organize the exported class definitions, declare each class both in local scope (const) as well as storing them in
-// this JS object:
-import {math}    from './tiny-graphics-math.js';
-import {widgets} from './tiny-graphics-gui.js';
+import * as math from './tiny-graphics-math.js';
+import { Vector3, vec3, color, Matrix, Mat4 } from './tiny-graphics-math.js';
+import * as widgets from './tiny-graphics-gui.js';
+export * from './tiny-graphics-math.js';
+export * from './tiny-graphics-gui.js';
+export { math, widgets };
 
-export const tiny = {...math, ...widgets, math, widgets };
-
-// Pull these names into this module's scope for convenience:
-const {Vector3, vec3, color, Matrix, Mat4, Keyboard_Manager} = tiny;
-
-
-const Shape = tiny.Shape =
-  class Shape {
+export class Shape {
       // See description at https://github.com/encyclopedia-of-code/tiny-graphics-js/wiki/tiny-graphics.js#shape
       constructor (...args) {
           [this.vertices, this.indices] = [[], []];
@@ -181,8 +176,7 @@ const test_rookie_mistake = function () {
 
 
 
-const Shader = tiny.Shader =
-class Shader {
+export class Shader {
     // See description at https://github.com/encyclopedia-of-code/tiny-graphics-js/wiki/tiny-graphics.js#shader
     copy_onto_graphics_card (renderer, given_info = new Map()) {
       // TODO:  Calling this twice should recompile the shader in-place with updated options (untested)
@@ -332,8 +326,7 @@ class Shader {
 };
 
 
-const Texture = tiny.Texture =
-class Texture {
+export class Texture {
   // See description at https://github.com/encyclopedia-of-code/tiny-graphics-js/wiki/tiny-graphics.js#texture
   constructor (filename, min_filter = "LINEAR_MIPMAP_LINEAR") {
       Object.assign (this, {filename, min_filter});
@@ -384,8 +377,7 @@ class Texture {
   }
 };
 
-const Shadow_Map = tiny.Shadow_Map =
-class Shadow_Map {
+export class Shadow_Map {
       constructor (width, height, min_filter = "NEAREST", mag_filter = "NEAREST") {
           Object.assign (this, {width, height, min_filter, mag_filter, ready:true});
       }
@@ -456,8 +448,7 @@ class Shadow_Map {
       }
   };
 
-const Component = tiny.Component =
-  class Component {
+export class Component {
       // See description at https://github.com/encyclopedia-of-code/tiny-graphics-js/wiki/tiny-graphics.js#component
       constructor (props = {}) {
           const rules = [
@@ -479,7 +470,7 @@ const Component = tiny.Component =
               // Don't bubble the event to parent nodes; let child elements be targeted in isolation.
               event.stopPropagation ();
           };
-          this.key_controls       = new Keyboard_Manager (document, callback_behavior);
+          this.key_controls       = new widgets.Keyboard_Manager (document, callback_behavior);
           // Finally, run the user's code for setting up their scene:
           this.init ();
       }
@@ -564,17 +555,17 @@ const Component = tiny.Component =
           if (overridden_options.make_controls) {
               this.embedded_controls_area           = this.program_stuff.appendChild (document.createElement ("div"));
               this.embedded_controls_area.className = "controls-widget";
-              this.embedded_controls                = new tiny.Controls_Widget (this);
+              this.embedded_controls                = new widgets.Controls_Widget (this);
           }
           if (overridden_options.make_code_nav) {
               this.embedded_code_nav_area           = this.program_stuff.appendChild (document.createElement ("div"));
               this.embedded_code_nav_area.className = "code-widget";
-              this.embedded_code_nav                = new tiny.Code_Widget (this);
+              this.embedded_code_nav                = new widgets.Code_Widget (this);
           }
           if (overridden_options.make_editor) {
               this.embedded_editor_area           = this.program_stuff.appendChild (document.createElement ("div"));
               this.embedded_editor_area.className = "editor-widget";
-              this.embedded_editor                = new tiny.Editor_Widget (this);
+              this.embedded_editor                = new widgets.Editor_Widget (this);
           }
       }
       render_frame (context) {}                            // Called each frame for drawing.
@@ -583,8 +574,7 @@ const Component = tiny.Component =
   };
 
 
-const RenderListItem = tiny.RenderListItem =
-class RenderListItem {
+export class RenderListItem {
   constructor (shape, material) {
       // To draw, just need all this for Renderer:
     this.shape = shape;
@@ -626,8 +616,7 @@ class RenderListItem {
   }
 }
 
-const Renderer = tiny.Renderer =
-class Renderer extends Component {
+export class Renderer extends Component {
   init () {
     this.renderList = []
     this.max_fps = 60;
@@ -871,8 +860,7 @@ class Renderer extends Component {
   }
 }
 
-const UBO_Plan = tiny.UBO_Plan =
-class UBO_Plan {
+export class UBO_Plan {
   constructor (...args) {
     this.element_offsets = new Map();
     this.ready = true;        // For async loaded entries

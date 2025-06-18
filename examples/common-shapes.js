@@ -1,13 +1,7 @@
-import {tiny} from '../tiny-graphics.js';
-// Pull these names into this module's scope for convenience:
-const {Vector, Vector3, vec, vec2, vec3, vec4, color, Matrix, Mat4, Shape, Shader, Component} = tiny;
+import * as tiny from '../tiny-graphics.js';
+import { Vector, Vector3, vec, vec2, vec3, vec4, color, Matrix, Mat4, Shape, Shader, Component } from '../tiny-graphics.js';
 
-const defs = {};
-
-export {tiny, defs};
-
-const Triangle = defs.Triangle =
-  class Triangle extends Shape {
+export class Triangle extends Shape {
       // **Triangle** The simplest possible 2D Shape – one triangle.  It stores 3 corner vertices, each with sufficient data to shade them.
 
       init () {
@@ -35,8 +29,7 @@ const Triangle = defs.Triangle =
   };
 
 
-const Square = defs.Square =
-  class Square extends Shape {
+export class Square extends Shape {
       // **Square** demonstrates two triangles that share vertices.  On any planar surface, the
       // interior edges don't make any important seams.  In these cases there's no reason not
       // to re-use data of the common vertices between triangles.  This makes all the vertex
@@ -54,8 +47,7 @@ const Square = defs.Square =
       }
   };
 
-const Tetrahedron = defs.Tetrahedron =
-  class Tetrahedron extends Shape {
+export class Tetrahedron extends Shape {
       // **Tetrahedron** demonstrates flat vs smooth shading (a boolean argument selects
       // which one). It is also our first 3D, non-planar shape. Four triangles share
       // corners with each other. Unless we store duplicate points at each corner
@@ -108,8 +100,7 @@ const Tetrahedron = defs.Tetrahedron =
       }
   };
 
-const Windmill = defs.Windmill =
-  class Windmill extends Shape {
+export class Windmill extends Shape {
       // **Windmill**  As our shapes get more complicated, we begin using matrices and flow
       // control (including loops) to generate non-trivial point clouds and connect them.
       init (num_blades=5) {
@@ -140,8 +131,7 @@ const Windmill = defs.Windmill =
   };
 
 
-const Cube = defs.Cube =
-  class Cube extends Shape {
+export class Cube extends Shape {
       // **Cube** A closed 3D shape, and the first example of a compound shape (a Shape constructed
       // out of other Shapes).  A cube inserts six Square strips into its own arrays, using six
       // different matrices as offsets for each square.
@@ -160,8 +150,7 @@ const Cube = defs.Cube =
   };
 
 
-const Subdivision_Sphere = defs.Subdivision_Sphere =
-  class Subdivision_Sphere extends Shape {
+export class Subdivision_Sphere extends Shape {
       constructor (max_subdivisions) {
           super ("position", "normal", "texture_coord");
           // Start from the following equilateral tetrahedron:
@@ -228,8 +217,7 @@ const Subdivision_Sphere = defs.Subdivision_Sphere =
   };
 
 
-const Grid_Patch = defs.Grid_Patch =
-  class Grid_Patch extends Shape {
+export class Grid_Patch extends Shape {
       constructor (rows, columns, next_row_function, next_column_function,
                    texture_coord_range = [[0, rows], [0, columns]]) {
           super ("position", "normal", "texture_coord");
@@ -288,8 +276,7 @@ const Grid_Patch = defs.Grid_Patch =
   };
 
 
-const Surface_Of_Revolution = defs.Surface_Of_Revolution =
-  class Surface_Of_Revolution extends Grid_Patch {
+export class Surface_Of_Revolution extends Grid_Patch {
       constructor (rows, columns, points, texture_coord_range, total_curvature_angle = 2 * Math.PI) {
           const row_operation    = i => Grid_Patch.sample_array (points, i),
                 column_operation = (j, p) => Mat4.rotation (total_curvature_angle / columns, 0, 0, 1).times (p.to4 (1))
@@ -300,8 +287,7 @@ const Surface_Of_Revolution = defs.Surface_Of_Revolution =
   };
 
 
-const Regular_2D_Polygon = defs.Regular_2D_Polygon =
-  class Regular_2D_Polygon extends Surface_Of_Revolution {
+export class Regular_2D_Polygon extends Surface_Of_Revolution {
       constructor (rows, columns) {
           super (rows, columns, Vector3.cast ([0, 0, 0], [1, 0, 0]));
           this.arrays.normal = this.arrays.normal.map (x => vec3 (0, 0, 1));
@@ -310,22 +296,19 @@ const Regular_2D_Polygon = defs.Regular_2D_Polygon =
       }
   };
 
-const Cylindrical_Tube = defs.Cylindrical_Tube =
-  class Cylindrical_Tube extends Surface_Of_Revolution {
+export class Cylindrical_Tube extends Surface_Of_Revolution {
       constructor (rows, columns, texture_range) {
           super (rows, columns, Vector3.cast ([1, 0, .5], [1, 0, -.5]), texture_range);
       }
   };
 
-const Cone_Tip = defs.Cone_Tip =
-  class Cone_Tip extends Surface_Of_Revolution { // Note:  Touches the Z axis
+export class Cone_Tip extends Surface_Of_Revolution { // Note:  Touches the Z axis
       constructor (rows, columns, texture_range) {
           super (rows, columns, Vector3.cast ([0, 0, 1], [1, 0, -1]), texture_range);
       }
   };
 
-const Torus = defs.Torus =
-  class Torus extends Shape {
+export class Torus extends Shape {
       constructor (rows, columns, texture_range) {
           super ("position", "normal", "texture_coord");
           const circle_points = Array (rows).fill (vec3 (1 / 3, 0, 0))
@@ -340,8 +323,7 @@ const Torus = defs.Torus =
       }
   };
 
-const Grid_Sphere = defs.Grid_Sphere =
-  class Grid_Sphere extends Shape {
+export class Grid_Sphere extends Shape {
       constructor (rows, columns, texture_range) {
           super ("position", "normal", "texture_coord");
           const semi_circle_points = Array (rows).fill (vec3 (0, 0, 1)).map ((x, i, a) =>
@@ -353,8 +335,7 @@ const Grid_Sphere = defs.Grid_Sphere =
       }
   };
 
-const Closed_Cone = defs.Closed_Cone =
-  class Closed_Cone extends Shape {
+export class Closed_Cone extends Shape {
       constructor (rows, columns, texture_range) {
           super ("position", "normal", "texture_coord");
           Cone_Tip.insert_transformed_copy_into (this, [rows, columns, texture_range]);
@@ -363,15 +344,13 @@ const Closed_Cone = defs.Closed_Cone =
       }
   };
 
-const Rounded_Closed_Cone = defs.Rounded_Closed_Cone =
-  class Rounded_Closed_Cone extends Surface_Of_Revolution {
+export class Rounded_Closed_Cone extends Surface_Of_Revolution {
       constructor (rows, columns, texture_range) {
           super (rows, columns, [vec3 (0, 0, 1), vec3 (1, 0, -1), vec3 (0, 0, -1)], texture_range);
       }
   };
 
-const Capped_Cylinder = defs.Capped_Cylinder =
-  class Capped_Cylinder extends Shape {
+export class Capped_Cylinder extends Shape {
       constructor (rows, columns, texture_range) {
           super ("position", "normal", "texture_coord");
           Cylindrical_Tube.insert_transformed_copy_into (this, [rows, columns, texture_range]);
@@ -381,16 +360,14 @@ const Capped_Cylinder = defs.Capped_Cylinder =
       }
   };
 
-const Rounded_Capped_Cylinder = defs.Rounded_Capped_Cylinder =
-  class Rounded_Capped_Cylinder extends Surface_Of_Revolution {
+export class Rounded_Capped_Cylinder extends Surface_Of_Revolution {
       constructor (rows, columns, texture_range) {
           super (rows, columns, [vec3 (0, 0, .5), vec3 (1, 0, .5), vec3 (1, 0, -.5), vec3 (0, 0, -.5)], texture_range);
       }
   };
 
 
-const Axis_Arrows = defs.Axis_Arrows =
-  class Axis_Arrows extends Shape {
+export class Axis_Arrows extends Shape {
       constructor () {
           super ("position", "normal", "texture_coord");
           var stack = [];
@@ -415,8 +392,7 @@ const Axis_Arrows = defs.Axis_Arrows =
       }
   };
 
-const Instanced_Shape = defs.Instanced_Shape =
-  class Instanced_Shape extends tiny.Shape {
+export class Instanced_Shape extends tiny.Shape {
       // A truly minimal triangle, with three vertices each holding a 3D position and a color.
       constructor () {
           super();
@@ -431,8 +407,7 @@ const Instanced_Shape = defs.Instanced_Shape =
       }
   };
 
-  const Instanced_Square = defs.Instanced_Square =
-  class Instanced_Square extends tiny.Shape {
+  export class Instanced_Square extends tiny.Shape {
       // A truly minimal Square, with six vertices each holding a 3D position and a color.
       constructor () {
           super();
@@ -451,8 +426,7 @@ const Instanced_Shape = defs.Instanced_Shape =
       }
   };
 
-  const Instanced_Square_Index = defs.Instanced_Square_Index =
-  class Instanced_Square_Index extends tiny.Shape {
+  export class Instanced_Square_Index extends tiny.Shape {
       // A truly minimal Square, with six vertices each holding a 3D position and a color.
       constructor () {
           super();
@@ -470,8 +444,7 @@ const Instanced_Shape = defs.Instanced_Shape =
       }
   };
 
-const Instanced_Cube_Index = defs.Instanced_Cube_Index =
-  class Instanced_Cube_Index extends tiny.Shape {
+export class Instanced_Cube_Index extends tiny.Shape {
       // A truly minimal Cube
       init () {
           // Describe the where the points of a triangle are in space, and also describe their colors:
@@ -525,8 +498,7 @@ const Instanced_Cube_Index = defs.Instanced_Cube_Index =
   };
 
 
-const Minimal_Shape = defs.Minimal_Shape =
-  class Minimal_Shape extends tiny.Shape {
+export class Minimal_Shape extends tiny.Shape {
       // A truly minimal triangle, with three vertices each holding a 3D position and a color.
       init () {
           // Describe the where the points of a triangle are in space, and also describe their colors:
@@ -536,8 +508,7 @@ const Minimal_Shape = defs.Minimal_Shape =
       }
   };
 
-const Minimaler_Shape = defs.Minimaler_Shape =
-  class Minimaler_Shape extends tiny.Shape {
+export class Minimaler_Shape extends tiny.Shape {
       init () {
           this.vertices[0] = { position: vec3 (0, 0, 0)};
           this.vertices[1] = { position: vec3 (1, 0, 0)};
@@ -545,8 +516,7 @@ const Minimaler_Shape = defs.Minimaler_Shape =
       }
   };
 
-const Shape_From_File = defs.Shape_From_File =
-  class Shape_From_File extends tiny.Shape
+export class Shape_From_File extends tiny.Shape
   {                                   // **Shape_From_File** is a versatile standalone Shape that imports
                                       // all its arrays' data from an .obj 3D model file.
     constructor( filename, uses_3d_texture = false )

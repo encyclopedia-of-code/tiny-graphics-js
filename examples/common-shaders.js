@@ -1,13 +1,7 @@
-import {tiny} from '../tiny-graphics.js';
-// Pull these names into this module's scope for convenience:
-const {Vector, Vector3, vec, vec3, vec4, color, Matrix, Mat4, Shape, Shader, Component} = tiny;
+import * as tiny from '../tiny-graphics.js';
+import { Vector, Vector3, vec, vec3, vec4, color, Matrix, Mat4, Shape, Shader, Component } from '../tiny-graphics.js';
 
-const defs = {};
-
-export {tiny, defs};
-
-const Shader_Without_UBOs = defs.Shader_Without_UBOs  =
-class Shader_Without_UBOs  extends Shader {
+export class Shader_Without_UBOs  extends Shader {
     constructor (num_lights = 1, options) {
       super();
       const defaults = { has_instancing: true, has_shadows: true, has_texture: true };
@@ -119,8 +113,7 @@ class Shader_Without_UBOs  extends Shader {
     }
 };
 
-const Universal_Shader = defs.Universal_Shader  =
-class Universal_Shader extends Shader {
+export class Universal_Shader extends Shader {
     constructor (num_lights = 2, options) {
       super();
       const defaults = { has_instancing: true, has_shadows: true, has_texture: true };
@@ -355,8 +348,7 @@ class Universal_Shader extends Shader {
     }
 };
 
-const Shadow_Pass_Shader = defs.Shadow_Pass_Shader =
-class Shadow_Pass_Shader extends Shader {
+export class Shadow_Pass_Shader extends Shader {
     update_GPU (context, uniforms, model_transform, material) {
 
       const gpu_addresses = renderer.uniform_addresses.get(this);
@@ -397,8 +389,7 @@ class Shadow_Pass_Shader extends Shader {
     }
 };
 
-const Debug_Shader = defs.Debug_Shader =
-class Debug_Shader extends Shader {
+export class Debug_Shader extends Shader {
     update_GPU (renderer, uniforms, matrix, material) {
       const gpu_addresses = renderer.uniform_addresses.get(this);
 
@@ -478,8 +469,7 @@ class Debug_Shader extends Shader {
     }
 };
 
-const Basic_Shader = defs.Basic_Shader =
-  class Basic_Shader extends Shader {
+export class Basic_Shader extends Shader {
     static default_values () { return {}; }
       vertex_glsl_code () {          // ********* VERTEX SHADER *********
         return "#version 300 es " + `
@@ -499,8 +489,7 @@ const Basic_Shader = defs.Basic_Shader =
       }
   };
 /*
-const Phong_Shader = defs.Phong_Shader =
-  class Phong_Shader extends Shader {
+export class Phong_Shader extends Shader {
       constructor (num_lights = 2) {
           super ();
           this.num_lights = num_lights;
@@ -614,8 +603,7 @@ const Phong_Shader = defs.Phong_Shader =
   };
 
 
-const Textured_Phong = defs.Textured_Phong =
-  class Textured_Phong extends Phong_Shader {
+export class Textured_Phong extends Phong_Shader {
       vertex_glsl_code () {         // ********* VERTEX SHADER *********
           return this.shared_glsl_code () + `
         varying vec2 f_tex_coord;
@@ -661,8 +649,7 @@ const Textured_Phong = defs.Textured_Phong =
       }
   };
 
-const Fake_Bump_Map = defs.Fake_Bump_Map =
-  class Fake_Bump_Map extends Textured_Phong {
+export class Fake_Bump_Map extends Textured_Phong {
       fragment_glsl_code () {                            // ********* FRAGMENT SHADER *********
           return this.shared_glsl_code () + `
         varying vec2 f_tex_coord;

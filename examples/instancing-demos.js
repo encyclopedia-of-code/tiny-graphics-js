@@ -1,12 +1,8 @@
-import {tiny, defs} from './common.js';
+import * as defs from './common.js';
+import { vec3, vec4, color, Mat4, Texture, RenderListItem, Renderer } from './common.js';
+import { Camera, LightArray, Material } from './common.js';
 
-                                                  // Pull these names into this module's scope for convenience:
-const { vec3, vec4, color, Mat4, Shape, Shader, Texture, RenderListItem, Renderer } = tiny;
-const {Camera, LightArray, Material} = defs
-
-export
-const Instanced_Cubes_Demo = defs.Instanced_Cubes_Demo =
-class Instanced_Cubes_Demo extends Renderer {
+export class Instanced_Cubes_Demo extends Renderer {
   init () {
     super.init();
     // this.shapes = {cube: new defs.Instanced_Cube_Index()};
@@ -59,9 +55,7 @@ render_frame () {
 };
 
 
-export
-const UBO_Test_Demo = defs.UBO_Test_Demo =
-class UBO_Test_Demo extends Renderer {
+export class UBO_Test_Demo extends Renderer {
   init () {
     this.shader = new defs.Instanced_Shader (Light.NUM_LIGHTS);
     this.water = new Material("Water", this.shader, { color: vec4(0.0, 0.5, 0.5, 1.0) });
