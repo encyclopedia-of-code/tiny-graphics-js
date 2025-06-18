@@ -174,19 +174,32 @@ export class Code_Widget {
                          " 10px; box-sizing: border-box; background: #EEEEEE; font-family:monospace; padding:18px }",
                          ".code-widget div.class-list .heading { display:inline-block; font-weight:bold }"
           ];
-
           tiny.Component.initialize_CSS (Code_Widget, rules);
 
           this.component = component;
-
-          import( './main-scene.js' )
-            .then (module => {
-
-                const code_in_focus = options.code_in_focus || component.constructor;
-                this.build_reader (component.embedded_code_nav_area, code_in_focus, module);
-                if ( !options.hide_navigator)
-                    this.build_navigator (component.embedded_code_nav_area, code_in_focus);
-            });
+          this.init(options);
+      }
+      async init(options) {
+        const module = await this.aggregateModules();
+        const code_in_focus = options.code_in_focus || this.component.constructor;
+        this.build_reader(this.component.embedded_code_nav_area, code_in_focus, module);
+        if (!options.hide_navigator)
+          this.build_navigator(this.component.embedded_code_nav_area, code_in_focus);
+      }
+      async aggregateModules() {
+        const [sceneManifest, commonModule] = await Promise.all([
+          import('./scene-manifest.js'),
+          import('./examples/common.js')
+        ]);
+        const sceneNames = [
+          sceneManifest.main_scene_name,
+          ...sceneManifest.additional_scene_names
+        ];
+        const sceneDefs = await Promise.all(sceneNames.map(sceneManifest.load_scene));
+        return {
+          ...commonModule,
+          ...Object.fromEntries(sceneNames.map((name, i) => [name, sceneDefs[i]]))
+        };
       }
       build_reader (element, main_scene, definitions) {     // (Internal helper function)
           this.definitions            = definitions;

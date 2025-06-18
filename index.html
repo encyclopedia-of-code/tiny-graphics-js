@@ -15,10 +15,15 @@ index.html - The web page document containing the canvas (drawing surface).  It 
 // ********************* THE ENTRY POINT OF YOUR JAVASCRIPT PROGRAM STARTS HERE *********************
 // Indicate which element on the page you want the Canvas_Widget to replace with a 3D WebGL area:
 const element_to_replace = document.querySelector ("#main-section");
-import {main_scene, additional_scenes} from './main-scene.js';
-const root = new main_scene ();                                                     // This line creates your scene.
-root.animated_children.push (...additional_scenes.map (scene => new scene ()));
-root.render_layout (element_to_replace);
+import { load_scene, main_scene_name, additional_scene_names } from './scene-manifest.js';
+Promise.all([
+  load_scene(main_scene_name),
+  ...additional_scene_names.map(load_scene)
+]).then(([Main_Scene_Class, ...Additional_Scene_Classes]) => {
+  const root = new Main_Scene_Class();                    // This line creates your scene.
+  root.animated_children.push(...Additional_Scene_Classes.map(Scene => new Scene()));
+  root.render_layout(element_to_replace);
+});
 </script>
 
 </body>
