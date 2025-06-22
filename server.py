@@ -14,7 +14,7 @@ Handler.extensions_map.update({
 
 try:
     with socketserver.TCPServer(("", args.port), Handler) as httpd:
-        print(f"serving at port {args.port}")
+        print(f"Serving at port {args.port}. Launch your web browser and navigate to localhost:{args.port}.")
         httpd.serve_forever()
 except OSError as e:
     print(f"Error: Could not start server on port {args.port}: {e.strerror}")
