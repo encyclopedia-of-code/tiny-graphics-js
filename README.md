@@ -26,7 +26,7 @@ to minimize GPU state changes. It's possible to design such a framework in tiny-
 Components, but this scene graph functionality is not immediately built in.
 - Various still-pending fixes and API enhancements.
 
-## Overview and Usage
+## Writing code with tiny-graphics
 
 ### tiny-graphics.js
 
@@ -79,6 +79,21 @@ https://github.com/encyclopedia-of-code/tiny-graphics-js/wiki
 https://github.com/encyclopedia-of-code/tiny-graphics-js/wiki
 
 ## Installing tiny-graphics.js
+
+### Requirements
+
+- **Python 3.0 or higher** must be installed and available in your system PATH. You need python in order to run multi-file websites locally.
+- **macOS users:** After cloning, make the `.command` file executable:
+`chmod +x host.command`
+
+Clone the repo or otherwise download the files from github.
+
+- *Windows*: Double-click `host.bat` to start the server.
+- *macOS*: Double-click `host.command` to start the server (after making it executable as above).
+- *Linux*: Open a terminal in the project directory and run:
+`python3 server.py`
+Or specify a port by running:
+`python3 server.py 8080`
 
 To run a sample using tiny-graphics.js, visit its GitHub Pages link:
 

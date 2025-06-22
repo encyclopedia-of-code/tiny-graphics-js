@@ -1,50 +1,21 @@
-import sys
+import argparse
+import http.server
+import socketserver
 
-PORT = 8000
+parser = argparse.ArgumentParser()
+parser.add_argument("port", nargs="?", type=int, default=8000, help="Port to serve on (default: 8000)")
+args = parser.parse_args()
 
-if sys.version_info < (3, 0):
-    import SimpleHTTPServer
-    import SocketServer
+Handler = http.server.SimpleHTTPRequestHandler
+Handler.extensions_map.update({
+    '.obj': 'text/plain',
+    '.wasm': 'application/wasm',
+})
 
-    class Handler(SimpleHTTPServer.SimpleHTTPRequestHandler):
-        pass
+try:
+    with socketserver.TCPServer(("", args.port), Handler) as httpd:
+        print(f"serving at port {args.port}")
+        httpd.serve_forever()
+except OSError as e:
+    print(f"Error: Could not start server on port {args.port}: {e.strerror}")
 
-    Handler.extensions_map = {
-        '.manifest': 'text/cache-manifest',
-        '.html': 'text/html',
-        '.png': 'image/png',
-        '.jpg': 'image/jpg',
-        '.svg': 'image/svg+xml',
-        '.css': 'text/css',
-        '.js':  'application/x-javascript',
-        '': 'application/octet-stream', # Default
-    }
-
-    httpd = SocketServer.TCPServer(("", PORT), Handler)
-
-    print("serving at port", PORT)
-    httpd.serve_forever()
-
-
-else:
-    import http.server
-    from http.server import HTTPServer, BaseHTTPRequestHandler
-    import socketserver
-
-    Handler = http.server.SimpleHTTPRequestHandler
-
-    Handler.extensions_map={
-        '.manifest': 'text/cache-manifest',
-        '.html': 'text/html',
-        '.png': 'image/png',
-        '.jpg': 'image/jpg',
-        '.svg': 'image/svg+xml',
-        '.css': 'text/css',
-        '.js':  'application/x-javascript',
-        '': 'application/octet-stream', # Default
-    }
-
-    httpd = socketserver.TCPServer(("", PORT), Handler)
-
-    print("serving at port", PORT)
-    httpd.serve_forever()
