@@ -6,7 +6,7 @@ export class Instanced_Cubes_Demo extends Renderer {
   init () {
     super.init();
     // this.shapes = {cube: new defs.Instanced_Cube_Index()};
-    this.shapes = {cube: new defs.Cube(), tetrahedron: new defs.Tetrahedron(true) };
+    this.shapes = {cube: new defs.Cube(), tetrahedron: new defs.Subdivision_Sphere(3) };
 
      this.shader = new defs.Universal_Shader (LightArray.NUM_LIGHTS, {has_shadows: false, has_texture: false});
     // this.shader = new defs.Shader_Without_UBOs (1, {has_shadows: false, has_texture: false});
@@ -15,8 +15,8 @@ export class Instanced_Cubes_Demo extends Renderer {
     this.fire = new Material(this.textured_shader, { color: vec4(0.1, 0.1, 0.1, 1.0) }, { diffuse_texture: new Texture( "assets/rgb.jpg" ) });
     this.water = new Material(this.shader, { color: vec4(0.0, 0.5, 0.5, 1.0) });
 
-    this.renderList.push(new RenderListItem(this.shapes.cube, this.fire) );
-    this.renderList.push(new RenderListItem(this.shapes.tetrahedron, this.water) );
+    this.renderList.push(new RenderListItem(this.shapes.cube, this.water) );
+    this.renderList.push(new RenderListItem(this.shapes.tetrahedron, this.fire) );
 
     for( let i=0; i<2; i++ ) {
       const renderListItem = this.renderList[i];

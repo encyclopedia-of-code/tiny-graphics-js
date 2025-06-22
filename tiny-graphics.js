@@ -103,6 +103,39 @@ export class Shape {
             recipient.vertices.push( Object.assign( { ...v, position, normal } ) );
           }
       }
+      subdivide(count) {
+          const starting_length = this.indices.length;
+          for (let i = 0; i < starting_length; i += 3) {
+              const a = this.indices[i], b = this.indices[i+1], c = this.indices[i+2];
+              this.subdivide_triangle(a, b, c, count);
+          }
+      }
+      subdivide_triangle(a, b, c, count) {
+          const v = this.vertices;
+          const stack = [[a, b, c, count]];
+          while (stack.length > 0) {
+              const [a, b, c, count] = stack.pop();
+
+              // Base case of recursion: The finest level of detail we want.
+              if (count <= 0) {
+                  this.indices.push(a, b, c);
+                  continue;
+              }
+              // Add vertices along the three edges at midpoints.
+              const ab_pos = v[a].position.mix(v[b].position, 0.5);
+              const ac_pos = v[a].position.mix(v[c].position, 0.5);
+              const bc_pos = v[b].position.mix(v[c].position, 0.5);
+              const ab = v.push({ position: ab_pos }) - 1;
+              const ac = v.push({ position: ac_pos }) - 1;
+              const bc = v.push({ position: bc_pos }) - 1;
+
+              // Recurse on four smaller triangles.
+              stack.push([a, ab, ac,  count - 1]);
+              stack.push([ab, b, bc,  count - 1]);
+              stack.push([ac, bc, c,  count - 1]);
+              stack.push([ab, bc, ac, count - 1]);
+          }
+      }
       make_flat_shaded_version () {
           return class extends this.constructor {
               constructor (...args) {
