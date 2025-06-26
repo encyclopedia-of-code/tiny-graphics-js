@@ -168,27 +168,34 @@ export class Subdivision_Sphere extends Shape {
 
             // Textures are tricky.  A Subdivision sphere has no straight seams to which image
             // edges in UV space can be mapped.  The only way to avoid artifacts is to smoothly
-            // wrap & unwrap the image in reverse - displaying the texture twice on the sphere.
+            // wrap & unwrap the image in reverse - displaying the texture twice on the sphere
+            // so that 1 and 0 map to the same coordinate.
             v.texture_coord = vec2( 0.5 - Math.atan2 (v.position[ 2 ], v.position[ 0 ]) / (2 * Math.PI),
                                     0.5 + Math.asin (v.position[ 1 ]) / Math.PI);
           }
 
-          // TODO: Fix the UV seam by duplicating vertices with offset UV:
-       //   const tex = this.arrays.texture_coord;
-       //   for (let i = 0; i < this.indices.length; i += 3) {
-       //       const a = this.indices[ i ], b = this.indices[ i + 1 ], c = this.indices[ i + 2 ];
-       //       if ([[a, b], [a, c], [b, c]].some (x => (Math.abs (tex[ x[ 0 ] ][ 0 ] - tex[ x[ 1 ] ][ 0 ]) > 0.5))
-       //           && [a, b, c].some (x => tex[ x ][ 0 ] < 0.5)) {
-       //           for (let q of [[a, i], [b, i + 1], [c, i + 2]]) {
-       //               if (tex[ q[ 0 ] ][ 0 ] < 0.5) {
-       //                   this.indices[ q[ 1 ] ] = this.arrays.position.length;
-       //                   this.arrays.position.push (this.arrays.position[ q[ 0 ] ].copy ());
-       //                   this.arrays.normal.push (this.arrays.normal  [ q[ 0 ] ].copy ());
-       //                   tex.push (tex[ q[ 0 ] ].plus (vec (1, 0)));
-       //               }
-       //           }
-       //       }
-       //   }
+          // Even with 1 and 0 mapping to the same texture coordinate, the shader doesn't
+          // know it and will still try to interpolate any triangles that straddle the image edge back across the
+          // whole image, creating a seam. Fix any such edges by duplicating vertices with offset UV so that all triangles stick to one side of the image.
+          for (let i = 0; i < this.indices.length; i += 3) {
+              const a = this.indices[i], b = this.indices[i + 1], c = this.indices[i + 2];
+              const v = this.vertices;
+              if ([[a, b], [a, c], [b, c]].some (
+                ([i1, i2]) => Math.abs (v[i1].texture_coord[0] - v[i2].texture_coord[0]) > 0.5 )) {
+                  // Seam detected; duplicate the vertices on one side of the wrap.
+                  for (const [p,idx] of [[a, i], [b, i + 1], [c, i + 2]]) {
+                      if (v[p].texture_coord[0] < 0.5) {
+                          const new_vertex = {
+                              position: v[p].position.copy(),
+                              normal: v[p].normal.copy(),
+                              texture_coord: v[p].texture_coord.plus(vec(1,0))
+                          };
+                          this.indices[idx] = this.vertices.length;
+                          this.vertices.push(new_vertex);
+                      }
+                  }
+              }
+          }
       }
   };
 
