@@ -2,6 +2,7 @@ const scene_list = [
 //   {name: "Axes_Viewer", path: "./examples/axes-viewer.js"},
 //   {name: "Axes_Viewer_Test_Scene", path: "./examples/axes-viewer.js"},
   {name: "Instanced_Cubes_Demo", path: "./examples/instancing-demos.js"},
+  {name: "Inertia_Demo", path: "./examples/collisions-demo.js"},
 ];
 
 export async function load_scene(name) {

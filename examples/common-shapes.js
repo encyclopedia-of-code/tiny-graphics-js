@@ -151,7 +151,7 @@ export class Cube extends Shape {
 
 
 export class Subdivision_Sphere extends Shape {
-      init (max_subdivisions) {
+      init (max_subdivisions, texture_coord_range) {
           // Start from the following equilateral tetrahedron:
           this.vertices[0] = { position: vec3(0,0,-1) };
           this.vertices[1] = { position: vec3(0, .9428, .3333) };

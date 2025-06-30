@@ -194,7 +194,7 @@ export class Shape {
 
 const test_rookie_mistake = function () {
     test_rookie_mistake.counter |= 0;
-    if (test_rookie_mistake.counter++ > 200)
+    if ( test_rookie_mistake.counter++ > 200)
         throw `Error: You are sending a lot of object definitions to the GPU, probably by mistake!  Many are likely
         duplicates, which you don't want since sending each one is very slow.  TO FIX THIS: Avoid ever declaring a
         Shape, Shader, UBO, or Texture with "new" anywhere that's called repeatedly (such as inside render_frame()).
@@ -737,7 +737,7 @@ export class Renderer extends Component {
       // are processed:
       this.event = window.requestAnimFrame (this.frame_advance.bind (this));
   }
-/*
+  /*
   shadow_map_pass (uniforms) {
     for (let light of uniforms.UBOs.lightArray.fields.lights) {
       if (!light.casts_shadow)
@@ -767,7 +767,7 @@ export class Renderer extends Component {
     const existing_VAO = this.VAOs.get (renderListItem);
     const VAO  = existing_VAO ?? gl.createVertexArray();
     this.VAOs.set (renderListItem, VAO);
-    if (!existing_VAO) test_rookie_mistake();
+  //  if (!existing_VAO) test_rookie_mistake();   // FINISH
 
     const previous_VAO = this.gpu_versions.get("VAO");
     this.gpu_versions.set("VAO", VAO);
@@ -782,7 +782,7 @@ export class Renderer extends Component {
 
         const previous_EBO = this.gpu_versions.get("Active_EBO");
         this.gpu_versions.set("Active_EBO", EBO);
-        if( !existing_VAO)
+        if( !existing_VAO || previous_EBO != EBO )
           gl.bindBuffer (gl.ELEMENT_ARRAY_BUFFER, EBO);
 
         if( ! (this.gpu_versions.get(EBO) >= shape.indices_version) ) {

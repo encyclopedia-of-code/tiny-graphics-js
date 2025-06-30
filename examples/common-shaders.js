@@ -113,6 +113,8 @@ export class Shader_Without_UBOs  extends Shader {
     }
 };
 
+// FINISH: Try converting vec3 types in shader UBOs to vec4.
+
 export class Universal_Shader extends Shader {
     constructor (num_lights = 2, options) {
       super();

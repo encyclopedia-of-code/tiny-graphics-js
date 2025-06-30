@@ -43,14 +43,14 @@ export class LightArray extends UBO_Plan {
                 lights: [
                           {
                             direction_or_position: vec4 (0.0, 0.0, 0.0, 0.0),
-                            color: vec3 (1.0, 1.0, 1.0, 1.0),
+                            color: vec3 (1.0, 1.0, 1.0),
                             diffuse: 1.0,
                             specular: 1.0,
                             attenuation_factor: 0.0
                           },
                           {
                             direction_or_position: vec4 (0.0, -1.0, 0.0, 1.0),
-                            color: vec3 (1.0, 1.0, 1.0, 1.0),
+                            color: vec3 (1.0, 1.0, 1.0),
                             diffuse: 1.0,
                             specular: 1.0,
                             attenuation_factor: 0.0
