@@ -15,18 +15,27 @@ export class Instanced_Cubes_Demo extends Renderer {
     this.fire = new Material(this.textured_shader, { color: vec4(0.1, 0.1, 0.1, 1.0) }, { diffuse_texture: new Texture( "assets/rgb.jpg" ) });
     this.water = new Material(this.shader, { color: vec4(0.0, 0.5, 0.5, 1.0) });
 
-    this.renderList.push(new RenderListItem(this.shapes.cube, this.water) );
-    this.renderList.push(new RenderListItem(this.shapes.tetrahedron, this.fire) );
+    const items = [ new RenderListItem(this.water, this.shapes.cube, 0),
+                    new RenderListItem(this.fire, this.shapes.tetrahedron, 0) ];
 
     for( let i=0; i<2; i++ ) {
-      const renderListItem = this.renderList[i];
-      renderListItem.model_transforms.push(
+      items[i].model_transforms.push(
         ...Array(1000).fill(0).map( (x,j) =>
               Mat4.translation(... vec3(Math.random()* 2 - 1, 2*i+1,  Math.random()*2 - 1)
                                   .times_pairwise(vec3(20, 2, 20))).times(Mat4.scale(.5,.5,.5)) )
       );
-      renderListItem.update_matrices();
+      this.renderList.insert( items[i] );
     }
+
+    for( let i=0; i<1000; i++) {
+      const item = new RenderListItem(this.fire, this.shapes.cube, 0);
+      item.model_transforms.push(
+              Mat4.translation(... vec3(Math.random()* 2 - 1, 5,  Math.random()*2 - 1)
+                                  .times_pairwise(vec3(20, 2, 20))).times(Mat4.scale(.5,.5,.5)) )
+      this.renderList.insert( item );
+    }
+
+    this.renderList.traverse( (item) => item.update_matrices(), {prune: false} );
 
     this.state.lightArray =
          new defs.LightArray({ambient: .1, lights:[
@@ -46,10 +55,19 @@ render_frame () {
       this.animated_children.push( this.controls );
     }
 
+    const item = this.renderList.get(this.fire, this.shapes.cube, 0)
+    this.renderList.clear_group(item);
+    item.model_transforms.length = 0;
+    item.model_transforms.push(
+      ...Array(1000).fill(0).map( (x,j) =>
+            Mat4.translation(... vec3(Math.random()* 2 - 1, 5,  Math.random()*2 - 1)
+                                .times_pairwise(vec3(20, 2, 20))).times(Mat4.scale(.5,.5,.5)) )
+    );
+    item.update_matrices();
+
     this.state.selected_UBOs.set(this.state.camera.get_binding_point(), this.state.camera);
     this.state.selected_UBOs.set(this.state.lightArray.get_binding_point(), this.state.lightArray);
 
-     for( let renderListItem of this.renderList)
-       this.draw(renderListItem);
+    this.renderList.traverse( (item) => this.draw( item ), {prune: true} );
   }
 };

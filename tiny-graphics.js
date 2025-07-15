@@ -25,6 +25,8 @@ export class Shape {
       static build_VBO_plan( entries, destination, buffer_hint = "STATIC_DRAW", divisor = 0 ) {
         if (!entries[0]) return;
 
+        // WARNING: Changing VBO layout after creation is unsupported and will break rendering!
+
         // --- Step 1: Attribute Metadata ---
         // Preview the first entry to see what our VBO data source is like.
         // Each VBO entry is either a matrix or a dictionary (of vertex fields).
@@ -606,26 +608,123 @@ export class Component {
       render_controls () {}     // render_controls(): Called by Controls_Widget for generating interactive UI.
   };
 
+class Linked_List {
+  constructor() {
+    this.head = this.tail = null;
+    this.size = 0;
+  }
+  insertAfter(refNode, newNode) {
+    newNode.previous = refNode;
+    newNode.next = refNode.next;
+    if (refNode.next) refNode.next.previous = newNode;
+    else this.tail = newNode;
+    refNode.next = newNode;
+    this.size++;
+  }
+  remove(node) {
+    if (node.previous) node.previous.next = node.next;
+    else this.head = node.next;
+    if (node.next) node.next.previous = node.previous;
+    else this.tail = node.previous;
+    node.next = node.previous = null;
+    this.size--;
+  }
+}
+
+class Sorted_RenderList {
+  constructor() {
+    this.linked_list = new Linked_List();
+    this.material_map = new Map(); // Nested map, 3 deep.  Sort by 3 levels: Material, shape, group ID.
+  }
+  get (material, shape, group_ID) {
+    return this.material_map.get(material)?.get(shape)?.get(group_ID);
+  }
+
+  insert (item) {
+    const {material, shape, group_ID} = item;
+    // Begin by assuming the very first item in our dictionaries is the best one to cluster with, then narrow it down.
+    let best_candidate = this.material_map.values().next().value?.values().next().value?.values().next().value;
+
+    let shape_map = this.material_map.get(material);
+    if (shape_map) best_candidate = shape_map.values().next().value?.values().next().value || best_candidate;
+    else shape_map = this.material_map.set(material, new Map()).get(material);
+
+    let group_map = shape_map.get(shape);
+    if (group_map) best_candidate = group_map.values().next().value || best_candidate;
+    else group_map = shape_map.set(shape, new Map()).get(shape);
+
+    let exact_match = group_map.get(group_ID);
+    if (exact_match) {
+      // A fully matching linked list node exists; merge matrices into it.
+      exact_match.instance_count = exact_match.model_transforms.push(...item.model_transforms);
+      return;
+    }
+    group_map.set(group_ID, item);
+
+    if (best_candidate)
+      // A partial match exists; insert next to it to grow the cluster.
+      this.linked_list.insertAfter(best_candidate, item);
+    else {
+      // The whole list was empty.
+      this.linked_list.head = this.linked_list.tail = item;
+      item.previous = item.next = null;
+      this.linked_list.size = 1;
+    }
+  }
+
+  remove (item) {
+    const {material, shape, group_ID} = item;
+    let shape_map = this.material_map.get(material);
+    if (!shape_map) return false;
+    let group_map = shape_map.get(shape);
+    if (!group_map) return false;
+    let node = group_map.get(group_ID);
+    if (!node) return false;
+
+    // Remove from linked list, then from maps:
+    this.linked_list.remove(node);
+    group_map.delete(group_ID);
+    if (group_map.size === 0) shape_map.delete(shape);
+    if (shape_map.size === 0) this.material_map.delete(material);
+    return true;
+  }
+
+  clear_group (item) {
+    const {material, shape, group_ID} = item;
+    const node = this.get(material, shape, group_ID);
+    if (!node) return false;
+    node.model_transforms = [];
+    node.instance_count = 0;
+    return true;
+  }
+
+  traverse(callback, options) {
+    let current = this.linked_list.head;
+    while (current) {
+      let next = current.next; // Save next in case we remove current
+
+      // Prune empty entries we encounter, from both the linked list and dictionary.
+      // remove() also handles pruning empty maps up the chain.
+      if (options.prune && current.model_transforms.length === 0)
+        this.remove(current.material, current.shape, current.group_ID);
+      else
+        callback(current);
+      current = next;
+    }
+  }
+}
 
 export class RenderListItem {
-  constructor (shape, material) {
+  constructor (material, shape, group_ID) {
       // To draw, just need all this for Renderer:
     this.shape = shape;
     this.material = material;
+    this.group_ID = group_ID;
     this.model_transforms = [];
     this.matrix_VBO_plan = {attributes: ["model_transform"] };
     this.group_transform = Mat4.identity();
     this.type = "TRIANGLES";
     this.instance_count = 0;
-      // Linked list to other RenderListItems for insertion / removal:
-    // const neighbors = {next, prev, next_group, prev_group, next_material, prev_material, next_VBO, prev_VBO};
-    //        Problem: Linked lists are slow to identify where to insert / delete, even if the operation is fast.
-    //        Idea:  Rather than insertion sort, which fixed arrays of items aren't really great at, would sorting
-    //        in place (by material/VAO/group) after the fact be preferable via bubble sort or something?
-    //        (See Perplexity file) Best options: A. Fixed array.  Binary insertion sort for new items, with manual
-    //        batching when items obviously will belong together; for deletions, binary search and then shift.
-    //        B.  Balanced binary search tree.  Would support more chaotic mass insertions/deletions per frame.
-    //        Nevermind, will use linked list and secondary dictionary.  See perplexity file.
   }
   update_matrices() {
     if (!this.model_transforms.length)     // The user may specify no matrices for the single instance case.
@@ -633,37 +732,22 @@ export class RenderListItem {
     this.instance_count = this.model_transforms.length;
     Shape.build_VBO_plan (this.model_transforms, this.matrix_VBO_plan, "STATIC_DRAW", 1)
   }
-
-
-  insert ( ) {
-    // recursive?
-    // traverse the linked list, either placing the new item in sequence (ideally sorted) unless
-    // an exact match exists, in which case just grow that item's matrices array.
-
-
-    // Sort order:  (Same VBOs except matrices (Same MATERIAL (Same GROUP (Identical) ) ) )
-  }
-  remove ( ) {
-    // recursive?
-
-  }
 }
 
 export class Renderer extends Component {
   init () {
-    this.renderList = []
+    this.renderList = new Sorted_RenderList();
     this.max_fps = 60;
     this.prev_frame_number = -1;
     this.is_running = true;
 
-
     // All the below maps belonging to this Renderer describe associations that exist only for this Renderer's context.
-    this.UBOs = new Map(); // UBO_Plan -> ubo_ptr
-    this.VAOs = new Map(); // RenderListItem -> vao_ptr
-    this.VBOs = new Map(); // VBO_plan -> vbo_ptr
-    this.gpu_versions = new Map(); // VBO_plan, UBO_plan, EBO_ptr -> version number existing on GPU
+    this.UBOs = new Map(); // UBO_Plan -> <gl ubo ref>
+    this.VAOs = new Map(); // RenderListItem -> <gl vao ref>
+    this.VBOs = new Map(); // VBO_plan -> <gl vao ref>
+    this.gpu_versions = new Map(); // VBO_plan, UBO_plan, <gl ebo ref> -> version number existing on GPU
         // Other values: Bound_UBO_#, Program, VAO, Active_EBO -> Their respective objects
-    this.index_buffers = new Map();  // Shape -> EBO_ptr
+    this.index_buffers = new Map();  // Shape -> <gl ebo ref>
     this.shaders = new Map();  // Shader -> { program, vertex_shader, fragment_shader }
     this.attribute_addresses = new Map();  // Shader -> Attribute_Addresses
     this.uniform_addresses = new Map();  // Shader -> Uniform_Addresses
@@ -809,35 +893,35 @@ export class Renderer extends Component {
       this.VBOs.set( VBO_plan, vbo );
       gl.bindBuffer (gl.ARRAY_BUFFER, vbo);
 
-      for( let [i,name] of VBO_plan.attributes.entries()) {
-        const name = VBO_plan.attributes[i];
-        if( !attribute_addresses[name] )
-          continue;
-        const attr_index = attribute_addresses[name].index;
-        if( !(attr_index >= 0 )) throw "Attribute addresses not retrieved yet";   // TODO:  Temporary
+      if( !existing || !existing_VAO)      // Enter the section to set a VBO's attributes only once; VBO layout changes aren't supported.
+        for( let [i,name] of VBO_plan.attributes.entries()) {
+          const name = VBO_plan.attributes[i];
+          if( !attribute_addresses[name] )
+            continue;
+          const attr_index = attribute_addresses[name].index;
+          if( !(attr_index >= 0 )) throw "Attribute addresses not retrieved yet";   // TODO:  Temporary
 
-        // TODO:  Untested with numeric types other than GL_FLOAT.
-        // attribute_addresses[name].type returns the container's type instead (like FLOAT_MAT4/FLOAT_VEC3); not it.
+          // TODO:  Untested with numeric types other than GL_FLOAT.
+          // attribute_addresses[name].type returns the container's type instead (like FLOAT_MAT4/FLOAT_VEC3); not it.
 
-        if( VBO_plan.attribute_is_matrix[i] )
-          for( let row = 0; row < VBO_plan.sizes[i]; row++ ) {
-            gl.vertexAttribPointer(attr_index+row, VBO_plan.sizes[i], gl.FLOAT, false, VBO_plan.stride, VBO_plan.offsets[i] + row * VBO_plan.sizes[i] * 4);
-            gl.vertexAttribDivisor(attr_index+row, VBO_plan.divisor);
-            gl.enableVertexAttribArray (attr_index+row);
+          if( VBO_plan.attribute_is_matrix[i] )
+            for( let row = 0; row < VBO_plan.sizes[i]; row++ ) {
+              gl.vertexAttribPointer(attr_index+row, VBO_plan.sizes[i], gl.FLOAT, false, VBO_plan.stride, VBO_plan.offsets[i] + row * VBO_plan.sizes[i] * 4);
+              gl.vertexAttribDivisor(attr_index+row, VBO_plan.divisor);
+              gl.enableVertexAttribArray (attr_index+row);
+            }
+
+          else {
+            if( attribute_addresses[name].size != VBO_plan.sizes[i])
+              throw "Wrong primitive size provided in the VBO vs the shader attribute.";
+
+            // Assumptions about the shader: Vertex fields are interleaved, in the same order they'll appear in the shader (using offset keyword).
+            // TODO: Support normalization of attributes; allow the user to specify.
+            gl.vertexAttribPointer(attr_index, VBO_plan.sizes[i], gl.FLOAT, false, VBO_plan.stride, VBO_plan.offsets[i]);
+            gl.vertexAttribDivisor(attr_index, VBO_plan.divisor);
+            gl.enableVertexAttribArray (attr_index);
           }
-
-        else {
-          if( attribute_addresses[name].size != VBO_plan.sizes[i])
-            throw "Wrong primitive size provided in the VBO vs the shader attribute.";
-
-          // TODO: Support normalization of attributes; allow the user to specify.
-          // This assumes some stuff about the shader: Vertex fields are interleaved; vertex fields are
-          // in the same order that they'll appear in the shader (using offset keyword).
-          gl.vertexAttribPointer(attr_index, VBO_plan.sizes[i], gl.FLOAT, false, VBO_plan.stride, VBO_plan.offsets[i]);
-          gl.vertexAttribDivisor(attr_index, VBO_plan.divisor);
-          gl.enableVertexAttribArray (attr_index);
         }
-      }
 
       if( this.gpu_versions.get(VBO_plan) >= VBO_plan.version  )
         continue;
