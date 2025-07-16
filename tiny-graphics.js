@@ -67,9 +67,10 @@ export class Shape {
         // --- Step 4: Buffer Filling ---
         let pos = 0, next_version = destination.version + 1;
         function set_element(value) {
-          if (destination.data[pos].toFixed(5) != value.toFixed(5))
+          if (Math.abs(destination.data[pos] - value) > 1e-5) {
             destination.version = next_version;
-          destination.data[pos] = value;
+            destination.data[pos] = value;
+          }
           pos++;
         }
 
@@ -723,14 +724,15 @@ export class RenderListItem {
     this.model_transforms = [];
     this.matrix_VBO_plan = {attributes: ["model_transform"] };
     this.group_transform = Mat4.identity();
+    this.hint = "STATIC_DRAW";
     this.type = "TRIANGLES";
     this.instance_count = 0;
   }
-  update_matrices() {
+  update_matrices(buffer_hint = "STATIC_DRAW") {
     if (!this.model_transforms.length)     // The user may specify no matrices for the single instance case.
       this.model_transforms.push( Mat4.identity() );
     this.instance_count = this.model_transforms.length;
-    Shape.build_VBO_plan (this.model_transforms, this.matrix_VBO_plan, "STATIC_DRAW", 1)
+    Shape.build_VBO_plan (this.model_transforms, this.matrix_VBO_plan, buffer_hint, 1)
   }
 }
 
@@ -1012,9 +1014,10 @@ export class UBO_Plan {
   set_element(offset, value) {
     if( offset >= this.buffer_boundary )
       throw "A UBO field was too big for its GLSL variable."
-    if( this.local_buffer[offset].toFixed(5) != value.toFixed(5) )
+    if (Math.abs(this.local_buffer[offset] - value) > 1e-5) {
       this.version = this.next_version;
-    this.local_buffer[offset] = value;
+      this.local_buffer[offset] = value;
+    }
   }
   fill_buffer (uniform_block_info) {
     if (!uniform_block_info.buffer_size)
