@@ -29,13 +29,14 @@ export class Instanced_Cubes_Demo extends Renderer {
 
     for( let i=0; i<1000; i++) {
       const item = new RenderListItem(this.fire, this.shapes.cube, 0);
+      item.hint = "STREAM_DRAW";
       item.model_transforms.push(
               Mat4.translation(... vec3(Math.random()* 2 - 1, 5,  Math.random()*2 - 1)
                                   .times_pairwise(vec3(20, 2, 20))).times(Mat4.scale(.5,.5,.5)) )
       this.renderList.insert( item );
     }
 
-    this.renderList.traverse( (item) => item.update_matrices(), {prune: false} );
+    this.renderList.traverse( (item) => item.update_matrices(item.hint), {prune: false} );
 
     this.state.lightArray =
          new defs.LightArray({ambient: .1, lights:[
@@ -55,15 +56,18 @@ render_frame () {
       this.animated_children.push( this.controls );
     }
 
-    const item = this.renderList.get(this.fire, this.shapes.cube, 0)
+    let item = this.renderList.get(this.fire, this.shapes.cube, 0)
     this.renderList.clear_group(item);
-    item.model_transforms.length = 0;
-    item.model_transforms.push(
-      ...Array(1000).fill(0).map( (x,j) =>
-            Mat4.translation(... vec3(Math.random()* 2 - 1, 5,  Math.random()*2 - 1)
-                                .times_pairwise(vec3(20, 2, 20))).times(Mat4.scale(.5,.5,.5)) )
-    );
-    item.update_matrices();
+    for( let i=0; i<1000; i++) {
+      const item = new RenderListItem(this.fire, this.shapes.cube, 0);
+      item.hint = "STREAM_DRAW";
+      item.model_transforms.push(
+              Mat4.translation(... vec3(Math.random()* 2 - 1, 5,  Math.random()*2 - 1)
+                                  .times_pairwise(vec3(20, 2, 20))).times(Mat4.scale(.5,.5,.5)) )
+      this.renderList.insert( item );
+    }
+    item = this.renderList.get(this.fire, this.shapes.cube, 0)
+    item.update_matrices(item.hint);
 
     this.state.selected_UBOs.set(this.state.camera.get_binding_point(), this.state.camera);
     this.state.selected_UBOs.set(this.state.lightArray.get_binding_point(), this.state.lightArray);
