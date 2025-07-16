@@ -5,18 +5,16 @@ import { Camera, LightArray, Material } from './common.js';
 export class Instanced_Cubes_Demo extends Renderer {
   init () {
     super.init();
-    // this.shapes = {cube: new defs.Instanced_Cube_Index()};
-    this.shapes = {cube: new defs.Cube(), tetrahedron: new defs.Subdivision_Sphere(3) };
+    this.shapes = {cube: new defs.Cube(), ball: new defs.Subdivision_Sphere(3) };
 
     this.shader = new defs.Universal_Shader (LightArray.NUM_LIGHTS, {has_shadows: false, has_texture: false});
-    // this.shader = new defs.Shader_Without_UBOs (1, {has_shadows: false, has_texture: false});
     this.textured_shader = new defs.Universal_Shader (LightArray.NUM_LIGHTS, {has_shadows: false, has_texture: true});
 
     this.fire = new Material(this.textured_shader, { color: vec4(0.1, 0.1, 0.1, 1.0) }, { diffuse_texture: new Texture( "assets/rgb.jpg" ) });
     this.water = new Material(this.shader, { color: vec4(0.0, 0.5, 0.5, 1.0) });
 
     const items = [ new RenderListItem(this.water, this.shapes.cube, 0),
-                    new RenderListItem(this.fire, this.shapes.tetrahedron, 0) ];
+                    new RenderListItem(this.fire, this.shapes.ball, 0) ];
 
     for( let i=0; i<2; i++ ) {
       items[i].model_transforms.push(
@@ -36,7 +34,7 @@ export class Instanced_Cubes_Demo extends Renderer {
       this.renderList.insert( item );
     }
 
-    this.renderList.traverse( (item) => item.update_matrices(item.hint), {prune: false} );
+    this.renderList.traverse( (item) => item.update_matrices(), {prune: false} );
 
     this.state.lightArray =
          new defs.LightArray({ambient: .1, lights:[
@@ -56,8 +54,7 @@ render_frame () {
       this.animated_children.push( this.controls );
     }
 
-    let item = this.renderList.get(this.fire, this.shapes.cube, 0)
-    this.renderList.clear_group(item);
+    this.renderList.get(this.fire, this.shapes.cube, 0).clear();
     for( let i=0; i<1000; i++) {
       const item = new RenderListItem(this.fire, this.shapes.cube, 0);
       item.hint = "STREAM_DRAW";
@@ -66,8 +63,7 @@ render_frame () {
                                   .times_pairwise(vec3(20, 2, 20))).times(Mat4.scale(.5,.5,.5)) )
       this.renderList.insert( item );
     }
-    item = this.renderList.get(this.fire, this.shapes.cube, 0)
-    item.update_matrices(item.hint);
+    this.renderList.get(this.fire, this.shapes.cube, 0).update_matrices();
 
     this.state.selected_UBOs.set(this.state.camera.get_binding_point(), this.state.camera);
     this.state.selected_UBOs.set(this.state.lightArray.get_binding_point(), this.state.lightArray);

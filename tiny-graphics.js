@@ -690,15 +690,6 @@ class Sorted_RenderList {
     return true;
   }
 
-  clear_group (item) {
-    const {material, shape, group_ID} = item;
-    const node = this.get(material, shape, group_ID);
-    if (!node) return false;
-    node.model_transforms = [];
-    node.instance_count = 0;
-    return true;
-  }
-
   traverse(callback, options) {
     let current = this.linked_list.head;
     while (current) {
@@ -721,18 +712,22 @@ export class RenderListItem {
     this.shape = shape;
     this.material = material;
     this.group_ID = group_ID;
-    this.model_transforms = [];
     this.matrix_VBO_plan = {attributes: ["model_transform"] };
     this.group_transform = Mat4.identity();
     this.hint = "STATIC_DRAW";
     this.type = "TRIANGLES";
+    this.model_transforms = [];
     this.instance_count = 0;
   }
-  update_matrices(buffer_hint = "STATIC_DRAW") {
+  update_matrices() {
     if (!this.model_transforms.length)     // The user may specify no matrices for the single instance case.
       this.model_transforms.push( Mat4.identity() );
     this.instance_count = this.model_transforms.length;
-    Shape.build_VBO_plan (this.model_transforms, this.matrix_VBO_plan, buffer_hint, 1)
+    Shape.build_VBO_plan (this.model_transforms, this.matrix_VBO_plan, this.buffer_hint, 1)
+  }
+  clear() {
+    this.model_transforms = [];
+    this.instance_count = 0;
   }
 }
 
