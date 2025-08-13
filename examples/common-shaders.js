@@ -121,37 +121,32 @@ export class Universal_Shader extends Shader {
       const defaults = { has_instancing: true, has_shadows: true, has_texture: true };
       Object.assign (this, defaults, options, {num_lights});
     }
-    update_GPU (renderer, group_transform, material) {
+    update_GPU (renderer, renderListItem) {
       const gpu_addresses = renderer.uniform_addresses.get(this);
 
       // FINISH:  Move lightArray bind out of demo to here instead of the below?  And will shadows use a fully separate lightArray?
       if( false )
       if (this.has_shadows)
-        for (let light of renderer.state.lights)
+        for (let light of state.lights)
           if (!light.supports_shadow)
             throw `Simpler lights do not have compatible UBO layouts to use with shadowed shaders!`;
           else if (light.casts_shadow)
             light.bind(renderer, gpu_addresses);
 
-      renderer.state.selected_UBOs.set(material.get_binding_point(), material);
+      const state = renderListItem.render_state;
+    //  state[ state.camera.get_binding_point() ] = state.camera;
+    //  state[ state.lightArray.get_binding_point() ] = state.lightArray;
+    //  state[ state.material.get_binding_point() ] = state.material;
 
-      if( this.previous_animation_time != renderer.state.animation_time ) {
-        this.previous_animation_time = renderer.state.animation_time;
-        renderer.context.uniform1f (gpu_addresses.animation_time, renderer.state.animation_time / 1000);
+      if( this.previous_animation_time != state.animation_time ) {
+        this.previous_animation_time = state.animation_time;
+        renderer.context.uniform1f (gpu_addresses.animation_time, state.animation_time / 1000);
       }
-      if( !this.previous_group_matrix || !this.previous_group_matrix.equals(group_transform) ) {
-        if( !this.previous_group_matrix ) this.previous_group_matrix = Mat4.of(...group_transform);
-        else this.previous_group_matrix.set(group_transform);
-        renderer.context.uniformMatrix4fv (gpu_addresses.group_transform, true, Matrix.flatten_2D_to_1D (group_transform));
+      if( !this.previous_group_matrix || !this.previous_group_matrix.equals(renderListItem.group_transform) ) {
+        if( !this.previous_group_matrix ) this.previous_group_matrix = Mat4.of(...renderListItem.group_transform);
+        else this.previous_group_matrix.set(renderListItem.group_transform);
+        renderer.context.uniformMatrix4fv (gpu_addresses.group_transform, true, Matrix.flatten_2D_to_1D (renderListItem.group_transform));
       }
-    }
-    static default_values () {
-      return {
-              color: vec4 (1.0, 1.0, 1.0, 1.0),
-              diffuse: vec3(1.0, 1.0, 1.0),
-              specular: vec3 (1.0, 1.0, 1.0),
-              smoothness: 32.0
-            };
     }
     shared_glsl_code () {           // ********* SHARED CODE, INCLUDED IN BOTH SHADERS *********
         return "#version 300 es " + `

@@ -195,9 +195,16 @@ export class Shadow_Light {
   };
 
 export class Material extends UBO_Plan {
-    init(shader = undefined, fields = {}, samplers = {}) {
-      Object.assign (this, {shader, samplers: new Map(Object.entries(samplers))} );
-      this.fields = Object.assign(shader.constructor.default_values(), fields);
+    init(fields = {}) {
+      this.fields = Object.assign(Material.default_values(), fields);
+    }
+    static default_values () {
+      return {
+              color: vec4 (1.0, 1.0, 1.0, 1.0),
+              diffuse: vec3(1.0, 1.0, 1.0),
+              specular: vec3 (1.0, 1.0, 1.0),
+              smoothness: 32.0
+            };
     }
     get_binding_point () { return 2; }
 };

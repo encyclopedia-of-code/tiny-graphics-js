@@ -7,14 +7,34 @@ export class Instanced_Cubes_Demo extends Renderer {
     super.init();
     this.shapes = {cube: new defs.Cube(), ball: new defs.Subdivision_Sphere(3) };
 
-    this.shader = new defs.Universal_Shader (LightArray.NUM_LIGHTS, {has_shadows: false, has_texture: false});
     this.textured_shader = new defs.Universal_Shader (LightArray.NUM_LIGHTS, {has_shadows: false, has_texture: true});
 
-    this.fire = new Material(this.textured_shader, { color: vec4(0.1, 0.1, 0.1, 1.0) }, { diffuse_texture: new Texture( "assets/rgb.jpg" ) });
-    this.water = new Material(this.shader, { color: vec4(0.0, 0.5, 0.5, 1.0) });
+    this.state.samplers = new Map([ ["diffuse_texture", new Texture( "assets/rgb.jpg" )] ]);
 
-    const items = [ new RenderListItem(this.water, this.shapes.cube, 0),
-                    new RenderListItem(this.fire, this.shapes.ball, 0) ];
+    this.state.shader = new defs.Universal_Shader (LightArray.NUM_LIGHTS, {has_shadows: false, has_texture: false});
+
+    this.fire = new Material({ color: vec4(0.1, 0.1, 0.1, 1.0) });
+    this.water = new Material({ color: vec4(0.0, 0.5, 0.5, 1.0) });
+
+
+
+
+    this.state.lightArray =
+         new defs.LightArray({ambient: .1, lights:[
+           {direction_or_position: vec4(0.0, 10.0, 0.0, 1.0),
+             color: vec3(1.0, 0.0, 0.0), diffuse: 0.5, specular: 1.0, attenuation_factor: 0.001},
+           {direction_or_position: vec4(5.0, 10.0, 0.0, 0.0),
+             color: vec3(1.0, 1.0, 1.0), diffuse: 0.5, specular: 1.0, attenuation_factor: 0.001}
+         ]});
+
+  //  this.state_fire = { ...this.state, material: this.fire };
+  //  this.state_water = { ...this.state, material: this.water };
+
+     this.state_fire  = Object.assign( Object.create( this.state ), { material: this.fire } );
+     this.state_water = Object.assign( Object.create( this.state ), { material: this.water } );
+
+    const items = [ new RenderListItem(this.state_water, this.shapes.cube, 0),
+                    new RenderListItem(this.state_water, this.shapes.ball, 0) ];
 
     for( let i=0; i<2; i++ ) {
       items[i].model_transforms.push(
@@ -26,7 +46,7 @@ export class Instanced_Cubes_Demo extends Renderer {
     }
 
     for( let i=0; i<1000; i++) {
-      const item = new RenderListItem(this.fire, this.shapes.cube, 0);
+      const item = new RenderListItem(this.state_fire, this.shapes.cube, 0);
       item.hint = "STREAM_DRAW";
       item.model_transforms.push(
               Mat4.translation(... vec3(Math.random()* 2 - 1, 5,  Math.random()*2 - 1)
@@ -36,13 +56,6 @@ export class Instanced_Cubes_Demo extends Renderer {
 
     this.renderList.traverse( (item) => item.update_matrices(), {prune: false} );
 
-    this.state.lightArray =
-         new defs.LightArray({ambient: .1, lights:[
-           {direction_or_position: vec4(0.0, 10.0, 0.0, 1.0),
-             color: vec3(1.0, 0.0, 0.0), diffuse: 0.5, specular: 1.0, attenuation_factor: 0.001},
-           {direction_or_position: vec4(5.0, 10.0, 0.0, 0.0),
-             color: vec3(1.0, 1.0, 1.0), diffuse: 0.5, specular: 1.0, attenuation_factor: 0.001}
-         ]});
 }
 render_frame () {
     if( !this.controls )  {
@@ -54,19 +67,16 @@ render_frame () {
       this.animated_children.push( this.controls );
     }
 
-    this.renderList.get(this.fire, this.shapes.cube, 0).clear();
+    this.renderList.get(this.state_fire, this.shapes.cube, 0).clear();
     for( let i=0; i<1000; i++) {
-      const item = new RenderListItem(this.fire, this.shapes.cube, 0);
+      const item = new RenderListItem(this.state_fire, this.shapes.cube, 0);
       item.hint = "STREAM_DRAW";
       item.model_transforms.push(
               Mat4.translation(... vec3(Math.random()* 2 - 1, 5,  Math.random()*2 - 1)
                                   .times_pairwise(vec3(20, 2, 20))).times(Mat4.scale(.5,.5,.5)) )
       this.renderList.insert( item );
     }
-    this.renderList.get(this.fire, this.shapes.cube, 0).update_matrices();
-
-    this.state.selected_UBOs.set(this.state.camera.get_binding_point(), this.state.camera);
-    this.state.selected_UBOs.set(this.state.lightArray.get_binding_point(), this.state.lightArray);
+    this.renderList.get(this.state_fire, this.shapes.cube, 0).update_matrices();
 
     this.renderList.traverse( (item) => this.draw( item ), {prune: true} );
   }

@@ -325,7 +325,7 @@ export class Shader {
       Object.assign (instance, {program, vertex_shader, fragment_shader});
       return instance;
     }
-    activate (renderer, group_transform, material) {    // FINISH: Move to renderer?
+    activate (renderer, renderListItem) {    // FINISH: Move to renderer?
       // copy_to_GPU if needed
       // useProgram if needed
       // send loose uniforms with polymorphism (this.update_GPU)
@@ -338,10 +338,10 @@ export class Shader {
           renderer.context.useProgram (instance.program);
 
         // TODO: Confirm that there are cases where update_GPU can't be batched to once-per-frame.
-        this.update_GPU (renderer, group_transform, material);
+        this.update_GPU (renderer, renderListItem);
 
         let offset = 0;
-        for (const [name, sampler] of material.samplers.entries())
+        for (const [name, sampler] of renderListItem.render_state.samplers.entries())
           if (sampler && sampler.ready) {
 
             const current_sampler2D_index = renderer.uniform_addresses[name];
@@ -635,20 +635,20 @@ class Linked_List {
 class Sorted_RenderList {
   constructor() {
     this.linked_list = new Linked_List();
-    this.material_map = new Map(); // Nested map, 3 deep.  Sort by 3 levels: Material, shape, group ID.
+    this.render_state_map = new Map(); // Nested map, 3 deep.  Sort by 3 levels: Render state, Shape, group ID.
   }
-  get (material, shape, group_ID) {
-    return this.material_map.get(material)?.get(shape)?.get(group_ID);
+  get (render_state, shape, group_ID) {
+    return this.render_state_map.get(render_state)?.get(shape)?.get(group_ID);
   }
 
   insert (item) {
-    const {material, shape, group_ID} = item;
+    const {render_state, shape, group_ID} = item;
     // Begin by assuming the very first item in our dictionaries is the best one to cluster with, then narrow it down.
-    let best_candidate = this.material_map.values().next().value?.values().next().value?.values().next().value;
+    let best_candidate = this.render_state_map.values().next().value?.values().next().value?.values().next().value;
 
-    let shape_map = this.material_map.get(material);
+    let shape_map = this.render_state_map.get(render_state);
     if (shape_map) best_candidate = shape_map.values().next().value?.values().next().value || best_candidate;
-    else shape_map = this.material_map.set(material, new Map()).get(material);
+    else shape_map = this.render_state_map.set(render_state, new Map()).get(render_state);
 
     let group_map = shape_map.get(shape);
     if (group_map) best_candidate = group_map.values().next().value || best_candidate;
@@ -674,8 +674,8 @@ class Sorted_RenderList {
   }
 
   remove (item) {
-    const {material, shape, group_ID} = item;
-    let shape_map = this.material_map.get(material);
+    const {render_state, shape, group_ID} = item;
+    let shape_map = this.render_state_map.get(render_state);
     if (!shape_map) return false;
     let group_map = shape_map.get(shape);
     if (!group_map) return false;
@@ -686,7 +686,7 @@ class Sorted_RenderList {
     this.linked_list.remove(node);
     group_map.delete(group_ID);
     if (group_map.size === 0) shape_map.delete(shape);
-    if (shape_map.size === 0) this.material_map.delete(material);
+    if (shape_map.size === 0) this.render_state_map.delete(render_state);
     return true;
   }
 
@@ -698,7 +698,7 @@ class Sorted_RenderList {
       // Prune empty entries we encounter, from both the linked list and dictionary.
       // remove() also handles pruning empty maps up the chain.
       if (options.prune && current.model_transforms.length === 0)
-        this.remove(current.material, current.shape, current.group_ID);
+        this.remove(current.render_state, current.shape, current.group_ID);
       else
         callback(current);
       current = next;
@@ -707,10 +707,10 @@ class Sorted_RenderList {
 }
 
 export class RenderListItem {
-  constructor (material, shape, group_ID) {
+  constructor (state, shape, group_ID) {
       // To draw, just need all this for Renderer:
     this.shape = shape;
-    this.material = material;
+    this.render_state = state;
     this.group_ID = group_ID;
     this.matrix_VBO_plan = {attributes: ["model_transform"] };
     this.group_transform = Mat4.identity();
@@ -751,11 +751,12 @@ export class Renderer extends Component {
     this.textures = new Map();  // Texture -> texture buffer
     this.shadow_maps = new Map();  // Shadow_Map -> texture buffer
 
-    this.state = { animate   : true,
-              animation_time : 0,
-         animation_delta_time: 0,
-                selected_UBOs: new Map()   // binding point integer -> UBO_plan
-    };
+    this.state = Object.create(null);
+    Object.assign( this.state,
+      { animate   : true,
+        animation_time : 0,
+        animation_delta_time: 0,
+      } );
   }
   make_context (canvas, background_color = color (0, 0, 0, 1), dimensions) {
       this.canvas              = canvas;
@@ -932,25 +933,28 @@ export class Renderer extends Component {
       VBO_plan.has_resized = false;
     }
   }
-  draw (renderListItem, overridden_material) {
-    const material = overridden_material ?? renderListItem.material;
-    material.shader.activate (this, renderListItem.group_transform, material);
+  draw (renderListItem) {
+    const shader = renderListItem.render_state.shader;
+    shader.activate (this, renderListItem);
 
     const gl = this.context;
-    this.update_VAO( renderListItem, this.attribute_addresses.get( material.shader ) );
+    this.update_VAO( renderListItem, this.attribute_addresses.get( shader ) );
 
-    for (let [binding_point, ubo_plan] of this.state.selected_UBOs.entries()) {
+    for (let key in renderListItem.render_state ) {
+      const ubo_plan = renderListItem.render_state[key];
+      if( !(ubo_plan instanceof UBO_Plan) )
+        continue;
       const existing = this.UBOs.get(ubo_plan);
       const ubo = existing ?? gl.createBuffer();
       this.UBOs.set(ubo_plan, ubo);
 
-      const ID = "Bound_UBO_" + binding_point;
+      const ID = "Bound_UBO_" + ubo_plan.get_binding_point();
       const previous_bound_ubo = this.gpu_versions.get(ID);
       this.gpu_versions.set(ID, ubo);
       if(previous_bound_ubo != ubo )
-        gl.bindBufferBase (gl.UNIFORM_BUFFER, binding_point, ubo);
+        gl.bindBufferBase (gl.UNIFORM_BUFFER, ubo_plan.get_binding_point(), ubo);
 
-      ubo_plan.fill_buffer(this.uniform_addresses.get(material.shader).uniform_block_info.get( ubo_plan.constructor.name ));
+      ubo_plan.fill_buffer(this.uniform_addresses.get(shader).uniform_block_info.get( ubo_plan.constructor.name ));
       if( !ubo_plan.local_buffer || this.gpu_versions.get(ubo_plan) >= ubo_plan.version )
         continue;
       this.gpu_versions.set(ubo_plan, ubo_plan.version);
