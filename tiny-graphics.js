@@ -260,44 +260,51 @@ export class Shader {
           constructor (program) {
               const indices_to_blockname = new Map();
               const indices_to_offsets = new Map();
-              this.uniform_block_info = new Map();  // block_name -> { buffer_size, element_offsets}
+              this.uniform_block_info = new Map();  // block_name -> { buffer_size, element_offsets, next_offsets }
               const num_blocks = gl.getProgramParameter(program, gl.ACTIVE_UNIFORM_BLOCKS);
+              const index_to_uniform_info = new Map();
               for (let i = 0; i < num_blocks; i++ ) {
-                const UBO_name = gl.getActiveUniformBlockName(program, i);
-                const UBO_size = gl.getActiveUniformBlockParameter(program, i, gl.UNIFORM_BLOCK_DATA_SIZE);
-                const UBO_index = gl.getUniformBlockIndex(program, UBO_name);
-                gl.uniformBlockBinding(program, UBO_index, UBO_index);   // By convention, force block indices to match binding points.
+                  const UBO_name = gl.getActiveUniformBlockName(program, i);
+                  const UBO_size = gl.getActiveUniformBlockParameter(program, i, gl.UNIFORM_BLOCK_DATA_SIZE);
+                  const UBO_index = gl.getUniformBlockIndex(program, UBO_name);
+                  gl.uniformBlockBinding(program, UBO_index, UBO_index);
 
-                if( !given_info.get(UBO_name) )
-                  this.uniform_block_info.set(UBO_name,
-                        { buffer_size: UBO_size, element_offsets: new Map(), next_offsets: new Map() });
+                  if( !given_info.get(UBO_name) )
+                    this.uniform_block_info.set(UBO_name,
+                          { buffer_size: UBO_size, element_offsets: new Map(), next_offsets: new Map() });
 
-                const indices = gl.getActiveUniformBlockParameter(program, i, gl.UNIFORM_BLOCK_ACTIVE_UNIFORM_INDICES);
-                const offsets = gl.getActiveUniforms(program, indices, gl.UNIFORM_OFFSET);
-                for (let i = 0; i < indices.length; i++) {
-                  indices_to_blockname.set(indices[i], UBO_name);
-                  indices_to_offsets.set(indices[i], offsets[i]);
-                }
+                  const indices = gl.getActiveUniformBlockParameter(program, i, gl.UNIFORM_BLOCK_ACTIVE_UNIFORM_INDICES);
+                  const offsets = gl.getActiveUniforms(program, indices, gl.UNIFORM_OFFSET);
+                  for (let j = 0; j < indices.length; j++) {
+                      const idx = indices[j];
+                      const uniform = gl.getActiveUniform(program, idx);
+                      let dot_path = uniform.name.replace(/\[(\d+)\]/g, '.$1'); // 'lights[0].color' => 'lights.0.color'
+                      if (dot_path.startsWith(UBO_name + "."))
+                        dot_path = dot_path.substring(UBO_name.length + 1);
+                      indices_to_blockname.set(idx, UBO_name);
+                      indices_to_offsets.set(idx, offsets[j]);
+                      index_to_uniform_info.set(idx, {dot_path, offset: offsets[j], block: UBO_name});
+                  }
               }
 
-              const num_uniforms = gl.getProgramParameter (program, gl.ACTIVE_UNIFORMS);
-              let previous_offset;
+              const num_uniforms = gl.getProgramParameter(program, gl.ACTIVE_UNIFORMS);
               for (let i = 0; i < num_uniforms; ++i) {
-                  if (indices_to_blockname.get(i)) {  // Belongs to a UBO
-                    const name = indices_to_blockname.get(i);
-                    if( given_info.get(name) )
-                      continue;
-                    const full_name = gl.getActiveUniform (program, i).name;
-                    const dot_path = full_name.replace(/\[(\d+)\]/g, '.$1'); // 'lights[0].color' => 'lights.0.color'
-                    const offset = indices_to_offsets.get(i);
-                    this.uniform_block_info.get(name).element_offsets.set(dot_path, offset);
-                    if( previous_offset !== undefined )
-                      this.uniform_block_info.get(name).next_offsets.set(previous_offset, offset);
-                    previous_offset = offset;
+                  if (!indices_to_blockname.has(i)) {  // Loose uniform
+                      const uniform = gl.getActiveUniform(program, i);
+                      this[uniform.name] = gl.getUniformLocation(program, uniform.name);
                   }
-                  else {  // Loose uniform
-                      const full_name = gl.getActiveUniform (program, i).name;
-                      this[ full_name ] = gl.getUniformLocation (program, full_name);
+                  // Else, UBO member: Already cached in block maps above.
+              }
+
+              for (const [block_name, info] of this.uniform_block_info.entries()) {
+                  // Find all fields for this block:
+                  const fields = [...index_to_uniform_info.values()].filter(u => u.block === block_name);
+                  // Sort by offset:
+                  fields.sort((a, b) => a.offset - b.offset);
+                  // Assign boundaries:
+                  for (let j = 0; j < fields.length; ++j) {
+                      info.element_offsets.set(fields[j].dot_path, fields[j].offset);
+                      info.next_offsets.set(fields[j].offset, j+1 < fields.length ? fields[j+1].offset : info.buffer_size);
                   }
               }
           }
@@ -306,12 +313,12 @@ export class Shader {
       gl.shaderSource (vertex_shader, this.vertex_glsl_code ());
       gl.compileShader (vertex_shader);
       if ( !gl.getShaderParameter (vertex_shader, gl.COMPILE_STATUS))
-          throw "Vertex shader compile error: " + gl.getShaderInfoLog (vertex_shader);
+          throw "Vertex shader compile error: " + gl.getShaderInfoLog (vertex_shader) + this.vertex_glsl_code();
 
       gl.shaderSource (fragment_shader, this.fragment_glsl_code ());
       gl.compileShader (fragment_shader);
       if ( !gl.getShaderParameter (fragment_shader, gl.COMPILE_STATUS))
-          throw "Fragment shader compile error: " + gl.getShaderInfoLog (fragment_shader);
+          throw "Fragment shader compile error: " + gl.getShaderInfoLog (fragment_shader) + this.fragment_glsl_code();
 
       gl.attachShader (program, vertex_shader);
       gl.attachShader (program, fragment_shader);
@@ -495,7 +502,8 @@ export class Component {
           Component.initialize_CSS (Component, rules);
 
           this.props = props;
-          this.state = Object.create(this.props);      // Shadow all properties given by the parent, so that parent is read-only.
+          if( this.props.state )
+            this.state = Object.create(this.props.state);      // Shadow all properties given by the parent, so that parent is read-only.
           this.animated_children  = [];
           this.document_children  = [];
           // Set up how we'll handle key presses for the scene's control panel:
@@ -751,7 +759,8 @@ export class Renderer extends Component {
     this.textures = new Map();  // Texture -> texture buffer
     this.shadow_maps = new Map();  // Shadow_Map -> texture buffer
 
-    this.state = Object.create(null);
+    // FINISH: redefinition from Component
+    if( this.state === undefined ) this.state = Object.create(null);
     Object.assign( this.state,
       { animate   : true,
         animation_time : 0,
@@ -980,7 +989,6 @@ export class Renderer extends Component {
 
 export class UBO_Plan {
   constructor (...args) {
-    this.element_offsets = new Map();
     this.ready = true;        // For async loaded entries
     this.version = -1;
     this.type = Float32Array;   // User must override this manually before fill_buffer if they want a int/uint based UBO.
@@ -1019,6 +1027,8 @@ export class UBO_Plan {
     }
   }
   fill_buffer (uniform_block_info) {
+    if (!uniform_block_info)
+        return;  // Skip UBOs that the shader doesn't need.
     if (!uniform_block_info.buffer_size)
       throw `Can't call UBO_Plan::fill_buffer() before uniform block info for ${this.constructor.name} is queried at draw time.`
     if (!this.ready)
@@ -1043,3 +1053,201 @@ export class UBO_Plan {
     }
   }
 }
+
+
+
+export class GLTexture {
+  constructor(opts = {}) {
+    Object.assign(this, {
+      type: 'TEXTURE_2D', // 'TEXTURE_2D_ARRAY', 'TEXTURE_CUBE_MAP'
+      width: 1,
+      height: 1,
+      layers: 1,
+      minFilter: 'LINEAR_MIPMAP_LINEAR',
+      magFilter: 'LINEAR',
+      wrapS: 'CLAMP_TO_EDGE',
+      wrapT: 'CLAMP_TO_EDGE',
+      urls: null,   // Single URL, array of 6, or array-of-layers
+      data: null,   // For non-image use: typed array
+      framebuffer: false,
+      attachment: 'COLOR_ATTACHMENT0',
+      internalFormat: 'RGBA',
+      format: 'RGBA',
+      gl_type: 'UNSIGNED_BYTE',
+      ...opts
+    });
+
+    // For cubemaps, always keep this
+    this.cubeFaces = [
+      'TEXTURE_CUBE_MAP_POSITIVE_X', 'TEXTURE_CUBE_MAP_NEGATIVE_X',
+      'TEXTURE_CUBE_MAP_POSITIVE_Y', 'TEXTURE_CUBE_MAP_NEGATIVE_Y',
+      'TEXTURE_CUBE_MAP_POSITIVE_Z', 'TEXTURE_CUBE_MAP_NEGATIVE_Z'
+    ];
+    this.ready = false;
+    this.imageLayers = null;
+    this.texture = null;
+    this.fbo = null;
+
+    // Async load flag
+    if (this.urls)
+      this._start_async_load();
+    else
+      this.ready = true;
+  }
+
+  static _isPowerOfTwo(x) { return (x & (x - 1)) === 0 && x !== 0; }
+
+  // Initiate async loading based on this.urls (string or array)
+  _start_async_load() {
+    // Flatten to array, even for single images.
+    const urls = Array.isArray(this.urls) ? this.urls : [this.urls];
+    this.imageLayers = new Array(urls.length);
+    let remaining = urls.length;
+    this.ready = false;
+
+    urls.forEach((url, i) => {
+      const img = new Image();
+      img.crossOrigin = "Anonymous";
+      img.onload = () => {
+        this.imageLayers[i] = img;
+        remaining -= 1;
+        if (remaining === 0) {
+          this.ready = true;
+          // Optionally: trigger buffer upload here automatically
+          if(this._onready) this._onready();
+        }
+      };
+      img.src = url;
+    });
+  }
+
+  // Expose a ready-callback setter if you want to handle "reload on ready"
+  onReady(cb) { this._onready = cb; }
+
+  // Texture/FBO creation; call after .ready becomes true!
+  // For async images, you may want to call from an external place, or auto-upload above.
+  copy_onto_graphics_card(renderer) {
+    const gl = renderer.context;
+    const type = gl[this.type];
+
+    // Handle fallback (single blue pixel) before images load
+    if (!this.ready) {
+      if (!this.texture) this.texture = gl.createTexture();
+      gl.bindTexture(type, this.texture);
+      if (type === gl.TEXTURE_2D)
+        gl.texImage2D(type, 0, gl[this.internalFormat], 1, 1, 0, gl[this.format], gl[this.gl_type], new Uint8Array([0,0,255,255]));
+      else if (type === gl.TEXTURE_CUBE_MAP) {
+        for(let face of this.cubeFaces)
+          gl.texImage2D(gl[face], 0, gl[this.internalFormat], 1, 1, 0, gl[this.format], gl[this.gl_type], new Uint8Array([0,0,255,255]));
+      } else if (type === gl.TEXTURE_2D_ARRAY)
+        gl.texImage3D(type, 0, gl[this.internalFormat], 1, 1, this.layers, 0, gl[this.format], gl[this.gl_type], null);
+      this.ready = false; // stay not ready!
+      return;
+    }
+
+    if (!this.texture) this.texture = gl.createTexture();
+    gl.bindTexture(type, this.texture);
+
+    // Common parameters
+    gl.texParameteri(type, gl.TEXTURE_MIN_FILTER, gl[this.minFilter]);
+    gl.texParameteri(type, gl.TEXTURE_MAG_FILTER, gl[this.magFilter]);
+    gl.texParameteri(type, gl.TEXTURE_WRAP_S, gl[this.wrapS]);
+    gl.texParameteri(type, gl.TEXTURE_WRAP_T, gl[this.wrapT]);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+
+    // Actual allocation/upload
+    if (type === gl.TEXTURE_2D) {
+      if (this.imageLayers && this.imageLayers[0])
+        gl.texImage2D(type, 0, gl[this.internalFormat], gl[this.format], gl[this.gl_type], this.imageLayers[0]);
+      else if (this.data)
+        gl.texImage2D(type, 0, gl[this.internalFormat], this.width, this.height, 0, gl[this.format], gl[this.gl_type], this.data);
+    } else if (type === gl.TEXTURE_2D_ARRAY) {
+      gl.texImage3D(type, 0, gl[this.internalFormat], this.width, this.height, this.layers, 0, gl[this.format], gl[this.gl_type], null);
+      for (let i=0; i<this.layers; ++i) {
+        if(this.imageLayers && this.imageLayers[i]) {
+          // For Image, must draw to canvas and extract pixels (WebGL2 can't upload HTMLImageElement directly to a layer)
+          const canvas = document.createElement("canvas");
+          canvas.width = this.width; canvas.height = this.height;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(this.imageLayers[i], 0, 0, this.width, this.height);
+          const pixels = ctx.getImageData(0,0,this.width,this.height).data;
+          gl.texSubImage3D(type, 0, 0, 0, i, this.width, this.height, 1, gl[this.format], gl[this.gl_type], pixels);
+        }
+        // Else: user must update by update_array_layer, or use this.data for all layers at once.
+      }
+    } else if (type === gl.TEXTURE_CUBE_MAP) {
+      for(let i=0; i<6; ++i) {
+        if(this.imageLayers && this.imageLayers[i])
+          gl.texImage2D(gl[this.cubeFaces[i]], 0, gl[this.internalFormat], gl[this.format], gl[this.gl_type], this.imageLayers[i]);
+        else
+          gl.texImage2D(gl[this.cubeFaces[i]], 0, gl[this.internalFormat], 1, 1, 0, gl[this.format], gl[this.gl_type], new Uint8Array([0,0,255,255]));
+      }
+    }
+
+    // Mipmaps if power-of-2 image(s)
+    const pot = GLTexture._isPowerOfTwo(this.width) && GLTexture._isPowerOfTwo(this.height);
+    if(this.minFilter.includes('MIPMAP') && pot)
+      gl.generateMipmap(type);
+
+    // [FBO handling, as before, omitted for brevity but just as previous]
+    // -- Insert your framebuffer logic from previous answer here --
+    this.ready = true;
+  }
+
+  // Update one layer in-place (for 2D array textures, with HTMLImageElement or Uint8Array etc)
+  update_array_layer(renderer, layer, img_or_array) {
+    const gl = renderer.context;
+    const type = gl[this.type];
+    gl.bindTexture(type, this.texture);
+    let src = img_or_array;
+    if(img_or_array instanceof HTMLImageElement) {
+      // Convert to pixel array
+      const canvas = document.createElement('canvas');
+      canvas.width = this.width; canvas.height = this.height;
+      canvas.getContext('2d').drawImage(img_or_array, 0, 0, this.width, this.height);
+      src = canvas.getContext('2d').getImageData(0,0,this.width,this.height).data;
+    }
+    gl.texSubImage3D(type, 0, 0, 0, layer, this.width, this.height, 1, gl[this.format], gl[this.gl_type], src);
+    gl.bindTexture(type, null);
+  }
+
+  activate(renderer, textureUnit = 0) {
+    if (!this.ready) return;
+    const gl = renderer.context;
+    const type = gl[this.type];
+    gl.activeTexture(gl.TEXTURE0 + textureUnit);
+    gl.bindTexture(type, this.texture);
+  }
+
+  // For rendering into a FBO layer/face
+  activate_as_fbo(renderer, opts = {}) {
+    if (!this.framebuffer) throw new Error("Texture is not a framebuffer target.");
+    const gl = renderer.context;
+    const type = gl[this.type];
+    const attachmentEnum = gl[this.attachment] || gl.COLOR_ATTACHMENT0;
+    const target_layer = opts.target_layer || 0;
+    const cube_face = opts.cube_face || 0; // 0 - 5; default POS_X
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.fbo);
+
+    if (type === gl.TEXTURE_2D_ARRAY) {
+      gl.framebufferTextureLayer(gl.FRAMEBUFFER, attachmentEnum, this.texture, 0, target_layer);
+    } else if (type === gl.TEXTURE_CUBE_MAP) {
+      gl.framebufferTexture2D(gl.FRAMEBUFFER, attachmentEnum, gl[this.cubeFaces[cube_face]], this.texture, 0);
+    }
+
+    gl.viewport(0, 0, this.width, this.height);
+    if (gl.drawBuffers)
+      gl.drawBuffers([attachmentEnum]);
+    if (gl.readBuffer)
+      gl.readBuffer(gl.NONE);
+  }
+
+  deactivate_fbo(renderer, restore_viewport = true) {
+    const gl = renderer.context;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    if (restore_viewport && renderer.width && renderer.height)
+      gl.viewport(0, 0, renderer.width, renderer.height);
+  }
+}
+

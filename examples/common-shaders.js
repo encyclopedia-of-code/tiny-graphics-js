@@ -1,6 +1,8 @@
 import * as tiny from '../tiny-graphics.js';
 import { Vector, Vector3, vec, vec3, vec4, color, Matrix, Mat4, Shape, Shader, Component } from '../tiny-graphics.js';
 
+/* Firefox bug: Won't run unless Material UBO is removed from shader. Even simplifying the UBO to one vector isn't enough. */
+
 export class Shader_Without_UBOs  extends Shader {
     constructor (num_lights = 1, options) {
       super();
@@ -11,19 +13,18 @@ export class Shader_Without_UBOs  extends Shader {
     static default_values () {
       return {};
     }
-    update_GPU (renderer, group_transform, material) {
+    update_GPU (renderer, renderListItem) {
       const gpu_addresses = renderer.uniform_addresses.get(this);
+      const state = renderListItem.render_state;
 
-      renderer.state.selected_UBOs.set(material.get_binding_point(), material);
-
-      if( this.previous_animation_time != renderer.state.animation_time ) {
-        this.previous_animation_time = renderer.state.animation_time;
-        renderer.context.uniform1f (gpu_addresses.animation_time, renderer.state.animation_time / 1000);
+      if( this.previous_animation_time != state.animation_time ) {
+        this.previous_animation_time = state.animation_time;
+        renderer.context.uniform1f (gpu_addresses.animation_time, state.animation_time / 1000);
       }
-      if( !this.previous_group_matrix || !this.previous_group_matrix.equals(group_transform) ) {
-        if( !this.previous_group_matrix ) this.previous_group_matrix = Mat4.of(...group_transform);
-        else this.previous_group_matrix.set(group_transform);
-        renderer.context.uniformMatrix4fv (gpu_addresses.group_transform, true, Matrix.flatten_2D_to_1D (group_transform));
+      if( !this.previous_group_matrix || !this.previous_group_matrix.equals(renderListItem.group_transform) ) {
+        if( !this.previous_group_matrix ) this.previous_group_matrix = Mat4.of(...renderListItem.group_transform);
+        else this.previous_group_matrix.set(renderListItem.group_transform);
+        renderer.context.uniformMatrix4fv (gpu_addresses.group_transform, true, Matrix.flatten_2D_to_1D (renderListItem.group_transform));
       }
     }
     shared_glsl_code () {           // ********* SHARED CODE, INCLUDED IN BOTH SHADERS *********
@@ -98,8 +99,8 @@ export class Shader_Without_UBOs  extends Shader {
 
           float attenuation = 1.0 / (1.0 + attenuation_factor * distance_to_light * distance_to_light );
 
-          vec3 light_contribution = vec3(1.,1.,1.) * diffuse * light_diffuse * diffuse
-                                                  + specular * light_specular * specular;
+          vec3 light_contribution = vec3(1.,1.,1.) * diffuse * light_diffuse
+                                                  + specular * light_specular;
           light_contribution *= light_color.xyz;
 
           return attenuation * light_contribution;
@@ -112,8 +113,6 @@ export class Shader_Without_UBOs  extends Shader {
       }`
     }
 };
-
-// FINISH: Try converting vec3 types in shader UBOs to vec4.
 
 export class Universal_Shader extends Shader {
     constructor (num_lights = 2, options) {
@@ -169,7 +168,7 @@ export class Universal_Shader extends Shader {
       {
         mat4 camera_inverse;
         mat4 projection;
-        vec3 camera_position;
+        vec4 camera_position;
       };
 
       out vec3 VERTEX_POS;
@@ -197,13 +196,13 @@ export class Universal_Shader extends Shader {
       {
         mat4 camera_inverse;
         mat4 projection;
-        vec3 camera_position;
+        vec4 camera_position;
       };
 
       struct Light
       {
         vec4 direction_or_position;
-        vec3 color;
+        vec4 color;
         float diffuse;
         float specular;
         float attenuation_factor;
@@ -229,10 +228,10 @@ export class Universal_Shader extends Shader {
       uniform Material
       {
         vec4 color;
-        vec3 diffuse;
-        vec3 specular;
+        vec4 diffuse;
+        vec4 specular;
         float smoothness;
-      };
+      } mat;
       ${this.has_texture ? `
               uniform sampler2D diffuse_texture;`
               : ``}
@@ -294,7 +293,7 @@ export class Universal_Shader extends Shader {
                             ${this.has_texture ?
                                     `, vec4 texture_color` : ``}
                             ) {
-          vec3 E = normalize( camera_position - vertex_worldspace );
+          vec3 E = normalize( camera_position.xyz - vertex_worldspace );
           vec3 result = vec3( 0.0 );
           for(int i = 0; i < N_LIGHTS; i++) {
             vec3 surface_to_light_vector = lights[i].direction_or_position.xyz -
@@ -306,14 +305,13 @@ export class Universal_Shader extends Shader {
 
               // Compute diffuse and specular components of Phong Reflection Model.
             float diffuse  =      max( dot( N, L ), 0.0 );
-            float specular = pow( max( dot( N, H ), 0.0 ), smoothness );     // Use Blinn's "halfway vector" method.
+            float specular = pow( max( dot( N, H ), 0.0 ), mat.smoothness );     // Use Blinn's "halfway vector" method.
             float attenuation = 1.0 / (1.0 + lights[i].attenuation_factor * distance_to_light * distance_to_light );
 
-            // FINISH:  Why is diffuse multiplied in twice? Ditto specular
             vec3 light_contribution = ${this.has_texture ?
                                               `texture_color.xyz` : `vec3(1.,1.,1.)`}
-                                                      * diffuse * lights[i].diffuse * diffuse
-                                                    + specular * lights[i].specular * specular;
+                                                      * diffuse * lights[i].diffuse * mat.diffuse.xyz
+                                                    + specular * lights[i].specular * mat.specular.xyz;
             light_contribution *= lights[i].color.xyz;
 
             ${this.has_shadows ? `
@@ -330,14 +328,14 @@ export class Universal_Shader extends Shader {
         ${this.has_texture ? `
                 // Compute an initial (ambient) color:
                 vec4 tex_color = texture( diffuse_texture, VERTEX_TEXCOORD );
-                frag_color = vec4( ( tex_color.xyz + color.xyz ) * ambient, color.w * tex_color.w );
+                frag_color = vec4( ( tex_color.xyz + mat.color.xyz ) * ambient, mat.color.w * tex_color.w );
                 // Compute the final color with contributions from lights:
                 frag_color.xyz += phong_model_lights( normalize( VERTEX_NORMAL ), VERTEX_POS, tex_color);
                 `
                 :
                 `
                 // Compute an initial (ambient) color:
-                frag_color = vec4( color.xyz * ambient, color.w );
+                frag_color = vec4( mat.color.xyz * ambient, mat.color.w );
                 // Compute the final color with contributions from lights:
                 frag_color.xyz += phong_model_lights( normalize( VERTEX_NORMAL ), VERTEX_POS );
                 `}
@@ -371,7 +369,7 @@ export class Shadow_Pass_Shader extends Shader {
     {
       mat4 camera_inverse;
       mat4 projection;
-      vec3 camera_position;
+      vec4 camera_position;
     };
 
     void main() {

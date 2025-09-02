@@ -11,7 +11,7 @@ export class Instanced_Cubes_Demo extends Renderer {
 
     this.state.samplers = new Map([ ["diffuse_texture", new Texture( "assets/rgb.jpg" )] ]);
 
-    this.state.shader = new defs.Universal_Shader (LightArray.NUM_LIGHTS, {has_shadows: false, has_texture: false});
+    this.state.shader = new defs.Universal_Shader (LightArray.NUM_LIGHTS, {has_shadows: false, has_texture: true});
 
     this.fire = new Material({ color: vec4(0.1, 0.1, 0.1, 1.0) });
     this.water = new Material({ color: vec4(0.0, 0.5, 0.5, 1.0) });
@@ -29,6 +29,8 @@ export class Instanced_Cubes_Demo extends Renderer {
 
   //  this.state_fire = { ...this.state, material: this.fire };
   //  this.state_water = { ...this.state, material: this.water };
+
+     // TODO: this.states = {};  this.state.fire = etc..
 
      this.state_fire  = Object.assign( Object.create( this.state ), { material: this.fire } );
      this.state_water = Object.assign( Object.create( this.state ), { material: this.water } );
@@ -62,7 +64,7 @@ render_frame () {
       const value = { camera_inverse: Mat4.look_at( vec3(0.0, 5.0, 20.0), vec3(0,0,0), vec3(0,1,0) ),
                           projection: Mat4.perspective(Math.PI/2, this.width/this.height, 0.01, 500) };
       this.state.camera = new Camera( value );
-      this.controls = new defs.Movement_Controls( this.state );
+      this.controls = new defs.Movement_Controls( { state: this.state } );
       this.controls.add_mouse_controls( this.canvas );
       this.animated_children.push( this.controls );
     }
