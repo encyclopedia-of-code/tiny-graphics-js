@@ -32,12 +32,10 @@ export class Shape {
         // Each VBO entry is either a matrix or a dictionary (of vertex fields).
         const attributes = destination.attributes;
         const first = entries[0];
-        const is_matrix_array = first instanceof Matrix;
 
         const attributes_meta = attributes.map(attr => {
-              const first_value = is_matrix_array ? first : first[attr];
-              const is_matrix = first_value instanceof Matrix;
-              const size = is_matrix ? 4 : (first_value.length || 1);
+              const is_matrix = first[attr] instanceof Matrix;
+              const size = is_matrix ? 4 : (first[attr].length || 1);
               const full_size = is_matrix ? 16 : size;
               return { attr, is_matrix, size, full_size };
             });
@@ -76,7 +74,7 @@ export class Shape {
 
         for (const v of entries)
           attributes_meta.forEach( meta => {
-            const value = is_matrix_array ? v : v[meta.attr];
+            const value = v[meta.attr];
             if (meta.is_matrix)
               // Write as column-major for GLSL.
               for (let i = 0; i < 4; i++)
@@ -665,7 +663,7 @@ class Sorted_RenderList {
     let exact_match = group_map.get(group_ID);
     if (exact_match) {
       // A fully matching linked list node exists; merge matrices into it.
-      exact_match.instance_count = exact_match.model_transforms.push(...item.model_transforms);
+      exact_match.instance_count = exact_match.instance_vars.push(...item.instance_vars);
       return;
     }
     group_map.set(group_ID, item);
@@ -705,7 +703,7 @@ class Sorted_RenderList {
 
       // Prune empty entries we encounter, from both the linked list and dictionary.
       // remove() also handles pruning empty maps up the chain.
-      if (options.prune && current.model_transforms.length === 0)
+      if (options.prune && current.instance_vars.length === 0)
         this.remove(current.render_state, current.shape, current.group_ID);
       else
         callback(current);
@@ -720,21 +718,21 @@ export class RenderListItem {
     this.shape = shape;
     this.render_state = state;
     this.group_ID = group_ID;
-    this.matrix_VBO_plan = {attributes: ["model_transform"] };
+    this.instance_VBO_plan = {attributes: ["model_transform", "material_index"] };
     this.group_transform = Mat4.identity();
     this.hint = "STATIC_DRAW";
     this.type = "TRIANGLES";
-    this.model_transforms = [];
+    this.instance_vars = [];
     this.instance_count = 0;
   }
-  update_matrices() {
-    if (!this.model_transforms.length)     // The user may specify no matrices for the single instance case.
-      this.model_transforms.push( Mat4.identity() );
-    this.instance_count = this.model_transforms.length;
-    Shape.build_VBO_plan (this.model_transforms, this.matrix_VBO_plan, this.buffer_hint, 1)
+  update_per_instance_buffer() {
+    if (!this.instance_vars.length)     // The user may specify no matrices for the single instance case.
+      this.instance_vars.push( { model_transform: Mat4.identity(), material_index: 0 } );
+    this.instance_count = this.instance_vars.length;
+    Shape.build_VBO_plan (this.instance_vars, this.instance_VBO_plan, this.buffer_hint, 1)
   }
   clear() {
-    this.model_transforms = [];
+    this.instance_vars = [];
     this.instance_count = 0;
   }
 }
@@ -887,7 +885,7 @@ export class Renderer extends Component {
     }
 
          // VBO_plan is { attributes, data, offsets, sizes, stride, buffer_hint, vertex_count, has_resized, version, divisor }
-    for( let VBO_plan of [ ...renderListItem.shape.VBO_plans, renderListItem.matrix_VBO_plan ] ) {
+    for( let VBO_plan of [ ...renderListItem.shape.VBO_plans, renderListItem.instance_VBO_plan ] ) {
 
       if( VBO_plan.version < 0 )
         throw "This VBO is blank somehow; build_VBO_plans() was never called for it.";

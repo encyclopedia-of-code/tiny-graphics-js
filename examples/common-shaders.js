@@ -158,7 +158,8 @@ export class Universal_Shader extends Shader {
       layout(location = 1) in vec3 normal;
       layout(location = 2) in vec2 texture_coord;
       ${this.has_instancing ? `
-              layout(location = 3) in mat4 model_transform;`
+              layout(location = 3) in mat4 model_transform;
+              layout(location = 7) in float material_index;`
               : ``}
 
       uniform float animation_time;
@@ -188,6 +189,7 @@ export class Universal_Shader extends Shader {
         VERTEX_POS = vec3(world_position);
         VERTEX_NORMAL = mat3(inverse(transpose(world_space))) * normal;
         VERTEX_TEXCOORD = texture_coord;
+        if (material_index > .5) gl_Position *= vec4(1.,.5,1.,1.);
       }`;
     }
     fragment_glsl_code () {         // ********* FRAGMENT SHADER *********

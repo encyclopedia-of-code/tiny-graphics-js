@@ -39,24 +39,25 @@ export class Instanced_Cubes_Demo extends Renderer {
                     new RenderListItem(this.state_water, this.shapes.ball, 0) ];
 
     for( let i=0; i<2; i++ ) {
-      items[i].model_transforms.push(
+      items[i].instance_vars.push(
         ...Array(1000).fill(0).map( (x,j) =>
-              Mat4.translation(... vec3(Math.random()* 2 - 1, 2*i+1,  Math.random()*2 - 1)
+              Mat4.translation(...vec3(Math.random()* 2 - 1, 2*i+1,  Math.random()*2 - 1)
                                   .times_pairwise(vec3(20, 2, 20))).times(Mat4.scale(.5,.5,.5)) )
-      );
+        .map( m => { return { model_transform: m, material_index: +(Math.random() < .5) } } ) );
       this.renderList.insert( items[i] );
     }
 
     for( let i=0; i<1000; i++) {
       const item = new RenderListItem(this.state_fire, this.shapes.cube, 0);
       item.hint = "STREAM_DRAW";
-      item.model_transforms.push(
-              Mat4.translation(... vec3(Math.random()* 2 - 1, 5,  Math.random()*2 - 1)
-                                  .times_pairwise(vec3(20, 2, 20))).times(Mat4.scale(.5,.5,.5)) )
+      item.instance_vars.push( { model_transform: 
+              Mat4.translation(...vec3(Math.random()* 2 - 1, 5,  Math.random()*2 - 1)
+                                  .times_pairwise(vec3(20, 2, 20))).times(Mat4.scale(.5,.5,.5))
+                              , material_index: +(Math.random() < .5) } );
       this.renderList.insert( item );
     }
 
-    this.renderList.traverse( (item) => item.update_matrices(), {prune: false} );
+    this.renderList.traverse( (item) => item.update_per_instance_buffer(), {prune: false} );
 
 }
 render_frame () {
@@ -73,12 +74,13 @@ render_frame () {
     for( let i=0; i<1000; i++) {
       const item = new RenderListItem(this.state_fire, this.shapes.cube, 0);
       item.hint = "STREAM_DRAW";
-      item.model_transforms.push(
-              Mat4.translation(... vec3(Math.random()* 2 - 1, 5,  Math.random()*2 - 1)
-                                  .times_pairwise(vec3(20, 2, 20))).times(Mat4.scale(.5,.5,.5)) )
+      item.instance_vars.push( { model_transform: 
+              Mat4.translation(...vec3(Math.random()* 2 - 1, 5,  Math.random()*2 - 1)
+                                  .times_pairwise(vec3(20, 2, 20))).times(Mat4.scale(.5,.5,.5))
+                              , material_index: +(Math.random() < .5) } );
       this.renderList.insert( item );
     }
-    this.renderList.get(this.state_fire, this.shapes.cube, 0).update_matrices();
+    this.renderList.get(this.state_fire, this.shapes.cube, 0).update_per_instance_buffer();
 
     this.renderList.traverse( (item) => this.draw( item ), {prune: true} );
   }
