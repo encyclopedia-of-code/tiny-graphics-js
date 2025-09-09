@@ -150,6 +150,7 @@ export class Universal_Shader extends Shader {
     shared_glsl_code () {           // ********* SHARED CODE, INCLUDED IN BOTH SHADERS *********
         return "#version 300 es " + `
                 precision mediump float;
+                precision mediump sampler2DArray;
     `;
     }
     vertex_glsl_code () {          // ********* VERTEX SHADER *********
@@ -159,7 +160,8 @@ export class Universal_Shader extends Shader {
       layout(location = 2) in vec2 texture_coord;
       ${this.has_instancing ? `
               layout(location = 3) in mat4 model_transform;
-              layout(location = 7) in float material_index;`
+              layout(location = 7) in vec4 color;
+              layout(location = 8) in float material_index;`
               : ``}
 
       uniform float animation_time;
@@ -175,6 +177,7 @@ export class Universal_Shader extends Shader {
       out vec3 VERTEX_POS;
       out vec3 VERTEX_NORMAL;
       out vec2 VERTEX_TEXCOORD;
+      out vec4 VERTEX_COLOR;
 
       void main() {
         ${this.has_instancing ? `
@@ -189,7 +192,7 @@ export class Universal_Shader extends Shader {
         VERTEX_POS = vec3(world_position);
         VERTEX_NORMAL = mat3(inverse(transpose(world_space))) * normal;
         VERTEX_TEXCOORD = texture_coord;
-        if (material_index > .5) gl_Position *= vec4(1.,.5,1.,1.);
+        VERTEX_COLOR = color;
       }`;
     }
     fragment_glsl_code () {         // ********* FRAGMENT SHADER *********
@@ -234,13 +237,15 @@ export class Universal_Shader extends Shader {
         vec4 specular;
         float smoothness;
       } mat;
+
       ${this.has_texture ? `
-              uniform sampler2D diffuse_texture;`
+              uniform sampler2DArray diffuse_texture;`
               : ``}
 
       in vec3 VERTEX_POS;
       in vec3 VERTEX_NORMAL;
       in vec2 VERTEX_TEXCOORD;
+      in vec4 VERTEX_COLOR;
 
       out vec4 frag_color;
 
@@ -293,7 +298,7 @@ export class Universal_Shader extends Shader {
       // ***** PHONG SHADING HAPPENS HERE: *****
       vec3 phong_model_lights( vec3 N, vec3 vertex_worldspace
                             ${this.has_texture ?
-                                    `, vec4 texture_color` : ``}
+                                    `, vec3 texture_color` : ``}
                             ) {
           vec3 E = normalize( camera_position.xyz - vertex_worldspace );
           vec3 result = vec3( 0.0 );
@@ -311,7 +316,7 @@ export class Universal_Shader extends Shader {
             float attenuation = 1.0 / (1.0 + lights[i].attenuation_factor * distance_to_light * distance_to_light );
 
             vec3 light_contribution = ${this.has_texture ?
-                                              `texture_color.xyz` : `vec3(1.,1.,1.)`}
+                                              `texture_color` : `vec3(1.,1.,1.)`}
                                                       * diffuse * lights[i].diffuse * mat.diffuse.xyz
                                                     + specular * lights[i].specular * mat.specular.xyz;
             light_contribution *= lights[i].color.xyz;
@@ -329,15 +334,19 @@ export class Universal_Shader extends Shader {
       void main() {
         ${this.has_texture ? `
                 // Compute an initial (ambient) color:
-                vec4 tex_color = texture( diffuse_texture, VERTEX_TEXCOORD );
-                frag_color = vec4( ( tex_color.xyz + mat.color.xyz ) * ambient, mat.color.w * tex_color.w );
+                vec4 tex_color = texture( diffuse_texture, vec3(VERTEX_TEXCOORD, 2) );
+//                vec4 tex_color = texture( diffuse_texture, VERTEX_TEXCOORD );
+                vec3 base_color = mix( tex_color.xyz, VERTEX_COLOR.xyz, .7);
+
                 // Compute the final color with contributions from lights:
-                frag_color.xyz += phong_model_lights( normalize( VERTEX_NORMAL ), VERTEX_POS, tex_color);
+                vec3 lighting = phong_model_lights( normalize( VERTEX_NORMAL ), VERTEX_POS, base_color );
+                frag_color = vec4(lighting * base_color, VERTEX_COLOR.w * tex_color.w);
+                frag_color = tex_color;
                 `
                 :
                 `
                 // Compute an initial (ambient) color:
-                frag_color = vec4( mat.color.xyz * ambient, mat.color.w );
+                frag_color = vec4( VERTEX_COLOR.xyz * ambient, VERTEX_COLOR.w );
                 // Compute the final color with contributions from lights:
                 frag_color.xyz += phong_model_lights( normalize( VERTEX_NORMAL ), VERTEX_POS );
                 `}

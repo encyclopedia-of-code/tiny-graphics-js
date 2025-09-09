@@ -349,11 +349,11 @@ export class Shader {
         for (const [name, sampler] of renderListItem.render_state.samplers.entries())
           if (sampler && sampler.ready) {
 
-            const current_sampler2D_index = renderer.uniform_addresses[name];
-            const previous_texture_offset = renderer.gpu_versions.get("Texture offset_"+current_sampler2D_index);
-            renderer.gpu_versions.set("Texture offset_"+current_sampler2D_index, offset);
-            if(previous_texture_offset != offset )
-              renderer.context.uniform1i (current_sampler2D_index, offset);
+            const sampler_location = renderer.uniform_addresses.get(this)[name];
+            const previous_offset_for_location = renderer.gpu_versions.get(sampler_location);
+            renderer.gpu_versions.set(sampler_location, offset);
+            if(previous_offset_for_location != offset )
+              renderer.context.uniform1i (sampler_location, offset);
             // For this draw, use the texture image from correct the GPU buffer:
             sampler.activate (renderer, offset);
             offset++;
@@ -367,7 +367,7 @@ export class Shader {
 };
 
 
-export class Texture {
+export class Texture_Old {
   // See description at https://github.com/encyclopedia-of-code/tiny-graphics-js/wiki/tiny-graphics.js#texture
   constructor (filename, min_filter = "LINEAR_MIPMAP_LINEAR") {
       Object.assign (this, {filename, min_filter});
@@ -718,7 +718,7 @@ export class RenderListItem {
     this.shape = shape;
     this.render_state = state;
     this.group_ID = group_ID;
-    this.instance_VBO_plan = {attributes: ["model_transform", "material_index"] };
+    this.instance_VBO_plan = {attributes: ["model_transform", "color", "material_index"] };
     this.group_transform = Mat4.identity();
     this.hint = "STATIC_DRAW";
     this.type = "TRIANGLES";
@@ -727,7 +727,7 @@ export class RenderListItem {
   }
   update_per_instance_buffer() {
     if (!this.instance_vars.length)     // The user may specify no matrices for the single instance case.
-      this.instance_vars.push( { model_transform: Mat4.identity(), material_index: 0 } );
+      this.instance_vars.push( { model_transform: Mat4.identity(), color: color(1,1,1,1),  material_index: 0 } );
     this.instance_count = this.instance_vars.length;
     Shape.build_VBO_plan (this.instance_vars, this.instance_VBO_plan, this.buffer_hint, 1)
   }
@@ -757,7 +757,6 @@ export class Renderer extends Component {
     this.textures = new Map();  // Texture -> texture buffer
     this.shadow_maps = new Map();  // Shadow_Map -> texture buffer
 
-    // FINISH: redefinition from Component
     if( this.state === undefined ) this.state = Object.create(null);
     Object.assign( this.state,
       { animate   : true,
@@ -1054,13 +1053,12 @@ export class UBO_Plan {
 
 
 
-export class GLTexture {
+export class Texture {
   constructor(opts = {}) {
     Object.assign(this, {
-      type: 'TEXTURE_2D', // 'TEXTURE_2D_ARRAY', 'TEXTURE_CUBE_MAP'
-      width: 1,
-      height: 1,
-      layers: 1,
+      type: 'TEXTURE_2D_ARRAY', // 'TEXTURE_2D', 'TEXTURE_CUBE_MAP'
+      width: 256,
+      height: 256,
       minFilter: 'LINEAR_MIPMAP_LINEAR',
       magFilter: 'LINEAR',
       wrapS: 'CLAMP_TO_EDGE',
@@ -1083,7 +1081,6 @@ export class GLTexture {
     ];
     this.ready = false;
     this.imageLayers = null;
-    this.texture = null;
     this.fbo = null;
 
     // Async load flag
@@ -1111,27 +1108,27 @@ export class GLTexture {
         remaining -= 1;
         if (remaining === 0) {
           this.ready = true;
-          // Optionally: trigger buffer upload here automatically
-          if(this._onready) this._onready();
+          // Optionally: trigger buffer upload here automatically via callback
         }
       };
       img.src = url;
     });
   }
 
-  // Expose a ready-callback setter if you want to handle "reload on ready"
-  onReady(cb) { this._onready = cb; }
-
   // Texture/FBO creation; call after .ready becomes true!
-  // For async images, you may want to call from an external place, or auto-upload above.
   copy_onto_graphics_card(renderer) {
     const gl = renderer.context;
     const type = gl[this.type];
 
-    // Handle fallback (single blue pixel) before images load
+    const existing = renderer.textures.get (this);
+    const texture_buffer  = existing ?? gl.createTexture();
+    renderer.textures.set (this, texture_buffer);
+
     if (!this.ready) {
-      if (!this.texture) this.texture = gl.createTexture();
-      gl.bindTexture(type, this.texture);
+      /*
+FINISH: Needed?
+      // Handle fallback (single blue pixel) before images load
+      gl.bindTexture(type, texture_buffer);
       if (type === gl.TEXTURE_2D)
         gl.texImage2D(type, 0, gl[this.internalFormat], 1, 1, 0, gl[this.format], gl[this.gl_type], new Uint8Array([0,0,255,255]));
       else if (type === gl.TEXTURE_CUBE_MAP) {
@@ -1140,18 +1137,22 @@ export class GLTexture {
       } else if (type === gl.TEXTURE_2D_ARRAY)
         gl.texImage3D(type, 0, gl[this.internalFormat], 1, 1, this.layers, 0, gl[this.format], gl[this.gl_type], null);
       this.ready = false; // stay not ready!
+      */
       return;
     }
 
-    if (!this.texture) this.texture = gl.createTexture();
-    gl.bindTexture(type, this.texture);
+    gl.bindTexture(type, texture_buffer);
 
-    // Common parameters
-    gl.texParameteri(type, gl.TEXTURE_MIN_FILTER, gl[this.minFilter]);
-    gl.texParameteri(type, gl.TEXTURE_MAG_FILTER, gl[this.magFilter]);
-    gl.texParameteri(type, gl.TEXTURE_WRAP_S, gl[this.wrapS]);
-    gl.texParameteri(type, gl.TEXTURE_WRAP_T, gl[this.wrapT]);
-    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+    if (!existing) {
+      test_rookie_mistake();
+      // Common parameters
+      gl.texParameteri(type, gl.TEXTURE_MIN_FILTER, gl[this.minFilter]);
+      gl.texParameteri(type, gl.TEXTURE_MAG_FILTER, gl[this.magFilter]);
+      gl.texParameteri(type, gl.TEXTURE_WRAP_S, gl[this.wrapS]);
+      gl.texParameteri(type, gl.TEXTURE_WRAP_T, gl[this.wrapT]);
+// FINISH:  Had to disable this since it's incompatible with 2D Texture Array.
+//      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+    }
 
     // Actual allocation/upload
     if (type === gl.TEXTURE_2D) {
@@ -1160,13 +1161,13 @@ export class GLTexture {
       else if (this.data)
         gl.texImage2D(type, 0, gl[this.internalFormat], this.width, this.height, 0, gl[this.format], gl[this.gl_type], this.data);
     } else if (type === gl.TEXTURE_2D_ARRAY) {
-      gl.texImage3D(type, 0, gl[this.internalFormat], this.width, this.height, this.layers, 0, gl[this.format], gl[this.gl_type], null);
-      for (let i=0; i<this.layers; ++i) {
+      gl.texImage3D(type, 0, gl[this.internalFormat], this.width, this.height, this.imageLayers.length, 0, gl[this.format], gl[this.gl_type], null);
+      for (let i=0; i<this.imageLayers.length; ++i) {
         if(this.imageLayers && this.imageLayers[i]) {
           // For Image, must draw to canvas and extract pixels (WebGL2 can't upload HTMLImageElement directly to a layer)
-          const canvas = document.createElement("canvas");
-          canvas.width = this.width; canvas.height = this.height;
-          const ctx = canvas.getContext("2d");
+          this.canvas ||= document.createElement("canvas");
+          this.canvas.width = this.width; this.canvas.height = this.height;
+          const ctx = this.canvas.getContext("2d", { willReadFrequently: true });
           ctx.drawImage(this.imageLayers[i], 0, 0, this.width, this.height);
           const pixels = ctx.getImageData(0,0,this.width,this.height).data;
           gl.texSubImage3D(type, 0, 0, 0, i, this.width, this.height, 1, gl[this.format], gl[this.gl_type], pixels);
@@ -1183,20 +1184,30 @@ export class GLTexture {
     }
 
     // Mipmaps if power-of-2 image(s)
-    const pot = GLTexture._isPowerOfTwo(this.width) && GLTexture._isPowerOfTwo(this.height);
+    const pot = Texture._isPowerOfTwo(this.width) && Texture._isPowerOfTwo(this.height);
     if(this.minFilter.includes('MIPMAP') && pot)
       gl.generateMipmap(type);
 
-    // [FBO handling, as before, omitted for brevity but just as previous]
-    // -- Insert your framebuffer logic from previous answer here --
-    this.ready = true;
+    // FBO setup, if requested
+    if (this.framebuffer) {
+      throw "Change this.fbo to renderer storage"
+      if (!this.fbo) this.fbo = gl.createFramebuffer();
+      gl.bindFramebuffer(gl.FRAMEBUFFER, this.fbo);
+      if (this.kind === 'flat')
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, texture_buffer, 0);
+      if (this.kind === 'cube')
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_CUBE_MAP_POSITIVE_X, texture_buffer, 0);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    }
+    gl.bindTexture(type, null);
   }
 
   // Update one layer in-place (for 2D array textures, with HTMLImageElement or Uint8Array etc)
   update_array_layer(renderer, layer, img_or_array) {
     const gl = renderer.context;
     const type = gl[this.type];
-    gl.bindTexture(type, this.texture);
+    const texture_buffer = renderer.textures.get (this) || this.copy_onto_graphics_card (renderer);
+    gl.bindTexture(type, texture_buffer);
     let src = img_or_array;
     if(img_or_array instanceof HTMLImageElement) {
       // Convert to pixel array
@@ -1213,8 +1224,17 @@ export class GLTexture {
     if (!this.ready) return;
     const gl = renderer.context;
     const type = gl[this.type];
-    gl.activeTexture(gl.TEXTURE0 + textureUnit);
-    gl.bindTexture(type, this.texture);
+
+    const texture_buffer = renderer.textures.get (this) || this.copy_onto_graphics_card (renderer);
+    const previous_texture_unit = renderer.gpu_versions.get("Texture unit");
+    const field_ID = gl.TEXTURE0 + textureUnit;
+    renderer.gpu_versions.set("Texture unit", field_ID);
+    const previous_buffer = renderer.gpu_versions.get("Texture buffer pointer");
+    renderer.gpu_versions.set("Texture buffer pointer", texture_buffer);
+    if(previous_texture_unit != field_ID || previous_buffer != texture_buffer) {
+      gl.activeTexture (field_ID);
+      gl.bindTexture (type, texture_buffer);
+    }
   }
 
   // For rendering into a FBO layer/face
@@ -1222,6 +1242,7 @@ export class GLTexture {
     if (!this.framebuffer) throw new Error("Texture is not a framebuffer target.");
     const gl = renderer.context;
     const type = gl[this.type];
+    const texture_buffer = renderer.textures.get (this) || this.copy_onto_graphics_card (renderer);
     const attachmentEnum = gl[this.attachment] || gl.COLOR_ATTACHMENT0;
     const target_layer = opts.target_layer || 0;
     const cube_face = opts.cube_face || 0; // 0 - 5; default POS_X
@@ -1229,9 +1250,9 @@ export class GLTexture {
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.fbo);
 
     if (type === gl.TEXTURE_2D_ARRAY) {
-      gl.framebufferTextureLayer(gl.FRAMEBUFFER, attachmentEnum, this.texture, 0, target_layer);
+      gl.framebufferTextureLayer(gl.FRAMEBUFFER, attachmentEnum, texture_buffer, 0, target_layer);
     } else if (type === gl.TEXTURE_CUBE_MAP) {
-      gl.framebufferTexture2D(gl.FRAMEBUFFER, attachmentEnum, gl[this.cubeFaces[cube_face]], this.texture, 0);
+      gl.framebufferTexture2D(gl.FRAMEBUFFER, attachmentEnum, gl[this.cubeFaces[cube_face]], texture_buffer, 0);
     }
 
     gl.viewport(0, 0, this.width, this.height);

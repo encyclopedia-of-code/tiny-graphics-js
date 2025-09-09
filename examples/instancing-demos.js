@@ -9,7 +9,9 @@ export class Instanced_Cubes_Demo extends Renderer {
 
     this.textured_shader = new defs.Universal_Shader (LightArray.NUM_LIGHTS, {has_shadows: false, has_texture: true});
 
-    this.state.samplers = new Map([ ["diffuse_texture", new Texture( "assets/rgb.jpg" )] ]);
+    this.state.samplers = new Map([ ["diffuse_texture", new Texture( 
+        {urls: ["assets/earth.gif", "assets/rgb.jpg", "assets/stars.png", "assets/grid.png", "assets/text.png"] } 
+      )] ]);
 
     this.state.shader = new defs.Universal_Shader (LightArray.NUM_LIGHTS, {has_shadows: false, has_texture: true});
 
@@ -43,17 +45,17 @@ export class Instanced_Cubes_Demo extends Renderer {
         ...Array(1000).fill(0).map( (x,j) =>
               Mat4.translation(...vec3(Math.random()* 2 - 1, 2*i+1,  Math.random()*2 - 1)
                                   .times_pairwise(vec3(20, 2, 20))).times(Mat4.scale(.5,.5,.5)) )
-        .map( m => { return { model_transform: m, material_index: +(Math.random() < .5) } } ) );
+        .map( m => { return { model_transform: m, color: vec4(.9,.9,.9,1).randomized(.5), material_index: +(Math.random() < .5) } } ) );
       this.renderList.insert( items[i] );
     }
 
     for( let i=0; i<1000; i++) {
       const item = new RenderListItem(this.state_fire, this.shapes.cube, 0);
       item.hint = "STREAM_DRAW";
-      item.instance_vars.push( { model_transform: 
+      item.instance_vars.push( { model_transform:
               Mat4.translation(...vec3(Math.random()* 2 - 1, 5,  Math.random()*2 - 1)
                                   .times_pairwise(vec3(20, 2, 20))).times(Mat4.scale(.5,.5,.5))
-                              , material_index: +(Math.random() < .5) } );
+                              , color: vec4(.7,.7,.7,1).randomized(.5), material_index: +(Math.random() < .5) } );
       this.renderList.insert( item );
     }
 
@@ -74,10 +76,10 @@ render_frame () {
     for( let i=0; i<1000; i++) {
       const item = new RenderListItem(this.state_fire, this.shapes.cube, 0);
       item.hint = "STREAM_DRAW";
-      item.instance_vars.push( { model_transform: 
+      item.instance_vars.push( { model_transform:
               Mat4.translation(...vec3(Math.random()* 2 - 1, 5,  Math.random()*2 - 1)
                                   .times_pairwise(vec3(20, 2, 20))).times(Mat4.scale(.5,.5,.5))
-                              , material_index: +(Math.random() < .5) } );
+                              , color: vec4(.5,.5,.5,1).randomized(.5), material_index: +(Math.random() < .5) } );
       this.renderList.insert( item );
     }
     this.renderList.get(this.state_fire, this.shapes.cube, 0).update_per_instance_buffer();
