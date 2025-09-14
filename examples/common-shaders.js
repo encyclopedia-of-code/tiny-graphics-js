@@ -3,6 +3,200 @@ import { Vector, Vector3, vec, vec3, vec4, color, Matrix, Mat4, Shape, Shader, C
 
 /* Firefox bug: Won't run unless Material UBO is removed from shader. Even simplifying the UBO to one vector isn't enough. */
 
+
+export class PBR_Shader extends Shader {
+    constructor (num_lights = 2, num_materials = 5, options) {
+      super();
+      const defaults = { has_instancing: true, has_textures: true };
+      Object.assign (this, defaults, options, {num_lights, num_materials});
+    }
+    update_GPU (renderer, renderListItem) {
+      const gpu_addresses = renderer.uniform_addresses.get(this);
+      const state = renderListItem.render_state;
+
+      if( this.previous_animation_time != state.animation_time ) {
+        this.previous_animation_time = state.animation_time;
+        renderer.context.uniform1f (gpu_addresses.animation_time, state.animation_time / 1000);
+      }
+      if( !this.previous_group_matrix || !this.previous_group_matrix.equals(renderListItem.group_transform) ) {
+        if( !this.previous_group_matrix ) this.previous_group_matrix = Mat4.of(...renderListItem.group_transform);
+        else this.previous_group_matrix.set(renderListItem.group_transform);
+        renderer.context.uniformMatrix4fv (gpu_addresses.group_transform, true, Matrix.flatten_2D_to_1D (renderListItem.group_transform));
+      }
+    }
+    shared_glsl_code () {           // ********* SHARED CODE, INCLUDED IN BOTH SHADERS *********
+        return "#version 300 es " + `
+                precision mediump float;
+                precision mediump sampler2DArray;
+    `;
+    }
+    vertex_glsl_code () {          // ********* VERTEX SHADER *********
+        return this.shared_glsl_code () + `
+      layout(location = 0) in vec3 position; // Position is expressed in object coordinates
+      layout(location = 1) in vec3 normal;
+      layout(location = 2) in vec2 texture_coord;
+      ${this.has_instancing ? `
+              layout(location = 3) in mat4 model_transform;
+              layout(location = 7) in vec3 color;
+              layout(location = 8) in float material_index;`
+              : ``}
+
+      uniform float animation_time;
+      uniform mat4 group_transform;
+
+      uniform Camera
+      {
+        mat4 camera_inverse;
+        mat4 projection;
+        vec4 camera_position;
+      };
+
+      out vec3 VERTEX_POS;
+      out vec3 VERTEX_NORMAL;
+      out vec2 VERTEX_TEXCOORD;
+      out vec3 VERTEX_COLOR;
+      out float VERTEX_MATERIAL_INDEX;
+
+      void main() {
+        ${this.has_instancing ? `
+                mat4 world_space = group_transform * model_transform;`
+                :
+                `mat4 world_space = group_transform;`}
+
+        vec4 world_position = world_space * vec4( position, 1.0 );
+        gl_Position = projection * camera_inverse * world_position;
+        VERTEX_POS = vec3(world_position);
+        VERTEX_NORMAL = mat3(inverse(transpose(world_space))) * normal;
+        VERTEX_TEXCOORD = texture_coord;
+        VERTEX_COLOR = color;
+        VERTEX_COLOR = vec3(material_index);
+        VERTEX_MATERIAL_INDEX = material_index;
+      }`;
+    }
+    fragment_glsl_code () {         // ********* FRAGMENT SHADER *********
+        return this.shared_glsl_code () + `
+      uniform Camera {
+        mat4 camera_inverse;
+        mat4 projection;
+        vec4 camera_position;
+      };
+
+      struct Light {
+        vec4 direction_or_position;
+        vec4 color;
+        float diffuse;
+        float specular;
+        float attenuation_factor;
+        bool casts_shadow;
+      };
+      const int N_LIGHTS = ${this.num_lights};
+
+      uniform LightArray {
+        float ambient;
+        Light lights[N_LIGHTS];
+      };
+
+      struct Material {
+        float albedo_layer;
+        float roughness_layer;
+        float metallicity_layer;
+        float ao_layer;
+        float normal_layer;
+        vec3 emissivity;
+      };
+      const int N_MATERIALS = ${this.num_materials};
+      uniform Materials {
+        Material materials[N_MATERIALS];
+      };
+
+      ${this.has_textures ? `
+              uniform sampler2DArray texture_array;`
+              : ``}
+
+      in vec3 VERTEX_POS;
+      in vec3 VERTEX_NORMAL;
+      in vec2 VERTEX_TEXCOORD;
+      in vec3 VERTEX_COLOR;
+      in float VERTEX_MATERIAL_INDEX;
+
+      out vec4 frag_color;
+
+      const float PI = 3.1415926535;
+
+      vec3 PBRLight(
+          vec3 n, vec3 v, vec3 l,
+          vec3 albedo,
+          float metallic,
+          float roughness,
+          vec3 F0,
+          vec3 intensity
+      ) {
+          vec3 h = normalize(v + l);
+          float nDotL = max(dot(n, l), 0.0);
+          float nDotV = max(dot(n, v), 0.0);
+          float nDotH = max(dot(n, h), 0.0);
+          float vDotH = max(dot(v, h), 0.0);
+
+          float alpha2 = roughness * roughness * roughness * roughness;
+          float denom = (nDotH * nDotH) * (alpha2 - 1.0) + 1.0;
+          float D = alpha2 / (PI * denom * denom);
+
+          float k = pow(roughness + 1.0, 2.0) / 8.0;
+          float G_V = nDotV / (nDotV * (1.0 - k) + k);
+          float G_L = nDotL / (nDotL * (1.0 - k) + k);
+          float G = G_V * G_L;
+
+          vec3 F = F0 + (1.0 - F0) * pow(clamp(1.0 - vDotH, 0.0, 1.0), 5.0);
+
+          vec3 kS = F;
+          vec3 kD = (1.0 - kS) * (1.0 - metallic);
+
+          vec3 specular = (D * F * G) / max(4.0 * nDotV * nDotL, 0.001);
+          vec3 diffuse = kD * albedo / PI;
+
+          return (diffuse + specular) * intensity * nDotL;
+      }
+
+      void main() {
+          vec3 n = normalize(VERTEX_NORMAL);
+          vec3 v = normalize(camera_position.xyz - VERTEX_POS);
+
+          Material mat = materials[int(VERTEX_MATERIAL_INDEX + .5)];
+          vec4 albedo_tex = texture(texture_array, vec3(VERTEX_TEXCOORD, mat.albedo_layer));
+          vec3 albedo = mix(albedo_tex.rgb, VERTEX_COLOR, 0.3); // albedo_tex.rgb * VERTEX_COLOR; 
+          albedo = pow(albedo, vec3(2.2));
+          float metallic = texture(texture_array, vec3(VERTEX_TEXCOORD, mat.metallicity_layer)).r;
+          float roughness = texture(texture_array, vec3(VERTEX_TEXCOORD, mat.roughness_layer)).r;
+          float ao = texture(texture_array, vec3(VERTEX_TEXCOORD, mat.ao_layer)).r;
+          ao = clamp(ao, 0.0, 1.0);
+
+          // Calculate base reflectance F0
+          vec3 F0 = mix(vec3(0.04), albedo, metallic);
+
+          vec3 totalLight = vec3(0.0);
+          for (int i = 0; i < N_LIGHTS; i++) {
+              vec3 l = lights[i].direction_or_position.xyz - lights[i].direction_or_position.w * VERTEX_POS;
+              float dist = length(l);
+              l = normalize(l);
+              vec3 intensity = lights[i].color.xyz * lights[i].diffuse;
+              if (lights[i].direction_or_position.w > 0.5)
+                  intensity /= (1.0 + lights[i].attenuation_factor * dist * dist);
+
+              totalLight += PBRLight(n, v, l, ao * albedo, metallic, roughness, F0, intensity) + mat.emissivity;
+          }
+
+          // Optional: apply tone mapping and gamma correction here, or leave for later
+          vec3 tone_mapped = totalLight / (totalLight + vec3(1.0)); // simple Reinhard operator
+          vec3 gamma_corrected = pow(tone_mapped, vec3(1.0 / 2.2));
+
+          frag_color = vec4(gamma_corrected, albedo_tex.a);
+
+          // Add wireframe overlay if needed using your existing code
+      }`
+    }
+};
+
+
 export class Shader_Without_UBOs  extends Shader {
     constructor (num_lights = 1, options) {
       super();

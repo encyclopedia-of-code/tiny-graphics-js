@@ -194,12 +194,27 @@ export class Shadow_Light {
     }
   };
 
-export class Material extends UBO_Plan {
-    init(fields = {}) {
-      this.fields = Object.assign(Material.default_values(), fields);
+export class Materials extends UBO_Plan {
+    static NUM_MATERIALS = 2;
+    init(fields = []) {
+      this.count = 0;
+      this.pbr_layer_count = 0;
+      this.fields = { materials: fields || Array(Materials.NUM_MATERIALS) };
     }
-    static default_values () {
+    insert(material_fields = {}) {
+      this.fields.materials[this.count] = Object.assign( Materials.default_values(this.pbr_layer_count), material_fields );
+      this.count++;
+      this.pbr_layer_count += 6;
+    }
+    static default_values (pbr_offset) {
       return {
+              albedo_layer: pbr_offset + 0,
+              roughness_layer: pbr_offset + 1,
+              metallicity_layer: pbr_offset + 2,
+              ao_layer: pbr_offset + 3,
+              normal_layer: pbr_offset + 4,
+              height_layer: pbr_offset + 5,
+              emissivity: vec3(0,0,0),
               color: vec4 (1.0, 1.0, 1.0, 1.0),
               diffuse: vec3(1.0, 1.0, 1.0),
               specular: vec3 (1.0, 1.0, 1.0),

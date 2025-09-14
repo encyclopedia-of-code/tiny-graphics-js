@@ -1,32 +1,43 @@
 import * as defs from './common.js';
 import { vec3, vec4, color, Mat4, Texture, RenderListItem, Renderer } from './common.js';
-import { Camera, LightArray, Material } from './common.js';
+import { Camera, LightArray, Materials } from './common.js';
 
 export class Instanced_Cubes_Demo extends Renderer {
   init () {
     super.init();
     this.shapes = {cube: new defs.Cube(), ball: new defs.Subdivision_Sphere(3) };
 
-    this.textured_shader = new defs.Universal_Shader (LightArray.NUM_LIGHTS, {has_shadows: false, has_texture: true});
+    function blender_pbr_filenames(name) {
+      return ["albedo", "roughness", "metallic", "ao", "normal-ogl", "height"]
+          .map(s => "assets/" + name + "-bl/" + name + "_" + s + ".png");
+    }
 
-    this.state.samplers = new Map([ ["diffuse_texture", new Texture( 
-        {urls: ["assets/earth.gif", "assets/rgb.jpg", "assets/stars.png", "assets/grid.png", "assets/text.png"] } 
+    this.state.samplers = new Map([ ["diffuse_texture", new Texture(
+        {urls: [ ...blender_pbr_filenames("dark-wood-stain"),
+                 ...blender_pbr_filenames("ash-tree-bark"),
+                 ...blender_pbr_filenames("older-padded-leather"),
+                 ...blender_pbr_filenames("red-scifi-metal"),
+          "assets/rgb.jpg", "assets/stars.png", "assets/grid.png", "assets/text.png"] }
       )] ]);
 
-    this.state.shader = new defs.Universal_Shader (LightArray.NUM_LIGHTS, {has_shadows: false, has_texture: true});
+    this.state.shader = new defs.PBR_Shader (LightArray.NUM_LIGHTS, 5, {has_shadows: false, has_textures: true});
 
-    this.fire = new Material({ color: vec4(0.1, 0.1, 0.1, 1.0) });
-    this.water = new Material({ color: vec4(0.0, 0.5, 0.5, 1.0) });
+//    this.fire = new Material({ albedo_layer: 6, color: vec4(0.1, 0.1, 0.1, 1.0) });
+//    this.water = new Material({ albedo_layer: 0, color: vec4(0.0, 0.5, 0.5, 1.0) });
 
-
-
+    this.state.materials = new Materials();
+    this.state.materials.insert();
+    this.state.materials.insert();
+    this.state.materials.insert();
+    this.state.materials.insert();
+    this.state.materials.insert();
 
     this.state.lightArray =
          new defs.LightArray({ambient: .1, lights:[
-           {direction_or_position: vec4(0.0, 10.0, 0.0, 1.0),
-             color: vec3(1.0, 0.0, 0.0), diffuse: 0.5, specular: 1.0, attenuation_factor: 0.001},
+           {direction_or_position: vec4(-3.0, 10.0, 0.0, 0.0),
+             color: vec3(1.0, 0.7, 0.7), diffuse: 1.0, specular: 1.0, attenuation_factor: 0.00001},
            {direction_or_position: vec4(5.0, 10.0, 0.0, 0.0),
-             color: vec3(1.0, 1.0, 1.0), diffuse: 0.5, specular: 1.0, attenuation_factor: 0.001}
+             color: vec3(1.0, 1.0, 1.0), diffuse: 1.0, specular: 1.0, attenuation_factor: 0.00001}
          ]});
 
   //  this.state_fire = { ...this.state, material: this.fire };
@@ -34,28 +45,32 @@ export class Instanced_Cubes_Demo extends Renderer {
 
      // TODO: this.states = {};  this.state.fire = etc..
 
-     this.state_fire  = Object.assign( Object.create( this.state ), { material: this.fire } );
-     this.state_water = Object.assign( Object.create( this.state ), { material: this.water } );
+     this.state_pass0  = Object.assign( Object.create( this.state ) );
 
-    const items = [ new RenderListItem(this.state_water, this.shapes.cube, 0),
-                    new RenderListItem(this.state_water, this.shapes.ball, 0) ];
+//     this.state_fire  = Object.assign( Object.create( this.state ), { material: this.fire } );
+//     this.state_water = Object.assign( Object.create( this.state ), { material: this.water } );
+
+    const items = [ new RenderListItem(this.state_pass0, this.shapes.cube, 0),
+                    new RenderListItem(this.state_pass0, this.shapes.ball, 0) ];
 
     for( let i=0; i<2; i++ ) {
       items[i].instance_vars.push(
         ...Array(1000).fill(0).map( (x,j) =>
               Mat4.translation(...vec3(Math.random()* 2 - 1, 2*i+1,  Math.random()*2 - 1)
-                                  .times_pairwise(vec3(20, 2, 20))).times(Mat4.scale(.5,.5,.5)) )
-        .map( m => { return { model_transform: m, color: vec4(.9,.9,.9,1).randomized(.5), material_index: +(Math.random() < .5) } } ) );
+                                  .times_pairwise(vec3(20, 2, 20)))
+              .times(Mat4.rotation( Math.PI, ...defs.unsafe3( 0,0,0 ).randomized(1).normalized() ))
+              .times(Mat4.scale(.5,.5,.5)) )
+        .map( (m,j) => { return { model_transform: m, color: vec3(.9,.9,.9).randomized(.5), material_index: j%5 } } ) );
       this.renderList.insert( items[i] );
     }
 
     for( let i=0; i<1000; i++) {
-      const item = new RenderListItem(this.state_fire, this.shapes.cube, 0);
+      const item = new RenderListItem(this.state_pass0, this.shapes.cube, 1);
       item.hint = "STREAM_DRAW";
       item.instance_vars.push( { model_transform:
               Mat4.translation(...vec3(Math.random()* 2 - 1, 5,  Math.random()*2 - 1)
                                   .times_pairwise(vec3(20, 2, 20))).times(Mat4.scale(.5,.5,.5))
-                              , color: vec4(.7,.7,.7,1).randomized(.5), material_index: +(Math.random() < .5) } );
+                              , color: vec3(.7,.7,.7).randomized(.5), material_index: +(Math.random() < .5) } );
       this.renderList.insert( item );
     }
 
@@ -72,17 +87,17 @@ render_frame () {
       this.animated_children.push( this.controls );
     }
 
-    this.renderList.get(this.state_fire, this.shapes.cube, 0).clear();
+    this.renderList.get(this.state_pass0, this.shapes.cube, 1).clear();
     for( let i=0; i<1000; i++) {
-      const item = new RenderListItem(this.state_fire, this.shapes.cube, 0);
+      const item = new RenderListItem(this.state_pass0, this.shapes.cube, 1);
       item.hint = "STREAM_DRAW";
       item.instance_vars.push( { model_transform:
               Mat4.translation(...vec3(Math.random()* 2 - 1, 5,  Math.random()*2 - 1)
                                   .times_pairwise(vec3(20, 2, 20))).times(Mat4.scale(.5,.5,.5))
-                              , color: vec4(.5,.5,.5,1).randomized(.5), material_index: +(Math.random() < .5) } );
+                              , color: vec3(.5,.5,.5).randomized(.5), material_index: +(Math.random() < .5) } );
       this.renderList.insert( item );
     }
-    this.renderList.get(this.state_fire, this.shapes.cube, 0).update_per_instance_buffer();
+    this.renderList.get(this.state_pass0, this.shapes.cube, 1).update_per_instance_buffer();
 
     this.renderList.traverse( (item) => this.draw( item ), {prune: true} );
   }
