@@ -37,10 +37,14 @@ export class Square extends Shape {
       init () {
           // Specify the 4 square corner locations, and match those up with normal vectors.
           // Arrange the vertices into a square shape in texture space too.
-          this.vertices[0] = { position: vec3 (-1, -1, 0), normal: vec3 (0, 0, 1), texture_coord: vec2 (0, 0) };
-          this.vertices[1] = { position: vec3 ( 1, -1, 0), normal: vec3 (0, 0, 1), texture_coord: vec2 (1, 0) };
-          this.vertices[2] = { position: vec3 (-1,  1, 0), normal: vec3 (0, 0, 1), texture_coord: vec2 (0, 1) };
-          this.vertices[3] = { position: vec3 ( 1,  1, 0), normal: vec3 (0, 0, 1), texture_coord: vec2 (1, 1) };
+          this.vertices[0] = { position: vec3 (-1, -1, 0), normal: vec3 (0, 0, 1), tangent: vec3 (1, 0, 0),
+                               texture_coord: vec2 (0, 0) };
+          this.vertices[1] = { position: vec3 ( 1, -1, 0), normal: vec3 (0, 0, 1), tangent: vec3 (1, 0, 0),
+                               texture_coord: vec2 (1, 0) };
+          this.vertices[2] = { position: vec3 (-1,  1, 0), normal: vec3 (0, 0, 1), tangent: vec3 (1, 0, 0),
+                               texture_coord: vec2 (0, 1) };
+          this.vertices[3] = { position: vec3 ( 1,  1, 0), normal: vec3 (0, 0, 1), tangent: vec3 (1, 0, 0),
+                               texture_coord: vec2 (1, 1) };
 
           // Use two triangles this time, indexing into four distinct vertices:
           this.indices.push (0, 1, 2, 1, 3, 2);
@@ -165,6 +169,7 @@ export class Subdivision_Sphere extends Shape {
             v.position.normalize();
             // Each point has a normal vector that simply goes to the point from the origin:
             v.normal = vec3( ...v.position );
+            v.tangent = v.normal.cross( vec3(0,1,0) ).normalized();
 
             // Textures are tricky.  A Subdivision sphere has no straight seams to which image
             // edges in UV space can be mapped.  The only way to avoid artifacts is to smoothly
@@ -173,7 +178,9 @@ export class Subdivision_Sphere extends Shape {
             v.texture_coord = vec2( 0.5 - Math.atan2 (v.position[ 2 ], v.position[ 0 ]) / (2 * Math.PI),
                                     0.5 + Math.asin (v.position[ 1 ]) / Math.PI);
           }
-
+          this.fix_seam();
+      }
+      fix_seam() {
           // Even with 1 and 0 mapping to the same texture coordinate, the shader doesn't
           // know it and will still try to interpolate any triangles that straddle the image edge back across the
           // whole image, creating a seam. Fix any such edges by duplicating vertices with offset UV so that all triangles stick to one side of the image.
@@ -188,6 +195,7 @@ export class Subdivision_Sphere extends Shape {
                           const new_vertex = {
                               position: v[p].position.copy(),
                               normal: v[p].normal.copy(),
+                              tangent: v[p].tangent.copy(),
                               texture_coord: v[p].texture_coord.plus(vec(1,0))
                           };
                           this.indices[idx] = this.vertices.length;

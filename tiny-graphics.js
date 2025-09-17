@@ -100,8 +100,9 @@ export class Shape {
           for (let v of dummy_instance.vertices) {
             const inverse_transpose = Mat4.inverse( points_transform.transposed() );
             const position = points_transform .times (v.position.to4(1)).to3();
-            const normal   = inverse_transpose.times (v.normal  .to4(1)).to3();
-            recipient.vertices.push( Object.assign( { ...v, position, normal } ) );
+            const tangent  = points_transform .times (v.tangent .to4(0)).to3();
+            const normal   = inverse_transpose.times (v.normal  .to4(0)).to3();
+            recipient.vertices.push( Object.assign( { ...v, position, tangent, normal } ) );
           }
       }
       subdivide(count) {

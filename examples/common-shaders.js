@@ -34,11 +34,12 @@ export class PBR_Shader extends Shader {
         return this.shared_glsl_code () + `
       layout(location = 0) in vec3 position; // Position is expressed in object coordinates
       layout(location = 1) in vec3 normal;
-      layout(location = 2) in vec2 texture_coord;
+      layout(location = 2) in vec3 tangent;
+      layout(location = 3) in vec2 texture_coord;
       ${this.has_instancing ? `
-              layout(location = 3) in mat4 model_transform;
-              layout(location = 7) in vec3 color;
-              layout(location = 8) in float material_index;`
+              layout(location = 4) in mat4 model_transform;
+              layout(location = 8) in vec3 color;
+              layout(location = 9) in float material_index;`
               : ``}
 
       uniform float animation_time;
@@ -53,6 +54,8 @@ export class PBR_Shader extends Shader {
 
       out vec3 VERTEX_POS;
       out vec3 VERTEX_NORMAL;
+      out vec3 VERTEX_TANGENT;
+      out vec3 VERTEX_BITANGENT;
       out vec2 VERTEX_TEXCOORD;
       out vec3 VERTEX_COLOR;
       out float VERTEX_MATERIAL_INDEX;
@@ -67,9 +70,10 @@ export class PBR_Shader extends Shader {
         gl_Position = projection * camera_inverse * world_position;
         VERTEX_POS = vec3(world_position);
         VERTEX_NORMAL = mat3(inverse(transpose(world_space))) * normal;
-        VERTEX_TEXCOORD = texture_coord;
-        VERTEX_COLOR = color;
-        VERTEX_COLOR = vec3(material_index);
+        VERTEX_TANGENT = mat3(world_space) * tangent;
+        VERTEX_BITANGENT = cross( VERTEX_NORMAL, VERTEX_TANGENT);
+        VERTEX_TEXCOORD = texture_coord * vec2(1,-1) + vec2(0,1);
+        VERTEX_COLOR = clamp( color, 0., 1.);
         VERTEX_MATERIAL_INDEX = material_index;
       }`;
     }
@@ -115,6 +119,8 @@ export class PBR_Shader extends Shader {
 
       in vec3 VERTEX_POS;
       in vec3 VERTEX_NORMAL;
+      in vec3 VERTEX_TANGENT;
+      in vec3 VERTEX_BITANGENT;
       in vec2 VERTEX_TEXCOORD;
       in vec3 VERTEX_COLOR;
       in float VERTEX_MATERIAL_INDEX;
@@ -163,12 +169,16 @@ export class PBR_Shader extends Shader {
 
           Material mat = materials[int(VERTEX_MATERIAL_INDEX + .5)];
           vec4 albedo_tex = texture(texture_array, vec3(VERTEX_TEXCOORD, mat.albedo_layer));
-          vec3 albedo = mix(albedo_tex.rgb, VERTEX_COLOR, 0.3); // albedo_tex.rgb * VERTEX_COLOR; 
+          vec3 albedo = mix(albedo_tex.rgb, VERTEX_COLOR, 0.1); // albedo_tex.rgb * VERTEX_COLOR;
           albedo = pow(albedo, vec3(2.2));
           float metallic = texture(texture_array, vec3(VERTEX_TEXCOORD, mat.metallicity_layer)).r;
           float roughness = texture(texture_array, vec3(VERTEX_TEXCOORD, mat.roughness_layer)).r;
           float ao = texture(texture_array, vec3(VERTEX_TEXCOORD, mat.ao_layer)).r;
           ao = clamp(ao, 0.0, 1.0);
+          vec3 normalmap_value = texture(texture_array, vec3(VERTEX_TEXCOORD, mat.normal_layer)).rgb;
+          normalmap_value = normalmap_value * 2.0 - 1.0;
+          mat3 TBN = mat3(normalize(VERTEX_TANGENT), normalize(VERTEX_BITANGENT), n);
+          vec3 worldNormal = normalize(TBN * normalmap_value);
 
           // Calculate base reflectance F0
           vec3 F0 = mix(vec3(0.04), albedo, metallic);
@@ -182,14 +192,16 @@ export class PBR_Shader extends Shader {
               if (lights[i].direction_or_position.w > 0.5)
                   intensity /= (1.0 + lights[i].attenuation_factor * dist * dist);
 
-              totalLight += PBRLight(n, v, l, ao * albedo, metallic, roughness, F0, intensity) + mat.emissivity;
+              totalLight += PBRLight(worldNormal, v, l, ao * albedo, metallic, roughness, F0, intensity) + mat.emissivity;
           }
 
           // Optional: apply tone mapping and gamma correction here, or leave for later
           vec3 tone_mapped = totalLight / (totalLight + vec3(1.0)); // simple Reinhard operator
           vec3 gamma_corrected = pow(tone_mapped, vec3(1.0 / 2.2));
 
+          //frag_color = vec4(albedo, albedo_tex.a);
           frag_color = vec4(gamma_corrected, albedo_tex.a);
+          //frag_color = vec4(worldNormal, albedo_tex.a);
 
           // Add wireframe overlay if needed using your existing code
       }`
