@@ -206,7 +206,7 @@ export class Materials extends UBO_Plan {
       this.count++;
       this.pbr_layer_count += 6;
     }
-    static default_values (pbr_offset) {
+    static default_values (pbr_offset=0) {
       return {
               albedo_layer: pbr_offset + 0,
               roughness_layer: pbr_offset + 1,
