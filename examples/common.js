@@ -195,26 +195,44 @@ export class Shadow_Light {
   };
 
 export class Materials extends UBO_Plan {
-    static NUM_MATERIALS = 2;
-    init(fields = []) {
-      this.count = 0;
-      this.pbr_layer_count = 0;
-      this.fields = { materials: fields || Array(Materials.NUM_MATERIALS) };
+    static NUM_MATERIALS = 10;
+    static TEXTURE_LAYERS_PER_MATERIAL = 6;
+    init(texture_array, fields) {
+      this.texture_array = texture_array;
+      this.fields = { materials: fields || Array(Materials.NUM_MATERIALS).fill(0).map( (x,i) => Materials.default_values(i) ) };
     }
-    insert(material_fields = {}) {
-      this.fields.materials[this.count] = Object.assign( Materials.default_values(this.pbr_layer_count), material_fields );
-      this.count++;
-      this.pbr_layer_count += 6;
+    apply_fallbacks() {
+      const attributes = [ "albedo", "roughness", "metallicity", "ao", "normal", "height"];
+      for( let {layer} of this.texture_array.load_failures ) {
+        this.fields.materials.forEach( entry => {
+          const diff = layer - entry.starting_texture_layer;
+          if ( diff >= 0 && diff < Materials.TEXTURE_LAYERS_PER_MATERIAL)
+            entry[ "textured_" + attributes[layer-entry.starting_texture_layer] + "_amount" ] = 0;
+          }
+        )
+      }
+      this.texture_array.load_failures = [];
     }
-    static default_values (pbr_offset=0) {
+    fill_buffer (uniform_block_info) {
+      this.apply_fallbacks();
+      super.fill_buffer(uniform_block_info);
+    }
+    set(index, material_fields = {}) {
+      this.fields.materials[index] = Object.assign( this.fields.materials[index], material_fields );
+    }
+    static default_values (index=0) {
       return {
-              albedo_layer: pbr_offset + 0,
-              roughness_layer: pbr_offset + 1,
-              metallicity_layer: pbr_offset + 2,
-              ao_layer: pbr_offset + 3,
-              normal_layer: pbr_offset + 4,
-              height_layer: pbr_offset + 5,
-              emissivity: vec3(0,0,0),
+                starting_texture_layer: index * Materials.TEXTURE_LAYERS_PER_MATERIAL,
+                is_textured: 0,
+                fallback_roughness: 1,
+                fallback_metallicity: 1,
+                textured_albedo_amount: 1,
+                textured_roughness_amount: 1,
+                textured_metallicity_amount: 1,
+                textured_ao_amount: 1,
+                textured_normal_amount: 1,
+                textured_height_amount: 1,
+                collapse_textures: 0,
               color: vec4 (1.0, 1.0, 1.0, 1.0),
               diffuse: vec3(1.0, 1.0, 1.0),
               specular: vec3 (1.0, 1.0, 1.0),

@@ -5,32 +5,33 @@ import { Camera, LightArray, Materials } from './common.js';
 export class Instanced_Cubes_Demo extends Renderer {
   init () {
     super.init();
-    this.shapes = {cube: new defs.Cube(), ball: new defs.Subdivision_Sphere(3) };
+    this.shapes = {cube: new defs.Cube(), ball: new defs.Subdivision_Sphere(4) };
 
     function blender_pbr_filenames(name) {
       return ["albedo", "roughness", "metallic", "ao", "normal-ogl", "height"]
           .map(s => "assets/" + name + "-bl/" + name + "_" + s + ".png");
     }
 
-    this.state.samplers = new Map([ ["diffuse_texture", new Texture(
-        {urls: [ ...blender_pbr_filenames("dark-wood-stain"),
+    this.state.samplers = new Map([ ["texture_array", new Texture(
+        {urls: [
+                 ...blender_pbr_filenames("gold-scuffed"),
+                 ...blender_pbr_filenames("agedplanks1"),
+                 ...blender_pbr_filenames("dark-wood-stain"),
                  ...blender_pbr_filenames("ash-tree-bark"),
                  ...blender_pbr_filenames("older-padded-leather"),
                  ...blender_pbr_filenames("red-scifi-metal"),
+                 ...blender_pbr_filenames("fancy-scaled-gold"),
+                 ...blender_pbr_filenames("forest-floor"),
+                 ...blender_pbr_filenames("dusty-cobble"),
           "assets/rgb.jpg", "assets/stars.png", "assets/grid.png", "assets/text.png"] }
       )] ]);
 
-    this.state.shader = new defs.PBR_Shader (LightArray.NUM_LIGHTS, 5, {has_shadows: false, has_textures: true});
+    this.state.shader = new defs.PBR_Shader (LightArray.NUM_LIGHTS, Materials.NUM_MATERIALS, {has_shadows: false, has_textures: true});
 
-//    this.fire = new Material({ albedo_layer: 6, color: vec4(0.1, 0.1, 0.1, 1.0) });
-//    this.water = new Material({ albedo_layer: 0, color: vec4(0.0, 0.5, 0.5, 1.0) });
-
-    this.state.materials = new Materials();
-    this.state.materials.insert();
-    this.state.materials.insert();
-    this.state.materials.insert();
-    this.state.materials.insert();
-    this.state.materials.insert();
+    this.state.materials = new Materials(this.state.samplers.get("texture_array"));
+    this.state.materials.set(9, { collapse_textures: 1 });
+    this.state.materials.set(0, { textured_roughness_amount: .8 });
+    for( let i = 0; i < 10; i++ ) this.state.materials.set( i, {is_textured: 1} );
 
     this.state.lightArray =
          new defs.LightArray({ambient: .1, lights:[
@@ -40,11 +41,7 @@ export class Instanced_Cubes_Demo extends Renderer {
              color: vec3(1.0, 1.0, 1.0), diffuse: 1.0, specular: 1.0, attenuation_factor: 0.00001}
          ]});
 
-  //  this.state_fire = { ...this.state, material: this.fire };
-  //  this.state_water = { ...this.state, material: this.water };
-
      // TODO: this.states = {};  this.state.fire = etc..
-
      this.state_pass0  = Object.assign( Object.create( this.state ) );
 
 //     this.state_fire  = Object.assign( Object.create( this.state ), { material: this.fire } );
@@ -60,7 +57,8 @@ export class Instanced_Cubes_Demo extends Renderer {
                                   .times_pairwise(vec3(20, 2, 20)))
               .times(Mat4.rotation( Math.PI, ...defs.unsafe3( 0,0,0 ).randomized(1).normalized() ))
               .times(Mat4.scale(.5,.5,.5)) )
-        .map( (m,j) => { return { model_transform: m, color: vec3(.9,.9,.9).randomized(.5), material_index: j%5 } } ) );
+        .map( (m,j) => { return {
+          model_transform: m, color: vec3(.9,.9,.9).randomized(.5), material_index: j%Materials.NUM_MATERIALS } } ) );
       this.renderList.insert( items[i] );
     }
 

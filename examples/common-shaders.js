@@ -5,7 +5,7 @@ import { Vector, Vector3, vec, vec3, vec4, color, Matrix, Mat4, Shape, Shader, C
 
 
 export class PBR_Shader extends Shader {
-    constructor (num_lights = 2, num_materials = 5, options) {
+    constructor (num_lights = 2, num_materials = 0, options) {
       super();
       const defaults = { has_instancing: true, has_textures: true };
       Object.assign (this, defaults, options, {num_lights, num_materials});
@@ -57,8 +57,8 @@ export class PBR_Shader extends Shader {
       out vec3 VERTEX_TANGENT;
       out vec3 VERTEX_BITANGENT;
       out vec2 VERTEX_TEXCOORD;
-      out vec3 VERTEX_COLOR;
-      out float VERTEX_MATERIAL_INDEX;
+      out vec3 INSTANCE_COLOR;
+      out float INSTANCE_MATERIAL_INDEX;
 
       void main() {
         ${this.has_instancing ? `
@@ -70,7 +70,7 @@ export class PBR_Shader extends Shader {
         gl_Position = projection * camera_inverse * world_position;
         VERTEX_POS = vec3(world_position);
 
-        // *** Optimization for normal transform in place of inverse(): ***
+        // *** Optimization ("Eric's Blog") for normal transform in place of inverse(): ***
         vec3 squared_scale = vec3(
           dot(mat3(world_space)[0], mat3(world_space)[0]),
           dot(mat3(world_space)[1], mat3(world_space)[1]),
@@ -90,8 +90,8 @@ export class PBR_Shader extends Shader {
         VERTEX_TANGENT = mat3(world_space) * tangent;
         VERTEX_BITANGENT = cross( VERTEX_NORMAL, VERTEX_TANGENT);
         VERTEX_TEXCOORD = texture_coord * vec2(1,-1) + vec2(0,1);
-        VERTEX_COLOR = clamp( color, 0., 1.);
-        VERTEX_MATERIAL_INDEX = material_index;
+        INSTANCE_COLOR = clamp( color, 0., 1.);
+        INSTANCE_MATERIAL_INDEX = material_index;
       }`;
     }
     fragment_glsl_code () {         // ********* FRAGMENT SHADER *********
@@ -118,13 +118,17 @@ export class PBR_Shader extends Shader {
       };
 
       struct Material {
-        float albedo_layer;
-        float roughness_layer;
-        float metallicity_layer;
-        float ao_layer;
-        float normal_layer;
-        float height_layer;
-        vec3 emissivity;
+        float starting_texture_layer;
+        float is_textured;
+        float fallback_roughness;
+        float fallback_metallicity;
+        float textured_albedo_amount;
+        float textured_roughness_amount;
+        float textured_metallicity_amount;
+        float textured_ao_amount;
+        float textured_normal_amount;
+        float textured_height_amount;
+        float collapse_textures;
       };
       const int N_MATERIALS = ${this.num_materials};
       uniform Materials {
@@ -140,8 +144,8 @@ export class PBR_Shader extends Shader {
       in vec3 VERTEX_TANGENT;
       in vec3 VERTEX_BITANGENT;
       in vec2 VERTEX_TEXCOORD;
-      in vec3 VERTEX_COLOR;
-      in float VERTEX_MATERIAL_INDEX;
+      in vec3 INSTANCE_COLOR;
+      in float INSTANCE_MATERIAL_INDEX;
 
       out vec4 frag_color;
 
@@ -150,7 +154,7 @@ export class PBR_Shader extends Shader {
       vec3 PBRLight(
           vec3 n, vec3 v, vec3 l,
           vec3 albedo,
-          float metallic,
+          float metallicity,
           float roughness,
           vec3 F0,
           vec3 intensity
@@ -173,7 +177,7 @@ export class PBR_Shader extends Shader {
           vec3 F = F0 + (1.0 - F0) * pow(clamp(1.0 - vDotH, 0.0, 1.0), 5.0);
 
           vec3 kS = F;
-          vec3 kD = (1.0 - kS) * (1.0 - metallic);
+          vec3 kD = (1.0 - kS) * (1.0 - metallicity);
 
           vec3 specular = (D * F * G) / max(4.0 * nDotV * nDotL, 0.001);
           vec3 diffuse = kD * albedo / PI;
@@ -183,29 +187,52 @@ export class PBR_Shader extends Shader {
 
       void main() {
           vec3 n = normalize(VERTEX_NORMAL);
-          vec3 v = normalize(camera_position.xyz - VERTEX_POS);
-
-          Material mat = materials[int(VERTEX_MATERIAL_INDEX + .5)];
-          float height = texture(texture_array, vec3(VERTEX_TEXCOORD, mat.height_layer)).r;
           mat3 TBN = mat3(normalize(VERTEX_TANGENT), normalize(VERTEX_BITANGENT), n);
-          vec3 v_tangent = normalize( transpose(TBN) * v );
-          float parallaxScale = 0.05; // Tweak for depth strength
-          float parallaxBias = parallaxScale * -0.5;
-          float height_offset = height * parallaxScale + parallaxBias;
-          vec2 parallax_uv = VERTEX_TEXCOORD + v_tangent.xy * height_offset;
+          vec3 v = normalize(camera_position.xyz - VERTEX_POS);
+          vec2 uv = VERTEX_TEXCOORD;
 
-          vec4 albedo_tex = texture(texture_array, vec3(parallax_uv, mat.albedo_layer));
-          vec3 albedo = mix(albedo_tex.rgb, VERTEX_COLOR, 0.1); // albedo_tex.rgb * VERTEX_COLOR;
-          albedo = pow(albedo, vec3(2.2));
-          float metallic = texture(texture_array, vec3(parallax_uv, mat.metallicity_layer)).r;
-          float roughness = texture(texture_array, vec3(parallax_uv, mat.roughness_layer)).r;
-          // Calculate base reflectance F0
-          vec3 F0 = mix(vec3(0.04), albedo, metallic);
-          float ao = texture(texture_array, vec3(parallax_uv, mat.ao_layer)).r;
-          ao = clamp(ao, 0.0, 1.0);
-          vec3 normalmap_value = texture(texture_array, vec3(parallax_uv, mat.normal_layer)).rgb;
-          normalmap_value = normalmap_value * 2.0 - 1.0;
-          vec3 worldNormal = normalize(TBN * normalmap_value);
+          Material mat = materials[int(INSTANCE_MATERIAL_INDEX + .5)];
+          float c = 1. - mat.collapse_textures;
+          if( mat.textured_height_amount > 0. && mat.is_textured > 0. ) {
+            float height = texture(texture_array, vec3(VERTEX_TEXCOORD, mat.starting_texture_layer+5.*c)).r;
+            vec3 v_tangent = normalize( transpose(TBN) * v );
+            float parallaxScale = 0.07; // Tweak for depth strength
+            float parallaxBias = parallaxScale * -0.5;
+            float height_offset = height * parallaxScale + parallaxBias;
+            uv += v_tangent.xy * height_offset;
+          }
+
+          vec3 albedo = INSTANCE_COLOR;
+          float alpha = 1.;
+          if( mat.textured_albedo_amount > 0. && mat.is_textured > 0. ) {
+            vec4 albedo_tex = texture(texture_array, vec3(uv, mat.starting_texture_layer));
+            alpha = albedo_tex.a;
+            albedo = mix(albedo, pow(albedo_tex.rgb, vec3(2.2)), mat.textured_albedo_amount);    //2.2
+          }
+          float metallicity = mat.fallback_metallicity;
+          if( mat.textured_metallicity_amount > 0. && mat.is_textured > 0. ) {
+            float metallic_tex = texture(texture_array, vec3(uv, mat.starting_texture_layer+2.*c)).r;
+            metallicity = mix(metallicity, metallic_tex, mat.textured_metallicity_amount);
+          }
+          float roughness = mat.fallback_roughness;
+          if( mat.textured_roughness_amount > 0. && mat.is_textured > 0. ) {
+            float roughness_tex = texture(texture_array, vec3(uv, mat.starting_texture_layer+1.*c)).r;
+            roughness = mix(roughness, roughness_tex, mat.textured_roughness_amount);
+          }
+          vec3 F0 = mix(vec3(0.04), albedo, metallicity);  // (Base reflectance)
+          float ao = 1.;
+          if( mat.textured_ao_amount > 0. && mat.is_textured > 0. ) {
+            float ao_tex = texture(texture_array, vec3(uv, mat.starting_texture_layer+3.*c)).r;
+            ao = mix(ao, ao_tex, mat.textured_ao_amount);
+          }
+          if( mat.textured_normal_amount > 0. && mat.is_textured > 0. ) {
+            vec3 normalmap_value = texture(texture_array, vec3(uv, mat.starting_texture_layer+4.*c)).rgb;
+            normalmap_value = normalmap_value * 2.0 - 1.0;
+            if(c > 0.)
+              n = normalize(TBN * normalmap_value);
+            else
+              n += .25 * normalize(TBN * normalmap_value);
+          }
 
           vec3 totalLight = vec3(0.0);
           for (int i = 0; i < N_LIGHTS; i++) {
@@ -216,12 +243,12 @@ export class PBR_Shader extends Shader {
               if (lights[i].direction_or_position.w > 0.5)
                   intensity /= (1.0 + lights[i].attenuation_factor * dist * dist);
 
-              totalLight += PBRLight(worldNormal, v, l, ao * albedo, metallic, roughness, F0, intensity) + mat.emissivity;
+              totalLight += PBRLight(n, v, l, ao * albedo, metallicity, roughness, F0, intensity);
           }
 
           vec3 tone_mapped = totalLight / (totalLight + vec3(1.0)); // simple Reinhard operator
           vec3 gamma_corrected = pow(tone_mapped, vec3(1.0 / 2.2));
-          frag_color = vec4(gamma_corrected, albedo_tex.a);
+          frag_color = vec4(gamma_corrected, alpha);
       }`
     }
 };

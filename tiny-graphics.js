@@ -1062,8 +1062,8 @@ export class Texture {
       height: 256,
       minFilter: 'LINEAR_MIPMAP_LINEAR',
       magFilter: 'LINEAR',
-      wrapS: 'CLAMP_TO_EDGE',
-      wrapT: 'CLAMP_TO_EDGE',
+      wrapS: 'REPEAT',
+      wrapT: 'REPEAT',
       urls: null,   // Single URL, array of 6, or array-of-layers
       data: null,   // For non-image use: typed array
       framebuffer: false,
@@ -1098,6 +1098,7 @@ export class Texture {
     // Flatten to array, even for single images.
     const urls = Array.isArray(this.urls) ? this.urls : [this.urls];
     this.imageLayers = new Array(urls.length);
+    this.load_failures = []; // Track recent failed loads: {filename, layer}
     let remaining = urls.length;
     this.ready = false;
 
@@ -1105,6 +1106,9 @@ export class Texture {
       const img = new Image();
       img.crossOrigin = "Anonymous";
       img.onload = () => {
+        const filename = url.split('/').pop();
+        if (img.naturalWidth === 1 && img.naturalHeight === 1)
+          this.load_failures.push({ filename, layer: i })
         this.imageLayers[i] = img;
         remaining -= 1;
         if (remaining === 0) {
@@ -1125,22 +1129,8 @@ export class Texture {
     const texture_buffer  = existing ?? gl.createTexture();
     renderer.textures.set (this, texture_buffer);
 
-    if (!this.ready) {
-      /*
-FINISH: Needed?
-      // Handle fallback (single blue pixel) before images load
-      gl.bindTexture(type, texture_buffer);
-      if (type === gl.TEXTURE_2D)
-        gl.texImage2D(type, 0, gl[this.internalFormat], 1, 1, 0, gl[this.format], gl[this.gl_type], new Uint8Array([0,0,255,255]));
-      else if (type === gl.TEXTURE_CUBE_MAP) {
-        for(let face of this.cubeFaces)
-          gl.texImage2D(gl[face], 0, gl[this.internalFormat], 1, 1, 0, gl[this.format], gl[this.gl_type], new Uint8Array([0,0,255,255]));
-      } else if (type === gl.TEXTURE_2D_ARRAY)
-        gl.texImage3D(type, 0, gl[this.internalFormat], 1, 1, this.layers, 0, gl[this.format], gl[this.gl_type], null);
-      this.ready = false; // stay not ready!
-      */
+    if (!this.ready)
       return;
-    }
 
     gl.bindTexture(type, texture_buffer);
 
@@ -1151,8 +1141,6 @@ FINISH: Needed?
       gl.texParameteri(type, gl.TEXTURE_MAG_FILTER, gl[this.magFilter]);
       gl.texParameteri(type, gl.TEXTURE_WRAP_S, gl[this.wrapS]);
       gl.texParameteri(type, gl.TEXTURE_WRAP_T, gl[this.wrapT]);
-// FINISH:  Had to disable this since it's incompatible with 2D Texture Array.
-//      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
     }
 
     // Actual allocation/upload
