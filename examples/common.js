@@ -195,7 +195,7 @@ export class Shadow_Light {
   };
 
 export class Materials extends UBO_Plan {
-    static NUM_MATERIALS = 10;
+    static NUM_MATERIALS = 11;
     static TEXTURE_LAYERS_PER_MATERIAL = 6;
     init(texture_array, fields) {
       this.texture_array = texture_array;

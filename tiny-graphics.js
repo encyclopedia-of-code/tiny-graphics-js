@@ -213,11 +213,8 @@ const test_rookie_mistake = function () {
 
 export class Shader {
     // See description at https://github.com/encyclopedia-of-code/tiny-graphics-js/wiki/tiny-graphics.js#shader
-    copy_onto_graphics_card (renderer, given_info = new Map()) {
+    copy_onto_graphics_card (renderer) {
       // TODO:  Calling this twice should recompile the shader in-place with updated options (untested)
-      // TODO:  The given_info argument may be supplied with another uniform_addresses.get(shader).uniform_block_info
-      // to skip some repeat gl initialization calls.
-
       const gl       = renderer.context;
       const existing = renderer.shaders.get (this);
       const instance  = existing ?? { program: gl.createProgram(),
@@ -256,68 +253,71 @@ export class Shader {
       class Uniform_Addresses {
         // Uniform_Addresses: Helper inner class. Retrieve the GPU addresses of each uniform variable in
         // the shader based on their names.  Store these pointers for later.
-          constructor (program) {
-              const indices_to_blockname = new Map();
-              const indices_to_offsets = new Map();
-              this.uniform_block_info = new Map();  // block_name -> { buffer_size, element_offsets, next_offsets }
+          constructor (program, gl, given_info) {
+              this.uniform_block_info = {};  // block_name -> { buffer_size, element_offsets, next_offsets }
               const num_blocks = gl.getProgramParameter(program, gl.ACTIVE_UNIFORM_BLOCKS);
-              const index_to_uniform_info = new Map();
+              this.index_to_uniform_info = given_info.uniform_info || {};
               for (let i = 0; i < num_blocks; i++ ) {
                   const UBO_name = gl.getActiveUniformBlockName(program, i);
                   const UBO_size = gl.getActiveUniformBlockParameter(program, i, gl.UNIFORM_BLOCK_DATA_SIZE);
                   const UBO_index = gl.getUniformBlockIndex(program, UBO_name);
                   gl.uniformBlockBinding(program, UBO_index, UBO_index);
 
-                  if( !given_info.get(UBO_name) )
-                    this.uniform_block_info.set(UBO_name,
-                          { buffer_size: UBO_size, element_offsets: new Map(), next_offsets: new Map() });
+                  if( !given_info?.ubo_offsets || !given_info.ubo_offsets[UBO_name] ) {
+                    this.uniform_block_info[UBO_name] =
+                          { buffer_size: UBO_size, element_offsets: {}, next_offsets: {} };
 
-                  const indices = gl.getActiveUniformBlockParameter(program, i, gl.UNIFORM_BLOCK_ACTIVE_UNIFORM_INDICES);
-                  const offsets = gl.getActiveUniforms(program, indices, gl.UNIFORM_OFFSET);
-                  for (let j = 0; j < indices.length; j++) {
-                      const idx = indices[j];
-                      const uniform = gl.getActiveUniform(program, idx);
-                      let dot_path = uniform.name.replace(/\[(\d+)\]/g, '.$1'); // 'lights[0].color' => 'lights.0.color'
-                      if (dot_path.startsWith(UBO_name + "."))
-                        dot_path = dot_path.substring(UBO_name.length + 1);
-                      indices_to_blockname.set(idx, UBO_name);
-                      indices_to_offsets.set(idx, offsets[j]);
-                      index_to_uniform_info.set(idx, {dot_path, offset: offsets[j], block: UBO_name});
+                    const indices = gl.getActiveUniformBlockParameter(program, i, gl.UNIFORM_BLOCK_ACTIVE_UNIFORM_INDICES);
+                    const offsets = gl.getActiveUniforms(program, indices, gl.UNIFORM_OFFSET);
+                    for (let j = 0; j < indices.length; j++) {
+                        const idx = indices[j];
+                        const uniform = gl.getActiveUniform(program, idx);
+                        let dot_path = uniform.name.replace(/\[(\d+)\]/g, '.$1'); // 'lights[0].color' => 'lights.0.color'
+                        if (dot_path.startsWith(UBO_name + "."))
+                          dot_path = dot_path.substring(UBO_name.length + 1);
+                        this.index_to_uniform_info[idx] = {dot_path, offset: offsets[j], block: UBO_name};
+                    }
                   }
               }
 
               const num_uniforms = gl.getProgramParameter(program, gl.ACTIVE_UNIFORMS);
               for (let i = 0; i < num_uniforms; ++i) {
-                  if (!indices_to_blockname.has(i)) {  // Loose uniform
+                  if (!this.index_to_uniform_info[i]) {  // Loose uniform
                       const uniform = gl.getActiveUniform(program, i);
                       this[uniform.name] = gl.getUniformLocation(program, uniform.name);
                   }
                   // Else, UBO member: Already cached in block maps above.
               }
 
-              for (const [block_name, info] of this.uniform_block_info.entries()) {
+              for (const [block_name, info] of Object.entries(this.uniform_block_info)) {
+                  if( given_info?.ubo_offsets && given_info.ubo_offsets[block_name] )
+                    continue;
                   // Find all fields for this block:
-                  const fields = [...index_to_uniform_info.values()].filter(u => u.block === block_name);
+                  const fields = [...Object.values(this.index_to_uniform_info)].filter(u => u.block === block_name);
                   // Sort by offset:
                   fields.sort((a, b) => a.offset - b.offset);
                   // Assign boundaries:
                   for (let j = 0; j < fields.length; ++j) {
-                      info.element_offsets.set(fields[j].dot_path, fields[j].offset);
-                      info.next_offsets.set(fields[j].offset, j+1 < fields.length ? fields[j+1].offset : info.buffer_size);
+                      info.element_offsets[fields[j].dot_path] = fields[j].offset;
+                      info.next_offsets[fields[j].offset] = j+1 < fields.length ? fields[j+1].offset : info.buffer_size;
                   }
               }
+              Object.assign( this.uniform_block_info, given_info.ubo_offsets);
           }
       }
 
-      gl.shaderSource (vertex_shader, this.vertex_glsl_code ());
+      const vertex_src   = this.vertex_glsl_code();
+      const fragment_src = this.fragment_glsl_code();
+
+      gl.shaderSource (vertex_shader, vertex_src);
       gl.compileShader (vertex_shader);
       if ( !gl.getShaderParameter (vertex_shader, gl.COMPILE_STATUS))
-          throw "Vertex shader compile error: " + gl.getShaderInfoLog (vertex_shader) + this.vertex_glsl_code();
+          throw "Vertex shader compile error: " + gl.getShaderInfoLog (vertex_shader) + vertex_src;
 
-      gl.shaderSource (fragment_shader, this.fragment_glsl_code ());
+      gl.shaderSource (fragment_shader, fragment_src);
       gl.compileShader (fragment_shader);
       if ( !gl.getShaderParameter (fragment_shader, gl.COMPILE_STATUS))
-          throw "Fragment shader compile error: " + gl.getShaderInfoLog (fragment_shader) + this.fragment_glsl_code();
+          throw "Fragment shader compile error: " + gl.getShaderInfoLog (fragment_shader) + fragment_src;
 
       gl.attachShader (program, vertex_shader);
       gl.attachShader (program, fragment_shader);
@@ -325,7 +325,37 @@ export class Shader {
       if ( !gl.getProgramParameter (program, gl.LINK_STATUS))
           throw "Shader linker error: " + gl.getProgramInfoLog (program);
 
-      renderer.uniform_addresses.set(this, new Uniform_Addresses (program, gl));
+/*      async function hashShaderSource(src) {
+        const msgUint8 = new TextEncoder().encode(src);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+      }
+*/
+      function fnv1aHash(str) {
+        let hash = 2166136261;
+        for (let i = 0; i < str.length; i++) {
+          hash ^= str.charCodeAt(i);
+          hash += (hash << 1) + (hash << 4) + (hash << 7) + (hash << 8) + (hash << 24);
+        }
+        // Convert to 8-digit hex
+        return (hash >>> 0).toString(16).padStart(8, '0');
+      }
+      const shader_hash = fnv1aHash(vertex_src + '|' + fragment_src);
+      let cached_info = {};
+      try {
+        cached_info.ubo_offsets  = JSON.parse( localStorage.getItem( `ubo_offsets:${shader_hash}`) );
+        cached_info.uniform_info = JSON.parse( localStorage.getItem(`uniform_info:${shader_hash}`) );
+      } catch (e) {}
+
+      renderer.uniform_addresses.set(this, new Uniform_Addresses(program, gl, cached_info));
+
+      if (!cached_info.ubo_offsets) {
+        const ubo_info_to_cache = renderer.uniform_addresses.get(this).uniform_block_info;
+        const index_to_uniform_info = renderer.uniform_addresses.get(this).index_to_uniform_info;
+        localStorage.setItem( `ubo_offsets:${shader_hash}`, JSON.stringify(ubo_info_to_cache));
+        localStorage.setItem(`uniform_info:${shader_hash}`, JSON.stringify(index_to_uniform_info));
+      }
       renderer.attribute_addresses.set(this, new Attribute_Addresses (program, gl));
 
       Object.assign (instance, {program, vertex_shader, fragment_shader});
@@ -961,7 +991,7 @@ export class Renderer extends Component {
       if(previous_bound_ubo != ubo )
         gl.bindBufferBase (gl.UNIFORM_BUFFER, ubo_plan.get_binding_point(), ubo);
 
-      ubo_plan.fill_buffer(this.uniform_addresses.get(shader).uniform_block_info.get( ubo_plan.constructor.name ));
+      ubo_plan.fill_buffer(this.uniform_addresses.get(shader).uniform_block_info[ ubo_plan.constructor.name ]);
       if( !ubo_plan.local_buffer || this.gpu_versions.get(ubo_plan) >= ubo_plan.version )
         continue;
       this.gpu_versions.set(ubo_plan, ubo_plan.version);
@@ -1036,10 +1066,10 @@ export class UBO_Plan {
     this.next_version = this.version+1;
 
     for (const [dot_path, value] of Object.entries( this.traverse_fields() )) {
-      const offset = uniform_block_info.element_offsets.get( dot_path );
+      const offset = uniform_block_info.element_offsets[ dot_path ];
       if (offset === undefined) continue;  // Skip entries of this.fields that don't exist in the GLSL UBO
 
-      this.buffer_boundary = uniform_block_info.next_offsets.get( offset )/4 || uniform_block_info.buffer_size/4;
+      this.buffer_boundary = uniform_block_info.next_offsets[offset]/4 || uniform_block_info.buffer_size/4;
 
       if (value instanceof Matrix)
         // Turn any matrices column major for GLSL.
@@ -1151,18 +1181,31 @@ export class Texture {
         gl.texImage2D(type, 0, gl[this.internalFormat], this.width, this.height, 0, gl[this.format], gl[this.gl_type], this.data);
     } else if (type === gl.TEXTURE_2D_ARRAY) {
       gl.texImage3D(type, 0, gl[this.internalFormat], this.width, this.height, this.imageLayers.length, 0, gl[this.format], gl[this.gl_type], null);
+
+      // Allocate a single buffer for all layers
+      const layerSize = this.width * this.height * 4; // Assuming RGBA8 (4 bytes per pixel)
+      const totalSize = layerSize * this.imageLayers.length;
+      const combinedPixels = new Uint8Array(totalSize);
+
+      // For Image, must draw to canvas and extract pixels (WebGL2 can't upload HTMLImageElement directly to a layer)
+      const canvas = document.createElement("canvas");
+      canvas.width = this.width;
+      canvas.height = this.height;
+      const ctx = canvas.getContext("2d", { willReadFrequently: true });
+
       for (let i=0; i<this.imageLayers.length; ++i) {
-        if(this.imageLayers && this.imageLayers[i]) {
-          // For Image, must draw to canvas and extract pixels (WebGL2 can't upload HTMLImageElement directly to a layer)
-          this.canvas ||= document.createElement("canvas");
-          this.canvas.width = this.width; this.canvas.height = this.height;
-          const ctx = this.canvas.getContext("2d", { willReadFrequently: true });
-          ctx.drawImage(this.imageLayers[i], 0, 0, this.width, this.height);
-          const pixels = ctx.getImageData(0,0,this.width,this.height).data;
-          gl.texSubImage3D(type, 0, 0, 0, i, this.width, this.height, 1, gl[this.format], gl[this.gl_type], pixels);
+        const img = this.imageLayers[i];
+        if(img) {
+          ctx.clearRect(0, 0, this.width, this.height);
+          ctx.drawImage(img, 0, 0, this.width, this.height);
+          const pixels = ctx.getImageData(0, 0, this.width, this.height).data;
+
+          combinedPixels.set(pixels, i * layerSize);
         }
         // Else: user must update by update_array_layer, or use this.data for all layers at once.
       }
+      // Upload all layers at once
+      gl.texSubImage3D(type, 0, 0, 0, 0, this.width, this.height, this.imageLayers.length, gl[this.format], gl[this.gl_type], combinedPixels);
     } else if (type === gl.TEXTURE_CUBE_MAP) {
       for(let i=0; i<6; ++i) {
         if(this.imageLayers && this.imageLayers[i])

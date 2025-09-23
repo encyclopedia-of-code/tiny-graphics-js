@@ -23,15 +23,16 @@ export class Instanced_Cubes_Demo extends Renderer {
                  ...blender_pbr_filenames("fancy-scaled-gold"),
                  ...blender_pbr_filenames("forest-floor"),
                  ...blender_pbr_filenames("dusty-cobble"),
-          "assets/rgb.jpg", "assets/stars.png", "assets/grid.png", "assets/text.png"] }
+          "assets/rgb.jpg", "assets/earth.gif", "assets/stars.png", "assets/grid.png", "assets/text.png"] }
       )] ]);
 
     this.state.shader = new defs.PBR_Shader (LightArray.NUM_LIGHTS, Materials.NUM_MATERIALS, {has_shadows: false, has_textures: true});
 
     this.state.materials = new Materials(this.state.samplers.get("texture_array"));
     this.state.materials.set(9, { collapse_textures: 1 });
+    this.state.materials.set(10, { collapse_textures: 1, starting_texture_layer: 55 });
     this.state.materials.set(0, { textured_roughness_amount: .8 });
-    for( let i = 0; i < 10; i++ ) this.state.materials.set( i, {is_textured: 1} );
+    for( let i = 0; i < 11; i++ ) this.state.materials.set( i, {is_textured: 1} );
 
     this.state.lightArray =
          new defs.LightArray({ambient: .1, lights:[
@@ -41,14 +42,11 @@ export class Instanced_Cubes_Demo extends Renderer {
              color: vec3(1.0, 1.0, 1.0), diffuse: 1.0, specular: 1.0, attenuation_factor: 0.00001}
          ]});
 
-     // TODO: this.states = {};  this.state.fire = etc..
-     this.state_pass0  = Object.assign( Object.create( this.state ) );
+    this.passes = [];
+    this.passes.push( Object.create( this.state ) );
 
-//     this.state_fire  = Object.assign( Object.create( this.state ), { material: this.fire } );
-//     this.state_water = Object.assign( Object.create( this.state ), { material: this.water } );
-
-    const items = [ new RenderListItem(this.state_pass0, this.shapes.cube, 0),
-                    new RenderListItem(this.state_pass0, this.shapes.ball, 0) ];
+    const items = [ new RenderListItem(this.passes[0], this.shapes.cube, 0),
+                    new RenderListItem(this.passes[0], this.shapes.ball, 0) ];
 
     for( let i=0; i<2; i++ ) {
       items[i].instance_vars.push(
@@ -63,7 +61,7 @@ export class Instanced_Cubes_Demo extends Renderer {
     }
 
     for( let i=0; i<1000; i++) {
-      const item = new RenderListItem(this.state_pass0, this.shapes.cube, 1);
+      const item = new RenderListItem(this.passes[0], this.shapes.cube, 1);
       item.hint = "STREAM_DRAW";
       item.instance_vars.push( { model_transform:
               Mat4.translation(...vec3(Math.random()* 2 - 1, 5,  Math.random()*2 - 1)
@@ -85,9 +83,9 @@ render_frame () {
       this.animated_children.push( this.controls );
     }
 
-    this.renderList.get(this.state_pass0, this.shapes.cube, 1).clear();
+    this.renderList.get(this.passes[0], this.shapes.cube, 1).clear();
     for( let i=0; i<1000; i++) {
-      const item = new RenderListItem(this.state_pass0, this.shapes.cube, 1);
+      const item = new RenderListItem(this.passes[0], this.shapes.cube, 1);
       item.hint = "STREAM_DRAW";
       item.instance_vars.push( { model_transform:
               Mat4.translation(...vec3(Math.random()* 2 - 1, 5,  Math.random()*2 - 1)
@@ -95,7 +93,7 @@ render_frame () {
                               , color: vec3(.5,.5,.5).randomized(.5), material_index: +(Math.random() < .5) } );
       this.renderList.insert( item );
     }
-    this.renderList.get(this.state_pass0, this.shapes.cube, 1).update_per_instance_buffer();
+    this.renderList.get(this.passes[0], this.shapes.cube, 1).update_per_instance_buffer();
 
     this.renderList.traverse( (item) => this.draw( item ), {prune: true} );
   }
