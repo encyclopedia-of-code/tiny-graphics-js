@@ -263,7 +263,7 @@ export class Shader {
                   const UBO_index = gl.getUniformBlockIndex(program, UBO_name);
                   gl.uniformBlockBinding(program, UBO_index, UBO_index);
 
-                  if( !given_info?.ubo_offsets || !given_info.ubo_offsets[UBO_name] ) {
+                  if( !given_info?.ubo_offsets?.[UBO_name] ) {
                     this.uniform_block_info[UBO_name] =
                           { buffer_size: UBO_size, element_offsets: {}, next_offsets: {} };
 

@@ -5,7 +5,7 @@ import { Camera, LightArray, Materials } from './common.js';
 export class Instanced_Cubes_Demo extends Renderer {
   init () {
     super.init();
-    this.shapes = {cube: new defs.Cube(), ball: new defs.Subdivision_Sphere(4) };
+    this.shapes = {cube: new defs.Cube(), ball: new defs.Rounded_Closed_Cone(12, 12, [[0,1],[0,1]]) };
 
     function blender_pbr_filenames(name) {
       return ["albedo", "roughness", "metallic", "ao", "normal-ogl", "height"]

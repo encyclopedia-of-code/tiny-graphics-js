@@ -209,47 +209,56 @@ export class Subdivision_Sphere extends Shape {
 
 
 export class Grid_Patch extends Shape {
-      constructor (rows, columns, next_row_function, next_column_function,
+      init (rows, columns, next_row_function, next_column_function,
                    texture_coord_range = [[0, rows], [0, columns]]) {
-          super ("position", "normal", "texture_coord");
           let points = [];
           for (let r = 0; r <= rows; r++) {
               points.push (new Array (columns + 1));
               // Allocate a 2D array. Use next_row_function to generate the start point of each row. Pass in the
               // progress ratio, and the previous point if it existed.
-              points[ r ][ 0 ] = next_row_function (r / rows, points[ r - 1 ] && points[ r - 1 ][ 0 ]);
+              points[ r ][ 0 ] = next_row_function (r / rows, points[ r - 1 ]?.[ 0 ]);
           }
           // From those, use next_column function to generate the remaining points:
-          for (let r = 0; r <= rows; r++)
+          for (let r = 0; r <= rows; r++) {
               for (let c = 0; c <= columns; c++) {
                   if (c > 0) points[ r ][ c ] = next_column_function (c / columns, points[ r ][ c - 1 ], r / rows);
 
-                  this.arrays.position.push (points[ r ][ c ]);
                   // Interpolate texture coords from a provided range.
-                  const a1 = c / columns, a2 = r / rows, x_range = texture_coord_range[ 0 ],
-                        y_range                                  = texture_coord_range[ 1 ];
-                  this.arrays.texture_coord.push (
-                    vec ((a1) * x_range[ 1 ] + (1 - a1) * x_range[ 0 ], (a2) * y_range[ 1 ] + (1 - a2) * y_range[ 0 ]));
+                  const a1 = c / columns, a2 = r / rows,
+                        x_range = texture_coord_range[ 0 ],
+                        y_range = texture_coord_range[ 1 ],
+                        tangent = (c>0) ? points[r][c].minus( points[r][c-1] ) : undefined;
+                  this.vertices.push({ position: points[ r ][ c ], tangent,
+                                       texture_coord: vec2 ((a1) * x_range[ 1 ] + (1 - a1) * x_range[ 0 ],
+                                                            (a2) * y_range[ 1 ] + (1 - a2) * y_range[ 0 ])})
               }
+              this.vertices[r*(columns+1)].tangent = this.vertices[(r+1)*(columns+1)-1].tangent.copy();
+          }
           for (let r = 0; r <= rows; r++)
             // Generate normals by averaging the cross products of all defined neighbor pairs.
               for (let c = 0; c <= columns; c++) {
-                  let curr = points[ r ][ c ], neighbors = new Array (4), normal = vec3 (0, 0, 0);
+                  let curr = points[ r ][ c ], normal = vec3 (0, 0, 0), v = this.vertices[ r*(columns+1)+c];
                   // Store each neighbor by rotational order.
-                  for (let [i, dir] of [[-1, 0], [0, 1], [1, 0], [0, -1]].entries ())
-                    // Leave "undefined" in the array wherever we hit a boundary.
-                      neighbors[ i ] = points[ r + dir[ 1 ] ] && points[ r + dir[ 1 ] ][ c + dir[ 0 ] ];
+                  const neighbors = [[-1, 0], [0, 1], [1, 0], [0, -1]].map( (dir, i) =>
+                      // Leave "undefined" in the array wherever we hit a boundary.
+                      points[ r+dir[1] ]?.[ c+dir[0] ] );
 
                   // Take cross-products of pairs of neighbors, proceeding in consistent rotational direction through
                   // the pairs:
                   for (let i = 0; i < 4; i++)
-                      if (neighbors[ i ] && neighbors[ (i + 1) % 4 ])
+                      if (neighbors[ i ] && neighbors[ (i+1)%4 ])
                           normal =
-                            normal.plus (neighbors[ i ].minus (curr).cross (neighbors[ (i + 1) % 4 ].minus (curr)));
+                            normal.plus (neighbors[ i ].minus (curr).cross (neighbors[ (i+1)%4 ].minus (curr)));
                   normal.normalize ();           // Normalize the sum to get the average vector.
                   // Store the normal if it's valid (not NaN or zero length), otherwise use a default:
-                  if (normal.every (x => x == x) && normal.norm () > .01) this.arrays.normal.push (normal.copy ());
-                  else this.arrays.normal.push (vec3 (0, 0, 1));
+                  if (normal.every (x => x == x) && normal.norm () > .01) v.normal = normal.copy ();
+                  else v.normal = vec3 (0, 0, 1);
+
+                  const proj = v.normal.times(v.tangent.dot(v.normal)); // component of tangent along normal
+
+                  // Subtract projection to make tangent orthogonal to normal
+                  v.tangent = v.tangent.minus(proj).normalized();
+
               }
 
           // Generate an index sequence like this (if #columns is 10):
@@ -268,40 +277,40 @@ export class Grid_Patch extends Shape {
 
 
 export class Surface_Of_Revolution extends Grid_Patch {
-      constructor (rows, columns, points, texture_coord_range, total_curvature_angle = 2 * Math.PI) {
+      init (rows, columns, points, texture_coord_range, total_curvature_angle = 2 * Math.PI) {
           const row_operation    = i => Grid_Patch.sample_array (points, i),
                 column_operation = (j, p) => Mat4.rotation (total_curvature_angle / columns, 0, 0, 1).times (p.to4 (1))
                                                  .to3 ();
 
-          super (rows, columns, row_operation, column_operation, texture_coord_range);
+          super.init (rows, columns, row_operation, column_operation, texture_coord_range);
       }
   };
 
 
 export class Regular_2D_Polygon extends Surface_Of_Revolution {
-      constructor (rows, columns) {
-          super (rows, columns, Vector3.cast ([0, 0, 0], [1, 0, 0]));
-          this.arrays.normal = this.arrays.normal.map (x => vec3 (0, 0, 1));
-          this.arrays.texture_coord.forEach (
-            (x, i, a) => a[ i ] = this.arrays.position[ i ].map (x => x / 2 + .5).slice (0, 2));
+      init (rows, columns) {
+          super.init (rows, columns, Vector3.cast ([0, 0, 0], [1, 0, 0]));
+          this.vertices.forEach( x => {
+            x.normal = vec3 (0, 0, 1);
+            x.texture_coord = x.position.map(x => x / 2 + .5).slice (0, 2);
+          });
       }
   };
 
 export class Cylindrical_Tube extends Surface_Of_Revolution {
-      constructor (rows, columns, texture_range) {
-          super (rows, columns, Vector3.cast ([1, 0, .5], [1, 0, -.5]), texture_range);
+      init (rows, columns, texture_range) {
+          super.init (rows, columns, Vector3.cast ([1, 0, .5], [1, 0, -.5]), texture_range);
       }
   };
 
 export class Cone_Tip extends Surface_Of_Revolution { // Note:  Touches the Z axis
-      constructor (rows, columns, texture_range) {
-          super (rows, columns, Vector3.cast ([0, 0, 1], [1, 0, -1]), texture_range);
+      init (rows, columns, texture_range) {
+          super.init (rows, columns, Vector3.cast ([0, 0, 1], [1, 0, -1]), texture_range);
       }
   };
 
-export class Torus extends Shape {
-      constructor (rows, columns, texture_range) {
-          super ("position", "normal", "texture_coord");
+export class Torus extends Surface_Of_Revolution {
+      init (rows, columns, texture_range) {
           const circle_points = Array (rows).fill (vec3 (1 / 3, 0, 0))
                                             .map ((p, i, a) => Mat4.translation (-2 / 3, 0, 0)
                                                                    .times (
@@ -310,25 +319,23 @@ export class Torus extends Shape {
                                                                    .times (Mat4.scale (1, 1, 3))
                                                                    .times (p.to4 (1)).to3 ());
 
-          Surface_Of_Revolution.insert_transformed_copy_into (this, [rows, columns, circle_points, texture_range]);
+          super.init(rows, columns, circle_points, texture_range);
       }
   };
 
-export class Grid_Sphere extends Shape {
-      constructor (rows, columns, texture_range) {
-          super ("position", "normal", "texture_coord");
+export class Grid_Sphere extends Surface_Of_Revolution {
+      init (rows, columns, texture_range) {
           const semi_circle_points = Array (rows).fill (vec3 (0, 0, 1)).map ((x, i, a) =>
                                                                                Mat4.rotation (
                                                                                  i / (a.length - 1) * Math.PI, 0, 1, 0)
                                                                                    .times (x.to4 (1)).to3 ());
 
-          Surface_Of_Revolution.insert_transformed_copy_into (this, [rows, columns, semi_circle_points, texture_range]);
+          super.init(rows, columns, semi_circle_points, texture_range);
       }
   };
 
 export class Closed_Cone extends Shape {
-      constructor (rows, columns, texture_range) {
-          super ("position", "normal", "texture_coord");
+      init (rows, columns, texture_range) {
           Cone_Tip.insert_transformed_copy_into (this, [rows, columns, texture_range]);
           Regular_2D_Polygon.insert_transformed_copy_into (this, [1, columns], Mat4.rotation (Math.PI, 0, 1, 0)
                                                                                    .times (Mat4.translation (0, 0, 1)));
@@ -336,15 +343,14 @@ export class Closed_Cone extends Shape {
   };
 
 export class Rounded_Closed_Cone extends Surface_Of_Revolution {
-      constructor (rows, columns, texture_range) {
-          super (rows, columns, [vec3 (0, 0, 1), vec3 (1, 0, -1), vec3 (0, 0, -1)], texture_range);
+      init (rows, columns, texture_range) {
+          super.init (rows, columns, [vec3 (0, 0, 1), vec3 (1, 0, -1), vec3 (0, 0, -1)], texture_range);
       }
   };
 
 export class Capped_Cylinder extends Shape {
-      constructor (rows, columns, texture_range) {
-          super ("position", "normal", "texture_coord");
-          Cylindrical_Tube.insert_transformed_copy_into (this, [rows, columns, texture_range]);
+      init (rows, columns, texture_range) {
+          Cylindrical_Tube  .insert_transformed_copy_into (this, [rows, columns, texture_range]);
           Regular_2D_Polygon.insert_transformed_copy_into (this, [1, columns], Mat4.translation (0, 0, .5));
           Regular_2D_Polygon.insert_transformed_copy_into (this, [1, columns], Mat4.rotation (Math.PI, 0, 1, 0).times (
             Mat4.translation (0, 0, .5)));
@@ -352,15 +358,14 @@ export class Capped_Cylinder extends Shape {
   };
 
 export class Rounded_Capped_Cylinder extends Surface_Of_Revolution {
-      constructor (rows, columns, texture_range) {
-          super (rows, columns, [vec3 (0, 0, .5), vec3 (1, 0, .5), vec3 (1, 0, -.5), vec3 (0, 0, -.5)], texture_range);
+      init (rows, columns, texture_range) {
+          super.init(rows, columns, [vec3 (0, 0, .5), vec3 (1, 0, .5), vec3 (1, 0, -.5), vec3 (0, 0, -.5)], texture_range);
       }
   };
 
 
 export class Axis_Arrows extends Shape {
-      constructor () {
-          super ("position", "normal", "texture_coord");
+      init () {
           var stack = [];
           Subdivision_Sphere.insert_transformed_copy_into (this, [3], Mat4.rotation (Math.PI / 2, 0, 1, 0)
                                                                           .times (Mat4.scale (.25, .25, .25)));
@@ -380,58 +385,6 @@ export class Axis_Arrows extends Shape {
                                                                 .times (Mat4.scale (.05, .05, .4)));
           Cylindrical_Tube.insert_transformed_copy_into (this, [7, 7, tex], transform.times (Mat4.translation (0, 0, 1))
                                                                                      .times (Mat4.scale (.1, .1, 2)));
-      }
-  };
-
-export class Instanced_Shape extends tiny.Shape {
-      // A truly minimal triangle, with three vertices each holding a 3D position and a color.
-      constructor () {
-          super();
-          // Describe the where the points of a triangle are in space, and also describe their colors:
-          this.vertices[0] = { position: vec3 (0, 0, 0), color: color (1, 0, 0, 1) };
-          this.vertices[1] = { position: vec3 (1, 0, 0), color: color (0, 1, 0, 1) };
-          this.vertices[2] = { position: vec3 (0, 1, 0), color: color (0, 0, 1, 1) };
-
-          this.build_VBO( ["position", "color"] );
-
-          this.single_triangle = this.vertices;
-      }
-  };
-
-  export class Instanced_Square extends tiny.Shape {
-      // A truly minimal Square, with six vertices each holding a 3D position and a color.
-      constructor () {
-          super();
-          // Describe the where the points of a triangle are in space, and also describe their colors:
-          this.vertices[0] = { position: vec3 (-0.5, -0.5, 0), color: color (1, 0, 0, 1) };
-          this.vertices[1] = { position: vec3 (0.5, -0.5, 0), color: color (0, 1, 0, 1) };
-          this.vertices[2] = { position: vec3 (-0.5, 0.5, 0), color: color (0, 0, 1, 1) };
-          this.vertices[3] = { position: vec3 (0.5, -0.5, 0), color: color (0, 1, 0, 1) };
-          this.vertices[4] = { position: vec3 (-0.5, 0.5, 0), color: color (0, 0, 1, 1) };
-          this.vertices[5] = { position: vec3 (0.5, 0.5, 0), color: color (0, 1, 1, 1) };
-          this.num_vertices = this.vertices.length
-
-          this.build_VBO( ["position", "color"] );
-
-          this.single_triangle = this.vertices;
-      }
-  };
-
-  export class Instanced_Square_Index extends tiny.Shape {
-      // A truly minimal Square, with six vertices each holding a 3D position and a color.
-      constructor () {
-          super();
-          // Describe the where the points of a triangle are in space, and also describe their colors:
-          this.vertices[0] = { position: vec3 (-0.5, -0.5, 0), color: color (1, 0, 0, 1) };
-          this.vertices[1] = { position: vec3 (0.5, -0.5, 0), color: color (0, 1, 0, 1) };
-          this.vertices[2] = { position: vec3 (-0.5, 0.5, 0), color: color (0, 0, 1, 1) };
-          this.vertices[3] = { position: vec3 (0.5, 0.5, 0), color: color (0, 1, 1, 1) };
-
-          this.indices = [0, 1, 2, 1, 2, 3];
-
-          this.build_VBO( ["position", "color"] );
-
-          this.single_triangle = this.vertices;
       }
   };
 
