@@ -13,17 +13,13 @@ export class Shape {
       constructor (...args) {
           [this.vertices, this.indices] = [[], []];
           this.waiting = false; // Since models loaded from files can be not ready
+          this.ready = false;
           this.init(...args);
           this.indices_version = 0;
-
-          if(! this.VBO_plans)
-            // If no VBO layout is specified, assume all vertex fields should be in just one, interleaved.
-            this.VBO_plans = [{attributes: [...Object.keys(this.vertices[0])] }];
-          for( let vbo_plan of this.VBO_plans )
-            Shape.build_VBO_plan (this.vertices, vbo_plan);
       }
       static build_VBO_plan( entries, destination, buffer_hint = "STATIC_DRAW", divisor = 0 ) {
-        if (!entries[0]) return;
+        if (!entries[0] || this.waiting) return;
+        this.ready = true;
 
         // WARNING: Changing VBO layout after creation is unsupported and will break rendering!
 
@@ -361,7 +357,7 @@ export class Shader {
       Object.assign (instance, {program, vertex_shader, fragment_shader});
       return instance;
     }
-    activate (renderer, renderListItem) {    // FINISH: Move to renderer?
+    activate (renderer, renderListItem) {
       // copy_to_GPU if needed
       // useProgram if needed
       // send loose uniforms with polymorphism (this.update_GPU)
@@ -396,129 +392,6 @@ export class Shader {
     update_GPU () {}
     static default_values () {}
 };
-
-
-export class Texture_Old {
-  // See description at https://github.com/encyclopedia-of-code/tiny-graphics-js/wiki/tiny-graphics.js#texture
-  constructor (filename, min_filter = "LINEAR_MIPMAP_LINEAR") {
-      Object.assign (this, {filename, min_filter});
-
-      // Create a new HTML Image object:
-      this.image             = new Image ();
-      this.image.onload      = () => this.ready = true;
-      this.image.crossOrigin = "Anonymous";           // Avoid a browser warning.
-      this.image.src         = filename;
-  }
-  copy_onto_graphics_card (renderer, need_initial_settings = true) {
-      const gl = renderer.context;
-      const existing = renderer.textures.get (this);
-      const texture_buffer  = existing ?? gl.createTexture();
-      renderer.textures.set (this, texture_buffer);
-      if (!existing) test_rookie_mistake();
-
-      gl.bindTexture (gl.TEXTURE_2D, texture_buffer);
-
-      if (need_initial_settings) {
-          gl.pixelStorei (gl.UNPACK_FLIP_Y_WEBGL, true);
-          // Always use bi-linear sampling when zoomed out.
-          gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-          // Apply user-defined sampling method when zoomed in.
-          gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl[ this.min_filter ]);
-      }
-      gl.texImage2D (gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this.image);
-      if (this.min_filter === "LINEAR_MIPMAP_LINEAR")
-        // For tri-linear sampling (the default), generate the necessary "mips" of the texture and store them
-        // on the GPU.
-          gl.generateMipmap (gl.TEXTURE_2D);
-      return texture_buffer;
-  }
-  activate (renderer, texture_unit = 0) {
-      if ( !this.ready)
-          return;          // Terminate draw requests until the image file is actually loaded over the network.
-      const gl = renderer.context;
-      const texture_buffer = renderer.textures.get (this) || this.copy_onto_graphics_card (renderer);
-      const previous_texture_unit = renderer.gpu_versions.get("Texture unit");
-      const field_ID = gl[ "TEXTURE" + texture_unit ];
-      renderer.gpu_versions.set("Texture unit", field_ID);
-      const previous_buffer = renderer.gpu_versions.get("Texture buffer pointer");
-      renderer.gpu_versions.set("Texture buffer pointer", texture_buffer);
-      if(previous_texture_unit != field_ID || previous_buffer != texture_buffer) {
-        gl.activeTexture (field_ID);
-        gl.bindTexture (gl.TEXTURE_2D, texture_buffer);
-      }
-  }
-};
-
-export class Shadow_Map {
-      constructor (width, height, min_filter = "NEAREST", mag_filter = "NEAREST") {
-          Object.assign (this, {width, height, min_filter, mag_filter, ready:true});
-      }
-      copy_onto_graphics_card (renderer) {
-          const gl = renderer.context;
-          const existing = renderer.shadow_maps.get (this);
-          const instance  = existing ?? {fbo_pointer: gl.createFramebuffer(), texture_buffer: gl.createTexture()};
-          renderer.shadow_maps.set (this, instance);
-          if (!existing) test_rookie_mistake();
-
-          gl.bindTexture (gl.TEXTURE_2D, instance.texture_buffer);
-          gl.bindFramebuffer(gl.FRAMEBUFFER, instance.fbo_pointer);
-
-          gl.pixelStorei (gl.UNPACK_FLIP_Y_WEBGL, true);
-
-          gl.texStorage2D(
-            gl.TEXTURE_2D,      // target
-            1,                  // mip levels
-            gl.DEPTH_COMPONENT16, // internal format
-            this.width, this.height
-          );
-          // gl.texImage2D(gl.TEXTURE_2D, 0, gl.DEPTH_COMPONENT16, this.width, this.height, 0,
-          //   gl.DEPTH_COMPONENT, gl.UNSIGNED_INT, null);
-
-          // Always use bi-linear sampling when zoomed out.
-          gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl[ this.mag_filter ]);
-          // Apply user-defined sampling method when zoomed in.
-          gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl[ this.min_filter ]);
-          gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl[ "CLAMP_TO_EDGE" ]);
-          gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl[ "CLAMP_TO_EDGE" ]);
-          //onto the fbo
-          gl.framebufferTexture2D (gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, instance.texture_buffer, 0);
-
-          gl.drawBuffers ([gl.NONE]);
-          gl.readBuffer (gl.NONE);
-
-          gl.bindFramebuffer (gl.FRAMEBUFFER, null);
-          gl.bindTexture( gl.TEXTURE_2D, null);
-
-          return instance;
-      }
-      activate (renderer, texture_unit = 0, treat_as_fbo = false) {
-          const gl = renderer.context;
-          const instance = renderer.shadow_maps.get(this) || this.copy_onto_graphics_card (renderer);
-
-          // TODO: The below gl calls are done without checking cached values.
-          // The FBO parts seemingly couldn't be cached, but the rest could, as in Texture.
-          // If bindTexture(null) below is needed, then not that.
-
-          if( treat_as_fbo ) {
-            gl.viewport (0, 0, this.width, this.height);
-            gl.bindFramebuffer (gl.FRAMEBUFFER, instance.fbo_pointer);
-            gl.clear (gl.DEPTH_BUFFER_BIT);
-          }
-          else {
-            gl.activeTexture (gl[ "TEXTURE" + texture_unit ]);
-            gl.uniform1i (this.draw_sampler_address, texture_unit);
-          }
-          gl.bindTexture (gl.TEXTURE_2D, instance.texture_buffer);
-      }
-      deactivate (renderer, treat_as_fbo = false) {
-        const gl = renderer.context;
-        if (treat_as_fbo) {
-          gl.viewport(0, 0, renderer.width, renderer.height);
-          gl.bindFramebuffer (gl.FRAMEBUFFER, null);
-        }
-        gl.bindTexture( gl.TEXTURE_2D, null);
-      }
-  };
 
 export class Component {
       // See description at https://github.com/encyclopedia-of-code/tiny-graphics-js/wiki/tiny-graphics.js#component
@@ -894,6 +767,15 @@ export class Renderer extends Component {
       gl.bindVertexArray( VAO );
 
     const shape = renderListItem.shape;
+    if( shape.waiting ) return;
+    if( !shape.ready) {
+      if( ! shape.VBO_plans)
+        // If no VBO layout is specified, assume all vertex fields should be in just one, interleaved.
+        shape.VBO_plans = [{attributes: [...Object.keys(shape.vertices[0])] }];
+      for( let vbo_plan of shape.VBO_plans )
+        Shape.build_VBO_plan (shape.vertices, vbo_plan);
+    }
+
     if (shape.indices.length) {
         const existing_EBO = this.index_buffers.get (shape);
         const EBO = existing_EBO ?? gl.createBuffer();

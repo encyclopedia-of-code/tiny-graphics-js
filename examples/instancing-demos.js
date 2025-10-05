@@ -5,7 +5,8 @@ import { Camera, LightArray, Materials } from './common.js';
 export class Instanced_Cubes_Demo extends Renderer {
   init () {
     super.init();
-    this.shapes = {cube: new defs.Cube(), ball: new defs.Rounded_Closed_Cone(12, 12, [[0,1],[0,1]]) };
+    this.shapes = {cube: new defs.Cube(), ball: new defs.Shape_From_File("assets/teapot.obj") };
+//defs.Shape_From_File("assets/teapot.obj")
 
     function blender_pbr_filenames(name) {
       return ["albedo", "roughness", "metallic", "ao", "normal-ogl", "height"]
@@ -50,7 +51,7 @@ export class Instanced_Cubes_Demo extends Renderer {
 
     for( let i=0; i<2; i++ ) {
       items[i].instance_vars.push(
-        ...Array(1000).fill(0).map( (x,j) =>
+        ...Array(100).fill(0).map( (x,j) =>
               Mat4.translation(...vec3(Math.random()* 2 - 1, 2*i+1,  Math.random()*2 - 1)
                                   .times_pairwise(vec3(20, 2, 20)))
               .times(Mat4.rotation( Math.PI, ...defs.unsafe3( 0,0,0 ).randomized(1).normalized() ))
@@ -60,7 +61,7 @@ export class Instanced_Cubes_Demo extends Renderer {
       this.renderList.insert( items[i] );
     }
 
-    for( let i=0; i<1000; i++) {
+    for( let i=0; i<100; i++) {
       const item = new RenderListItem(this.passes[0], this.shapes.cube, 1);
       item.hint = "STREAM_DRAW";
       item.instance_vars.push( { model_transform:
@@ -84,7 +85,7 @@ render_frame () {
     }
 
     this.renderList.get(this.passes[0], this.shapes.cube, 1).clear();
-    for( let i=0; i<1000; i++) {
+    for( let i=0; i<100; i++) {
       const item = new RenderListItem(this.passes[0], this.shapes.cube, 1);
       item.hint = "STREAM_DRAW";
       item.instance_vars.push( { model_transform:

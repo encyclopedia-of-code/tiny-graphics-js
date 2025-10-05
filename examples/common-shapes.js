@@ -460,20 +460,14 @@ export class Minimaler_Shape extends tiny.Shape {
       }
   };
 
-export class Shape_From_File extends tiny.Shape
-  {                                   // **Shape_From_File** is a versatile standalone Shape that imports
+export class Shape_From_File extends tiny.Shape {
+                                      // **Shape_From_File** is a versatile standalone Shape that imports
                                       // all its arrays' data from an .obj 3D model file.
-    constructor( filename, uses_3d_texture = false )
-      { super( "position", "normal", "texture_coord" );
-        this.ready = false;
-        //if uses_3d texture is false, means we are using 2d texture!
-        this.uses_3d_texture = uses_3d_texture;
-                                      // Begin downloading the mesh. Once that completes, return
-                                      // control to our parse_into_mesh function.
+    init( filename ) {
+        this.waiting = true;
         this.load_file( filename );
       }
-    load_file( filename )
-        {                             // Request the external file and wait for it to load.
+    load_file( filename ) {                     // Request the external file and wait for it to load.
           return fetch( filename )
             .then( response =>
               { if ( response.ok )  return Promise.resolve( response.text() )
@@ -482,11 +476,10 @@ export class Shape_From_File extends tiny.Shape
             .then( obj_file_contents => this.parse_into_mesh( obj_file_contents ) )
             .catch( error => { throw "OBJ file loader:  OBJ file either not found or is of unsupported format." } )
         }
-    parse_into_mesh( data )
-      {                           // Adapted from the "webgl-obj-loader.js" library found online:
-        var verts = [], vertNormals = [], textures = [], unpacked = {};
+    parse_into_mesh( data ) {                   // Adapted from the "webgl-obj-loader.js" library found online:
+        var positions = [], normals = [], texture_coords = [], unpacked = {};
 
-        unpacked.verts = [];        unpacked.norms = [];    unpacked.textures = [];
+        unpacked.positions = [];    unpacked.normals = [];    unpacked.texture_coords = [];
         unpacked.hashindices = {};  unpacked.indices = [];  unpacked.index = 0;
 
         var lines = data.split('\n');
@@ -499,14 +492,9 @@ export class Shape_From_File extends tiny.Shape
           var elements = line.split(WHITESPACE_RE);
           elements.shift();
 
-          if      (VERTEX_RE.test(line))   verts.push.apply(verts, elements);
-          else if (NORMAL_RE.test(line))   vertNormals.push.apply(vertNormals, elements);
-          else if (TEXTURE_RE.test(line)) {
-            if (this.uses_3d_texture)
-              textures.push.apply(textures, elements);
-            else //use 2d texture coordinates, even though texture coord can be 3d in obj file
-              textures.push.apply(textures, elements.slice(0,2));
-          }
+          if      (VERTEX_RE.test(line))  positions.push(...elements);
+          else if (NORMAL_RE.test(line))  normals.push(...elements);
+          else if (TEXTURE_RE.test(line)) texture_coords.push(...elements.slice(0,2));
           else if (FACE_RE.test(line)) {
             var quad = false;
             for (var j = 0, eleLen = elements.length; j < eleLen; j++)
@@ -514,30 +502,21 @@ export class Shape_From_File extends tiny.Shape
                 if(j === 3 && !quad) {  j = 2;  quad = true;  }
                 if(elements[j] in unpacked.hashindices)
                     unpacked.indices.push(unpacked.hashindices[elements[j]]);
-                else
-                {
+                else {
                     var vertex = elements[ j ].split( '/' );
 
-                    unpacked.verts.push(+verts[(vertex[0] - 1) * 3 + 0]);
-                    unpacked.verts.push(+verts[(vertex[0] - 1) * 3 + 1]);
-                    unpacked.verts.push(+verts[(vertex[0] - 1) * 3 + 2]);
+                    unpacked.positions.push(+positions[(vertex[0] - 1) * 3 + 0]);
+                    unpacked.positions.push(+positions[(vertex[0] - 1) * 3 + 1]);
+                    unpacked.positions.push(+positions[(vertex[0] - 1) * 3 + 2]);
 
-                    if (textures.length)
-                    {
-                        if (this.uses_3d_texture) {
-                          unpacked.textures.push(+textures[(vertex[1] - 1) * 2 + 0]);
-                          unpacked.textures.push(+textures[(vertex[1] - 1) * 2 + 1]);
-                          unpacked.textures.push(+textures[(vertex[1] - 1) * 2 + 2]);
-                        }
-                        else {
-                          unpacked.textures.push(+textures[(vertex[1] - 1) * 2 + 0]);
-                          unpacked.textures.push(+textures[(vertex[1] - 1) * 2 + 1]);
-                        }
+                    if (texture_coords.length) {
+                      unpacked.texture_coords.push(+texture_coords[(vertex[1] - 1) * 2 + 0]);
+                      unpacked.texture_coords.push(+texture_coords[(vertex[1] - 1) * 2 + 1]);
                     }
 
-                    unpacked.norms.push(+vertNormals[(vertex[2] - 1) * 3 + 0]);
-                    unpacked.norms.push(+vertNormals[(vertex[2] - 1) * 3 + 1]);
-                    unpacked.norms.push(+vertNormals[(vertex[2] - 1) * 3 + 2]);
+                    unpacked.normals.push(+normals[(vertex[2] - 1) * 3 + 0]);
+                    unpacked.normals.push(+normals[(vertex[2] - 1) * 3 + 1]);
+                    unpacked.normals.push(+normals[(vertex[2] - 1) * 3 + 2]);
 
                     unpacked.hashindices[elements[j]] = unpacked.index;
                     unpacked.indices.push(unpacked.index);
@@ -547,53 +526,41 @@ export class Shape_From_File extends tiny.Shape
             }
           }
         }
-        {
-          const { verts, norms, textures } = unpacked;
-          var selection_of_attributes = [];
+      
+        ({ positions, normals, texture_coords } = unpacked);
+        this.indices = unpacked.indices;
 
-          for( var j = 0; j < verts.length/3; j++ )
-              this.vertices[j] = {};
+        for (let i = 0; i < positions.length; i += 3)
+          this.vertices.push({ position: vec3(...positions.slice(i, i + 3)),
+                               normal:   vec3(...normals.slice(i, i + 3)),
+                               tangent:  vec3(0,0,0)
+                             });
+        for(let i = 0; i < texture_coords.length; i += 2 )
+          this.vertices[i/2].texture_coord = vec( texture_coords[ i ], texture_coords[ i+1 ] );
 
-          if (verts != [])
-          {
-            selection_of_attributes.push("position");
-            for( var j = 0; j < verts.length/3; j++ )
-              this.vertices[j].position = vec3( verts[ 3*j ], verts[ 3*j + 1 ], verts[ 3*j + 2 ] );
-          }
+        for (let i = 0; i < this.indices.length; i += 3) {     // Tangent calculation:
+          const face = this.indices.slice(i, i+3);
+          const vertices = face.map( i => this.vertices[i] );
+          const points = vertices.map( v => v.position );
+          const UVs = vertices.map( v => v.texture_coord );
 
-          if (norms != [])
-          {
-            selection_of_attributes.push("normal");
-            for( var j = 0; j < norms.length/3; j++ )
-              this.vertices[j].normal = vec3( norms[ 3*j ], norms[ 3*j + 1 ], norms[ 3*j + 2 ] );
-          }
+          const edge1 = points[1].minus(points[0]);
+          const edge2 = points[2].minus(points[0]);
+          const deltaUV1 = UVs[1].minus(UVs[0]);
+          const deltaUV2 = UVs[2].minus(UVs[0]);
+          const r = 1.0 / (deltaUV1[0] * deltaUV2[1] - deltaUV1[1] * deltaUV2[0]);
 
-          if (textures != [])
-          {
-            selection_of_attributes.push("texture_coord");
-            if (this.uses_3d_texture) {
-              for( var j = 0; j < textures.length/3; j++ )
-                this.vertices[j].texture_coord = vec3( textures[ 3*j ], textures[ 3*j + 1 ], textures[ 3*j + 2 ] );
-            }
-            else { //use 2d texture coordinates
-              for( var j = 0; j < textures.length/2; j++ )
-                this.vertices[j].texture_coord = vec( textures[ 2*j ], textures[ 2*j + 1 ] );
-            }
-          }
-
-          this.indices = unpacked.indices;
+          // Accumulate tangent to all three vertices of the face:
+          const tangent = edge1.times(deltaUV2[1]).minus(edge2.times(deltaUV1[1])).times(r);
+          vertices.forEach( v => v.tangent = v.tangent.plus(tangent) );
         }
+        for (let v of this.vertices) {    // Finally, orthogonalize and normalize tangents:
+          const n = v.normal;
+          const t = v.tangent;
+          v.tangent = t.minus(n.times(n.dot(t))).normalized(); // Subtract out component along normal
+        }
+
         this.normalize_positions( false );
-
-        //Deduce it from the obj data!
-        this.build_VBO( selection_of_attributes );
-
-        this.ready = true;
-      }
-    draw( caller, uniforms, model_transform, material, type = "TRIANGLES", instances )
-      {               // draw(): Same as always for shapes, but cancel all
-                      // attempts to draw the shape before it loads:
-        if( this.ready )
-          super.draw( caller, uniforms, model_transform, material, type, instances );
+        this.waiting = false;
       }
   };
