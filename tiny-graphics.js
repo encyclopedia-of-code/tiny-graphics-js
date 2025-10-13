@@ -666,6 +666,7 @@ export class Renderer extends Component {
       { animate   : true,
         animation_time : 0,
         animation_delta_time: 0,
+        samplers: new Map()
       } );
   }
   make_context (canvas, background_color = color (0, 0, 0, 1), dimensions) {
@@ -1008,7 +1009,8 @@ export class Texture {
   // Initiate async loading based on this.urls (string or array)
   _start_async_load() {
     // Flatten to array, even for single images.
-    const urls = Array.isArray(this.urls) ? this.urls : [this.urls];
+    let urls = Array.isArray(this.urls) ? this.urls : [this.urls];
+    urls = urls.filter( u => u !== undefined );
     this.imageLayers = new Array(urls.length);
     this.load_failures = []; // Track recent failed loads: {filename, layer}
     let remaining = urls.length;

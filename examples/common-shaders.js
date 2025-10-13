@@ -95,6 +95,7 @@ export class PBR_Shader extends Shader {
       }`;
     }
     fragment_glsl_code () {         // ********* FRAGMENT SHADER *********
+      // Good PBR reference: https://github.com/emeiri/ogldev/blob/master/Common/Shaders/lighting_new.fs
         return this.shared_glsl_code () + `
       uniform Camera {
         mat4 camera_inverse;
@@ -248,6 +249,7 @@ export class PBR_Shader extends Shader {
 
           vec3 tone_mapped = totalLight / (totalLight + vec3(1.0)); // simple Reinhard operator
           vec3 gamma_corrected = pow(tone_mapped, vec3(1.0 / 2.2));
+          gamma_corrected = max(gamma_corrected, vec3(ambient));
           frag_color = vec4(gamma_corrected, alpha);
       }`
     }

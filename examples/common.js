@@ -1,4 +1,4 @@
-import { vec3, vec4, Mat4, UBO_Plan } from '../tiny-graphics.js';
+import { vec3, vec4, Mat4, UBO_Plan, Texture } from '../tiny-graphics.js';
 export * from '../tiny-graphics.js';
 export * from './common-shapes.js';
 export * from './common-shaders.js';
@@ -195,11 +195,25 @@ export class Shadow_Light {
   };
 
 export class Materials extends UBO_Plan {
-    static NUM_MATERIALS = 12;
+    static NUM_MATERIALS = 128;
     static TEXTURE_LAYERS_PER_MATERIAL = 6;
-    init(texture_array, fields) {
-      this.texture_array = texture_array;
-      this.fields = { materials: fields || Array(Materials.NUM_MATERIALS).fill(0).map( (x,i) => Materials.default_values(i) ) };
+    init(materials_list, fields) {
+      this.materials_list = materials_list;
+      this.name_to_index = Object.keys( materials_list ).reduce((acc, name, index) => (acc[name] = index, acc), {});
+      const all_filenames = Object.values( materials_list ).flatMap
+        ( filename => Array.isArray(filename) ? filename : [filename] );
+      const urls_to_layer = all_filenames.reduce( (acc, filename, index) => (acc[filename] = index, acc), {});
+
+      this.texture_array = new Texture({urls: all_filenames});
+      this.fields = { materials: Array(Materials.NUM_MATERIALS).fill(0).map( (x,i) => {
+        const filename = Object.values( materials_list )[i];
+        return Object.assign( Materials.default_values(),
+             { collapse_textures: +(!Array.isArray(filename)),
+               starting_texture_layer: urls_to_layer[Array.isArray(filename) ? filename[0] : filename ],
+               is_textured: filename ? 1 : 0
+             });
+        })
+      };
     }
     apply_fallbacks() {
       const attributes = [ "albedo", "roughness", "metallicity", "ao", "normal", "height"];
@@ -217,12 +231,11 @@ export class Materials extends UBO_Plan {
       this.apply_fallbacks();
       super.fill_buffer(uniform_block_info);
     }
-    set(index, material_fields = {}) {
-      this.fields.materials[index] = Object.assign( this.fields.materials[index], material_fields );
+    set(name, material_fields = {}) {
+      Object.assign( this.fields.materials[ this.name_to_index[name] ], material_fields );
     }
-    static default_values (index=0) {
+    static default_values () {
       return {
-                starting_texture_layer: index * Materials.TEXTURE_LAYERS_PER_MATERIAL,
                 is_textured: 0,
                 fallback_roughness: .5,
                 fallback_metallicity: 1,
@@ -233,10 +246,6 @@ export class Materials extends UBO_Plan {
                 textured_normal_amount: 1,
                 textured_height_amount: 1,
                 collapse_textures: 0,
-              color: vec4 (1.0, 1.0, 1.0, 1.0),
-              diffuse: vec3(1.0, 1.0, 1.0),
-              specular: vec3 (1.0, 1.0, 1.0),
-              smoothness: 32.0
             };
     }
     get_binding_point () { return 2; }
