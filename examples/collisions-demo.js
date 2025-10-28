@@ -1,13 +1,13 @@
 import * as defs from './common.js';
 import { vec3, unsafe3, vec4, color, Mat4, Texture, RenderListItem, Component, Renderer } from './common.js';
-import { Camera, LightArray, Material } from './common.js';
+import { Camera, LightArray, Materials } from './common.js';
 
 export class Rigid_Body {           // **Rigid_Body** can store and update the properties of a 3D body that incrementally
                                     // moves from its previous place due to velocities.  It conforms to the
                                     // approach outlined in the "Fix Your Timestep!" blog post by Glenn Fiedler.
-  constructor( shape, material, size )
+  constructor( { shape, material_index, color, size } )
     { Object.assign( this,
-             { shape, material, size } )
+             { shape, material_index, color, size } )
     }
   situate( location_matrix, linear_velocity, angular_velocity, spin_axis = vec3( 0,0,0 ).randomized(1).normalized() )
     {                               // situate(): assign the body's initial values, or overwrite them.
@@ -129,17 +129,6 @@ export class Simulation extends Renderer
     {                                     // display(): advance the time and state of our whole simulation.
       if( this.state.animate )
         this.simulate( this.state.animation_delta_time );
-
-      this.renderList.length = 0;
-                                          // Draw each shape at its current location:
-      for( let b of this.bodies ) {
-        const idx = this.renderList.push(new RenderListItem(b.shape, b.material) ) - 1;
-        this.renderList[idx].model_transforms.push( b.drawn_location );
-        this.renderList[idx].update_matrices();
-      }
-
-      for( let renderListItem of this.renderList)
-        this.draw(renderListItem);
     }
   update_state( dt )      // update_state(): Your subclass of Simulation has to override this abstract function.
     { throw "Override this" }
@@ -147,23 +136,64 @@ export class Simulation extends Renderer
 
 
 export class Test_Data
-{                             // **Test_Data** pre-loads some Shapes and Textures that other Scenes can borrow.
+{                             // **Test_Data** pre-loads some Shapes and Materials that other Scenes can borrow.
   constructor()
-    { this.textures = { rgb   : new Texture( "assets/rgb.jpg" ),
-                        earth : new Texture( "assets/earth.gif" ),
-                        grid  : new Texture( "assets/grid.png" ),
-                        stars : new Texture( "assets/stars.png" ),
-                        text  : new Texture( "assets/text.png" ),
-                      }
-      this.shapes = { // donut  : new defs.Torus          ( 15, 15, [[0,2],[0,1]] ),
-                      // cone   : new defs.Closed_Cone    ( 4, 10,  [[0,2],[0,1]] ),
-                      // capped : new defs.Capped_Cylinder( 4, 12,  [[0,2],[0,1]] ),
+    {
+      this.shapes = { donut  : new defs.Torus          ( 15, 15, [[0,2],[0,1]] ),
+                      cone   : new defs.Closed_Cone    ( 4, 10,  [[0,2],[0,1]] ),
+                      capped : new defs.Capped_Cylinder( 4, 12,  [[0,2],[0,1]] ),
                       ball   : new defs.Subdivision_Sphere( 3,   [[0,1],[0,1]] ),
                       cube   : new defs.Cube(),
-                      // prism  : new ( defs.Capped_Cylinder   .prototype.make_flat_shaded_version() )( 10, 10, [[0,2],[0,1]] ),
-                      // gem    : new ( defs.Subdivision_Sphere.prototype.make_flat_shaded_version() )( 2 ),
-                      // donut2 : new ( defs.Torus             .prototype.make_flat_shaded_version() )( 20, 20, [[0,2],[0,1]] ),
+  //                  prism  : new ( defs.Capped_Cylinder   .prototype.make_flat_shaded_version() )( 10, 10, [[0,2],[0,1]] ),
+  //                  gem    : new ( defs.Subdivision_Sphere.prototype.make_flat_shaded_version() )( 2 ),
+  //                  donut2 : new ( defs.Torus             .prototype.make_flat_shaded_version() )( 20, 20, [[0,2],[0,1]] ),
                     };
+
+      function blender_pbr_filenames(name) {
+        return ["albedo", "roughness", "metallic", "ao", "normal-ogl", "height"]
+            .map(s => "assets/" + name + "-bl/" + name + "_" + s + ".png");
+      }
+      const materials = {
+              "gold":      blender_pbr_filenames("gold-scuffed"),
+              "planks":    blender_pbr_filenames("agedplanks1"),
+              "dark-wood": blender_pbr_filenames("dark-wood-stain"),
+              "bark":      blender_pbr_filenames("ash-tree-bark"),
+              "leather":   blender_pbr_filenames("older-padded-leather"),
+              "red":       blender_pbr_filenames("red-scifi-metal"),
+              "scales":    blender_pbr_filenames("fancy-scaled-gold"),
+              "grass":     blender_pbr_filenames("agedplanks1"),
+              "cobble":    blender_pbr_filenames("dusty-cobble"),
+              "rgb":       "assets/rgb.jpg",
+              "earth":     "assets/earth.gif",
+              "turtle":    "assets/13103_pearlturtle_diffuse.jpg",
+              "solid":      undefined
+      };
+      this.num_materials = Object.keys(materials).length;
+      this.state = Object.create(null);
+      Object.assign( this.state,
+        { animate   : true,
+          animation_time : 0,
+          animation_delta_time: 0,
+          samplers: new Map()
+        } );
+      this.state.materials = new Materials( materials );
+      this.state.samplers.set("texture_array", this.state.materials.texture_array );
+      this.state.materials.set("turtle", {
+            fallback_roughness: 1,
+            fallback_metallicity: .2,
+            textured_roughness_amount: .5,
+            textured_metallicity_amount: .5,
+      });
+      this.state.materials.set("gold", { textured_roughness_amount: .8 });
+
+      this.state.shader = new defs.PBR_Shader (LightArray.NUM_LIGHTS, Materials.NUM_MATERIALS, {has_shadows: false, has_textures: true});
+      this.state.lightArray =
+           new defs.LightArray({ambient: .025, lights:[
+             {direction_or_position: vec4(-3.0, 10.0, 0.0, 0.0),
+               color: vec3(1.0, 0.7, 0.7), diffuse: 1.0, specular: 1.0, attenuation_factor: 0.00001},
+             {direction_or_position: vec4( 0,-5,-10,1),
+               color: vec3(1,1,1), diffuse: 0.5, specular: 1.0, attenuation_factor: 0.001}
+           ]});
     }
   random_shape( shape_list = this.shapes )
     {                                       // random_shape():  Extract a random shape from this.shapes.
@@ -181,22 +211,30 @@ export class Inertia_Demo extends Simulation
       this.data = new Test_Data();
       this.shapes = { ...this.data.shapes };
       this.shapes.square = new defs.Square();
-      const shader = new defs.Universal_Shader (LightArray.NUM_LIGHTS, {has_shadows: false, has_texture: true});   // defs.Fake_Bump_Map( 1 );
-      this.material = new Material( shader, { color: vec4( .4,.8,.4,1 ), ambient:.4 }, { diffuse_texture: this.data.textures.stars } );
+      this.num_falling_bodies = 500;
 
-      this.state.lightArray =
-           new defs.LightArray({ambient: .1, lights:[
-             {direction_or_position: vec4( 0,-5,-10,1),
-               color: vec3(1,1,1), diffuse: 0.5, specular: 1.0, attenuation_factor: 0.001}
-           ]});
+      this.state = this.data.state;
+      this.passes = [];
+      this.passes.push( Object.create( this.state ) );
+
+      // Optionally pre-allocate persistent storage for each render pass:
+      for( let shape of Object.values(this.shapes) ) {
+        const item = new RenderListItem(this.passes[0], shape, 0);
+        item.hint = "STREAM_DRAW";
+        this.renderList.insert(item);
+      }
     }
-  random_color() { this.material.color = color( .6,.6*Math.random(),.6*Math.random(),1 ) }
+  random_color() { return color( .6,.6*Math.random(),.6*Math.random(),1 ).to3() }
   update_state( dt )
     {                 // update_state():  Override the base time-stepping code to say what this particular
                       // scene should do to its bodies every frame -- including applying forces.
                       // Generate additional moving bodies if there ever aren't enough:
-      while( this.bodies.length < 150 )
-        this.bodies.push( new Rigid_Body( this.data.random_shape(), this.material, vec3( 1,1+Math.random(),1 ) )
+      while( this.bodies.length < this.num_falling_bodies )
+        this.bodies.push( new Rigid_Body( {
+          shape: this.data.random_shape(),
+          material_index: Math.random()*9999%this.data.num_materials,
+          color: this.random_color(),
+          size: vec3( 1,1+Math.random(),1 ) } )
               .situate( Mat4.translation( ...vec3( 0,15,0 ).randomized(10) ),
                         vec3( 0,-1,0 ).randomized(2).normalized().times(3), Math.random() ) );
 
@@ -209,22 +247,36 @@ export class Inertia_Demo extends Simulation
       this.bodies = this.bodies.filter( b => b.center.norm() < 50 && b.linear_velocity.norm() > 2 );
     }
   render_frame() {                                 // display(): Draw everything else in the scene besides the moving bodies.
+      super.render_frame();
+
       if( !this.controls )  {
         const value = { camera_inverse: Mat4.translation(0,0,-50),
                             projection: Mat4.perspective(Math.PI/4, this.width/this.height, 1, 500) };
         this.state.camera = new Camera( value );
-        this.controls = new defs.Movement_Controls( this.state );
+        this.controls = new defs.Movement_Controls( { state: this.state } );
         this.controls.add_mouse_controls( this.canvas );
         this.animated_children.push( this.controls );
       }
-      this.state.selected_UBOs.set(this.state.camera.get_binding_point(), this.state.camera);
-      this.state.selected_UBOs.set(this.state.lightArray.get_binding_point(), this.state.lightArray);
 
-      super.render_frame();
-                                                                                              // Draw the ground:
-    //   this.shapes.square.draw( caller, this.uniforms, Mat4.translation( 0,-10,0 )
-    //                                    .times( Mat4.rotation( Math.PI/2,   1,0,0 ) ).times( Mat4.scale( 50,50,1 ) ),
-    //                            { ...this.material, texture: this.data.textures.earth } );
+      this.renderList.traverse( (item) => item.clear(), {prune: false} );
+
+      // Draw the ground:
+      const item = new RenderListItem(this.passes[0], this.shapes.square, 0);
+      item.instance_vars.push( { model_transform: Mat4.translation( 0,-10,0 )
+                                    .times( Mat4.rotation( Math.PI/2,   1,0,0 ) ).times( Mat4.scale( 50,50,1 ) ),
+                                 color: vec3(.5,1,.5), material_index: 0 } );
+      this.renderList.insert( item );
+
+      // Draw each shape at its current location:
+      for( let b of this.bodies ) {
+        const item = new RenderListItem(this.passes[0], b.shape, 0);
+
+        item.instance_vars.push( { model_transform: b.drawn_location, color: b.color, material_index: b.material_index } );
+
+        this.renderList.insert( item );
+      }
+      this.renderList.traverse( (item) => item.update_per_instance_buffer(), {prune: false} );
+      this.renderList.traverse( (item) => this.draw( item ), {prune: false} );
     }
   render_explanation() {
       this.document_region.innerHTML += `<p>This demo lets random initial momentums carry bodies until they fall and bounce.  It shows a good way to do incremental movements, which are crucial for making objects look like they're moving on their own instead of following a pre-determined path.  Animated objects look more real when they have inertia and obey physical laws, instead of being driven by simple sinusoids or periodic functions.

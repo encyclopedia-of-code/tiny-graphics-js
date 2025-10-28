@@ -547,7 +547,7 @@ class Sorted_RenderList {
     this.linked_list = new Linked_List();
     this.render_state_map = new Map(); // Nested map, 3 deep.  Sort by 3 levels: Render state, Shape, group ID.
   }
-  get (render_state, shape, group_ID) {
+  get (render_state, shape, group_ID) {  // returns a RenderListItem
     return this.render_state_map.get(render_state)?.get(shape)?.get(group_ID);
   }
 
@@ -874,7 +874,9 @@ export class Renderer extends Component {
       if(previous_bound_ubo != ubo )
         gl.bindBufferBase (gl.UNIFORM_BUFFER, ubo_plan.get_binding_point(), ubo);
 
-      ubo_plan.fill_buffer(this.uniform_addresses.get(shader).uniform_block_info[ ubo_plan.constructor.name ]);
+      if( ubo_plan.dirty )
+        ubo_plan.fill_buffer(this.uniform_addresses.get(shader).uniform_block_info[ ubo_plan.constructor.name ]);
+      ubo_plan.dirty = false;
       if( !ubo_plan.local_buffer || this.gpu_versions.get(ubo_plan) >= ubo_plan.version )
         continue;
       this.gpu_versions.set(ubo_plan, ubo_plan.version);
@@ -901,6 +903,7 @@ export class Renderer extends Component {
 export class UBO_Plan {
   constructor (...args) {
     this.ready = true;        // For async loaded entries
+    this.dirty = true;
     this.version = -1;
     this.type = Float32Array;   // User must override this manually before fill_buffer if they want a int/uint based UBO.
     this.init(...args);

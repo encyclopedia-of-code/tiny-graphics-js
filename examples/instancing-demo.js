@@ -29,20 +29,21 @@ export class Instanced_Cubes_Demo extends Renderer {
             "cobble":    blender_pbr_filenames("dusty-cobble"),
             "rgb":       "assets/rgb.jpg",
             "earth":     "assets/earth.gif",
-            "turtle":    "assets/13103_pearlturtle_diffuse.jpg",
+        //  "turtle":    "assets/13103_pearlturtle_diffuse.jpg",
             "solid":      undefined
     };
     this.num_materials = Object.keys(materials).length;
 
     this.state.materials = new Materials( materials );
     this.state.samplers.set("texture_array", this.state.materials.texture_array );
-
+    /*
     this.state.materials.set("turtle", {
           fallback_roughness: 1,
           fallback_metallicity: .2,
           textured_roughness_amount: .5,
           textured_metallicity_amount: .5,
     });
+    */
     this.state.materials.set("gold", { textured_roughness_amount: .8 });
 
     this.state.shader = new defs.PBR_Shader (LightArray.NUM_LIGHTS, Materials.NUM_MATERIALS, {has_shadows: false, has_textures: true});
@@ -71,7 +72,7 @@ export class Instanced_Cubes_Demo extends Renderer {
           model_transform: m, color: vec3(1,1,1).randomized(.3), material_index: j%this.num_materials } } ) );
       this.renderList.insert( items[i] );
     }
-
+/*
     for( let i=0; i<this.num_objects; i++) {
       const item = new RenderListItem(this.passes[0], this.shapes.cube, 1);
       item.hint = "STREAM_DRAW";
@@ -87,8 +88,7 @@ export class Instanced_Cubes_Demo extends Renderer {
               Mat4.translation(...vec3(0, .25, .5).times_pairwise(vec3(20, 10, 20)))
                               , color: vec3(.7,.7,.7).randomized(.5), material_index: 11 } );
     this.renderList.insert( item );
-
-
+*/
     this.renderList.traverse( (item) => item.update_per_instance_buffer(), {prune: false} );
 
 }
@@ -101,7 +101,7 @@ render_frame () {
       this.controls.add_mouse_controls( this.canvas );
       this.animated_children.push( this.controls );
     }
-
+/*
     this.renderList.get(this.passes[0], this.shapes.cube, 1).clear();
     for( let i=0; i<this.num_objects; i++) {
       const item = new RenderListItem(this.passes[0], this.shapes.cube, 1);
@@ -113,7 +113,7 @@ render_frame () {
       this.renderList.insert( item );
     }
     this.renderList.get(this.passes[0], this.shapes.cube, 1).update_per_instance_buffer();
-
+*/
     this.renderList.traverse( (item) => this.draw( item ), {prune: true} );
   }
 };
