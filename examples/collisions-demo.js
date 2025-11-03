@@ -250,9 +250,9 @@ export class Inertia_Demo extends Simulation
       super.render_frame();
 
       if( !this.controls )  {
-        const value = { camera_inverse: Mat4.translation(0,0,-50),
+        const camera = { camera_inverse: Mat4.translation(0,0,-50),
                             projection: Mat4.perspective(Math.PI/4, this.width/this.height, 1, 500) };
-        this.state.camera = new Camera( value );
+        this.state.camera = new Camera( camera );
         this.controls = new defs.Movement_Controls( { state: this.state } );
         this.controls.add_mouse_controls( this.canvas );
         this.animated_children.push( this.controls );

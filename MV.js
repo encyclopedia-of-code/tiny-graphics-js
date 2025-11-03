@@ -519,7 +519,7 @@ function matvec(data) { return new MatVec(data); }
     0,  0, 1, 0,
     0,  0, 0, 1
   ];
-  console.assert(matricesAlmostEqual(matrix, expectedRotZ90, EPS), "16. Rotate Z 90 degrees");
+  assert(matricesAlmostEqual(matrix, expectedRotZ90, EPS), "16. Rotate Z 90 degrees");
 
   // 17. Scale by 2, 3, 4
   matrix.scale(2, 3, 4);
@@ -529,7 +529,7 @@ function matvec(data) { return new MatVec(data); }
     expectedScale[row * 4 + 1] *= 3;  // scale Y
     expectedScale[row * 4 + 2] *= 4;  // scale Z
   }
-  console.assert(matricesAlmostEqual(matrix, expectedScale, EPS), "17. Scale 2x3x4");
+  assert(matricesAlmostEqual(matrix, expectedScale, EPS), "17. Scale 2x3x4");
 
   // 18. Translate world by (5,6,7)
   const translation = matvec().set_identity().translate(5,6,7);
@@ -538,7 +538,7 @@ function matvec(data) { return new MatVec(data); }
   expectedTranslate[3] += 5;
   expectedTranslate[7] += 6;
   expectedTranslate[11] += 7;
-  console.assert(matricesAlmostEqual(translation, expectedTranslate, EPS), "18. Translate 5,6,7");
+  assert(matricesAlmostEqual(translation, expectedTranslate, EPS), "18. Translate 5,6,7");
 
   // 19. LookAt from origin looking down -Z with +Y up
   let eye = matvec([0,0,0 ]);
@@ -581,9 +581,101 @@ function matvec(data) { return new MatVec(data); }
   ];
   assert(matricesAlmostEqual(matrix, expectedInvertTranslation, EPS), "22. Invert translation");
 
+  // 23. Zero-length vector normalization
+  let mv_23_zeroNorm = matvec([0, 0, 0]);
+  mv_23_zeroNorm.normalize();
+  assert(mv_23_zeroNorm.size === 3, "23. Zero-length normalize size");
+  assert(mv_23_zeroNorm.data[0] === 0 && mv_23_zeroNorm.data[1] === 0 && mv_23_zeroNorm.data[2] === 0, "23. Zero-length vector stays zero");
+
+  // 24. Identity matrix multiplication
+  let mv_24_identity = matvec().set_identity();
+  let mv_24_M = matvec([
+    [2, 3, 4, 5],
+    [1, 0, 3, 2],
+    [0, 1, 4, 3],
+    [0, 0, 0, 1]
+  ]);
+  let mv_24_res = mv_24_M.clone().multiply(mv_24_identity);
+  assert(mv_24_res.equals(mv_24_M), "24. Identity matrix multiplication leaves matrix unchanged");
+
+  // 25. Inversion of non-invertible matrix throws
+  let mv_25_singular = matvec([
+    [1, 0, 0, 0],
+    [0, 0, 0, 0],
+    [0, 0, 0, 0],
+    [0, 0, 0, 0]
+  ]);
+  let mv_25_threw = false;
+  try {
+    mv_25_singular.invert();
+  } catch(e) {
+    mv_25_threw = true;
+  }
+  assert(mv_25_threw, "25. Non-invertible matrix throws on invert");
+
+  // 26. Rotation by 0 and 2 * PI
+  let mv_26_identity = matvec().set_identity();
+  let mv_26_rot0 = mv_26_identity.clone().rotate(0, 0, 1, 0);
+  let mv_26_rot2pi = mv_26_identity.clone().rotate(2 * Math.PI, 0, 1, 0);
+  assert(mv_26_rot0.equals(mv_26_identity), "26. Rotate 0 radians unchanged");
+  assert(mv_26_rot2pi.equals(mv_26_identity), "26. Rotate 2*PI radians unchanged");
+
+  // 27. Matrix-vector multiplication associativity: (A*B)*v === A*(B*v)
+  let mv_27_A = matvec([
+    [1, 0, 0, 0],
+    [0, 2, 0, 0],
+    [0, 0, 3, 0],
+    [0, 0, 0, 1]
+  ]);
+  let mv_27_B = matvec([
+    [0, -1, 0, 0],
+    [1,  0, 0, 0],
+    [0,  0, 1, 0],
+    [0,  0, 0, 1]
+  ]);
+  let mv_27_v = matvec([1, 2, 3]);
+  let mv_27_res1 = mv_27_A.clone().multiply(mv_27_B).multiply(mv_27_v.quickClone().to4(1));
+  let mv_27_res2 = mv_27_A.clone().multiply(mv_27_B.clone().multiply(mv_27_v.quickClone().to4(1)));
+  assert(mv_27_res1.equals(mv_27_res2), "27. Matrix multiplication associativity with vector");
+
+  // 28. Clone deep copy validation
+  let mv_28_original = matvec([1, 2, 3]);
+  let mv_28_copy = mv_28_original.clone();
+  mv_28_copy.data[0] = 999;
+  assert(mv_28_original.data[0] !== 999, "28. Clone creates deep copy");
+
+  // 29. Equals threshold edge case
+  let mv_29_a = matvec([1, 2, 3]);
+  let mv_29_b = matvec([1 + 1e-6, 2, 3]);
+  assert(mv_29_a.equals(mv_29_b, 1e-6), "29. equals with boundary epsilon");
+  assert(!mv_29_a.equals(mv_29_b, 1e-7), "29. equals fails below epsilon");
+
+  // 30. Mix at edges and beyond bounds
+  let mv_30_start = matvec([0, 0, 0]);
+  let mv_30_end = matvec([10, 10, 10]);
+  let mv_30_t0 = mv_30_start.clone().mix(mv_30_end, 0);
+  let mv_30_t1 = mv_30_start.clone().mix(mv_30_end, 1);
+  let mv_30_tb = mv_30_start.clone().mix(mv_30_end, -0.5);  // Below 0
+  let mv_30_ta = mv_30_start.clone().mix(mv_30_end, 1.5);   // Above 1
+  assert(mv_30_t0.equals(mv_30_start), "30. mix with t=0");
+  assert(mv_30_t1.equals(mv_30_end), "30. mix with t=1");
+  assert(mv_30_tb.data[0] < 0, "30. mix with t < 0 extrapolates");
+  assert(mv_30_ta.data[0] > 10, "30. mix with t > 1 extrapolates");
+
+  // 31. look_at with parallel up and view throws error
+  let mv_31_eye = matvec([0, 0, 0]);
+  let mv_31_at = matvec([0, 0, -1]);
+  let mv_31_up = matvec([0, 0, -1]);  // Parallel to view direction
+  let mv_31_threw = false;
+  try {
+    let mv_31_test = matvec().look_at(mv_31_eye, mv_31_at, mv_31_up);
+  } catch (e) {
+    mv_31_threw = true;
+  }
+  assert(mv_31_threw, "31. look_at throws when up parallel to view");
+
   console.log("All MatVec tests passed.");
 })();
-
 
 /*
 const inverse_transpose = points_transform.clone().transpose().invert();

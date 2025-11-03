@@ -622,7 +622,6 @@ export class RenderListItem {
     this.shape = shape;
     this.render_state = state;
     this.group_ID = group_ID;
-    this.instance_VBO_plan = {attributes: ["model_transform", "color", "material_index"] };
     this.group_transform = Mat4.identity();
     this.hint = "STATIC_DRAW";
     this.type = "TRIANGLES";
@@ -630,8 +629,12 @@ export class RenderListItem {
     this.instance_count = 0;
   }
   update_per_instance_buffer() {
-    if (!this.instance_vars.length)     // The user may specify no matrices for the single instance case.
-      this.instance_vars.push( { model_transform: Mat4.identity(), color: color(1,1,1,1),  material_index: 0 } );
+    if( !this.instance_VBO_plan ) {
+      if (!this.instance_vars.length) {     // The user may specify no matrices for the single instance case.
+        this.instance_vars.push( { model_transform: Mat4.identity(), color: vec3(1,1,1),  material_index: 0 } );
+      }
+      this.instance_VBO_plan = { attributes: [...Object.keys(this.instance_vars[0])] };
+    }
     this.instance_count = this.instance_vars.length;
     Shape.build_VBO_plan (this.instance_vars, this.instance_VBO_plan, this.buffer_hint, 1)
   }
@@ -772,10 +775,11 @@ export class Renderer extends Component {
     if( !shape.ready) {
       if( ! shape.VBO_plans)
         // If no VBO layout is specified, assume all vertex fields should be in just one, interleaved.
-        shape.VBO_plans = [{attributes: [...Object.keys(shape.vertices[0])] }];
+        shape.VBO_plans = [ {attributes: [...Object.keys(shape.vertices[0])] }];
       for( let vbo_plan of shape.VBO_plans )
         Shape.build_VBO_plan (shape.vertices, vbo_plan);
     }
+    renderListItem.update_per_instance_buffer();
 
     if (shape.indices.length) {
         const existing_EBO = this.index_buffers.get (shape);

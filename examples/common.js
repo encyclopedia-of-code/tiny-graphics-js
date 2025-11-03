@@ -12,6 +12,7 @@ export class Camera extends UBO_Plan {
      this.assign(fields);
     }
     assign(fields) {
+      this.dirty = true;
       // If only one matrix is provided, invert it to fill in the other.
       const temp = { camera_world: fields?.camera_world || fields?.camera_inverse && Mat4.inverse(fields.camera_inverse),
                    camera_inverse: fields?.camera_inverse || fields?.camera_world && Mat4.inverse(fields.camera_world) };
@@ -21,9 +22,11 @@ export class Camera extends UBO_Plan {
     }
     get_binding_point () { return 0; }
     post_multiply (matrix) {
+        this.dirty = true;
         this.assign( { camera_world: this.fields.camera_world.times(matrix) } );
     }
     pre_multiply (inverted_matrix) {
+      this.dirty = true;
       this.assign( { camera_inverse: inverted_matrix.times(this.fields.camera_inverse) } );
     }
   };
@@ -202,6 +205,8 @@ export class Materials extends UBO_Plan {
       this.name_to_index = Object.keys( materials_list ).reduce((acc, name, index) => (acc[name] = index, acc), {});
       const all_filenames = Object.values( materials_list ).flatMap
         ( filename => Array.isArray(filename) ? filename : [filename] );
+      if( all_filenames.length === 0 )
+        return;
       const urls_to_layer = all_filenames.reduce( (acc, filename, index) => (acc[filename] = index, acc), {});
 
       this.texture_array = new Texture({urls: all_filenames});

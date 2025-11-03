@@ -47,8 +47,7 @@ export class Instanced_Cubes_Demo extends Renderer {
     this.state.materials.set("gold", { textured_roughness_amount: .8 });
 
     this.state.shader = new defs.PBR_Shader (LightArray.NUM_LIGHTS, Materials.NUM_MATERIALS, {has_shadows: false, has_textures: true});
-    this.state.lightArray =
-         new defs.LightArray({ambient: .025, lights:[
+    this.state.lightArray = new defs.LightArray({ambient: .025, lights:[
            {direction_or_position: vec4(-3.0, 10.0, 0.0, 0.0),
              color: vec3(1.0, 0.7, 0.7), diffuse: 1.0, specular: 1.0, attenuation_factor: 0.00001},
            {direction_or_position: vec4(5.0, 10.0, 0.0, 0.0),
@@ -89,14 +88,14 @@ export class Instanced_Cubes_Demo extends Renderer {
                               , color: vec3(.7,.7,.7).randomized(.5), material_index: 11 } );
     this.renderList.insert( item );
 */
-    this.renderList.traverse( (item) => item.update_per_instance_buffer(), {prune: false} );
+   // this.renderList.traverse( (item) => item.update_per_instance_buffer(), {prune: false} );
 
 }
 render_frame () {
     if( !this.controls )  {
-      const value = { camera_inverse: Mat4.look_at( vec3(0.0, 5.0, 20.0), vec3(0,0,0), vec3(0,1,0) ),
+      const camera = { camera_inverse: Mat4.look_at( vec3(0.0, 5.0, 20.0), vec3(0,0,0), vec3(0,1,0) ),
                           projection: Mat4.perspective(Math.PI/2, this.width/this.height, 0.01, 500) };
-      this.state.camera = new Camera( value );
+      this.state.camera = new Camera( camera );
       this.controls = new defs.Movement_Controls( { state: this.state } );
       this.controls.add_mouse_controls( this.canvas );
       this.animated_children.push( this.controls );

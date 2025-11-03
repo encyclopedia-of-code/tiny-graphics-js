@@ -442,24 +442,6 @@ export class Instanced_Cube_Index extends tiny.Shape {
   };
 
 
-export class Minimal_Shape extends tiny.Shape {
-      // A truly minimal triangle, with three vertices each holding a 3D position and a color.
-      init () {
-          // Describe the where the points of a triangle are in space, and also describe their colors:
-          this.vertices[0] = { position: vec3 (0, 0, 0), color: color (1, 0, 0, 1) };
-          this.vertices[1] = { position: vec3 (1, 0, 0), color: color (0, 1, 0, 1) };
-          this.vertices[2] = { position: vec3 (0, 1, 0), color: color (0, 0, 1, 1) };
-      }
-  };
-
-export class Minimaler_Shape extends tiny.Shape {
-      init () {
-          this.vertices[0] = { position: vec3 (0, 0, 0)};
-          this.vertices[1] = { position: vec3 (1, 0, 0)};
-          this.vertices[2] = { position: vec3 (0, 1, 0)};
-      }
-  };
-
 export class Shape_From_File extends tiny.Shape {
                                       // **Shape_From_File** is a versatile standalone Shape that imports
                                       // all its arrays' data from an .obj 3D model file.
