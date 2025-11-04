@@ -49,9 +49,9 @@ export class Instanced_Cubes_Demo extends Renderer {
     this.state.shader = new defs.PBR_Shader (LightArray.NUM_LIGHTS, Materials.NUM_MATERIALS, {has_shadows: false, has_textures: true});
     this.state.lightArray = new defs.LightArray({ambient: .025, lights:[
            {direction_or_position: vec4(-3.0, 10.0, 0.0, 0.0),
-             color: vec3(1.0, 0.7, 0.7), diffuse: 1.0, specular: 1.0, attenuation_factor: 0.00001},
+             color: vec3(1.0, 0.7, 0.7), diffuse: 1.0, specular: 1.0, attenuation_factor: 0.0001},
            {direction_or_position: vec4(5.0, 10.0, 0.0, 0.0),
-             color: vec3(1.0, 1.0, 1.0), diffuse: 1.0, specular: 1.0, attenuation_factor: 0.00001}
+             color: vec3(1.0, 1.0, 1.0), diffuse: 1.0, specular: 1.0, attenuation_factor: 0.0001}
          ]});
 
     this.passes = [];

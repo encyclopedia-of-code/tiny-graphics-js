@@ -4,6 +4,8 @@ export * from './common-shapes.js';
 export * from './common-shaders.js';
 export * from './common-components.js';
 
+// WARNING:  These class names must match shader UBO variable names.
+
 export class Camera extends UBO_Plan {
     init(fields) {
       this.fields = { projection: Mat4.identity(),
@@ -251,6 +253,29 @@ export class Materials extends UBO_Plan {
                 textured_normal_amount: 1,
                 textured_height_amount: 1,
                 collapse_textures: 0,
+            };
+    }
+    get_binding_point () { return 2; }
+};
+
+
+
+
+
+export class Simple_Materials extends UBO_Plan {
+    static NUM_MATERIALS = 128;
+    init(materials_list, fields) {
+      this.materials_list = materials_list;
+      this.name_to_index = Object.keys( materials_list ).reduce((acc, name, index) => (acc[name] = index, acc), {});
+      this.fields = { materials: Array(Materials.NUM_MATERIALS).fill(0).map( (x,i) => Simple_Materials.default_values() ) };
+    }
+    set(name, material_fields = {}) {
+      Object.assign( this.fields.materials[ this.name_to_index[name] ], material_fields );
+    }
+    static default_values () {
+      return { diffusivity: 1.0,
+               specularity: 1.0,
+               smoothness:  1.0
             };
     }
     get_binding_point () { return 2; }

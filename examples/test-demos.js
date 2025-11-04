@@ -6,14 +6,13 @@ export class Minimal_Shading_Demo extends Renderer {
   init () {
     super.init();
     this.shape = new defs.Cube();
-    this.state.shader = new defs.PBR_Shader (1, 1, {has_shadows: false, has_textures: true});
-
-    const materials = { "solid": undefined };
-    this.state.materials = new defs.Materials( materials );
+    //this.state.shader = new defs.PBR_Shader (1, 1, {has_shadows: false, has_textures: true});
+    this.state.shader = new defs.Minimal_Phong_Shader (1, 1);
+    this.state.materials = new defs.Simple_Materials( { "solid": undefined } );
 
     this.state.lightArray = new defs.LightArray({ambient: .025, lights:[
            {direction_or_position: vec4(0, 10, 0, 0),
-             color: vec3(1.0, 0.7, 0.7), diffuse: 1.0, specular: 1.0, attenuation_factor: 0.00001},
+             color: vec3(1.0, 0.7, 0.7), diffuse: 1.0, specular: 1.0, attenuation_factor: 0.0001},
          ]});
 
     this.passes = [ Object.create( this.state ) ];

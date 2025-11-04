@@ -255,6 +255,153 @@ export class PBR_Shader extends Shader {
     }
 };
 
+export class Minimal_Phong_Shader extends Shader {
+    constructor (num_lights = 2, num_materials = 0, options) {
+      super();
+      Object.assign (this, options, {num_lights, num_materials});
+    }
+    update_GPU (renderer, renderListItem) {
+      const gpu_addresses = renderer.uniform_addresses.get(this);
+      const state = renderListItem.render_state;
+
+      if( this.previous_animation_time != state.animation_time ) {
+        this.previous_animation_time = state.animation_time;
+        renderer.context.uniform1f (gpu_addresses.animation_time, state.animation_time / 1000);
+      }
+      if( !this.previous_group_matrix || !this.previous_group_matrix.equals(renderListItem.group_transform) ) {
+        if( !this.previous_group_matrix ) this.previous_group_matrix = Mat4.of(...renderListItem.group_transform);
+        else this.previous_group_matrix.set(renderListItem.group_transform);
+        renderer.context.uniformMatrix4fv (gpu_addresses.group_transform, true, Matrix.flatten_2D_to_1D (renderListItem.group_transform));
+      }
+    }
+    shared_glsl_code () {           // ********* SHARED CODE, INCLUDED IN BOTH SHADERS *********
+        return `#version 300 es
+      precision mediump float;
+
+      uniform Camera {
+        mat4 camera_inverse;
+        mat4 projection;
+        vec4 camera_position;
+      };
+
+      struct Light {
+        vec4 direction_or_position;
+        vec4 color;
+        float diffuse;
+        float specular;
+        float attenuation_factor;
+      };
+      const int N_LIGHTS = ${this.num_lights};
+
+      uniform LightArray {
+        float ambient;
+        Light lights[N_LIGHTS];
+      };
+
+      struct Material {
+        float diffusivity;
+        float specularity;
+        float smoothness;
+      };
+      const int N_MATERIALS = ${this.num_materials};
+      uniform Simple_Materials {
+        Material materials[N_MATERIALS];
+      };
+
+      vec3 phong_model_lights( vec3 N, vec3 vertex_worldspace, Material mat ) {
+          vec3 E = normalize( camera_position.xyz - vertex_worldspace );
+          vec3 result = vec3( 0.0 );
+          for(int i = 0; i < N_LIGHTS; i++) {
+            vec3 surface_to_light_vector = lights[i].direction_or_position.xyz -
+                                            lights[i].direction_or_position.w * vertex_worldspace;
+            float distance_to_light = length( surface_to_light_vector );
+
+            vec3 L = normalize( surface_to_light_vector );
+            vec3 H = normalize( L + E );
+
+              // Compute diffuse and specular components of Phong Reflection Model.
+            float diffuse  =      max( dot( N, L ), 0.0 );
+            float specular = pow( max( dot( N, H ), 0.0 ), mat.smoothness );     // Use Blinn's "halfway vector" method.
+            float attenuation = 1.0 / (1.0 + lights[i].attenuation_factor * distance_to_light * distance_to_light );
+
+            vec3 light_contribution = lights[i].color.xyz;
+            light_contribution *= diffuse * lights[i].diffuse * mat.diffusivity
+                                    + specular * lights[i].specular * mat.specularity;
+
+            result += attenuation * light_contribution;
+          }
+          return result;
+        } `;
+    }
+    vertex_glsl_code () {          // ********* VERTEX SHADER *********
+        return this.shared_glsl_code () + `
+      layout(location = 0) in vec3 position; // Position is expressed in object coordinates
+      layout(location = 1) in vec3 normal;
+      layout(location = 4) in mat4 model_transform;
+      layout(location = 8) in vec3 color;
+      layout(location = 9) in float material_index;
+
+      uniform float animation_time;
+      uniform mat4 group_transform;
+
+      out vec3 VERTEX_POS;
+      out vec3 VERTEX_NORMAL;
+      out vec3 INSTANCE_COLOR;
+      out float INSTANCE_MATERIAL_INDEX;
+
+      vec3 transform_normal(mat4 world_space) {
+        // *** Optimization ("Eric's Blog") for normal transform in place of inverse(): ***
+        // Replaces slow method of using inverse() and transpose as normals require:
+        // return mat3(inverse(transpose(world_space))) * normal;
+
+        vec3 squared_scale = vec3(
+          dot(mat3(world_space)[0], mat3(world_space)[0]),
+          dot(mat3(world_space)[1], mat3(world_space)[1]),
+          dot(mat3(world_space)[2], mat3(world_space)[2])
+        );
+        vec3 inv_squared_scale = 1.0 / squared_scale;
+        mat3 rotation = mat3(
+          normalize(mat3(world_space)[0]),
+          normalize(mat3(world_space)[1]),
+          normalize(mat3(world_space)[2])
+        );
+        vec3 scaled_normal = normal * inv_squared_scale;
+        return rotation * scaled_normal;
+      }
+
+      void main() {
+        mat4 world_space = group_transform * model_transform;
+        vec4 world_position = world_space * vec4( position, 1.0 );
+        gl_Position = projection * camera_inverse * world_position;
+
+        VERTEX_POS = vec3(world_position);
+        VERTEX_NORMAL = transform_normal( world_space );
+        INSTANCE_COLOR = clamp( color, 0., 1.);
+        INSTANCE_MATERIAL_INDEX = material_index;
+      }`;
+    }
+    fragment_glsl_code () {         // ********* FRAGMENT SHADER *********
+        return this.shared_glsl_code () + `
+      in vec3 VERTEX_POS;
+      in vec3 VERTEX_NORMAL;
+      in vec3 INSTANCE_COLOR;
+      in float INSTANCE_MATERIAL_INDEX;
+
+      out vec4 frag_color;
+
+      void main() {
+        Material mat = materials[int(INSTANCE_MATERIAL_INDEX + .5)];
+
+        // Compute an initial (ambient) color:
+        frag_color = vec4( INSTANCE_COLOR * ambient, 1.0 );
+
+        // Compute the final color with contributions from lights:
+        frag_color.xyz += phong_model_lights( normalize( VERTEX_NORMAL ), VERTEX_POS, mat );
+
+        // frag_color.xyz += normalize( VERTEX_NORMAL );
+      }`
+    }
+};
 
 export class Shader_Without_UBOs  extends Shader {
     constructor (num_lights = 1, options) {

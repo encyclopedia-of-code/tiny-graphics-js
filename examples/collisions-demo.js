@@ -190,7 +190,7 @@ export class Test_Data
       this.state.lightArray =
            new defs.LightArray({ambient: .025, lights:[
              {direction_or_position: vec4(-3.0, 10.0, 0.0, 0.0),
-               color: vec3(1.0, 0.7, 0.7), diffuse: 1.0, specular: 1.0, attenuation_factor: 0.00001},
+               color: vec3(1.0, 0.7, 0.7), diffuse: 1.0, specular: 1.0, attenuation_factor: 0.0001},
              {direction_or_position: vec4( 0,-5,-10,1),
                color: vec3(1,1,1), diffuse: 0.5, specular: 1.0, attenuation_factor: 0.001}
            ]});
