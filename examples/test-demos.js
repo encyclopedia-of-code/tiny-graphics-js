@@ -1,6 +1,6 @@
 import * as tiny from '../tiny-graphics.js';
 import * as defs from './common.js';
-import { vec3, vec4, color, Mat4, RenderListItem, Renderer } from './common.js';
+import { MatVec, matvec, RenderListItem, Renderer } from './common.js';
 
 export class Minimal_Shading_Demo extends Renderer {
   init () {
@@ -51,9 +51,9 @@ export class Minimal_Demo extends Renderer {
 export class Minimal_Shape extends tiny.Shape {
       // A truly minimal triangle, with three vertices each holding a 3D position and a color.
       init () {
-          this.vertices[0] = { position: vec3 (0, 0, 0), color: color (1, 0, 0, 1) };
-          this.vertices[1] = { position: vec3 (1, 0, 0), color: color (0, 1, 0, 1) };
-          this.vertices[2] = { position: vec3 (0, 1, 0), color: color (0, 0, 1, 1) };
+          this.vertices[0] = { position: matvec([0, 0, 0]), color: matvec([1, 0, 0, 1]) };
+          this.vertices[1] = { position: matvec([1, 0, 0]), color: matvec([0, 1, 0, 1]) };
+          this.vertices[2] = { position: matvec([0, 1, 0]), color: matvec([0, 0, 1, 1]) };
       }
   };
 

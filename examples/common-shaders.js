@@ -1,5 +1,5 @@
 import * as tiny from '../tiny-graphics.js';
-import { Vector, Vector3, vec, vec3, vec4, color, Matrix, Mat4, Shape, Shader, Component } from '../tiny-graphics.js';
+import { MatVec, matvec, Shape, Shader, Component } from '../tiny-graphics.js';
 
 /* Firefox bug: Won't run unless Material UBO is removed from shader. Even simplifying the UBO to one vector isn't enough. */
 

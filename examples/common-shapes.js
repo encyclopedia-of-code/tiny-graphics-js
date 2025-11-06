@@ -1,5 +1,5 @@
 import * as tiny from '../tiny-graphics.js';
-import { Vector, Vector3, vec, vec2, vec3, vec4, color, Matrix, Mat4, Shape, Shader, Component } from '../tiny-graphics.js';
+import { MatVec, matvec, Shape, Shader, Component } from '../tiny-graphics.js';
 
 export class Triangle extends Shape {
       // **Triangle** The simplest possible 2D Shape – one triangle.  It stores 3 corner vertices, each with sufficient data to shade them.
@@ -11,17 +11,17 @@ export class Triangle extends Shape {
           // "Normal" vectors:  Vectors that point away from the triangle face.  They're needed so the graphics engine can know if the shape is pointed at light or not, and then color it accordingly.
           // Texture coordinates: Points in the seperate 2D X/Y pixel space belonging to any 2D images we might like to paint the shape with.
 
-          this.vertices[0] = { position: vec3 (0, 0, 0),
-                               normal: vec3 (0, 0, 1),
-                               texture_coord: vec2 (0, 0) };
+          this.vertices[0] = { position: matvec([0, 0, 0]),
+                               normal: matvec([0, 0, 1]),
+                               texture_coord: matvec([0, 0]) };
 
-          this.vertices[1] = { position: vec3 (1, 0, 0),
-                               normal: vec3 (0, 0, 1),
-                               texture_coord: vec2 (1, 0) };
+          this.vertices[1] = { position: matvec([1, 0, 0]),
+                               normal: matvec([0, 0, 1]),
+                               texture_coord: matvec([1, 0]) };
 
-          this.vertices[2] = { position: vec3 (0, 1, 0),
-                               normal: vec3 (0, 0, 1),
-                               texture_coord: vec2 (0, 1) };
+          this.vertices[2] = { position: matvec([0, 1, 0]),
+                               normal: matvec([0, 0, 1]),
+                               texture_coord: matvec([0, 1]) };
 
           // Next, describe how to connect whole triangles out of individual vertices.  Say a list of indices of vertex entries in your desired order. Every three indices in "this.indices" traces out one triangle.
           this.indices              = [0, 1, 2];

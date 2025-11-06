@@ -1,5 +1,5 @@
 import * as tiny from '../tiny-graphics.js';
-import { vec, vec3, vec4, Mat4, Component } from '../tiny-graphics.js';
+import { MatVec, matvec, Component } from '../tiny-graphics.js';
 import * as shapes from './common-shapes.js';
 import * as shaders from './common-shaders.js';
 
@@ -12,9 +12,9 @@ export class Movement_Controls extends Component {
         const defaults = {
           roll                    : 0,
           look_around_locked      : true,
-          thrust                  : vec3 (0, 0, 0),
-          pos                     : vec3 (0, 0, 0),
-          z_axis                  : vec3 (0, 0, 0),
+          thrust                  : matvec ([0, 0, 0]),
+          pos                     : matvec ([0, 0, 0]),
+          z_axis                  : matvec ([0, 0, 0]),
           radians_per_frame       : 1 / 200,
           meters_per_frame        : 20,
           speed_multiplier        : 1,
@@ -27,9 +27,9 @@ export class Movement_Controls extends Component {
               return;
           this.mouse_enabled_canvases.add (canvas);
           // First, measure mouse steering, for rotating the flyaround camera:
-          this.mouse           = {"from_center": vec (0, 0)};
+          this.mouse           = {"from_center": matvec ([0, 0])};
           const mouse_position = (e, rect = canvas.getBoundingClientRect ()) =>
-            vec (e.clientX - (rect.left + rect.right) / 2, e.clientY - (rect.bottom + rect.top) / 2);
+            matvec ([e.clientX - (rect.left + rect.right) / 2, e.clientY - (rect.bottom + rect.top) / 2]);
           // Set up mouse response.  The last one stops us from reacting if the mouse leaves the canvas:
           document.addEventListener ("mouseup", e => { this.mouse.anchor = undefined; });
           canvas.addEventListener ("mousedown", e => {
@@ -40,7 +40,7 @@ export class Movement_Controls extends Component {
               e.preventDefault ();
               this.mouse.from_center = mouse_position (e);
           });
-          canvas.addEventListener ("mouseout", e => { if ( !this.mouse.anchor) this.mouse.from_center.scale_by (0); });
+          canvas.addEventListener ("mouseout", e => { if ( !this.mouse.anchor) this.mouse.from_center.multiply (0); });
       }
       render_explanation (document_builder, document_element = document_builder.document_region) { }
       render_controls () {
@@ -52,7 +52,7 @@ export class Movement_Controls extends Component {
             { label: "Right",   keys: ["d"], idx: 0, val: -1 },
             { label: "Down",    keys: ["z"], idx: 1, val: 1 }
           ].forEach(({ label, keys, idx, val }, i) => {
-            this.key_triggered_button(label, keys, () => this.thrust[idx] = val, undefined, () => this.thrust[idx] = 0);
+            this.key_triggered_button(label, keys, () => this.thrust.data[idx] = val, undefined, () => this.thrust.data[idx] = 0);
             if ([1, 4].includes(i)) this.new_line();
           });
 
@@ -72,30 +72,30 @@ export class Movement_Controls extends Component {
                                      "green");
           this.new_line ();
           this.live_string (
-            box => box.textContent = "Position: " + this.pos[ 0 ].toFixed (2) + ", " + this.pos[ 1 ].toFixed (2)
-                                     + ", " + this.pos[ 2 ].toFixed (2));
+            box => box.textContent = "Position: " + this.pos.data[ 0 ].toFixed (2) + ", " + this.pos.data[ 1 ].toFixed (2)
+                                     + ", " + this.pos.data[ 2 ].toFixed (2));
           this.new_line ();
           // The facing directions actually follow the left hand rule:
-          this.live_string (box => box.textContent = "Facing: " + ((this.z_axis[ 0 ] > 0 ? "West " : "East ")
-                                                     + (this.z_axis[ 1 ] > 0 ? "Down " : "Up ") +
-                                                     (this.z_axis[ 2 ] > 0 ? "North" : "South")));
+          this.live_string (box => box.textContent = "Facing: " + ((this.z_axis.data[ 0 ] > 0 ? "West " : "East ")
+                                                     + (this.z_axis.data[ 1 ] > 0 ? "Down " : "Up ") +
+                                                     (this.z_axis.data[ 2 ] > 0 ? "North" : "South")));
           this.new_line ();
           this.key_triggered_button ("Go to world origin", ["r"], () => {
-              this.recipient.assign( { camera_world: Mat4.identity() } )
+              this.recipient.assign( { camera_world: matvec().set_identity() } )
           }, "orange");
           this.new_line ();
 
           this.key_triggered_button ("Look at origin from front", ["1"], () => {
               this.recipient.assign( { camera_inverse:
-                  Mat4.look_at (vec3 (0, 0, 10), vec3 (0, 0, 0), vec3 (0, 1, 0)) } )
+                  matvec().look_at (matvec ([0, 0, 10]), matvec ([0, 0, 0]), matvec ([0, 1, 0])) } )
           }, "black");
           this.new_line ();
-          [ { label: "from right", keys: ["2"], pos: vec3(10,0,0) },
-            { label: "from rear",  keys: ["3"], pos: vec3(0,0,-10) },
-            { label: "from left",  keys: ["4"], pos: vec3(-10,0,0) }
+          [ { label: "from right", keys: ["2"], pos: matvec([10,0,0]) },
+            { label: "from rear",  keys: ["3"], pos: matvec([0,0,-10]) },
+            { label: "from left",  keys: ["4"], pos: matvec([-10,0,0]) }
           ].forEach(({ label, keys, pos }) => {
             this.key_triggered_button(label, keys, () => {
-              this.recipient.assign({ camera_inverse: Mat4.look_at(pos, vec3(0,0,0), vec3(0,1,0)) });
+              this.recipient.assign({ camera_inverse: matvec().look_at(pos, matvec([0,0,0]), matvec([0,1,0])) });
             }, "black");
           });
           this.new_line ();
@@ -109,27 +109,27 @@ export class Movement_Controls extends Component {
           const getVelocity = (v) => { if (v < -leeway) return (v + leeway) * radians_per_frame;
                                        if (v > leeway)  return (v - leeway) * radians_per_frame;
                                        return 0; };
+          const matrix = matvec().set_identity();
           if (!this.look_around_locked) {
               // Apply camera rotation for both axes
-              this.mouse.from_center.forEach((v, i) => {
-                  const velocity = getVelocity(v);
-                  // On X step, rotate around Y axis; on Y step, rotate around X axis
-                  this.recipient.pre_multiply(Mat4.rotation(velocity, i, 1 - i, 0));
-              });
+              const v = this.mouse.from_center.data;
+              this.recipient.pre_multiply( matrix.quickClone().rotate(getVelocity(v[1]), 1, 0, 0)
+                                                              .rotate(getVelocity(v[0]), 0, 1, 0) );
           }
-          this.recipient.pre_multiply (Mat4.rotation (.1 * this.roll, 0, 0, 1));
-          this.recipient.pre_multiply (Mat4.translation (...this.thrust.times(meters_per_frame)) );
+          this.recipient.pre_multiply ( matrix.translate( ...this.thrust.quickClone().multiply(meters_per_frame) )
+                                              .rotate(.1 * this.roll, 0, 0, 1) );
       }
       third_person_arcball (radians_per_frame) {
           // Spin the scene around a point on an axis determined by user mouse drag:
-          const dragging_vector = this.mouse.from_center.minus (this.mouse.anchor);
+          const dragging_vector = this.mouse.from_center.clone().subtract (this.mouse.anchor);
           if (dragging_vector.norm () <= 0)
               return;
-          this.recipient.pre_multiply (Mat4.translation (0, 0, 25));
-          const rotation = Mat4.rotation (radians_per_frame * dragging_vector.norm (),
-                                          dragging_vector[ 1 ], dragging_vector[ 0 ], 0);
-          this.recipient.pre_multiply (rotation);
-          this.recipient.pre_multiply (Mat4.translation (0, 0, -25));
+
+          const matrix = matvec().set_identity().translate([0, 0, -25])
+                                                .rotate(radians_per_frame * dragging_vector.norm (),
+                                                        dragging_vector.data[ 1 ], dragging_vector.data[ 0 ], 0)
+                                                .translate([0, 0, 25]);
+          this.recipient.pre_multiply (matrix);
       }
       render_frame (caller) {
           const m  = this.speed_multiplier * this.meters_per_frame,
@@ -143,7 +143,7 @@ export class Movement_Controls extends Component {
               this.third_person_arcball (dt * r);
 
           // Log some values:
-          this.pos    = this.recipient.fields.camera_world.times (vec4 (0, 0, 0, 1));
-          this.z_axis = this.recipient.fields.camera_world.times (vec4 (0, 0, 1, 0));
+          this.pos.loadVector( this.recipient.fields.camera_world.quickClone().multiply ( matvec([0, 0, 0, 1]) ).data );
+          this.z_axis.loadVector( this.recipient.fields.camera_world.quickClone().multiply ( matvec([0, 0, 1, 0]) ).data );
       }
   };

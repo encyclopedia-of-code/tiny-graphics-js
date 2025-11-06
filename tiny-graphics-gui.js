@@ -258,8 +258,8 @@ export class Code_Widget {
           div.appendChild (document.createTextNode ("Math helper definitions "));
 
           const input2    = div.appendChild (document.createElement ("select"));
-          input2.onchange = () => this.display_code (tiny.math[ input2.value ]);
-          for (let definition of Object.keys (tiny.math)) {
+          input2.onchange = () => this.display_code (tiny[ input2.value ]);
+          for (let definition of ["MatVec", "matvec"]) {
               const option = input2.appendChild (document.createElement ("option"));
               option.value = option.innerText = definition;
           }

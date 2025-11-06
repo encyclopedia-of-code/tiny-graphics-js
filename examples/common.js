@@ -1,4 +1,4 @@
-import { vec3, vec4, Mat4, UBO_Plan, Texture } from '../tiny-graphics.js';
+import { MatVec, matvec, UBO_Plan, Texture } from '../tiny-graphics.js';
 export * from '../tiny-graphics.js';
 export * from './common-shapes.js';
 export * from './common-shaders.js';
@@ -8,28 +8,26 @@ export * from './common-components.js';
 
 export class Camera extends UBO_Plan {
     init(fields) {
-      this.fields = { projection: Mat4.identity(),
-                    camera_world: Mat4.identity(),
-                  camera_inverse: Mat4.identity() };
+      this.fields = { projection: matvec().set_identity(),
+                    camera_world: matvec().set_identity(),
+                  camera_inverse: matvec().set_identity() };
      this.assign(fields);
     }
     assign(fields) {
       this.dirty = true;
       // If only one matrix is provided, invert it to fill in the other.
-      const temp = { camera_world: fields?.camera_world || fields?.camera_inverse && Mat4.inverse(fields.camera_inverse),
-                   camera_inverse: fields?.camera_inverse || fields?.camera_world && Mat4.inverse(fields.camera_world) };
+      const temp = { camera_world: fields?.camera_world || fields?.camera_inverse && fields.camera_inverse.clone().invert(),
+                   camera_inverse: fields?.camera_inverse || fields?.camera_world && fields.camera_world.clone().invert() };
       Object.assign( this.fields, fields, temp.camera_world ? temp : {} );
-      this.fields.camera_position = vec3(this.fields.camera_world[0][3], this.fields.camera_world[1][3],
-                                         this.fields.camera_world[2][3]);
+      this.fields.camera_position = vec3(this.fields.camera_world.data[3], this.fields.camera_world.data[7],
+                                         this.fields.camera_world.data[11]);
     }
     get_binding_point () { return 0; }
     post_multiply (matrix) {
-        this.dirty = true;
-        this.assign( { camera_world: this.fields.camera_world.times(matrix) } );
+        this.assign( { camera_world: this.fields.camera_world.multiply(matrix) } );
     }
     pre_multiply (inverted_matrix) {
-      this.dirty = true;
-      this.assign( { camera_inverse: inverted_matrix.times(this.fields.camera_inverse) } );
+      this.assign( { camera_inverse: inverted_matrix.clone().multiply(this.fields.camera_inverse) } );
     }
   };
 
@@ -47,15 +45,15 @@ export class LightArray extends UBO_Plan {
                 ambient: 0,
                 lights: [
                           {
-                            direction_or_position: vec4 (0.0, 0.0, 0.0, 0.0),
-                            color: vec3 (1.0, 1.0, 1.0),
+                            direction_or_position: matvec ([0.0, 0.0, 0.0, 0.0]),
+                            color: matvec ([1.0, 1.0, 1.0]),
                             diffuse: 1.0,
                             specular: 1.0,
                             attenuation_factor: 0.0
                           },
                           {
-                            direction_or_position: vec4 (0.0, -1.0, 0.0, 1.0),
-                            color: vec3 (1.0, 1.0, 1.0),
+                            direction_or_position: matvec ([0.0, -1.0, 0.0, 1.0]),
+                            color: matvec ([1.0, 1.0, 1.0]),
                             diffuse: 1.0,
                             specular: 1.0,
                             attenuation_factor: 0.0

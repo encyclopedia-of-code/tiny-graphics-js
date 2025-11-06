@@ -1,12 +1,11 @@
 // tiny-graphics.js - A file that shows how to organize a complete graphics program, refactoring common WebGL steps.
 // By Garett.
 
-import * as math from './tiny-graphics-math.js';
-import { Vector3, vec3, color, Matrix, Mat4 } from './tiny-graphics-math.js';
+import { MatVec, matvec } from './MV.js';
 import * as widgets from './tiny-graphics-gui.js';
-export * from './tiny-graphics-math.js';
+export * from './MV.js';
 export * from './tiny-graphics-gui.js';
-export { math, widgets };
+export { MatVec, matvec, widgets };
 
 export class Shape {
       // See description at https://github.com/encyclopedia-of-code/tiny-graphics-js/wiki/tiny-graphics.js#shape
@@ -30,9 +29,9 @@ export class Shape {
         const first = entries[0];
 
         const attributes_meta = attributes.map(attr => {
-              const is_matrix = first[attr] instanceof Matrix;
-              const size = is_matrix ? 4 : (first[attr].length || 1);
-              const full_size = is_matrix ? 16 : size;
+              const full_size = first[attr].size;
+              const is_matrix = full_size === 16;
+              const size = is_matrix ? 4 : full_size;
               return { attr, is_matrix, size, full_size };
             });
 
@@ -75,10 +74,10 @@ export class Shape {
               // Write as column-major for GLSL.
               for (let i = 0; i < 4; i++)
                 for (let j = 0; j < 4; j++)
-                  set_element(value[j][i]);
+                  set_element(value.data[ j*4 + i ]);
             else if (meta.size > 1)
               for (let i = 0; i < meta.size; i++)
-                set_element(value[i]);
+                set_element(value.data[i]);
             else
               set_element(value);
           });
@@ -88,16 +87,15 @@ export class Shape {
       // NOTE: All the below functions make a further assumption: that your vertex buffer includes fields called
       // "position" and "normal" stored at each point, instead of just any arbitrary fields.
 
-      static insert_transformed_copy_into (recipient, args, points_transform = Mat4.identity ()) {
+      static insert_transformed_copy_into (recipient, args, points_transform = matvec().set_identity ()) {
           // Append one of these shapes onto recipient's vertex list. Transform points/normals as desired when inserting.
           // For transforming normals, the math requires the inverse transpose matrix.
           const dummy_instance = new this (...args);
           recipient.indices.push (...dummy_instance.indices.map (i => i + recipient.vertices.length));
           for (let v of dummy_instance.vertices) {
-            const inverse_transpose = Mat4.inverse( points_transform.transposed() );
-            const position = points_transform .times (v.position.to4(1)).to3();
-            const tangent  = points_transform .times (v.tangent .to4(0)).to3();
-            const normal   = inverse_transpose.times (v.normal  .to4(0)).to3();
+            const position = points_transform.clone().multiply(v.position);
+            const normal   = points_transform.clone().invert().transpose().multiply(v.normal);
+            const tangent  = points_transform.clone().multiply(v.tangent);
             recipient.vertices.push( Object.assign( { ...v, position, tangent, normal } ) );
           }
       }
@@ -120,9 +118,9 @@ export class Shape {
                   continue;
               }
               // Add vertices along the three edges at midpoints.
-              const ab_pos = v[a].position.mix(v[b].position, 0.5);
-              const ac_pos = v[a].position.mix(v[c].position, 0.5);
-              const bc_pos = v[b].position.mix(v[c].position, 0.5);
+              const ab_pos = v[a].position.clone().mix(v[b].position, 0.5);
+              const ac_pos = v[a].position.clone().mix(v[c].position, 0.5);
+              const bc_pos = v[b].position.clone().mix(v[c].position, 0.5);
               const ab = v.push({ position: ab_pos }) - 1;
               const ac = v.push({ position: ac_pos }) - 1;
               const bc = v.push({ position: bc_pos }) - 1;
@@ -172,18 +170,22 @@ export class Shape {
           }
       }
       normalize_positions (keep_aspect_ratios = true) {
-          let p_arr              = this.vertices.map(item => item.position);
-          const average_position = p_arr.reduce ((acc, p) => acc.plus (p.times (1 / p_arr.length)), vec3 (0, 0, 0));
-          p_arr                  = p_arr.map (p => p.minus (average_position));           // Center the point cloud on
-                                                                                          // the origin.
+          let p_arr = this.vertices.map(item => item.position);
+          const average_position = p_arr.reduce ((acc, p) => acc.add(p.quickClone().multiply (1 / p_arr.length)), matvec([0, 0, 0]));
+          p_arr = p_arr.map (p => p.clone().subtract (average_position));           // Center the point cloud on
+                                                                                                     // the origin.
           const average_lengths = p_arr.reduce ((acc, p) =>
-                                                  acc.plus (p.map (x => Math.abs (x)).times (1 / p_arr.length)),
-                                                vec3 (0, 0, 0));
+                                                  acc.loadVector([ acc.data[0] + Math.abs(p[0]),
+                                                                   acc.data[1] + Math.abs(p[1]),
+                                                                   acc.data[2] + Math.abs(p[2]) ]), matvec([0, 0, 0]))
+                                  .multiply (1 / p_arr.length);
           let final_positions = [];
           if (keep_aspect_ratios)                            // Divide each axis by its average distance from the origin.
-              final_positions = p_arr.map (p => p.map ((x, i) => x / average_lengths[ i ]));
+              final_positions = p_arr.map (p => p.loadVector([ p.data[0] / average_lengths.data[0],
+                                                               p.data[1] / average_lengths.data[1],
+                                                               p.data[2] / average_lengths.data[2] ]) );
           else
-              final_positions = p_arr.map (p => p.times (1 / average_lengths.norm ()));
+              final_positions = p_arr.map (p => p.multiply (1 / matvec(average_lengths).norm() ));
 
           for (var i = 0; i < final_positions.length; i++)
             this.vertices[i].position = final_positions[i];
@@ -622,7 +624,7 @@ export class RenderListItem {
     this.shape = shape;
     this.render_state = state;
     this.group_ID = group_ID;
-    this.group_transform = Mat4.identity();
+    this.group_transform = matvec().set_identity();
     this.hint = "STATIC_DRAW";
     this.type = "TRIANGLES";
     this.instance_vars = [];
@@ -631,7 +633,7 @@ export class RenderListItem {
   update_per_instance_buffer() {
     if( !this.instance_VBO_plan ) {
       if (!this.instance_vars.length) {     // The user may specify no matrices for the single instance case.
-        this.instance_vars.push( { model_transform: Mat4.identity(), color: vec3(1,1,1),  material_index: 0 } );
+        this.instance_vars.push( { model_transform: matvec().set_identity(), color: matvec([1,1,1]),  material_index: 0 } );
       }
       this.instance_VBO_plan = { attributes: [...Object.keys(this.instance_vars[0])] };
     }
@@ -672,7 +674,7 @@ export class Renderer extends Component {
         samplers: new Map()
       } );
   }
-  make_context (canvas, background_color = color (0, 0, 0, 1), dimensions) {
+  make_context (canvas, background_color = [0, 0, 0, 1], dimensions) {
       this.canvas              = canvas;
       this.context = canvas.getContext("webgl2");
       if ( !this.context) throw "Canvas failed to make a WebGL context.";
@@ -961,11 +963,13 @@ export class UBO_Plan {
 
       this.buffer_boundary = uniform_block_info.next_offsets[offset]/4 || uniform_block_info.buffer_size/4;
 
-      if (value instanceof Matrix)
+      if (value?.size === 16)
         // Turn any matrices column major for GLSL.
-        value.forEach ((r, i) => r.forEach ((x, j) => this.set_element( offset/4 + 4*i+j,  value[j][i]) ));
-      else if (value instanceof this.type)
-        for (let i=0; i<value.length; i++) this.set_element( offset/4 + i,  value[i]);
+        for (let i = 0; i < 4; i++)
+          for (let j = 0; j < 4; j++)
+            this.set_element(offset/4 + 4*i+j, value.data[ j*4 + i ]);
+      else if (value instanceof MatVec)
+        for (let i=0; i<value.size; i++) this.set_element( offset/4 + i,  value.data[i]);
       else
         this.set_element(offset/4, value);
     }

@@ -221,6 +221,15 @@ export class MatVec {
     throw new Error("Unsupported multiply for sizes " + this.size + " and " + other.size);
   }
 
+  pre_multiply(other) {
+    const out = this.nextBuffer;
+
+    const temp = other.clone().multiply(this);
+    for (let i = 0; i < this.size; i++) out[i] = temp[i];
+    this.currentIndex = 1 - this.currentIndex;
+    return this;
+  }
+
   toString() {
     const d = this.data;
     if (this.size === 16) {
@@ -365,7 +374,7 @@ export class MatVec {
 }
 
 // Helpers for easy creation
-function matvec(data) { return new MatVec(data); }
+export function matvec(data) { return new MatVec(data); }
 
 // Tests
 (function(){
@@ -674,13 +683,49 @@ function matvec(data) { return new MatVec(data); }
   }
   assert(mv_31_threw, "31. look_at throws when up parallel to view");
 
+  // 32. pre_multiply 4x4 matrix: result matches reference (A * B)
+  let mv_32_A = new MatVec([
+    [2, 0, 0, 0],
+    [0, 3, 0, 0],
+    [0, 0, 4, 0],
+    [0, 0, 0, 1]
+  ]);
+  let mv_32_B = new MatVec([
+    [1, 2, 3, 4],
+    [4, 5, 6, 7],
+    [7, 8, 9,10],
+    [10,11,12,13]
+  ]);
+  // Reference: A * B
+  let mv_32_expected = [
+    2, 4, 6, 8,
+    12,15,18,21,
+    28,32,36,40,
+    10,11,12,13
+  ];
+  let mv_32_res = mv_32_B.clone().pre_multiply(mv_32_A);
+  assert(arraysAlmostEqual(mv_32_res.data.slice(0,16), mv_32_expected), "32. pre_multiply matrix correct");
+
+  // 33. pre_multiply leaves the input size, A is not mutated, and buffer is correct
+  let mv_33_A = matvec().set_identity();
+  let mv_33_B = matvec([[2,0,0,0],[0,3,0,0],[0,0,4,0],[0,0,0,1]]);
+  let mv_33_B_clone = mv_33_B.clone();
+  let mv_33_pre = mv_33_B.pre_multiply(mv_33_A);
+  assert(mv_33_pre.equals(mv_33_B_clone), "33. pre_multiply(identity) leaves matrix unchanged");
+  assert(mv_33_B.size === 16, "33. pre_multiply preserves size");
+
+  // 34. pre_multiply with translation
+  let mv_34_T = matvec([[1,0,0,5],[0,1,0,6],[0,0,1,7],[0,0,0,1]]);
+  let mv_34_V = matvec([1,2,3,1]);
+  let mv_34_exp = [6,8,10,1];
+  let mv_34_res = mv_34_V.clone().pre_multiply(mv_34_T);
+  assert(arraysAlmostEqual(mv_34_res.data.slice(0,4), mv_34_exp), "34. pre_multiply with translation vector correct");
+
+  // 35. pre_multiply chain matches multiply
+  let mv_35_A = matvec([[1,2,3,4],[4,3,2,1],[0,1,0,1],[1,0,1,0]]);
+  let mv_35_B = matvec([[2,0,0,0],[0,2,0,0],[0,0,2,0],[0,0,0,1]]);
+  let mv_35_result1 = mv_35_A.clone().multiply(mv_35_B);
+  let mv_35_result2 = mv_35_B.clone().pre_multiply(mv_35_A);
+  assert(arraysAlmostEqual(mv_35_result1.data.slice(0,16), mv_35_result2.data.slice(0,16)), "35. pre_multiply matches multiply");
   console.log("All MatVec tests passed.");
 })();
-
-/*
-const inverse_transpose = points_transform.clone().transpose().invert();
-const position = points_transform.clone().multiply(v.position.to4(1)).to3();
-const tangent = points_transform.clone().multiply(v.tangent.to4(0)).to3();
-const normal = inverse_transpose.multiply(v.normal.to4(0)).to3();
-recipient.vertices.push( Object.assign( { ...v, position, tangent, normal } ) );
-*/
