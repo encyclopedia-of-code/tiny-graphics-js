@@ -116,7 +116,7 @@ export class Movement_Controls extends Component {
               this.recipient.pre_multiply( matrix.quickClone().rotate(getVelocity(v[1]), 1, 0, 0)
                                                               .rotate(getVelocity(v[0]), 0, 1, 0) );
           }
-          this.recipient.pre_multiply ( matrix.translate( ...this.thrust.quickClone().multiply(meters_per_frame) )
+          this.recipient.pre_multiply ( matrix.translate( ...this.thrust.quickClone().multiply(meters_per_frame).data )
                                               .rotate(.1 * this.roll, 0, 0, 1) );
       }
       third_person_arcball (radians_per_frame) {
@@ -125,10 +125,10 @@ export class Movement_Controls extends Component {
           if (dragging_vector.norm () <= 0)
               return;
 
-          const matrix = matvec().set_identity().translate([0, 0, -25])
+          const matrix = matvec().set_identity().translate(0, 0, -25)
                                                 .rotate(radians_per_frame * dragging_vector.norm (),
                                                         dragging_vector.data[ 1 ], dragging_vector.data[ 0 ], 0)
-                                                .translate([0, 0, 25]);
+                                                .translate(0, 0, 25);
           this.recipient.pre_multiply (matrix);
       }
       render_frame (caller) {

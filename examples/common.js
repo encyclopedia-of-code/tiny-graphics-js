@@ -19,8 +19,8 @@ export class Camera extends UBO_Plan {
       const temp = { camera_world: fields?.camera_world || fields?.camera_inverse && fields.camera_inverse.clone().invert(),
                    camera_inverse: fields?.camera_inverse || fields?.camera_world && fields.camera_world.clone().invert() };
       Object.assign( this.fields, fields, temp.camera_world ? temp : {} );
-      this.fields.camera_position = vec3(this.fields.camera_world.data[3], this.fields.camera_world.data[7],
-                                         this.fields.camera_world.data[11]);
+      this.fields.camera_position = matvec([this.fields.camera_world.data[3], this.fields.camera_world.data[7],
+                                         this.fields.camera_world.data[11]]);
     }
     get_binding_point () { return 0; }
     post_multiply (matrix) {

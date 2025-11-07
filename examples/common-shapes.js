@@ -37,14 +37,14 @@ export class Square extends Shape {
       init () {
           // Specify the 4 square corner locations, and match those up with normal vectors.
           // Arrange the vertices into a square shape in texture space too.
-          this.vertices[0] = { position: vec3 (-1, -1, 0), normal: vec3 (0, 0, 1), tangent: vec3 (1, 0, 0),
-                               texture_coord: vec2 (0, 0) };
-          this.vertices[1] = { position: vec3 ( 1, -1, 0), normal: vec3 (0, 0, 1), tangent: vec3 (1, 0, 0),
-                               texture_coord: vec2 (1, 0) };
-          this.vertices[2] = { position: vec3 (-1,  1, 0), normal: vec3 (0, 0, 1), tangent: vec3 (1, 0, 0),
-                               texture_coord: vec2 (0, 1) };
-          this.vertices[3] = { position: vec3 ( 1,  1, 0), normal: vec3 (0, 0, 1), tangent: vec3 (1, 0, 0),
-                               texture_coord: vec2 (1, 1) };
+          this.vertices[0] = { position: matvec([-1, -1, 0]), normal: matvec([0, 0, 1]), tangent: matvec([1, 0, 0]),
+                               texture_coord: matvec([0, 0]) };
+          this.vertices[1] = { position: matvec([ 1, -1, 0]), normal: matvec([0, 0, 1]), tangent: matvec([1, 0, 0]),
+                               texture_coord: matvec([1, 0]) };
+          this.vertices[2] = { position: matvec([-1,  1, 0]), normal: matvec([0, 0, 1]), tangent: matvec([1, 0, 0]),
+                               texture_coord: matvec([0, 1]) };
+          this.vertices[3] = { position: matvec([ 1,  1, 0]), normal: matvec([0, 0, 1]), tangent: matvec([1, 0, 0]),
+                               texture_coord: matvec([1, 1]) };
 
           // Use two triangles this time, indexing into four distinct vertices:
           this.indices.push (0, 1, 2, 1, 3, 2);
@@ -64,10 +64,10 @@ export class Tetrahedron extends Shape {
               // Method 1: A tetrahedron with shared vertices. Compact, performs better,
               // but can't produce flat shading or discontinuous seams in textures.
               this.vertices = [
-                  { position: vec3(0, 0, 0), normal: vec3(-a, -a, -a), texture_coord: vec2(0, 0) },
-                  { position: vec3(1, 0, 0), normal: vec3(1, 0, 0),    texture_coord: vec2(1, 0) },
-                  { position: vec3(0, 1, 0), normal: vec3(0, 1, 0),    texture_coord: vec2(0, 1) },
-                  { position: vec3(0, 0, 1), normal: vec3(0, 0, 1),    texture_coord: vec2(1, 1) }
+                  { position: matvec([0, 0, 0]), normal: matvec([-a, -a, -a]), texture_coord: matvec([0, 0]) },
+                  { position: matvec([1, 0, 0]), normal: matvec([1, 0, 0]),    texture_coord: matvec([1, 0]) },
+                  { position: matvec([0, 1, 0]), normal: matvec([0, 1, 0]),    texture_coord: matvec([0, 1]) },
+                  { position: matvec([0, 0, 1]), normal: matvec([0, 0, 1]),    texture_coord: matvec([1, 1]) }
               ];
               // Notice the repeats in the index list. Vertices are shared
               // and appear in multiple triangles with this method.
@@ -82,21 +82,21 @@ export class Tetrahedron extends Shape {
               // same point from different directions.
               this.vertices = [
                   // Face 1
-                  { position: vec3(0, 0, 0), normal: vec3(0, 0, -1), texture_coord: vec2(0, 0) },
-                  { position: vec3(1, 0, 0), normal: vec3(0, 0, -1), texture_coord: vec2(1, 0) },
-                  { position: vec3(0, 1, 0), normal: vec3(0, 0, -1), texture_coord: vec2(1, 1) },
+                  { position: matvec([0, 0, 0]), normal: matvec([0, 0, -1]), texture_coord: matvec([0, 0]) },
+                  { position: matvec([1, 0, 0]), normal: matvec([0, 0, -1]), texture_coord: matvec([1, 0]) },
+                  { position: matvec([0, 1, 0]), normal: matvec([0, 0, -1]), texture_coord: matvec([1, 1]) },
                   // Face 2
-                  { position: vec3(0, 0, 0), normal: vec3(0, -1, 0), texture_coord: vec2(0, 0) },
-                  { position: vec3(1, 0, 0), normal: vec3(0, -1, 0), texture_coord: vec2(1, 0) },
-                  { position: vec3(0, 0, 1), normal: vec3(0, -1, 0), texture_coord: vec2(1, 1) },
+                  { position: matvec([0, 0, 0]), normal: matvec([0, -1, 0]), texture_coord: matvec([0, 0]) },
+                  { position: matvec([1, 0, 0]), normal: matvec([0, -1, 0]), texture_coord: matvec([1, 0]) },
+                  { position: matvec([0, 0, 1]), normal: matvec([0, -1, 0]), texture_coord: matvec([1, 1]) },
                   // Face 3
-                  { position: vec3(0, 0, 0), normal: vec3(-1, 0, 0), texture_coord: vec2(0, 0) },
-                  { position: vec3(0, 1, 0), normal: vec3(-1, 0, 0), texture_coord: vec2(1, 0) },
-                  { position: vec3(0, 0, 1), normal: vec3(-1, 0, 0), texture_coord: vec2(1, 1) },
+                  { position: matvec([0, 0, 0]), normal: matvec([-1, 0, 0]), texture_coord: matvec([0, 0]) },
+                  { position: matvec([0, 1, 0]), normal: matvec([-1, 0, 0]), texture_coord: matvec([1, 0]) },
+                  { position: matvec([0, 0, 1]), normal: matvec([-1, 0, 0]), texture_coord: matvec([1, 1]) },
                   // Face 4
-                  { position: vec3(0, 0, 1), normal: vec3(a, a, a), texture_coord: vec2(0, 0) },
-                  { position: vec3(1, 0, 0), normal: vec3(a, a, a), texture_coord: vec2(1, 0) },
-                  { position: vec3(0, 1, 0), normal: vec3(a, a, a), texture_coord: vec2(1, 1) }
+                  { position: matvec([0, 0, 1]), normal: matvec([a, a, a]), texture_coord: matvec([0, 0]) },
+                  { position: matvec([1, 0, 0]), normal: matvec([a, a, a]), texture_coord: matvec([1, 0]) },
+                  { position: matvec([0, 1, 0]), normal: matvec([a, a, a]), texture_coord: matvec([1, 1]) }
               ];
               // Notice all vertices are unique this time.
               this.indices.push(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11);
@@ -111,19 +111,19 @@ export class Windmill extends Shape {
           // A for loop to automatically generate the triangles:
           for (let i = 0; i < num_blades; i++) {
               // Rotate around a few degrees in the XZ plane to place each new point:
-              const spin     = Mat4.rotation (i * 2 * Math.PI / num_blades, 0, 1, 0);
+              const spin     = matvec().set_identity().rotate(i * 2 * Math.PI / num_blades, 0, 1, 0);
               // Apply that XZ rotation matrix to point (1,0,0) of the base triangle.
-              const newPoint = spin.times (vec4 (1, 0, 0, 1)).to3 ();
+              const newPoint = spin.clone().multiply( matvec([1, 0, 0]) );
               const triangle = [newPoint,                      // Store that XZ position as point 1.
-                  newPoint.plus ([0, 1, 0]),    // Store it again but with higher y coord as point 2.
-                  vec3 (0, 0, 0)];          // All triangles touch this location -- point 3.
-              const tex_coords = [ [0, 0], [0, 1], [1, 0] ];
+                  newPoint.clone().add ( matvec([0, 1, 0]) ),    // Store it again but with higher y coord as point 2.
+                  matvec([0, 0, 0])];          // All triangles touch this location -- point 3.
+              const tex_coords = [ matvec([0, 0]), matvec([0, 1]), matvec([1, 0]) ];
 
               // Rotate our base triangle's normal (0,0,1) to get the new one.  Careful!  Normal vectors are not
               // points; their perpendicularity constraint gives them a mathematical quirk that when applying
               // matrices you have to apply the transposed inverse of that matrix instead.  But right now we've
               // got a pure rotation matrix, where the inverse and transpose operations cancel out, so it's ok.
-              var newNormal = spin.times (vec4 (0, 0, 1, 0)).to3 ();
+              var newNormal = spin.clone().multiply ( matvec([0, 0, 1, 0]) );
               // Propagate the same normal to all three vertices:
               for( let i=0; i<3; i++ )
                 this.vertices.push( { position: triangle[i], normal: newNormal, texture_coord: tex_coords[i] } );
@@ -143,9 +143,10 @@ export class Cube extends Shape {
             // Loop 3 times (for each axis), and inside loop twice (for opposing cube sides):
             for (var i = 0; i < 3; i++)
                 for (var j = 0; j < 2; j++) {
-                    var square_transform = Mat4.rotation (i == 0 ? Math.PI / 2 : 0, 1, 0, 0)
-                                               .times (Mat4.rotation (Math.PI * j - (i == 1 ? Math.PI / 2 : 0), 0, 1, 0))
-                                               .times (Mat4.translation (0, 0, 1));
+                    const square_transform = matvec().set_identity()
+                                            .rotate(i == 0 ? Math.PI / 2 : 0, 1, 0, 0)
+                                            .rotate (Math.PI * j - (i == 1 ? Math.PI / 2 : 0), 0, 1, 0)
+                                            .translate(0, 0, 1);
                     // Calling this function of a Square (or any Shape) copies it into the specified
                     // Shape (this one) at the specified matrix offset (square_transform):
                     Square.insert_transformed_copy_into (this, [], square_transform);
@@ -153,14 +154,14 @@ export class Cube extends Shape {
         }
     };
 
-
+/*
 export class Subdivision_Sphere extends Shape {
       init (max_subdivisions, texture_coord_range) {
           // Start from the following equilateral tetrahedron:
-          this.vertices[0] = { position: vec3(0,0,-1) };
-          this.vertices[1] = { position: vec3(0, .9428, .3333) };
-          this.vertices[2] = { position: vec3(-.8165, -.4714, .3333) };
-          this.vertices[3] = { position: vec3(.8165, -.4714, .3333) };
+          this.vertices[0] = { position: matvec([0,0,-1]) };
+          this.vertices[1] = { position: matvec([0, .9428, .3333]) };
+          this.vertices[2] = { position: matvec([-.8165, -.4714, .3333]) };
+          this.vertices[3] = { position: matvec([.8165, -.4714, .3333]) };
 
           this.indices.push (0, 1, 2, 3, 2, 1, 1, 0, 3, 0, 2, 3);
           this.subdivide(max_subdivisions)
@@ -168,14 +169,14 @@ export class Subdivision_Sphere extends Shape {
           for( let v of this.vertices ) {
             v.position.normalize();
             // Each point has a normal vector that simply goes to the point from the origin:
-            v.normal = vec3( ...v.position );
-            v.tangent = v.normal.cross( vec3(0,1,0) ).normalized();
+            v.normal = matvec([ ...v.position ]);
+            v.tangent = v.normal.cross( matvec([0,1,0]) ).normalized();
 
             // Textures are tricky.  A Subdivision sphere has no straight seams to which image
             // edges in UV space can be mapped.  The only way to avoid artifacts is to smoothly
             // wrap & unwrap the image in reverse - displaying the texture twice on the sphere
             // so that 1 and 0 map to the same coordinate.
-            v.texture_coord = vec2( 0.5 - Math.atan2 (v.position[ 2 ], v.position[ 0 ]) / (2 * Math.PI),
+            v.texture_coord = matvec([ 0.5 - Math.atan2 (v.position[ 2 ], v.position[ 0 ]) / (2 * Math.PI),
                                     0.5 + Math.asin (v.position[ 1 ]) / Math.PI);
           }
           this.fix_seam();
@@ -196,7 +197,7 @@ export class Subdivision_Sphere extends Shape {
                               position: v[p].position.copy(),
                               normal: v[p].normal.copy(),
                               tangent: v[p].tangent.copy(),
-                              texture_coord: v[p].texture_coord.plus(vec(1,0))
+                              texture_coord: v[p].texture_coord.plusmatvec([1,0]))
                           };
                           this.indices[idx] = this.vertices.length;
                           this.vertices.push(new_vertex);
@@ -230,14 +231,14 @@ export class Grid_Patch extends Shape {
                         tangent = (c>0) ? points[r][c].minus( points[r][c-1] ) : undefined;
                   this.vertices.push({ position: points[ r ][ c ], tangent,
                                        texture_coord: vec2 ((a1) * x_range[ 1 ] + (1 - a1) * x_range[ 0 ],
-                                                            (a2) * y_range[ 1 ] + (1 - a2) * y_range[ 0 ])})
+                                                            (a2) * y_range[ 1 ] + (1 - a2) * y_range[ 0 ]])})
               }
               this.vertices[r*(columns+1)].tangent = this.vertices[(r+1)*(columns+1)-1].tangent.copy();
           }
           for (let r = 0; r <= rows; r++)
             // Generate normals by averaging the cross products of all defined neighbor pairs.
               for (let c = 0; c <= columns; c++) {
-                  let curr = points[ r ][ c ], normal = vec3 (0, 0, 0), v = this.vertices[ r*(columns+1)+c];
+                  let curr = points[ r ][ c ], normal = matvec([0, 0, 0]), v = this.vertices[ r*(columns+1)+c];
                   // Store each neighbor by rotational order.
                   const neighbors = [[-1, 0], [0, 1], [1, 0], [0, -1]].map( (dir, i) =>
                       // Leave "undefined" in the array wherever we hit a boundary.
@@ -252,7 +253,7 @@ export class Grid_Patch extends Shape {
                   normal.normalize ();           // Normalize the sum to get the average vector.
                   // Store the normal if it's valid (not NaN or zero length), otherwise use a default:
                   if (normal.every (x => x == x) && normal.norm () > .01) v.normal = normal.copy ();
-                  else v.normal = vec3 (0, 0, 1);
+                  else v.normal = matvec([0, 0, 1]);
 
                   const proj = v.normal.times(v.tangent.dot(v.normal)); // component of tangent along normal
 
@@ -291,7 +292,7 @@ export class Regular_2D_Polygon extends Surface_Of_Revolution {
       init (rows, columns) {
           super.init (rows, columns, Vector3.cast ([0, 0, 0], [1, 0, 0]));
           this.vertices.forEach( x => {
-            x.normal = vec3 (0, 0, 1);
+            x.normal = matvec([0, 0, 1]);
             x.texture_coord = x.position.map(x => x / 2 + .5).slice (0, 2);
           });
       }
@@ -311,12 +312,12 @@ export class Cone_Tip extends Surface_Of_Revolution { // Note:  Touches the Z ax
 
 export class Torus extends Surface_Of_Revolution {
       init (rows, columns, texture_range) {
-          const circle_points = Array (rows).fill (vec3 (1 / 3, 0, 0))
-                                            .map ((p, i, a) => Mat4.translation (-2 / 3, 0, 0)
+          const circle_points = Array (rows).fill (matvec([1 / 3, 0, 0]))
+                                            .map ((p, i, a) => Mat4.translation (-2 / 3, 0, 0])
                                                                    .times (
                                                                      Mat4.rotation (i / (a.length - 1) * 2 * Math.PI, 0,
                                                                                     -1, 0))
-                                                                   .times (Mat4.scale (1, 1, 3))
+                                                                   .times (Mat4.scale (1, 1, 3]))
                                                                    .times (p.to4 (1)).to3 ());
 
           super.init(rows, columns, circle_points, texture_range);
@@ -325,7 +326,7 @@ export class Torus extends Surface_Of_Revolution {
 
 export class Grid_Sphere extends Surface_Of_Revolution {
       init (rows, columns, texture_range) {
-          const semi_circle_points = Array (rows).fill (vec3 (0, 0, 1)).map ((x, i, a) =>
+          const semi_circle_points = Array (rows).fill (matvec([0, 0, 1])).map ((x, i, a) =>
                                                                                Mat4.rotation (
                                                                                  i / (a.length - 1) * Math.PI, 0, 1, 0)
                                                                                    .times (x.to4 (1)).to3 ());
@@ -338,28 +339,28 @@ export class Closed_Cone extends Shape {
       init (rows, columns, texture_range) {
           Cone_Tip.insert_transformed_copy_into (this, [rows, columns, texture_range]);
           Regular_2D_Polygon.insert_transformed_copy_into (this, [1, columns], Mat4.rotation (Math.PI, 0, 1, 0)
-                                                                                   .times (Mat4.translation (0, 0, 1)));
+                                                                                   .times (Mat4.translation (0, 0, 1])));
       }
   };
 
 export class Rounded_Closed_Cone extends Surface_Of_Revolution {
       init (rows, columns, texture_range) {
-          super.init (rows, columns, [vec3 (0, 0, 1), vec3 (1, 0, -1), vec3 (0, 0, -1)], texture_range);
+          super.init (rows, columns, [matvec([0, 0, 1]), matvec([1, 0, -1]), matvec([0, 0, -1])], texture_range);
       }
   };
 
 export class Capped_Cylinder extends Shape {
       init (rows, columns, texture_range) {
           Cylindrical_Tube  .insert_transformed_copy_into (this, [rows, columns, texture_range]);
-          Regular_2D_Polygon.insert_transformed_copy_into (this, [1, columns], Mat4.translation (0, 0, .5));
+          Regular_2D_Polygon.insert_transformed_copy_into (this, [1, columns], Mat4.translation (0, 0, .5]));
           Regular_2D_Polygon.insert_transformed_copy_into (this, [1, columns], Mat4.rotation (Math.PI, 0, 1, 0).times (
-            Mat4.translation (0, 0, .5)));
+            Mat4.translation (0, 0, .5])));
       }
   };
 
 export class Rounded_Capped_Cylinder extends Surface_Of_Revolution {
       init (rows, columns, texture_range) {
-          super.init(rows, columns, [vec3 (0, 0, .5), vec3 (1, 0, .5), vec3 (1, 0, -.5), vec3 (0, 0, -.5)], texture_range);
+          super.init(rows, columns, [matvec([0, 0, .5]), matvec([1, 0, .5]), matvec([1, 0, -.5]), matvec([0, 0, -.5])], texture_range);
       }
   };
 
@@ -368,23 +369,23 @@ export class Axis_Arrows extends Shape {
       init () {
           var stack = [];
           Subdivision_Sphere.insert_transformed_copy_into (this, [3], Mat4.rotation (Math.PI / 2, 0, 1, 0)
-                                                                          .times (Mat4.scale (.25, .25, .25)));
+                                                                          .times (Mat4.scale (.25, .25, .25])));
           this.drawOneAxis (Mat4.identity (), [[.67, 1], [0, 1]]);
-          this.drawOneAxis (Mat4.rotation (-Math.PI / 2, 1, 0, 0).times (Mat4.scale (1, -1, 1)), [[.34, .66], [0, 1]]);
-          this.drawOneAxis (Mat4.rotation (Math.PI / 2, 0, 1, 0).times (Mat4.scale (-1, 1, 1)), [[0, .33], [0, 1]]);
+          this.drawOneAxis (Mat4.rotation (-Math.PI / 2, 1, 0, 0).times (Mat4.scale (1, -1, 1])), [[.34, .66], [0, 1]]);
+          this.drawOneAxis (Mat4.rotation (Math.PI / 2, 0, 1, 0).times (Mat4.scale (-1, 1, 1])), [[0, .33], [0, 1]]);
       }
       drawOneAxis (transform, tex) {
           // Use a different texture coordinate range for each of the three axes, so they show up differently
-          Closed_Cone.insert_transformed_copy_into (this, [4, 10, tex], transform.times (Mat4.translation (0, 0, 2))
-                                                                                 .times (Mat4.scale (.25, .25, .25)));
-          Cube.insert_transformed_copy_into (this, [], transform.times (Mat4.translation (.95, .95, .45))
-                                                                .times (Mat4.scale (.05, .05, .45)));
-          Cube.insert_transformed_copy_into (this, [], transform.times (Mat4.translation (.95, 0, .5))
-                                                                .times (Mat4.scale (.05, .05, .4)));
-          Cube.insert_transformed_copy_into (this, [], transform.times (Mat4.translation (0, .95, .5))
-                                                                .times (Mat4.scale (.05, .05, .4)));
-          Cylindrical_Tube.insert_transformed_copy_into (this, [7, 7, tex], transform.times (Mat4.translation (0, 0, 1))
-                                                                                     .times (Mat4.scale (.1, .1, 2)));
+          Closed_Cone.insert_transformed_copy_into (this, [4, 10, tex], transform.times (Mat4.translation (0, 0, 2]))
+                                                                                 .times (Mat4.scale (.25, .25, .25])));
+          Cube.insert_transformed_copy_into (this, [], transform.times (Mat4.translation (.95, .95, .45]))
+                                                                .times (Mat4.scale (.05, .05, .45])));
+          Cube.insert_transformed_copy_into (this, [], transform.times (Mat4.translation (.95, 0, .5]))
+                                                                .times (Mat4.scale (.05, .05, .4])));
+          Cube.insert_transformed_copy_into (this, [], transform.times (Mat4.translation (0, .95, .5]))
+                                                                .times (Mat4.scale (.05, .05, .4])));
+          Cylindrical_Tube.insert_transformed_copy_into (this, [7, 7, tex], transform.times (Mat4.translation (0, 0, 1]))
+                                                                                     .times (Mat4.scale (.1, .1, 2])));
       }
   };
 
@@ -392,47 +393,47 @@ export class Instanced_Cube_Index extends tiny.Shape {
       // A truly minimal Cube
       init () {
           // Describe the where the points of a triangle are in space, and also describe their colors:
-          this.vertices[0] = { position: vec3 (-0.5, -0.5, -0.5), normal: vec3( 0.0, 0.0, -1.0), texture_coord: Vector.create (0.0, 0.0) }
-          this.vertices[1] = { position: vec3 (0.5, -0.5, -0.5),  normal: vec3(0.0, 0.0, -1.0 ), texture_coord: Vector.create (1.0, 0.0) }
-          this.vertices[2] = { position: vec3 (0.5,  0.5, -0.5),  normal: vec3(0.0, 0.0, -1.0 ), texture_coord: Vector.create ( 1.0, 1.0) }
-          this.vertices[3] = { position: vec3 (0.5,  0.5, -0.5),  normal: vec3(0.0, 0.0, -1.0 ), texture_coord: Vector.create ( 1.0, 1.0) }
-          this.vertices[4] = { position: vec3 (-0.5,  0.5, -0.5), normal: vec3( 0.0, 0.0, -1.0), texture_coord: Vector.create ( 0.0, 1.0) }
-          this.vertices[5] = { position: vec3 (-0.5, -0.5, -0.5), normal: vec3( 0.0, 0.0, -1.0), texture_coord: Vector.create ( 0.0, 0.0) }
+          this.vertices[0] = { position: matvec([-0.5, -0.5, -0.5), normal: matvec([ 0.0, 0.0, -1.0), texture_coord: Vector.create (0.0, 0.0) }
+          this.vertices[1] = { position: matvec([0.5, -0.5, -0.5),  normal: matvec([0.0, 0.0, -1.0 ), texture_coord: Vector.create (1.0, 0.0) }
+          this.vertices[2] = { position: matvec([0.5,  0.5, -0.5),  normal: matvec([0.0, 0.0, -1.0 ), texture_coord: Vector.create ( 1.0, 1.0) }
+          this.vertices[3] = { position: matvec([0.5,  0.5, -0.5),  normal: matvec([0.0, 0.0, -1.0 ), texture_coord: Vector.create ( 1.0, 1.0) }
+          this.vertices[4] = { position: matvec([-0.5,  0.5, -0.5), normal: matvec([ 0.0, 0.0, -1.0), texture_coord: Vector.create ( 0.0, 1.0) }
+          this.vertices[5] = { position: matvec([-0.5, -0.5, -0.5), normal: matvec([ 0.0, 0.0, -1.0), texture_coord: Vector.create ( 0.0, 0.0) }
 
-          this.vertices[6] = { position: vec3 (-0.5, -0.5,  0.5), normal: vec3( 0.0, 0.0, 1.0), texture_coord: Vector.create ( 0.0, 0.0) }
-          this.vertices[7] = { position: vec3 (0.5, -0.5,  0.5 ), normal: vec3( 0.0, 0.0, 1.0), texture_coord: Vector.create ( 1.0, 0.0) }
-          this.vertices[8] = { position: vec3 (0.5,  0.5,  0.5 ), normal: vec3( 0.0, 0.0, 1.0), texture_coord: Vector.create ( 1.0, 1.0) }
-          this.vertices[9] = { position: vec3 (0.5,  0.5,  0.5 ), normal: vec3( 0.0, 0.0, 1.0), texture_coord: Vector.create ( 1.0, 1.0) }
-          this.vertices[10] = { position: vec3 (-0.5,  0.5,  0.5), normal: vec3( 0.0, 0.0, 1.0), texture_coord: Vector.create ( 0.0, 1.0) }
-          this.vertices[11] = { position: vec3 (-0.5, -0.5,  0.5), normal: vec3( 0.0, 0.0, 1.0), texture_coord: Vector.create ( 0.0, 0.0) }
+          this.vertices[6] = { position: matvec([-0.5, -0.5,  0.5), normal: matvec([ 0.0, 0.0, 1.0), texture_coord: Vector.create ( 0.0, 0.0) }
+          this.vertices[7] = { position: matvec([0.5, -0.5,  0.5 ), normal: matvec([ 0.0, 0.0, 1.0), texture_coord: Vector.create ( 1.0, 0.0) }
+          this.vertices[8] = { position: matvec([0.5,  0.5,  0.5 ), normal: matvec([ 0.0, 0.0, 1.0), texture_coord: Vector.create ( 1.0, 1.0) }
+          this.vertices[9] = { position: matvec([0.5,  0.5,  0.5 ), normal: matvec([ 0.0, 0.0, 1.0), texture_coord: Vector.create ( 1.0, 1.0) }
+          this.vertices[10] = { position: matvec([-0.5,  0.5,  0.5), normal: matvec([ 0.0, 0.0, 1.0), texture_coord: Vector.create ( 0.0, 1.0) }
+          this.vertices[11] = { position: matvec([-0.5, -0.5,  0.5), normal: matvec([ 0.0, 0.0, 1.0), texture_coord: Vector.create ( 0.0, 0.0) }
 
-          this.vertices[12] = { position: vec3 (-0.5,  0.5,  0.5), normal: vec3( -1.0, 0.0, 0.0), texture_coord: Vector.create ( 1.0, 0.0) }
-          this.vertices[13] = { position: vec3 (-0.5,  0.5, -0.5), normal: vec3( -1.0, 0.0, 0.0), texture_coord: Vector.create ( 1.0, 1.0) }
-          this.vertices[14] = { position: vec3 (-0.5, -0.5, -0.5), normal: vec3( -1.0, 0.0, 0.0), texture_coord: Vector.create ( 0.0, 1.0) }
-          this.vertices[15] = { position: vec3 (-0.5, -0.5, -0.5), normal: vec3( -1.0, 0.0, 0.0), texture_coord: Vector.create ( 0.0, 1.0) }
-          this.vertices[16] = { position: vec3 (-0.5, -0.5,  0.5), normal: vec3( -1.0, 0.0, 0.0), texture_coord: Vector.create ( 0.0, 0.0) }
-          this.vertices[17] = { position: vec3 (-0.5,  0.5,  0.5), normal: vec3( -1.0, 0.0, 0.0), texture_coord: Vector.create ( 1.0, 0.0) }
+          this.vertices[12] = { position: matvec([-0.5,  0.5,  0.5), normal: matvec([ -1.0, 0.0, 0.0), texture_coord: Vector.create ( 1.0, 0.0) }
+          this.vertices[13] = { position: matvec([-0.5,  0.5, -0.5), normal: matvec([ -1.0, 0.0, 0.0), texture_coord: Vector.create ( 1.0, 1.0) }
+          this.vertices[14] = { position: matvec([-0.5, -0.5, -0.5), normal: matvec([ -1.0, 0.0, 0.0), texture_coord: Vector.create ( 0.0, 1.0) }
+          this.vertices[15] = { position: matvec([-0.5, -0.5, -0.5), normal: matvec([ -1.0, 0.0, 0.0), texture_coord: Vector.create ( 0.0, 1.0) }
+          this.vertices[16] = { position: matvec([-0.5, -0.5,  0.5), normal: matvec([ -1.0, 0.0, 0.0), texture_coord: Vector.create ( 0.0, 0.0) }
+          this.vertices[17] = { position: matvec([-0.5,  0.5,  0.5), normal: matvec([ -1.0, 0.0, 0.0), texture_coord: Vector.create ( 1.0, 0.0) }
 
-          this.vertices[18] = { position: vec3 (0.5,  0.5,  0.5), normal: vec3( 1.0, 0.0, 0.0), texture_coord: Vector.create ( 1.0, 0.0) }
-          this.vertices[19] = { position: vec3 (0.5,  0.5, -0.5), normal: vec3( 1.0, 0.0, 0.0), texture_coord: Vector.create ( 1.0, 1.0) }
-          this.vertices[20] = { position: vec3 (0.5, -0.5, -0.5), normal: vec3( 1.0, 0.0, 0.0), texture_coord: Vector.create ( 0.0, 1.0) }
-          this.vertices[21] = { position: vec3 (0.5, -0.5, -0.5), normal: vec3( 1.0, 0.0, 0.0), texture_coord: Vector.create ( 0.0, 1.0) }
-          this.vertices[22] = { position: vec3 (0.5, -0.5,  0.5), normal: vec3( 1.0, 0.0, 0.0), texture_coord: Vector.create ( 0.0, 0.0) }
-          this.vertices[23] = { position: vec3 (0.5,  0.5,  0.5), normal: vec3( 1.0, 0.0, 0.0), texture_coord: Vector.create ( 1.0, 0.0) }
+          this.vertices[18] = { position: matvec([0.5,  0.5,  0.5), normal: matvec([ 1.0, 0.0, 0.0), texture_coord: Vector.create ( 1.0, 0.0) }
+          this.vertices[19] = { position: matvec([0.5,  0.5, -0.5), normal: matvec([ 1.0, 0.0, 0.0), texture_coord: Vector.create ( 1.0, 1.0) }
+          this.vertices[20] = { position: matvec([0.5, -0.5, -0.5), normal: matvec([ 1.0, 0.0, 0.0), texture_coord: Vector.create ( 0.0, 1.0) }
+          this.vertices[21] = { position: matvec([0.5, -0.5, -0.5), normal: matvec([ 1.0, 0.0, 0.0), texture_coord: Vector.create ( 0.0, 1.0) }
+          this.vertices[22] = { position: matvec([0.5, -0.5,  0.5), normal: matvec([ 1.0, 0.0, 0.0), texture_coord: Vector.create ( 0.0, 0.0) }
+          this.vertices[23] = { position: matvec([0.5,  0.5,  0.5), normal: matvec([ 1.0, 0.0, 0.0), texture_coord: Vector.create ( 1.0, 0.0) }
 
-          this.vertices[24] = { position: vec3 (-0.5, -0.5, -0.5), normal: vec3( 0.0, -1.0, 0.0), texture_coord: Vector.create ( 0.0, 1.0) }
-          this.vertices[25] = { position: vec3 (0.5, -0.5, -0.5),  normal: vec3(0.0, -1.0, 0.0 ), texture_coord: Vector.create (1.0, 1.0) }
-          this.vertices[26] = { position: vec3 (0.5, -0.5,  0.5),  normal: vec3(0.0, -1.0, 0.0 ), texture_coord: Vector.create (1.0, 0.0) }
-          this.vertices[27] = { position: vec3 (0.5, -0.5,  0.5),  normal: vec3(0.0, -1.0, 0.0 ), texture_coord: Vector.create (1.0, 0.0) }
-          this.vertices[28] = { position: vec3 (-0.5, -0.5,  0.5), normal: vec3( 0.0, -1.0, 0.0), texture_coord: Vector.create ( 0.0, 0.0) }
-          this.vertices[29] = { position: vec3 (-0.5, -0.5, -0.5), normal: vec3( 0.0, -1.0, 0.0), texture_coord: Vector.create ( 0.0, 1.0) }
+          this.vertices[24] = { position: matvec([-0.5, -0.5, -0.5), normal: matvec([ 0.0, -1.0, 0.0), texture_coord: Vector.create ( 0.0, 1.0) }
+          this.vertices[25] = { position: matvec([0.5, -0.5, -0.5),  normal: matvec([0.0, -1.0, 0.0 ), texture_coord: Vector.create (1.0, 1.0) }
+          this.vertices[26] = { position: matvec([0.5, -0.5,  0.5),  normal: matvec([0.0, -1.0, 0.0 ), texture_coord: Vector.create (1.0, 0.0) }
+          this.vertices[27] = { position: matvec([0.5, -0.5,  0.5),  normal: matvec([0.0, -1.0, 0.0 ), texture_coord: Vector.create (1.0, 0.0) }
+          this.vertices[28] = { position: matvec([-0.5, -0.5,  0.5), normal: matvec([ 0.0, -1.0, 0.0), texture_coord: Vector.create ( 0.0, 0.0) }
+          this.vertices[29] = { position: matvec([-0.5, -0.5, -0.5), normal: matvec([ 0.0, -1.0, 0.0), texture_coord: Vector.create ( 0.0, 1.0) }
 
-          this.vertices[30] = { position: vec3 (-0.5,  0.5, -0.5), normal: vec3( 0.0, 1.0, 0.0), texture_coord: Vector.create ( 0.0, 1.0) }
-          this.vertices[31] = { position: vec3 (0.5,  0.5, -0.5), normal: vec3( 0.0, 1.0, 0.0), texture_coord: Vector.create ( 1.0, 1.0) }
-          this.vertices[32] = { position: vec3 (0.5,  0.5,  0.5), normal: vec3( 0.0, 1.0, 0.0), texture_coord: Vector.create ( 1.0, 0.0) }
-          this.vertices[33] = { position: vec3 (0.5,  0.5,  0.5), normal: vec3( 0.0, 1.0, 0.0), texture_coord: Vector.create ( 1.0, 0.0) }
-          this.vertices[34] = { position: vec3 (-0.5,  0.5,  0.5), normal: vec3( 0.0, 1.0, 0.0), texture_coord: Vector.create ( 0.0, 0.0) }
-          this.vertices[35] = { position: vec3 (-0.5,  0.5, -0.5), normal: vec3( 0.0, 1.0, 0.0), texture_coord: Vector.create ( 0.0, 1.0) }
+          this.vertices[30] = { position: matvec([-0.5,  0.5, -0.5), normal: matvec([ 0.0, 1.0, 0.0), texture_coord: Vector.create ( 0.0, 1.0) }
+          this.vertices[31] = { position: matvec([0.5,  0.5, -0.5), normal: matvec([ 0.0, 1.0, 0.0), texture_coord: Vector.create ( 1.0, 1.0) }
+          this.vertices[32] = { position: matvec([0.5,  0.5,  0.5), normal: matvec([ 0.0, 1.0, 0.0), texture_coord: Vector.create ( 1.0, 0.0) }
+          this.vertices[33] = { position: matvec([0.5,  0.5,  0.5), normal: matvec([ 0.0, 1.0, 0.0), texture_coord: Vector.create ( 1.0, 0.0) }
+          this.vertices[34] = { position: matvec([-0.5,  0.5,  0.5), normal: matvec([ 0.0, 1.0, 0.0), texture_coord: Vector.create ( 0.0, 0.0) }
+          this.vertices[35] = { position: matvec([-0.5,  0.5, -0.5), normal: matvec([ 0.0, 1.0, 0.0), texture_coord: Vector.create ( 0.0, 1.0) }
 
           this.indices = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
                           10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
@@ -508,17 +509,17 @@ export class Shape_From_File extends tiny.Shape {
             }
           }
         }
-      
+
         ({ positions, normals, texture_coords } = unpacked);
         this.indices = unpacked.indices;
 
         for (let i = 0; i < positions.length; i += 3)
-          this.vertices.push({ position: vec3(...positions.slice(i, i + 3)),
-                               normal:   vec3(...normals.slice(i, i + 3)),
-                               tangent:  vec3(0,0,0)
+          this.vertices.push({ position: matvec([...positions.slice(i, i + 3)]),
+                               normal:   matvec([...normals.slice(i, i + 3)]),
+                               tangent:  matvec([0,0,0])
                              });
         for(let i = 0; i < texture_coords.length; i += 2 )
-          this.vertices[i/2].texture_coord = vec( texture_coords[ i ], texture_coords[ i+1 ] );
+          this.vertices[i/2].texture_coord = matvec([ texture_coords[ i ], texture_coords[ i+1 ] ]);
 
         for (let i = 0; i < this.indices.length; i += 3) {     // Tangent calculation:
           const face = this.indices.slice(i, i+3);
@@ -546,3 +547,4 @@ export class Shape_From_File extends tiny.Shape {
         this.waiting = false;
       }
   };
+*/

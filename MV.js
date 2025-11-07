@@ -23,6 +23,7 @@ export class MatVec {
   }
 
   static quick = new MatVec();
+  static helper = new MatVec();
   quickClone() {
     const q = MatVec.quick;
     q.buffers[0].set(this.buffers[0]);
@@ -253,7 +254,7 @@ export class MatVec {
     x /= len; y /= len; z /= len;
     const c = Math.cos(angle), s = Math.sin(angle), t = 1 - c;
 
-    const rotMat = MatVec.quick;
+    const rotMat = MatVec.helper;
     rotMat.loadMatrix([
       [t*x*x + c,   t*x*y - s*z, t*x*z + s*y, 0],
       [t*x*y + s*z, t*y*y + c,   t*y*z - s*x, 0],
@@ -264,7 +265,7 @@ export class MatVec {
   }
 
   scale(x, y, z) {
-    const scaleMat = MatVec.quick;
+    const scaleMat = MatVec.helper;
     scaleMat.loadMatrix([
       [x, 0, 0, 0],
       [0, y, 0, 0],
@@ -275,7 +276,7 @@ export class MatVec {
   }
 
   translate(dx, dy, dz) {
-    const transMat = MatVec.quick;
+    const transMat = MatVec.helper;
     transMat.loadMatrix([
       [1, 0, 0, dx],
       [0, 1, 0, dy],
@@ -300,7 +301,6 @@ export class MatVec {
 
     z.multiply(-1); // Enforce right-handed coordinate system.
 
-    // Direct loadMatrix into this (no temp buffer)
     this.loadMatrix([
       [x.data[0], x.data[1], x.data[2], -x.dot(eye)],
       [y.data[0], y.data[1], y.data[2], -y.dot(eye)],
@@ -335,6 +335,16 @@ export class MatVec {
       [0, 0, -1, 0]
     ]);
     return this;
+  }
+
+  transpose() {
+    const out = this.nextBuffer;
+    for (let row = 0; row < 4; row++)
+      for (let col = 0; col < 4; col++)
+        out[col * 4 + row] = this.data[row * 4 + col];
+    this.currentIndex = 1 - this.currentIndex;
+    return this;
+    // Transposing a vector = undefined behavior.
   }
 
   invert() {
@@ -727,5 +737,42 @@ export function matvec(data) { return new MatVec(data); }
   let mv_35_result1 = mv_35_A.clone().multiply(mv_35_B);
   let mv_35_result2 = mv_35_B.clone().pre_multiply(mv_35_A);
   assert(arraysAlmostEqual(mv_35_result1.data.slice(0,16), mv_35_result2.data.slice(0,16)), "35. pre_multiply matches multiply");
+
+ // 36. Transpose of identity matrix is itself
+  let mv_36_identity = matvec().set_identity().transpose();
+  let mv_36_expected = [
+    1,0,0,0,
+    0,1,0,0,
+    0,0,1,0,
+    0,0,0,1
+  ];
+  assert(matricesAlmostEqual(mv_36_identity, mv_36_expected, EPS), "36. Transpose of identity");
+
+  // 37. Transpose of upper-triangular matrix becomes lower-triangular
+  let mv_37_upper = matvec([
+    [1,2,3,4],
+    [0,5,6,7],
+    [0,0,8,9],
+    [0,0,0,10]
+  ]);
+  let mv_37_trans = mv_37_upper.clone().transpose();
+  let mv_37_expected = [
+    1,0,0,0,
+    2,5,0,0,
+    3,6,8,0,
+    4,7,9,10
+  ];
+  assert(matricesAlmostEqual(mv_37_trans, mv_37_expected, EPS), "37. Transpose upper triangular");
+
+  // 38. Transpose twice yields original
+  let mv_38_A = matvec([
+    [1,2,3,4],
+    [5,6,7,8],
+    [9,10,11,12],
+    [13,14,15,16]
+  ]);
+  let mv_38_TT = mv_38_A.clone().transpose().transpose();
+  assert(mv_38_A.equals(mv_38_TT), "38. Transpose twice returns original");
+
   console.log("All MatVec tests passed.");
 })();

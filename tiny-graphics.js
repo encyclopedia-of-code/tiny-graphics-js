@@ -29,7 +29,7 @@ export class Shape {
         const first = entries[0];
 
         const attributes_meta = attributes.map(attr => {
-              const full_size = first[attr].size;
+              const full_size = first[attr].size || 1;
               const is_matrix = full_size === 16;
               const size = is_matrix ? 4 : full_size;
               return { attr, is_matrix, size, full_size };
@@ -924,7 +924,7 @@ export class UBO_Plan {
     while (stack.length) {
       const { value, path } = stack.pop();
 
-      if ( typeof value === 'number' || value instanceof this.type || value instanceof Matrix ) {
+      if ( typeof value === 'number' || value instanceof this.type || value instanceof MatVec ) {
         out[path.join('.')] = value;  // We found a leaf node.  Finalize the path array into a string.
         continue;
       }

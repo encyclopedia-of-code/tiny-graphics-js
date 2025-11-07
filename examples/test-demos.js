@@ -2,41 +2,10 @@ import * as tiny from '../tiny-graphics.js';
 import * as defs from './common.js';
 import { MatVec, matvec, RenderListItem, Renderer } from './common.js';
 
-export class Minimal_Shading_Demo extends Renderer {
-  init () {
-    super.init();
-    this.shape = new defs.Cube();
-    //this.state.shader = new defs.PBR_Shader (1, 1, {has_shadows: false, has_textures: true});
-    this.state.shader = new defs.Minimal_Phong_Shader (1, 1);
-    this.state.materials = new defs.Simple_Materials( { "solid": undefined } );
-
-    this.state.lightArray = new defs.LightArray({ambient: .025, lights:[
-           {direction_or_position: vec4(0, 10, 0, 0),
-             color: vec3(1.0, 0.7, 0.7), diffuse: 1.0, specular: 1.0, attenuation_factor: 0.0001},
-         ]});
-
-    this.passes = [ Object.create( this.state ) ];
-    this.item = new defs.RenderListItem(this.passes[0], this.shape, 0);
-    this.renderList.insert( this.item );
-    this.renderList.traverse( (item) => item.update_per_instance_buffer(), {prune: false} );
-  }
-  render_frame () {
-    if( !this.controls )  {
-      const camera = { camera_inverse: Mat4.look_at( vec3(0.0, 5.0, 20.0), vec3(0,0,0), vec3(0,1,0) ),
-                          projection: Mat4.perspective(Math.PI/2, this.width/this.height, 0.01, 500) };
-      this.state.camera = new defs.Camera( camera );
-      this.controls = new defs.Movement_Controls( { state: this.state } );
-      this.controls.add_mouse_controls( this.canvas );
-      this.animated_children.push( this.controls );
-    }
-    this.renderList.traverse( (item) => this.draw( item ), {prune: true} );
-  }
-}
-
 export class Minimal_Demo extends Renderer {
   init () {
     super.init();
-    this.shape = new Minimal_Shape();
+    this.shape = new defs.Cube();
     this.state.shader = new Basic_Shader();
     this.passes = [ Object.create( this.state ) ];
     this.item = new defs.RenderListItem(this.passes[0], this.shape, 0);
@@ -76,6 +45,38 @@ export class Basic_Shader extends tiny.Shader {
           }`;
       }
   };
+
+
+export class Minimal_Shading_Demo extends Renderer {
+  init () {
+    super.init();
+    this.shape = new defs.Cube();
+    //this.state.shader = new defs.PBR_Shader (1, 1, {has_shadows: false, has_textures: true});
+    this.state.shader = new defs.Minimal_Phong_Shader (1, 1);
+    this.state.materials = new defs.Simple_Materials( { "solid": undefined } );
+
+    this.state.lightArray = new defs.LightArray({ambient: .025, lights:[
+           {direction_or_position: matvec([0, 10, 0, 0]),
+             color: matvec([1.0, 0.7, 0.7]), diffuse: 1.0, specular: 1.0, attenuation_factor: 0.0001},
+         ]});
+
+    this.passes = [ Object.create( this.state ) ];
+    this.item = new defs.RenderListItem(this.passes[0], this.shape, 0);
+    this.renderList.insert( this.item );
+    this.renderList.traverse( (item) => item.update_per_instance_buffer(), {prune: false} );
+  }
+  render_frame () {
+    if( !this.controls )  {
+      const camera = { camera_inverse: matvec().look_at( matvec([0.0, 5.0, 20.0]), matvec([0,0,0]), matvec([0,1,0]) ),
+                          projection: matvec().perspective(Math.PI/2, this.width/this.height, 0.01, 500) };
+      this.state.camera = new defs.Camera( camera );
+      this.controls = new defs.Movement_Controls( { state: this.state } );
+      this.controls.add_mouse_controls( this.canvas );
+      this.animated_children.push( this.controls );
+    }
+    this.renderList.traverse( (item) => this.draw( item ), {prune: true} );
+  }
+}
 
 export class Debug_Shader extends tiny.Shader {
     update_GPU (renderer, uniforms, matrix, material) {

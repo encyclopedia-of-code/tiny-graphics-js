@@ -19,9 +19,9 @@ export class PBR_Shader extends Shader {
         renderer.context.uniform1f (gpu_addresses.animation_time, state.animation_time / 1000);
       }
       if( !this.previous_group_matrix || !this.previous_group_matrix.equals(renderListItem.group_transform) ) {
-        if( !this.previous_group_matrix ) this.previous_group_matrix = Mat4.of(...renderListItem.group_transform);
-        else this.previous_group_matrix.set(renderListItem.group_transform);
-        renderer.context.uniformMatrix4fv (gpu_addresses.group_transform, true, Matrix.flatten_2D_to_1D (renderListItem.group_transform));
+        if( !this.previous_group_matrix ) this.previous_group_matrix = renderListItem.group_transform.clone();
+        else this.previous_group_matrix.loadArray( renderListItem.group_transform.data );
+        renderer.context.uniformMatrix4fv (gpu_addresses.group_transform, true, renderListItem.group_transform.data );
       }
     }
     shared_glsl_code () {           // ********* SHARED CODE, INCLUDED IN BOTH SHADERS *********
@@ -269,9 +269,9 @@ export class Minimal_Phong_Shader extends Shader {
         renderer.context.uniform1f (gpu_addresses.animation_time, state.animation_time / 1000);
       }
       if( !this.previous_group_matrix || !this.previous_group_matrix.equals(renderListItem.group_transform) ) {
-        if( !this.previous_group_matrix ) this.previous_group_matrix = Mat4.of(...renderListItem.group_transform);
-        else this.previous_group_matrix.set(renderListItem.group_transform);
-        renderer.context.uniformMatrix4fv (gpu_addresses.group_transform, true, Matrix.flatten_2D_to_1D (renderListItem.group_transform));
+        if( !this.previous_group_matrix ) this.previous_group_matrix = renderListItem.group_transform.clone();
+        else this.previous_group_matrix.loadArray( renderListItem.group_transform.data );
+        renderer.context.uniformMatrix4fv (gpu_addresses.group_transform, true, renderListItem.group_transform.data );
       }
     }
     shared_glsl_code () {           // ********* SHARED CODE, INCLUDED IN BOTH SHADERS *********
