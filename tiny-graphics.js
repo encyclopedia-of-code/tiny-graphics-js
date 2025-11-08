@@ -170,25 +170,28 @@ export class Shape {
           }
       }
       normalize_positions (keep_aspect_ratios = true) {
-          let p_arr = this.vertices.map(item => item.position);
-          const average_position = p_arr.reduce ((acc, p) => acc.add(p.quickClone().multiply (1 / p_arr.length)), matvec([0, 0, 0]));
-          p_arr = p_arr.map (p => p.clone().subtract (average_position));           // Center the point cloud on
-                                                                                                     // the origin.
-          const average_lengths = p_arr.reduce ((acc, p) =>
-                                                  acc.loadVector([ acc.data[0] + Math.abs(p[0]),
-                                                                   acc.data[1] + Math.abs(p[1]),
-                                                                   acc.data[2] + Math.abs(p[2]) ]), matvec([0, 0, 0]))
-                                  .multiply (1 / p_arr.length);
-          let final_positions = [];
-          if (keep_aspect_ratios)                            // Divide each axis by its average distance from the origin.
-              final_positions = p_arr.map (p => p.loadVector([ p.data[0] / average_lengths.data[0],
-                                                               p.data[1] / average_lengths.data[1],
-                                                               p.data[2] / average_lengths.data[2] ]) );
-          else
-              final_positions = p_arr.map (p => p.multiply (1 / matvec(average_lengths).norm() ));
+          const average_position = this.vertices.reduce( (acc, v) =>
+                acc.add( v.position.quickClone().multiply( 1/this.vertices.length) ),
+                matvec([0,0,0]) );
 
-          for (var i = 0; i < final_positions.length; i++)
-            this.vertices[i].position = final_positions[i];
+          // Center the point cloud on the origin.
+          this.vertices.forEach( v => v.position.subtract( average_position ) );
+
+          const average_scale = this.vertices.reduce( (acc, v) =>
+                acc.add( matvec([ Math.abs(v.position.data[0]), Math.abs(v.position.data[1]),
+                                  Math.abs(v.position.data[2]) ])
+                       ), matvec([0,0,0]) );
+
+          average_scale.multiply(1 / this.vertices.length);
+
+          const a = average_scale.data;
+          const average_scale_inv = matvec([ 1/a[0], 1/a[1], 1/a[2] ]);
+
+          if (keep_aspect_ratios)
+            // Divide each axis by its average distance from the origin.
+            this.vertices.forEach( v => v.position.multiply( 1/average_scale.norm() ) );
+          else
+            this.vertices.forEach( v => v.position.multiply( average_scale_inv ) );
       }
   };
 

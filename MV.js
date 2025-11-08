@@ -49,6 +49,7 @@ export class MatVec {
       buf[i] = arr[i];
     }
     this.size = arr.length;
+    return this;
   }
 
   // Load matrix given array of rows, padded to 4x4, row-major order
@@ -112,11 +113,11 @@ export class MatVec {
     return this;
   }
 
-  random(size = 3) {
+  random(magnitude = 1, size = 3) {
     this.size = size;
     const out = this.nextBuffer;
     for (let i = 0; i < size; i++)
-      out[i] = Math.random() * 2 - 1;
+      out[i] = ( Math.random() * 2 - 1 ) * magnitude;
     for (let i = size; i < 16; i++) out[i] = 0;
     this.currentIndex = 1 - this.currentIndex;
     return this;
@@ -513,7 +514,7 @@ export function matvec(data) { return new MatVec(data); }
   assert(arraysAlmostEqual(mv_13.data.slice(0,3), [2,4,6]), "13. Scalar multiply chain correct");
 
   // 14. Random vector generation
-  let mv_14_rand = new MatVec().random(3);
+  let mv_14_rand = new MatVec().random();
   assert(mv_14_rand.size === 3, "14. Random vector size correct");
 
   // 15. mix() test
