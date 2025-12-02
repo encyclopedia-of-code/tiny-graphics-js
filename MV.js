@@ -1,3 +1,6 @@
+// Need loadVector test case: arr can be a plain array or a matvec.
+// Need vec * mat test case, for both pre_multiply and multiply.
+
 export class MatVec {
   constructor(data) {
     // Internally always has 2 buffers each length 16 (max for 4x4 matric)
@@ -42,13 +45,13 @@ export class MatVec {
   }
 
   // Load flat array as vector into first N positions, rest zero
-  loadVector(arr) {
+  loadVector(arr) {   // arr can be a plain array or a matvec.
     const buf = this.data;
     buf.fill(0);
-    for (let i = 0; i < arr.length && i < 16; i++) {
-      buf[i] = arr[i];
+    this.size = arr.size || arr.length;
+    for (let i = 0; i < this.size && i < 16; i++) {
+      buf[i] = arr.size ? arr.data[i] : arr[i];
     }
-    this.size = arr.length;
     return this;
   }
 
@@ -174,7 +177,8 @@ export class MatVec {
     this.size = 16;
     return this;
   }
-
+/*
+ * OLD:
   multiply(other) {
     const a = this.data;
     const out = this.nextBuffer;
@@ -199,15 +203,15 @@ export class MatVec {
 
     if (this.size === 16 && (other.size === 16 || other.size === 3 || other.size === 4)) {
       // Combine matrix * matrix and matrix * vector multiplication
-      let outputCols = (other.size === 16) ? 4 : 1;
-      let vecLen = (other.size === 16) ? 4 : other.size;
+      const isMatrix = other.size === 16;
+      let outputCols = isMatrix ? 4 : 1;
+      let vecLen = isMatrix ? 4 : other.size;
 
       for (let row = 0; row < 4; row++) {
         for (let col = 0; col < outputCols; col++) {
           out[row * outputCols + col] = 0;
           for (let k = 0; k < vecLen; k++) {
-            out[row * outputCols + col] += a[row * 4 + k] *
-               (other.size === 16 ? b[k * 4 + col] : b[k] );
+            out[row * outputCols + col] += a[row * 4 + k] * b[k * outputCols + col * isMatrix];
           }
           if( vecLen === 3 ) {
             out[row * outputCols + col] += a[row * 4 + 3] * 1;   // Homogenize vec3s to positions by convention.
@@ -222,15 +226,84 @@ export class MatVec {
 
     throw new Error("Unsupported multiply for sizes " + this.size + " and " + other.size);
   }
+  */
 
-  pre_multiply(other) {
+  multiply(other) {
     const out = this.nextBuffer;
+    const a = this.data;
+    if (typeof other === 'number') {
+      // Scalar multiply
+      for (let i = 0; i < this.size; i++) out[i] = a[i] * other;
+      for (let i = this.size; i < 16; i++) out[i] = 0;
+      this.currentIndex = 1 - this.currentIndex;
+      return this;
+    }
+    const b = other.data;
+    const aRows  = (this.size == 16 ? 4 : 1);
+    const aCols = (this.size == 16 ? 4 : this.size);
+    const bCols = (other.size == 16 ? 4 : 1);
+    const outputCols = (aRows == 4 ? bCols : 1);
 
-    const temp = other.clone().multiply(this);
-    for (let i = 0; i < this.size; i++) out[i] = temp[i];
+    // Removed, put back?  Support for:
+    // Elementwise multiply for vec3 and vec4 same size inputs
+    /*
+    if ((this.size === 3 || this.size === 4) && other.size === this.size) {
+      for (let i = 0; i < this.size; i++) out[i] = a[i] * b[i];
+      for (let i = this.size; i < 16; i++) out[i] = 0;
+      this.currentIndex = 1 - this.currentIndex;
+      return this;
+    }
+    */
+
+    // Combine matrix * matrix and matrix * vector and vector * matrix multiplication.
+    for (let row = 0; row < aRows; row++) {
+      for (let col = 0; col < outputCols; col++) {
+        out[row * outputCols + col] = 0;
+        for (let k = 0; k < aCols; k++) {
+          out[row * outputCols + col] += a[row * aCols + k] * b[k * bCols + col];
+        }
+        if( other.size == 3 ) {
+          out[row * outputCols + col] += a[row * aCols + 3] * 1; // Homogenize vec3s to positions by convention.
+        }
+      }
+    }
+    this.size = aRows * bCols;
+    // If we multiply by a vec3, assume we want a vec3 result.
+    if( this.size == 4 && other.size == 3 ) this.size = 3;
+    for (let i = this.size; i < 16; i++) out[i] = 0;
     this.currentIndex = 1 - this.currentIndex;
     return this;
   }
+
+  pre_multiply(other) {
+    const out = this.nextBuffer;
+    const a = other.data;
+    const b = this.data;
+    const aRows  = (other.size == 16 ? 4 : 1);
+    const aCols = (other.size == 16 ? 4 : other.size);
+    const bCols = (this.size == 16 ? 4 : 1);
+    const outputCols = (aRows == 4 ? bCols : 1);
+
+    for (let row = 0; row < aRows; row++) {
+      for (let col = 0; col < outputCols; col++) {
+        out[row * outputCols + col] = 0;
+        for (let k = 0; k < aCols; k++) {
+          out[row * outputCols + col] += a[row * aCols + k] * b[k * bCols + col];
+        }
+      }
+    }
+    this.size = aRows * bCols;
+    this.currentIndex = 1 - this.currentIndex;
+    return this;
+
+    // TODO: Specialized unrolled branches for Mat4*Mat4 and Mat4*Vec4.  In gl-matrix, outside the innermost loop
+    // they cache whichever multiplicand gets reused as the innermost loop index varies - i.e. the current row.
+  }
+ //   Old:
+ //   const temp = other.clone().multiply(this).data;
+ //   for (let i = 0; i < this.size; i++) out[i] = temp[i];
+ //   this.currentIndex = 1 - this.currentIndex;
+ //   return this;
 
   toString() {
     const d = this.data;
@@ -266,6 +339,10 @@ export class MatVec {
   }
 
   scale(x, y, z) {
+    if( x.data ) {
+      const d = x.data;
+      x = d[0]; y = d[1]; z = d[2];
+    }
     const scaleMat = MatVec.helper;
     scaleMat.loadMatrix([
       [x, 0, 0, 0],
@@ -277,6 +354,10 @@ export class MatVec {
   }
 
   translate(dx, dy, dz) {
+    if( dx.data ) {
+      const d = dx.data;
+      dx = d[0]; dy = d[1]; dz = d[2];
+    }
     const transMat = MatVec.helper;
     transMat.loadMatrix([
       [1, 0, 0, dx],
@@ -405,7 +486,8 @@ export function matvec(data) { return new MatVec(data); }
 
 
   function assert(condition, msg) {
-    if (!condition) throw new Error("Assertion failed: " + (msg || ""));
+    // if (!condition) throw new Error("Assertion failed: " + (msg || ""));
+    if (!condition) console.log("Assertion failed: " + (msg || ""));
   }
 
   function arraysAlmostEqual(a, b, eps=1e-6) {

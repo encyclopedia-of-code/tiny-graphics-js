@@ -1,6 +1,8 @@
 import * as defs from './common.js';
-import { vec3, unsafe3, vec4, color, Mat4, Texture, RenderListItem, Component, Renderer } from './common.js';
+import { MatVec, matvec, Texture, RenderListItem, Renderer } from './common.js';
 import { Camera, LightArray, Materials } from './common.js';
+
+// TODO: Use static function vars for temp matrices instead.
 
 export class Rigid_Body {           // **Rigid_Body** can store and update the properties of a 3D body that incrementally
                                     // moves from its previous place due to velocities.  It conforms to the
@@ -8,25 +10,34 @@ export class Rigid_Body {           // **Rigid_Body** can store and update the p
   constructor( { shape, material_index, color, size } )
     { Object.assign( this,
              { shape, material_index, color, size } )
+      this.center = matvec();
+      this.rotation = matvec();
+      this.previous = { center: matvec(), rotation: matvec() };
     }
-  situate( location_matrix, linear_velocity, angular_velocity, spin_axis = vec3( 0,0,0 ).randomized(1).normalized() )
+  situate( location_matrix, linear_velocity, angular_velocity, spin_axis = matvec().random() )
     {                               // situate(): assign the body's initial values, or overwrite them.
-      this.center   = location_matrix.times( vec4( 0,0,0,1 ) ).to3();
-      this.rotation = Mat4.translation( ...this.center.times( -1 ) ).times( location_matrix );
-      this.previous = { center: this.center.copy(), rotation: this.rotation.copy() };
+      this.center.loadVector( location_matrix.quickClone().multiply( matvec([ 0,0,0,1 ]) ).to3() );
+      this.rotation.set_identity().translate( this.center.quickClone().multiply( -1 ) ).multiply( location_matrix );
+      this.previous.center.loadVector( this.center );
+      this.previous.rotation.loadVector( this.rotation );
                                               // drawn_location gets replaced with an interpolated quantity:
       this.drawn_location = location_matrix;
-      this.temp_matrix = Mat4.identity();
       return Object.assign( this, { linear_velocity, angular_velocity, spin_axis } )
     }
   advance( time_amount )
     {                           // advance(): Perform an integration (the simplistic Forward Euler method) to
                                 // advance all the linear and angular velocities one time-step forward.
-      this.previous = { center: this.center.copy(), rotation: this.rotation.copy() };
+      this.previous.center.loadVector( this.center );
+      this.previous.rotation.loadVector( this.rotation );
                                                  // Apply the velocities scaled proportionally to real time (time_amount):
                                                  // Linear velocity first, then angular:
-      this.center = this.center.plus( this.linear_velocity.times( time_amount ) );
-      this.rotation.pre_multiply( Mat4.rotation( time_amount * this.angular_velocity, ...this.spin_axis ) );
+      this.center.add( this.linear_velocity.quickClone().multiply( time_amount ) );
+      const s = this.spin_axis.data;
+      const new_rotation = matvec().set_identity().rotate( time_amount * this.angular_velocity, s[0], s[1], s[2] );
+      new_rotation.multiply( this.rotation );
+      this.rotation = new_rotation;
+
+   //   this.rotation.pre_multiply( this.rotation.quickClone().set_identity().rotate( time_amount * this.angular_velocity, s[0], s[1], s[2] ) );
     }
   blend_rotation( alpha )
     {                        // blend_rotation(): Just naively do a linear blend of the rotations, which looks
@@ -34,21 +45,25 @@ export class Rigid_Body {           // **Rigid_Body** can store and update the p
 
                                   // TODO:  Replace this function with proper quaternion blending, and perhaps
                                   // store this.rotation in quaternion form instead for compactness.
-       return this.rotation.map( (x,i) => vec4( ...this.previous.rotation[i] ).mix( x, alpha ) );
+       const blended = MatVec.helper.set_identity();
+       for( let i = 0; i < 16; i++ )
+         blended.data[i] = this.previous.rotation.data[i] * (1-alpha) + this.rotation.data[i] * alpha;
+       return blended;
     }
   blend_state( alpha )
     {                             // blend_state(): Compute the final matrix we'll draw using the previous two physical
                                   // locations the object occupied.  We'll interpolate between these two states as
                                   // described at the end of the "Fix Your Timestep!" blog post.
-      this.drawn_location = Mat4.translation( ...this.previous.center.mix( this.center, alpha ) )
-                                      .times( this.blend_rotation( alpha ) )
-                                      .times( Mat4.scale( ...this.size ) );
+      MatVec.helper.loadVector( this.previous.center );
+      this.drawn_location.set_identity().translate( MatVec.helper.mix( this.center, alpha ) )
+                                        .multiply( this.blend_rotation( alpha ) )
+                                        .scale( this.size );
     }
                                               // The following are our various functions for testing a single point,
                                               // p, against some analytically-known geometric volume formula
                                               // (within some margin of distance).
   static intersect_cube( p, margin = 0 )
-    { return p.every( value => value >= -1 - margin && value <=  1 + margin )
+    { return p.data.every( value => value >= -1 - margin && value <=  1 + margin )
     }
   static intersect_sphere( p, margin = 0 )
     { return p.dot( p ) < 1 + margin;
@@ -63,14 +78,13 @@ export class Rigid_Body {           // **Rigid_Body** can store and update the p
       if ( this == b )
         return false;                     // Nothing collides with itself.
                                           // Convert sphere b to the frame where a is a unit sphere:
-      const T = this.inverse.times( b.drawn_location, this.temp_matrix );
+      const T = this.inverse.clone().multiply( b.drawn_location );
 
       const { intersect_test, points, leeway } = collider;
                                           // For each vertex in that b, shift to the coordinate frame of
                                           // a_inv*b.  Check if in that coordinate frame it penetrates
                                           // the unit sphere at the origin.  Leave some leeway.
-      return points.arrays.position.some( p =>
-        intersect_test( T.times( p.to4(1) ).to3(), leeway ) );
+      return points.some( p => intersect_test( T.clone().multiply( p ), leeway ) );
     }
 }
 
@@ -161,7 +175,7 @@ export class Test_Data
               "leather":   blender_pbr_filenames("older-padded-leather"),
               "red":       blender_pbr_filenames("red-scifi-metal"),
               "scales":    blender_pbr_filenames("fancy-scaled-gold"),
-              "grass":     blender_pbr_filenames("agedplanks1"),
+              "grass":     blender_pbr_filenames("grass1"),
               "cobble":    blender_pbr_filenames("dusty-cobble"),
               "rgb":       "assets/rgb.jpg",
               "earth":     "assets/earth.gif",
@@ -185,14 +199,17 @@ export class Test_Data
             textured_metallicity_amount: .5,
       });
       this.state.materials.set("gold", { textured_roughness_amount: .8 });
-
       this.state.shader = new defs.PBR_Shader (LightArray.NUM_LIGHTS, Materials.NUM_MATERIALS, {has_shadows: false, has_textures: true});
+
+//      this.state.shader = new defs.Minimal_Phong_Shader (1, 1);
+//      this.state.materials = new defs.Simple_Materials( { "solid": undefined } );
+
       this.state.lightArray =
            new defs.LightArray({ambient: .025, lights:[
-             {direction_or_position: vec4(-3.0, 10.0, 0.0, 0.0),
-               color: vec3(1.0, 0.7, 0.7), diffuse: 1.0, specular: 1.0, attenuation_factor: 0.0001},
-             {direction_or_position: vec4( 0,-5,-10,1),
-               color: vec3(1,1,1), diffuse: 0.5, specular: 1.0, attenuation_factor: 0.001}
+             {direction_or_position: matvec([-3, -3, 1, 0]),
+               color: matvec([1.0, 0.7, 0.7]), diffuse: 1.0, specular: 1.0, attenuation_factor: 0.001},
+             {direction_or_position: matvec([ 0,10,30,1 ]),
+               color: matvec([ 1,1,1 ]), diffuse: 1.0, specular: 1.0, attenuation_factor: 0.0001}
            ]});
     }
   random_shape( shape_list = this.shapes )
@@ -211,7 +228,7 @@ export class Inertia_Demo extends Simulation
       this.data = new Test_Data();
       this.shapes = { ...this.data.shapes };
       this.shapes.square = new defs.Square();
-      this.num_falling_bodies = 500;
+      this.num_falling_bodies = 100;
 
       this.state = this.data.state;
       this.passes = [];
@@ -224,35 +241,38 @@ export class Inertia_Demo extends Simulation
         this.renderList.insert(item);
       }
     }
-  random_color() { return color( .6,.6*Math.random(),.6*Math.random(),1 ).to3() }
+  random_color() { return matvec([ .6,.6*Math.random(),.6*Math.random() ]) }
   update_state( dt )
     {                 // update_state():  Override the base time-stepping code to say what this particular
                       // scene should do to its bodies every frame -- including applying forces.
                       // Generate additional moving bodies if there ever aren't enough:
-      while( this.bodies.length < this.num_falling_bodies )
-        this.bodies.push( new Rigid_Body( {
-          shape: this.data.random_shape(),
-          material_index: Math.random()*9999%this.data.num_materials,
-          color: this.random_color(),
-          size: vec3( 1,1+Math.random(),1 ) } )
-              .situate( Mat4.translation( ...vec3( 0,15,0 ).randomized(10) ),
-                        vec3( 0,-1,0 ).randomized(2).normalized().times(3), Math.random() ) );
+      while( this.bodies.length < this.num_falling_bodies ) {
+        const position = matvec().set_identity().translate( matvec().random(10).add( matvec([ 0,15,0 ]) ) );
+        const velocity = matvec().random(2).add( matvec([ 0,-1,2 ]) ).normalize().multiply(3);
+        const spin_axis = velocity.clone().cross( matvec([ 0,-1,0 ]) ).normalize();
+        this.bodies.push( new Rigid_Body(
+          { shape: this.data.random_shape(),
+            material_index: Math.random()*9999%this.data.num_materials,
+            color: this.random_color(),
+            size: matvec([ 1,1+Math.random(),1 ])
+          }).situate( position, velocity, Math.random(), spin_axis ) );
+      }
 
       for( let b of this.bodies ) {
-        b.linear_velocity[1] += dt * -9.8; // Gravity on Earth, where 1 unit in world space = 1 meter:
-        if( b.center[1] < -8 && b.linear_velocity[1] < 0 ) // If about to fall through floor, reverse y velocity:
-          b.linear_velocity[1] *= -.8;
+        b.linear_velocity.data[1] += dt * -9.8; // Gravity on Earth, where 1 unit in world space = 1 meter:
+        if( b.center.data[1] < -8 && b.linear_velocity.data[1] < 0 ) // If about to fall through floor, reverse y velocity:
+          b.linear_velocity.data[1] *= -.8;
       }
                                                       // Delete bodies that stop or stray too far away:
-      this.bodies = this.bodies.filter( b => b.center.norm() < 50 && b.linear_velocity.norm() > 2 );
+      this.bodies = this.bodies.filter( b => b.center.norm() < 50 && Math.abs( b.linear_velocity.data[1] ) > .05 );
     }
   render_frame() {                                 // display(): Draw everything else in the scene besides the moving bodies.
       super.render_frame();
 
       if( !this.controls )  {
-        const camera = { camera_inverse: Mat4.translation(0,0,-50),
-                            projection: Mat4.perspective(Math.PI/4, this.width/this.height, 1, 500) };
-        this.state.camera = new Camera( camera );
+        const camera = { camera_world: matvec().set_identity().translate(0,0,50),
+                            projection: matvec().perspective(Math.PI/4, this.width/this.height, 1, 500) };
+        this.state.camera = new defs.Camera( camera );
         this.controls = new defs.Movement_Controls( { state: this.state } );
         this.controls.add_mouse_controls( this.canvas );
         this.animated_children.push( this.controls );
@@ -262,9 +282,9 @@ export class Inertia_Demo extends Simulation
 
       // Draw the ground:
       const item = new RenderListItem(this.passes[0], this.shapes.square, 0);
-      item.instance_vars.push( { model_transform: Mat4.translation( 0,-10,0 )
-                                    .times( Mat4.rotation( Math.PI/2,   1,0,0 ) ).times( Mat4.scale( 50,50,1 ) ),
-                                 color: vec3(.5,1,.5), material_index: 0 } );
+      item.instance_vars.push( { model_transform: matvec().set_identity().translate( 0,-10,0 )
+                                    .rotate( Math.PI/2,  -1,0,0 ).scale( 50,50,1 ),
+                                 color: matvec([ .5,1,.5] ), material_index: this.state.materials.name_to_index["grass"] } );
       this.renderList.insert( item );
 
       // Draw each shape at its current location:
@@ -296,9 +316,9 @@ export class Collision_Demo extends Simulation
       this.shapes = { ...this.data.shapes };
                                   // Make simpler dummy shapes for representing all other shapes during collisions:
       this.colliders = [
-        { intersect_test: Rigid_Body.intersect_sphere, points: new defs.Subdivision_Sphere(1), leeway: .5 },
-        { intersect_test: Rigid_Body.intersect_sphere, points: new defs.Subdivision_Sphere(2), leeway: .3 },
-        { intersect_test: Rigid_Body.intersect_cube,   points: new defs.Cube(),                leeway: .1 }
+        { intersect_test: Rigid_Body.intersect_sphere, points: new defs.Subdivision_Sphere(1).vertices.map( v => v.position ), leeway: .5 },
+        { intersect_test: Rigid_Body.intersect_sphere, points: new defs.Subdivision_Sphere(2).vertices.map( v => v.position ), leeway: .3 },
+        { intersect_test: Rigid_Body.intersect_cube,   points: new defs.Cube().vertices.map( v => v.position ),                leeway: .1 }
                        ];
       this.collider_selection = 0;
                                                           // Materials:

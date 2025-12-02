@@ -26,7 +26,7 @@ export class Instanced_Cubes_Demo extends Renderer {
             "leather":   blender_pbr_filenames("older-padded-leather"),
             "red":       blender_pbr_filenames("red-scifi-metal"),
             "scales":    blender_pbr_filenames("fancy-scaled-gold"),
-            "grass":     blender_pbr_filenames("agedplanks1"),
+            "grass":     blender_pbr_filenames("grass1"),
             "cobble":    blender_pbr_filenames("dusty-cobble"),
             "rgb":       "assets/rgb.jpg",
             "earth":     "assets/earth.gif",
