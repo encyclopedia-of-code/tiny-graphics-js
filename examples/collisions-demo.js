@@ -14,9 +14,11 @@ export class Rigid_Body {           // **Rigid_Body** can store and update the p
       this.rotation = matvec();
       this.previous = { center: matvec(), rotation: matvec() };
     }
+  static helper1 = matvec([0,0,0,1]);
+  static helper2 = matvec();
   situate( location_matrix, linear_velocity, angular_velocity, spin_axis = matvec().random() )
     {                               // situate(): assign the body's initial values, or overwrite them.
-      this.center.loadVector( location_matrix.quickClone().multiply( matvec([ 0,0,0,1 ]) ).to3() );
+      this.center.loadVector( location_matrix.quickClone().multiply( Rigid_Body.helper1 ).to3() );
       this.rotation.set_identity().translate( this.center.quickClone().multiply( -1 ) ).multiply( location_matrix );
       this.previous.center.loadVector( this.center );
       this.previous.rotation.loadVector( this.rotation );
@@ -33,9 +35,8 @@ export class Rigid_Body {           // **Rigid_Body** can store and update the p
                                                  // Linear velocity first, then angular:
       this.center.add( this.linear_velocity.quickClone().multiply( time_amount ) );
       const s = this.spin_axis.data;
-      const new_rotation = matvec().set_identity().rotate( time_amount * this.angular_velocity, s[0], s[1], s[2] );
-      new_rotation.multiply( this.rotation );
-      this.rotation = new_rotation;
+      const new_rotation = Rigid_Body.helper2.set_identity().rotate( time_amount * this.angular_velocity, s[0], s[1], s[2] );
+      this.rotation.pre_multiply( new_rotation );
 
    //   this.rotation.pre_multiply( this.rotation.quickClone().set_identity().rotate( time_amount * this.angular_velocity, s[0], s[1], s[2] ) );
     }
@@ -45,7 +46,7 @@ export class Rigid_Body {           // **Rigid_Body** can store and update the p
 
                                   // TODO:  Replace this function with proper quaternion blending, and perhaps
                                   // store this.rotation in quaternion form instead for compactness.
-       const blended = MatVec.helper.set_identity();
+       const blended = Rigid_Body.helper2.set_identity();
        for( let i = 0; i < 16; i++ )
          blended.data[i] = this.previous.rotation.data[i] * (1-alpha) + this.rotation.data[i] * alpha;
        return blended;
@@ -54,8 +55,8 @@ export class Rigid_Body {           // **Rigid_Body** can store and update the p
     {                             // blend_state(): Compute the final matrix we'll draw using the previous two physical
                                   // locations the object occupied.  We'll interpolate between these two states as
                                   // described at the end of the "Fix Your Timestep!" blog post.
-      MatVec.helper.loadVector( this.previous.center );
-      this.drawn_location.set_identity().translate( MatVec.helper.mix( this.center, alpha ) )
+      Rigid_Body.helper2.loadVector( this.previous.center );
+      this.drawn_location.set_identity().translate( Rigid_Body.helper2.mix( this.center, alpha ) )
                                         .multiply( this.blend_rotation( alpha ) )
                                         .scale( this.size );
     }
@@ -228,7 +229,7 @@ export class Inertia_Demo extends Simulation
       this.data = new Test_Data();
       this.shapes = { ...this.data.shapes };
       this.shapes.square = new defs.Square();
-      this.num_falling_bodies = 100;
+      this.num_falling_bodies = 10000;
 
       this.state = this.data.state;
       this.passes = [];

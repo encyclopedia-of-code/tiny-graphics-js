@@ -1,5 +1,6 @@
 // Need loadVector test case: arr can be a plain array or a matvec.
 // Need vec * mat test case, for both pre_multiply and multiply.
+// Does quickClone really need to copy both buffers and index?
 
 export class MatVec {
   constructor(data) {
@@ -47,11 +48,11 @@ export class MatVec {
   // Load flat array as vector into first N positions, rest zero
   loadVector(arr) {   // arr can be a plain array or a matvec.
     const buf = this.data;
-    buf.fill(0);
     this.size = arr.size || arr.length;
     for (let i = 0; i < this.size && i < 16; i++) {
       buf[i] = arr.size ? arr.data[i] : arr[i];
     }
+    for (let i = this.size; i < 16; i++) buf[i] = 0;
     return this;
   }
 
@@ -857,5 +858,5 @@ export function matvec(data) { return new MatVec(data); }
   let mv_38_TT = mv_38_A.clone().transpose().transpose();
   assert(mv_38_A.equals(mv_38_TT), "38. Transpose twice returns original");
 
-  console.log("All MatVec tests passed.");
+  console.log("All MatVec tests performed.");
 })();
