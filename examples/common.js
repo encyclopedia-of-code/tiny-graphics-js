@@ -1,4 +1,4 @@
-import { MatVec, matvec, UBO_Plan, Texture } from '../tiny-graphics.js';
+import { MatVec, matvec, UBO_Plan, Texture, Renderer } from '../tiny-graphics.js';
 export * from '../tiny-graphics.js';
 export * from './common-shapes.js';
 export * from './common-shaders.js';
@@ -256,10 +256,6 @@ export class Materials extends UBO_Plan {
     get_binding_point () { return 2; }
 };
 
-
-
-
-
 export class Simple_Materials extends UBO_Plan {
     static NUM_MATERIALS = 128;
     init(materials_list, fields) {
@@ -279,117 +275,146 @@ export class Simple_Materials extends UBO_Plan {
     get_binding_point () { return 2; }
 };
 
-export class Material_From_File extends UBO_Plan {
-    init(shader = undefined, filename, arg_fields = {}, arg_samplers = {}) {
-      Object.assign (this, shader, filename, arg_fields, {arg_samplers: new Map(arg_samplers)} );
-      this.ready = false;
-
-      this.directory = filename.substring(0, filename.lastIndexOf('/') + 1);
-      this.load_file( filename );
+export class Rigid_Body {           // **Rigid_Body** can store and update the properties of a 3D body that incrementally
+                                    // moves from its previous place due to velocities.  It conforms to the
+                                    // approach outlined in the "Fix Your Timestep!" blog post by Glenn Fiedler.
+  constructor( { shape, material_index, color, size } )
+    { Object.assign( this,
+             { shape, material_index, color, size } )
+      this.center = matvec();
+      this.rotation = matvec();
+      this.previous = { center: matvec(), rotation: matvec() };
     }
-    get_binding_point () { return 2; }
-    load_file( filename ) {
-      // Request the external file and wait for it to load.
-      return fetch( filename )
-        .then( response =>
-          { if ( response.ok )  return Promise.resolve( response.text() )
-            else                return Promise.reject ( response.status )
-          })
-        .then( mtl_file_contents => this.parse_into_material( mtl_file_contents ) )
-        .catch( error => { throw "MTL file loader:  MTL file either not found or is of unsupported format." } )
+  static helper1 = matvec([0,0,0,1]);
+  static helper2 = matvec();
+  situate( location_matrix, linear_velocity, angular_velocity, spin_axis = matvec().random() )
+    {                               // situate(): assign the body's initial values, or overwrite them.
+      this.center.loadVector( location_matrix.quickClone().multiply( Rigid_Body.helper1 ).to3() );
+      this.rotation.set_identity().translate( this.center.quickClone().multiply( -1 ) ).multiply( location_matrix );
+      this.previous.center.loadVector( this.center );
+      this.previous.rotation.loadVector( this.rotation );
+                                              // drawn_location gets replaced with an interpolated quantity:
+      this.drawn_location = location_matrix;
+      return Object.assign( this, { linear_velocity, angular_velocity, spin_axis } )
     }
-    parse_into_material( data ) {
-      // Read All materials, a map from material name -> material data and samplers
+  advance( time_amount )
+    {                           // advance(): Perform an integration (the simplistic Forward Euler method) to
+                                // advance all the linear and angular velocities one time-step forward.
+      this.previous.center.loadVector( this.center );
+      this.previous.rotation.loadVector( this.rotation );
+                                                 // Apply the velocities scaled proportionally to real time (time_amount):
+                                                 // Linear velocity first, then angular:
+      this.center.add( this.linear_velocity.quickClone().multiply( time_amount ) );
+      const s = this.spin_axis.data;
+      const new_rotation = Rigid_Body.helper2.set_identity().rotate( time_amount * this.angular_velocity, s[0], s[1], s[2] );
+      this.rotation.pre_multiply( new_rotation );
 
-        var lines = data.split('\n');
-
-        var NEWNAME_RE = /^newmtl\s/;
-        var AMBIENT_RE = /^Ka\s/;
-        var DIFFUSE_RE = /^Kd\s/;
-        var SPECULAR_RE = /^Ks\s/;
-        var SMOOTHNESS_RE = /^Ns\s/;
-        var NON_TRANSPARENCY_RE = /^d\s/;
-        var TRANSPARENCY_RE = /^Tr\s/;
-        var ILLUM_RE = /^illum\s/;
-        var MAP_DIFFUSE_RE = /^map_Kd\s/;
-        var MAP_NORMAL_RE = /^map_Bump\s/;
-        var MAP_SPECULAR_RE = /^map_Ks\s/;
-        var WHITESPACE_RE = /\s+/;
-
-        this.MTL = [];
-        var first_material_name = undefined;
-        var current_material_name = undefined;
-
-        for (var i = 0; i < lines.length; i++) {
-          var line = lines[i].trim();
-          var elements = line.split(WHITESPACE_RE);
-          elements.shift();
-
-          if (NEWNAME_RE.test(line)) {
-            current_material_name = elements[0];
-            if ( first_material_name == undefined ) {
-              first_material_name = current_material_name;
-            }
-            this.MTL[current_material_name] = {data: {}, samplers: {}};
-          }
-          else if (AMBIENT_RE.test(line)) {
-            if (this.MTL[current_material_name].data.color == undefined)
-              //haven't read transparency yet
-              this.MTL[current_material_name].data.color = vec4 (elements[0], elements[1], elements[2], 1.0);
-            else {
-              //already read transparency
-              this.MTL[current_material_name].data.color[0] = elements[0];
-              this.MTL[current_material_name].data.color[1] = elements[1];
-              this.MTL[current_material_name].data.color[2] = elements[2];
-            }
-          }
-          else if (DIFFUSE_RE.test(line)) {
-            this.MTL[current_material_name].data.diffuse = vec3 (elements[0], elements[1], elements[2]);
-          }
-          else if (SPECULAR_RE.test(line)) {
-            this.MTL[current_material_name].data.specular = vec3 (elements[0], elements[1], elements[2]);
-          }
-          else if (SMOOTHNESS_RE.test(line)) {
-            this.MTL[current_material_name].data.smoothness = +(elements[0]);
-          }
-          else if (NON_TRANSPARENCY_RE.test(line)) {
-            if (this.MTL[current_material_name].data.color == undefined)
-              //haven't read color yet
-              this.MTL[current_material_name].data.color = vec4 (1.0, 1.0, 1.0, elements[0]);
-            else {
-              //already read color
-              this.MTL[current_material_name].data.color[3] = elements[0];
-            }
-          }
-          else if (TRANSPARENCY_RE.test(line)) {
-            if (this.MTL[current_material_name].data.color == undefined)
-              //haven't read color yet
-              this.MTL[current_material_name].data.color = vec4 (1.0, 1.0, 1.0, 1.0 - elements[0]);
-            else {
-              //already read color
-              this.MTL[current_material_name].data.color[3] = 1.0 - elements[0];
-            }
-          }
-          else if (ILLUM_RE.test(line)) {
-            //Ignore this for now
-            //If Illum is 1, can disable specular
-          }
-          else if (MAP_DIFFUSE_RE.test(line)) {
-            this.MTL[current_material_name].samplers.diffuse_texture = new tiny.Texture(this.directory + elements[0]);
-          }
-          else if (MAP_NORMAL_RE.test(line)) {
-            this.MTL[current_material_name].samplers.normal_texture = new tiny.Texture(this.directory + elements[0]);
-          }
-          else if (MAP_SPECULAR_RE.test(line)) {
-            this.MTL[current_material_name].samplers.specular_texture = new tiny.Texture(this.directory + elements[0]);
-          }
-        }
-
-        //shader defaults <- mtl file <- argument data
-        this.fields = Object.assign(shader.constructor.default_values(), this.MTL[first_material_name].data, this.arg_fields);
-        //mtl file <- argument sampler
-        this.samplers = Object.assign(this.MTL[first_material_name].samplers, this.arg_samplers);
-        this.ready = true;
-
+   //   this.rotation.pre_multiply( this.rotation.quickClone().set_identity().rotate( time_amount * this.angular_velocity, s[0], s[1], s[2] ) );
     }
-  };
+  blend_rotation( alpha )
+    {                        // blend_rotation(): Just naively do a linear blend of the rotations, which looks
+                             // ok sometimes but otherwise produces shear matrices, a wrong result.
+
+                                  // TODO:  Replace this function with proper quaternion blending, and perhaps
+                                  // store this.rotation in quaternion form instead for compactness.
+       const blended = Rigid_Body.helper2.set_identity();
+       for( let i = 0; i < 16; i++ )
+         blended.data[i] = this.previous.rotation.data[i] * (1-alpha) + this.rotation.data[i] * alpha;
+       return blended;
+    }
+  blend_state( alpha )
+    {                             // blend_state(): Compute the final matrix we'll draw using the previous two physical
+                                  // locations the object occupied.  We'll interpolate between these two states as
+                                  // described at the end of the "Fix Your Timestep!" blog post.
+      Rigid_Body.helper2.loadVector( this.previous.center );
+      this.drawn_location.set_identity().translate( Rigid_Body.helper2.mix( this.center, alpha ) )
+                                        .multiply( this.blend_rotation( alpha ) )
+                                        .scale( this.size );
+    }
+                                              // The following are our various functions for testing a single point,
+                                              // p, against some analytically-known geometric volume formula
+                                              // (within some margin of distance).
+  static intersect_cube( p, margin = 0 )
+    { return p.data.every( value => value >= -1 - margin && value <=  1 + margin )
+    }
+  static intersect_sphere( p, margin = 0 )
+    { return p.dot( p ) < 1 + margin;
+    }
+  check_if_colliding( b, collider )
+    {                                     // check_if_colliding(): Collision detection function.
+                                          // DISCLAIMER:  The collision method shown below is not used by anyone; it's just very quick
+                                          // to code.  Making every collision body an ellipsoid is kind of a hack, and looping
+                                          // through a list of discrete sphere points to see if the ellipsoids intersect is *really* a
+                                          // hack (there are perfectly good analytic expressions that can test if two ellipsoids
+                                          // intersect without discretizing them into points).
+      if ( this == b )
+        return false;                     // Nothing collides with itself.
+                                          // Convert sphere b to the frame where a is a unit sphere:
+      const T = this.inverse.clone().multiply( b.drawn_location );
+
+      const { intersect_test, points, leeway } = collider;
+                                          // For each vertex in that b, shift to the coordinate frame of
+                                          // a_inv*b.  Check if in that coordinate frame it penetrates
+                                          // the unit sphere at the origin.  Leave some leeway.
+      return points.some( p => intersect_test( T.clone().multiply( p ), leeway ) );
+    }
+}
+
+export class Simulation extends Renderer
+{                                         // **Simulation** manages the stepping of simulation time.  Subclass it when making
+                                          // a Component that is a physics demo.  This technique is careful to totally decouple
+                                          // the simulation from the frame rate (see below).
+  init()
+  {
+    super.init();
+    this.time_accumulator = 0;
+    this.time_scale = 1;
+    this.t = 0;
+    this.dt = 1/20;
+    this.steps_taken = 0;
+  }
+  simulate( frame_time )
+    {                                     // simulate(): Carefully advance time according to Glenn Fiedler's
+                                          // "Fix Your Timestep" blog post.
+                                          // This line gives ourselves a way to trick the simulator into thinking
+                                          // that the display framerate is running fast or slow:
+      frame_time *= this.time_scale;
+
+                                          // Avoid the spiral of death; limit the amount of time we will spend
+                                          // computing during this timestep if display lags:
+      this.time_accumulator += Math.min( frame_time, 0.1 );
+                                          // Repeatedly step the simulation until we're caught up with this frame:
+      // TODO: I added the abs and Math.sign to test reversing the simulation, it looks like.  Would it work in any circumstance?
+      while ( Math.abs( this.time_accumulator ) >= this.dt )
+      {                                                       // Single step of the simulation for all bodies:
+        this.props.target.update_state( this.dt );
+        for( let b of this.state.bodies )
+          b.advance( this.dt );
+                                          // Following the advice of the article, de-couple
+                                          // our simulation time from our frame rate:
+        this.t                += Math.sign( frame_time ) * this.dt;
+        this.time_accumulator -= Math.sign( frame_time ) * this.dt;
+        this.steps_taken++;
+      }
+                                            // Store an interpolation factor for how close our frame fell in between
+                                            // the two latest simulation time steps, so we can correctly blend the
+                                            // two latest states and display the result.
+      let alpha = this.time_accumulator / this.dt;
+      for( let b of this.state.bodies ) b.blend_state( alpha );
+    }
+  render_controls()
+    {                       // render_controls(): Create the buttons for interacting with simulation time.
+      this.key_triggered_button( "Speed up time", [ "Shift","T" ], () => this.time_scale *= 5           );
+      this.key_triggered_button( "Slow down time",        [ "t" ], () => this.time_scale /= 5           ); this.new_line();
+      this.live_string( box => { box.textContent = "Time scale: "  + this.time_scale                  } ); this.new_line();
+      this.live_string( box => { box.textContent = "Fixed simulation time step size: "  + this.dt     } ); this.new_line();
+      this.live_string( box => { box.textContent = this.steps_taken + " timesteps were taken so far." } );
+    }
+  render_frame()
+    {                                     // display(): advance the time and state of our whole simulation.
+      if( this.state.animate )
+        this.simulate( this.state.animation_delta_time );
+    }
+  update_state( dt )      // update_state(): Your subclass of Simulation has to override this abstract function.
+    { throw "Override this" }
+}

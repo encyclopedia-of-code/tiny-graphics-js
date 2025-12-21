@@ -398,6 +398,7 @@ export class Shader {
     static default_values () {}
 };
 
+
 export class Component {
       // See description at https://github.com/encyclopedia-of-code/tiny-graphics-js/wiki/tiny-graphics.js#component
       constructor (props = {}) {
@@ -669,13 +670,15 @@ export class Renderer extends Component {
     this.textures = new Map();  // Texture -> texture buffer
     this.shadow_maps = new Map();  // Shadow_Map -> texture buffer
 
-    if( this.state === undefined ) this.state = Object.create(null);
-    Object.assign( this.state,
-      { animate   : true,
-        animation_time : 0,
-        animation_delta_time: 0,
-        samplers: new Map()
-      } );
+    if( this.state === undefined ) {
+      this.state = Object.create(null);
+      Object.assign( this.state,
+        { animate   : true,
+          animation_time : 0,
+          animation_delta_time: 0,
+          samplers: new Map()
+        } );
+    }
   }
   make_context (canvas, background_color = [0, 0, 0, 1], dimensions) {
       this.canvas              = canvas;
@@ -869,6 +872,7 @@ export class Renderer extends Component {
     const gl = this.context;
     this.update_VAO( renderListItem, this.attribute_addresses.get( shader ) );
 
+    // Any UBO_Plan instances dropped into render_state will be assumed to exist on the GPU.
     for (let key in renderListItem.render_state ) {
       const ubo_plan = renderListItem.render_state[key];
       if( !(ubo_plan instanceof UBO_Plan) )
@@ -1199,4 +1203,5 @@ export class Texture {
       gl.viewport(0, 0, renderer.width, renderer.height);
   }
 }
+
 

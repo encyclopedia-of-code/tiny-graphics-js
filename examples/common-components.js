@@ -4,7 +4,7 @@ import * as shapes from './common-shapes.js';
 import * as shaders from './common-shaders.js';
 
 export class Movement_Controls extends Component {
-    constructor(props)
+    constructor(props)    // A state is expected to be shared with this helper Component.
       {
         super(props);
         this.recipient = this.state.camera;
