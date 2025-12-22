@@ -423,6 +423,13 @@ export class Component {
               event.stopPropagation ();
           };
           this.key_controls       = new widgets.Keyboard_Manager (document, callback_behavior);
+
+          // Find the correct browser's version of requestAnimationFrame() needed for queue-ing up re-display events:
+          window.requestAnimFrame = (w =>
+            w.requestAnimationFrame || w.webkitRequestAnimationFrame
+            || w.mozRequestAnimationFrame || w.oRequestAnimationFrame || w.msRequestAnimationFrame
+            || function (callback) { w.setTimeout (callback, 1000 / this.max_fps); }) (window);
+
           // Finally, run the user's code for setting up their scene:
           this.init ();
       }
@@ -637,6 +644,7 @@ export class RenderListItem {
   update_per_instance_buffer() {
     if( !this.instance_VBO_plan ) {
       if (!this.instance_vars.length) {     // The user may specify no matrices for the single instance case.
+                                            // TODO:  Does that still hold true?  They need to be able to set material/color.
         this.instance_vars.push( { model_transform: matvec().set_identity(), color: matvec([1,1,1]),  material_index: 0 } );
       }
       this.instance_VBO_plan = { attributes: [...Object.keys(this.instance_vars[0])] };
@@ -698,11 +706,6 @@ export class Renderer extends Component {
       gl.texImage2D (gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE,
                      new Uint8Array ([255, 0, 0, 255]));
 
-      // Find the correct browser's version of requestAnimationFrame() needed for queue-ing up re-display events:
-      window.requestAnimFrame = (w =>
-        w.requestAnimationFrame || w.webkitRequestAnimationFrame
-        || w.mozRequestAnimationFrame || w.oRequestAnimationFrame || w.msRequestAnimationFrame
-        || function (callback) { w.setTimeout (callback, 1000 / this.max_fps); }) (window);
   }
   set_canvas_size (dimensions = [1080, 600]) {
       // We must change size in CSS, wait for style re-flow, and then change size again within canvas attributes.

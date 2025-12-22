@@ -1,11 +1,11 @@
 import * as defs from './common.js';
-import { MatVec, matvec, Texture, RenderListItem, Renderer, Rigid_Body, Simulation } from './common.js';
+import { matvec, RenderListItem, Renderer, Rigid_Body, Simulation } from './common.js';
 import { Camera, LightArray, Materials } from './common.js';
 
 // TODO: Use static function vars for temp matrices instead.
 
-class Physics_Demo extends Renderer
-{                             // **Physics_Demo** pre-loads some Shapes and Materials that other Scenes can borrow.
+class Physics_Demo extends Renderer {
+                              // **Physics_Demo** pre-loads some Shapes and Materials that other Scenes can borrow.
   init() {
       super.init();
       this.shapes = { donut  : new defs.Torus          ( 15, 15, [[0,2],[0,1]] ),
@@ -38,13 +38,6 @@ class Physics_Demo extends Renderer
               "solid":      undefined
       };
       this.num_materials = Object.keys(materials).length;
-      this.state = Object.create(null);
-      Object.assign( this.state,
-        { animate   : true,
-          animation_time : 0,
-          animation_delta_time: 0,
-          samplers: new Map()
-        } );
       this.state.materials = new Materials( materials );
       this.state.samplers.set("texture_array", this.state.materials.texture_array );
       this.state.materials.set("turtle", {
@@ -67,15 +60,24 @@ class Physics_Demo extends Renderer
                color: matvec([ 1,1,1 ]), diffuse: 1.0, specular: 1.0, attenuation_factor: 0.0001}
            ]});
     }
-  random_shape( shape_list = this.shapes )
-    {                                       // random_shape():  Extract a random shape from this.shapes.
+  random_shape( shape_list = this.shapes ) {        // random_shape():  Extract a random shape from this.shapes.
       const shape_names = Object.keys( shape_list );
       return shape_list[ shape_names[ ~~( shape_names.length * Math.random() ) ] ]
     }
+  render_frame() {
+      if( !this.controls )  {
+        const camera = { camera_world: matvec().set_identity().translate(0,0,50),
+                            projection: matvec().perspective(Math.PI/4, this.width/this.height, 1, 500) };
+        this.state.camera = new defs.Camera( camera );
+        this.controls = new defs.Movement_Controls( { state: this.state } );
+        this.controls.add_mouse_controls( this.canvas );
+        this.animated_children.push( this.controls );
+      }
+  }
 }
 
-export class Inertia_Demo extends Physics_Demo
-{                                           // ** Inertia_Demo** demonstration: This scene lets random initial momentums
+export class Inertia_Demo extends Physics_Demo {
+                                            // ** Inertia_Demo** demonstration: This scene lets random initial momentums
                                             // carry several bodies until they fall due to gravity and bounce.
   init() {
       super.init();
@@ -126,15 +128,6 @@ export class Inertia_Demo extends Physics_Demo
   }
   render_frame() {                                 // display(): Draw everything else in the scene besides the moving bodies.
       super.render_frame();
-
-      if( !this.controls )  {
-        const camera = { camera_world: matvec().set_identity().translate(0,0,50),
-                            projection: matvec().perspective(Math.PI/4, this.width/this.height, 1, 500) };
-        this.state.camera = new defs.Camera( camera );
-        this.controls = new defs.Movement_Controls( { state: this.state } );
-        this.controls.add_mouse_controls( this.canvas );
-        this.animated_children.push( this.controls );
-      }
 
       this.renderList.traverse( (item) => item.clear(), {prune: false} );
 

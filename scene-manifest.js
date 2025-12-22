@@ -3,6 +3,7 @@ const scene_list = [
   {name: "Minimal_Shading_Demo", path: "./examples/test-demos.js"},
   {name: "Instanced_Cubes_Demo", path: "./examples/instancing-demo.js"},
   {name: "Inertia_Demo", path: "./examples/collisions-demo.js"},
+  {name: "Parametric_Surfaces", path: "./examples/parametric-surfaces.js"},
 ];
 
 export async function load_scene(name) {

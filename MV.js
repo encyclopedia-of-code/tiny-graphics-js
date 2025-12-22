@@ -45,7 +45,7 @@ export class MatVec {
     return copy;
   }
 
-  // Load flat array as vector into first N positions, rest zero
+  // Load another matvec or a flat array as vector into first N positions, rest zero
   loadVector(arr) {   // arr can be a plain array or a matvec.
     const buf = this.data;
     this.size = arr.size || arr.length;

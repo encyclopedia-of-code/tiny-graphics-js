@@ -1,11 +1,23 @@
-import {tiny, defs} from './common.js';
-                                                  // Pull these names into this module's scope for convenience:
-const { Vector3, vec3, vec4, color, Mat4, Shader, Texture, Component } = tiny;
+import * as defs from './common.js';
+import { MatVec, matvec, RenderListItem, Component, Renderer } from './common.js';
+import { Camera, LightArray, Materials } from './common.js';
 
+export class Parametric_Surfaces extends Renderer {
+  num_sections = 1;
+  init() {
+      super.init();
 
-export class Parametric_Surfaces extends Component
-{
-  num_sections = 7;
+      const materials = { "rgb":  "assets/rgb.jpg" };
+      this.state.materials = new Materials( materials );
+      this.state.samplers.set("texture_array", this.state.materials.texture_array );
+      this.state.shader = new defs.PBR_Shader (LightArray.NUM_LIGHTS, Materials.NUM_MATERIALS, {has_shadows: false, has_textures: true});
+
+      this.state.lightArray =
+           new defs.LightArray({ambient: .025, lights:[
+             {direction_or_position: matvec([ 0,0,1, 0]),
+               color: matvec([ 1,1,1 ]), diffuse: 1.0, specular: 1.0, attenuation_factor: 0.001},
+           ]});
+    }
   render_layout( div, options = {} )
     {
       this.div = div;
@@ -17,9 +29,6 @@ export class Parametric_Surfaces extends Component
       const rules = [ `.documentation-big { width:1030px; padding:0 25px; font-size: 29px; font-family: Arial` ];
       Component.initialize_CSS( Parametric_Surfaces, rules );
 
-      this.init_shared_objects();
-
-
       // TODO:  Should a loop like below exist in the core library, to loop through all document_children and call their render_layout()?
 
       for( let i = 0; i < this.num_sections; i++ )
@@ -27,7 +36,7 @@ export class Parametric_Surfaces extends Component
         const inner_div = div.appendChild( document.createElement( "div" ) );
         this[ "region_" + i ] = inner_div
 
-        const inner_scene = new Parametric_Surfaces_Section( { uniforms: this.uniforms, dont_tick: true, parent: this, section_index: i } );
+        const inner_scene = new Parametric_Surfaces_Section( { state: this.state, dont_tick: true, parent: this, section_index: i } );
         this.document_children.push( inner_scene );
         inner_scene.render_layout( inner_div );
       }
@@ -40,13 +49,13 @@ export class Parametric_Surfaces extends Component
 
       this.embedded_controls_area = div.appendChild( document.createElement( "div" ) );
       this.embedded_controls_area.className = "controls-widget";
-      this.embedded_controls = new tiny.Controls_Widget( this );
+      this.embedded_controls = new defs.widgets.Controls_Widget( this );
 
       this.embedded_code_nav_area = div.appendChild( document.createElement( "div" ) );
       this.embedded_code_nav_area.className = "code-widget";
-      this.embedded_code_nav = new tiny.Code_Widget( this );
+      this.embedded_code_nav = new defs.widgets.Code_Widget( this );
     }
-  init_shared_objects()
+  /* init_shared_objects()
   {
       Shader.assign_camera( Mat4.translation( 0,0,-3 ), this.uniforms );
 
@@ -55,42 +64,51 @@ export class Parametric_Surfaces extends Component
 
       this.movement_controls = new defs.Movement_Controls( { uniforms: this.uniforms } );
       this.animated_children.push( this.movement_controls );
-  }
-  render_frame( caller )
-    {
-      caller.controls = this.movement_controls;
+  } */
+  render_frame() {
+      if( !this.controls )  {
+        const camera = { camera_world: matvec().set_identity().translate(0,0,50),
+                            projection: matvec().perspective(Math.PI/4, this.width/this.height, 1, 100) };
+        this.state.camera = new defs.Camera( camera );
+        this.controls = new defs.Movement_Controls( { state: this.state } );
+        this.animated_children.push( this.controls );
+      }
 
                              // Tick values that update only once per frame (not per section).
-      const t = this.t = this.uniforms.animation_time/1000;
+      const t = this.t = this.state.animation_time/1000;
       const angle = Math.sin( t );
-      const light_position = Mat4.rotation( angle,   1,0,0 ).times( vec4( 0,0,1,0 ) );
-      this.uniforms.lights = [ defs.Phong_Shader.light_source( light_position, color( 1,1,1,1 ), 1000000 ) ];
+      const light_position = matvec().set_identity().rotate( angle,  1,0,0 ).multiply( matvec([ 0,0,1,0] ) );
+
+      this.state.lightArray.fields.lights[0].direction_or_position = light_position;
+      this.state.lightArray.dirty = true;
     }
 }
 
-export
-const Parametric_Surfaces_Section = defs.Parametric_Surfaces_Section =
-class Parametric_Surfaces_Section extends Component
-{ init()
-    {
+export class Parametric_Surfaces_Section extends Renderer {
+  init() {
+      super.init();
       this.parent = this.props.parent;
       this.section_index = this.props.section_index;
+      this.r = matvec();
 
-                                  // Switch on section_index to decide what to actually init.
-      const handler_at_index = this[ "init_section_" + this.section_index ];
-      handler_at_index.call( this );
-    }
-  render_frame( caller )
-    {
-                        // Part I:  All sections do this every frame:
-      this.r = Mat4.rotation( -.5*Math.sin( this.uniforms.animation_time/5000 ),   1,1,1 );
+      // Switch on section_index to decide what to init:
+      this[ "init_section_" + this.section_index ]();
+  }
+  render_frame() {
+      if( this.parent.controls && !this.controls )  {
+                            // Each section's canvas listens (by mouse) for the master Movement_Controls.
+        this.parent.controls.add_mouse_controls( this.canvas );
+        this.controls = this.parent.controls;
+      }
+      if( !this.parent.controls )
+        return;
 
-      this.uniforms.projection_transform = Mat4.perspective( Math.PI/4, caller.width/caller.height, 1, 100 );
+      // All sections do this every frame:
+      this.r.loadVector( MatVec.quick.set_identity().rotate( -.5*Math.sin( this.state.animation_time/5000 ),  1,1,1 ) );
 
-                        // Part II:  Switch on section_index to decide what to actually draw.
-      const handler_at_index = this[ "display_section_" + this.section_index ];
-      handler_at_index.call( this, caller );
-    }
+      // Switch on section_index to decide what to draw.
+      this[ "display_section_" + this.section_index ]();
+  }
   render_layout( div, options = {} )
     {
       this.div = div;
@@ -114,9 +132,6 @@ class Parametric_Surfaces_Section extends Component
       const canvas = this.program_stuff.appendChild( document.createElement( "canvas" ) );
       canvas.style = `width:1080px; height:600px; background:DimGray; margin:auto; margin-bottom:-4px`;
 
-                            // Each section's canvas listens (by mouse) for the master Movement_Controls.
-      this.parent.movement_controls.add_mouse_controls( canvas );
-
       if( !overridden_options.show_canvas )
         canvas.style.display = "none";
 
@@ -128,24 +143,35 @@ class Parametric_Surfaces_Section extends Component
 
       this.embedded_code_nav_area = this.program_stuff.appendChild( document.createElement( "div" ) );
       this.embedded_code_nav_area.className = "code-widget";
-      this.embedded_code_nav = new tiny.Code_Widget( this, { code_in_focus: this[ "init_section_" + this.section_index ], hide_navigator: true } );
+      this.embedded_code_nav = new defs.widgets.Code_Widget( this, { code_in_focus: this[ "init_section_" + this.section_index ], hide_navigator: true } );
 
       this.secondary_embedded_code_nav_area = this.program_stuff.appendChild( document.createElement( "div" ) );
       this.secondary_embedded_code_nav_area.className = "code-widget";
-      this.secondary_embedded_code_nav = new tiny.Code_Widget( this, { code_in_focus: this[ "display_section_" + this.section_index ], hide_navigator: true } );
+      this.secondary_embedded_code_nav = new defs.widgets.Code_Widget( this, { code_in_focus: this[ "display_section_" + this.section_index ], hide_navigator: true } );
     }
   init_section_0()
-    { const initial_corner_point = vec3( -1,-1,0 );
+    { const initial_corner_point = matvec([ -1,-1,0 ]);
                           // These two callbacks will step along s and t of the first sheet:
-      const row_operation = (s,p) => p ? Mat4.translation( 0,.2,0 ).times(p.to4(1)).to3()
+      const row_operation = (s,p) => p ? matvec().set_identity().translate( 0,.2,0 ).multiply(p)
                                        : initial_corner_point;
-      const column_operation = (t,p) =>  Mat4.translation( .2,0,0 ).times(p.to4(1)).to3();
+      const column_operation = (t,p) =>  matvec().set_identity().translate( .2,0,0 ).multiply(p);
                           // These two callbacks will step along s and t of the second sheet:
-      const row_operation_2    = (s,p)   => vec3(    -1,2*s-1,Math.random()/2 );
-      const column_operation_2 = (t,p,s) => vec3( 2*t-1,2*s-1,Math.random()/2 );
+      const row_operation_2    = (s,p)   => matvec([    -1,2*s-1,Math.random()/2 ]);
+      const column_operation_2 = (t,p,s) => matvec([ 2*t-1,2*s-1,Math.random()/2 ]);
 
       this.shapes = { sheet : new defs.Grid_Patch( 10, 10, row_operation, column_operation ),
                       sheet2: new defs.Grid_Patch( 10, 10, row_operation_2, column_operation_2 ) };
+
+      this.passes = [];
+      this.passes.push( Object.create( this.state ) );
+
+      const items = [ new RenderListItem(this.passes[0], this.shapes.sheet, 0),
+                      new RenderListItem(this.passes[0], this.shapes.sheet2, 0) ];
+
+      for( let i=0; i<2; i++ ) {
+        items[i].instance_vars.push( { model_transform: matvec().set_identity().translate( i*3-1.5,0,0 ), color: matvec([ 1,1,1 ]), material_index: 0 } );
+        this.renderList.insert( items[i] );
+      }
     }
   init_section_1()
   { const initial_corner_point = vec3( -1,-1,0 );
@@ -224,9 +250,9 @@ class Parametric_Surfaces_Section extends Component
   display_section_0( caller )
     {
                         // Draw the sheets, flipped 180 degrees so their normals point at us.
-      const r = Mat4.rotation( Math.PI,   0,1,0 ).times( this.r );
-      this.shapes.sheet .draw( caller, this.uniforms, Mat4.translation( -1.5,0,0 ).times(r), this.parent.material );
-      this.shapes.sheet2.draw( caller, this.uniforms, Mat4.translation(  1.5,0,0 ).times(r), this.parent.material );
+      const r = matvec().set_identity().rotate( Math.PI,   0,1,0 ).multiply( this.r );
+
+      this.renderList.traverse( (item) => this.draw( item ), {prune: true} );
     }
   display_section_1( caller )
   {
