@@ -397,7 +397,7 @@ export class Minimal_Phong_Shader extends Shader {
 
         // Compute the final color with contributions from lights:
         frag_color.xyz += phong_model_lights( normalize( VERTEX_NORMAL ), VERTEX_POS, mat );
-
+        // frag_color = vec4(1.,1.,1.,1.);
         // frag_color.xyz += normalize( VERTEX_NORMAL );
       }`
     }

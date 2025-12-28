@@ -1,22 +1,60 @@
+import * as tiny from '../tiny-graphics.js';
 import * as defs from './common.js';
 import { MatVec, matvec, RenderListItem, Component, Renderer } from './common.js';
 import { Camera, LightArray, Materials } from './common.js';
+
+export class Minimal_Shape extends tiny.Shape {
+      // A truly minimal triangle, with three vertices each holding a 3D position and a color.
+      init () {
+          this.vertices[0] = { position: matvec([0, 0, 0]), color: matvec([1, 0, 0, 1]) };
+          this.vertices[1] = { position: matvec([1, 0, 0]), color: matvec([0, 1, 0, 1]) };
+          this.vertices[2] = { position: matvec([0, 1, 0]), color: matvec([0, 0, 1, 1]) };
+      }
+  };
+
+export class Basic_Shader extends tiny.Shader {
+    static default_values () { return {}; }
+      vertex_glsl_code () {          // ********* VERTEX SHADER *********
+        return "#version 300 es " + `
+          precision mediump float;
+          layout(location = 0) in vec3 position;
+          void main() {
+            gl_Position = vec4( position, 1.0 );
+          }`;
+      }
+      fragment_glsl_code () {         // ********* FRAGMENT SHADER *********
+        return "#version 300 es " + `
+          precision mediump float;
+          out vec4 frag_color;
+          void main() {
+            frag_color = vec4(1.0, 0.0, 0.0, 1.0);
+          }`;
+      }
+  };
 
 export class Parametric_Surfaces extends Renderer {
   num_sections = 1;
   init() {
       super.init();
 
-      const materials = { "rgb":  "assets/rgb.jpg" };
-      this.state.materials = new Materials( materials );
-      this.state.samplers.set("texture_array", this.state.materials.texture_array );
-      this.state.shader = new defs.PBR_Shader (LightArray.NUM_LIGHTS, Materials.NUM_MATERIALS, {has_shadows: false, has_textures: true});
+   //   const materials = { "rgb":  "assets/rgb.jpg" };
+   //   this.state.materials = new Materials( materials );
+   //   this.state.samplers.set("texture_array", this.state.materials.texture_array );
+      //this.state.shader = new defs.PBR_Shader (LightArray.NUM_LIGHTS, Materials.NUM_MATERIALS, {has_shadows: false, has_textures: true});
 
-      this.state.lightArray =
-           new defs.LightArray({ambient: .025, lights:[
-             {direction_or_position: matvec([ 0,0,1, 0]),
-               color: matvec([ 1,1,1 ]), diffuse: 1.0, specular: 1.0, attenuation_factor: 0.001},
-           ]});
+      this.state.shader = new defs.Minimal_Phong_Shader (1, 1);
+
+      //     new defs.LightArray({ambient: .025, lights:[
+      //       {direction_or_position: matvec([ 0,0,1, 0]),
+      //         color: matvec([ 1,1,1 ]), diffuse: 1.0, specular: 1.0, attenuation_factor: 0.001},
+      //     ]});
+
+    this.state.materials = new defs.Simple_Materials( { "solid": undefined } );
+
+    this.state.lightArray = new defs.LightArray({ambient: .025, lights:[
+           {direction_or_position: matvec([0, 10, 0, 0]),
+             color: matvec([1.0, 0.7, 0.7]), diffuse: 1.0, specular: 1.0, attenuation_factor: 0.0001},
+         ]});
     }
   render_layout( div, options = {} )
     {
@@ -67,20 +105,21 @@ export class Parametric_Surfaces extends Renderer {
   } */
   render_frame() {
       if( !this.controls )  {
-        const camera = { camera_world: matvec().set_identity().translate(0,0,50),
-                            projection: matvec().perspective(Math.PI/4, this.width/this.height, 1, 100) };
+   //     const camera = { camera_world: matvec().set_identity().translate(0,0,50),
+   //                         projection: matvec().perspective(Math.PI/4, this.width/this.height, 1, 100) };
+        const camera = { camera_inverse: matvec().look_at( matvec([0.0, 5.0, 20.0]), matvec([0,0,0]), matvec([0,1,0]) ) };
         this.state.camera = new defs.Camera( camera );
         this.controls = new defs.Movement_Controls( { state: this.state } );
         this.animated_children.push( this.controls );
       }
 
                              // Tick values that update only once per frame (not per section).
-      const t = this.t = this.state.animation_time/1000;
-      const angle = Math.sin( t );
-      const light_position = matvec().set_identity().rotate( angle,  1,0,0 ).multiply( matvec([ 0,0,1,0] ) );
-
-      this.state.lightArray.fields.lights[0].direction_or_position = light_position;
-      this.state.lightArray.dirty = true;
+//      const t = this.t = this.state.animation_time/1000;
+//      const angle = Math.sin( t );
+//      const light_position = matvec().set_identity().rotate( angle,  1,0,0 ).multiply( matvec([ 0,0,1,0] ) );
+//
+//      this.state.lightArray.fields.lights[0].direction_or_position = light_position;
+//      this.state.lightArray.dirty = true;
     }
 }
 
@@ -99,6 +138,8 @@ export class Parametric_Surfaces_Section extends Renderer {
                             // Each section's canvas listens (by mouse) for the master Movement_Controls.
         this.parent.controls.add_mouse_controls( this.canvas );
         this.controls = this.parent.controls;
+        this.state.camera.fields.projection = matvec().perspective(Math.PI/2, this.width/this.height, 0.01, 500);
+        this.state.camera.dirty = true;
       }
       if( !this.parent.controls )
         return;
@@ -149,6 +190,21 @@ export class Parametric_Surfaces_Section extends Renderer {
       this.secondary_embedded_code_nav_area.className = "code-widget";
       this.secondary_embedded_code_nav = new defs.widgets.Code_Widget( this, { code_in_focus: this[ "display_section_" + this.section_index ], hide_navigator: true } );
     }
+  init_section_9() {
+
+ //   this.shape = new defs.Cube();
+ //   this.passes = [ Object.create( this.state ) ];
+ //   this.item = new defs.RenderListItem(this.passes[0], this.shape, 0);
+ //   this.renderList.insert( this.item );
+ //   this.renderList.traverse( (item) => item.update_per_instance_buffer(), {prune: false} );
+
+    this.shape = new defs.Cube();
+
+    this.passes = [ Object.create( this.state ) ];
+    this.item = new defs.RenderListItem(this.passes[0], this.shape, 0);
+    this.renderList.insert( this.item );
+    this.renderList.traverse( (item) => item.update_per_instance_buffer(), {prune: false} );
+  }
   init_section_0()
     { const initial_corner_point = matvec([ -1,-1,0 ]);
                           // These two callbacks will step along s and t of the first sheet:
@@ -246,6 +302,9 @@ export class Parametric_Surfaces_Section extends Renderer {
 
     this.shapes = { shell : new defs.Grid_Patch( 30, 30, sampler2, sample_two_arrays, [[0,1],[0,1]] )
     };
+  }
+  display_section_9( caller ) {
+    this.renderList.traverse( (item) => this.draw( item ), {prune: true} );
   }
   display_section_0( caller )
     {

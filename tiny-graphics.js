@@ -349,6 +349,8 @@ export class Shader {
         cached_info.uniform_info = JSON.parse( localStorage.getItem(`uniform_info:${shader_hash}`) );
       } catch (e) {}
 
+      cached_info = {};   // TODO: Remove this when done debugging to re-enable cache.
+
       renderer.uniform_addresses.set(this, new Uniform_Addresses(program, gl, cached_info));
 
       if (!cached_info.ubo_offsets) {
