@@ -37,24 +37,18 @@ export class Parametric_Surfaces extends Renderer {
   init() {
       super.init();
 
-   //   const materials = { "rgb":  "assets/rgb.jpg" };
-   //   this.state.materials = new Materials( materials );
-   //   this.state.samplers.set("texture_array", this.state.materials.texture_array );
-      //this.state.shader = new defs.PBR_Shader (LightArray.NUM_LIGHTS, Materials.NUM_MATERIALS, {has_shadows: false, has_textures: true});
+      const materials = { "rgb":  "assets/rgb.jpg" };
+      this.state.materials = new Materials( materials );
+      this.state.samplers.set("texture_array", this.state.materials.texture_array );
+      this.state.shader = new defs.PBR_Shader (LightArray.NUM_LIGHTS, Materials.NUM_MATERIALS, {has_shadows: false, has_textures: true});
 
-      this.state.shader = new defs.Minimal_Phong_Shader (1, 1);
+      // this.state.shader = new defs.Minimal_Phong_Shader (1, 1);
+      // this.state.materials = new defs.Simple_Materials( { "solid": undefined } );
 
-      //     new defs.LightArray({ambient: .025, lights:[
-      //       {direction_or_position: matvec([ 0,0,1, 0]),
-      //         color: matvec([ 1,1,1 ]), diffuse: 1.0, specular: 1.0, attenuation_factor: 0.001},
-      //     ]});
-
-    this.state.materials = new defs.Simple_Materials( { "solid": undefined } );
-
-    this.state.lightArray = new defs.LightArray({ambient: .025, lights:[
-           {direction_or_position: matvec([0, 10, 0, 0]),
-             color: matvec([1.0, 0.7, 0.7]), diffuse: 1.0, specular: 1.0, attenuation_factor: 0.0001},
-         ]});
+      this.state.lightArray = new defs.LightArray({ambient: .025, lights:[
+         {direction_or_position: matvec([ 0,0,1, 0]),
+           color: matvec([ 1,1,1 ]), diffuse: 1.0, specular: 1.0, attenuation_factor: 0.001},
+       ]});
     }
   render_layout( div, options = {} )
     {
@@ -93,21 +87,10 @@ export class Parametric_Surfaces extends Renderer {
       this.embedded_code_nav_area.className = "code-widget";
       this.embedded_code_nav = new defs.widgets.Code_Widget( this );
     }
-  /* init_shared_objects()
-  {
-      Shader.assign_camera( Mat4.translation( 0,0,-3 ), this.uniforms );
-
-      const shader = new defs.Textured_Phong( 1 );
-      this.material = { shader, ambient: .5, texture: new Texture( "assets/rgb.jpg" ) };
-
-      this.movement_controls = new defs.Movement_Controls( { uniforms: this.uniforms } );
-      this.animated_children.push( this.movement_controls );
-  } */
   render_frame() {
       if( !this.controls )  {
-   //     const camera = { camera_world: matvec().set_identity().translate(0,0,50),
-   //                         projection: matvec().perspective(Math.PI/4, this.width/this.height, 1, 100) };
-        const camera = { camera_inverse: matvec().look_at( matvec([0.0, 5.0, 20.0]), matvec([0,0,0]), matvec([0,1,0]) ) };
+        const camera = { camera_inverse: matvec().set_identity().translate( matvec([ 0,0,-3 ]) ),
+                         projection: matvec().perspective(Math.PI/4, this.width/this.height, 1, 100) };
         this.state.camera = new defs.Camera( camera );
         this.controls = new defs.Movement_Controls( { state: this.state } );
         this.animated_children.push( this.controls );
