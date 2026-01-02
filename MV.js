@@ -245,16 +245,13 @@ export class MatVec {
     const bCols = (other.size == 16 ? 4 : 1);
     const outputCols = (aRows == 4 ? bCols : 1);
 
-    // Removed, put back?  Support for:
     // Elementwise multiply for vec3 and vec4 same size inputs
-    /*
     if ((this.size === 3 || this.size === 4) && other.size === this.size) {
       for (let i = 0; i < this.size; i++) out[i] = a[i] * b[i];
       for (let i = this.size; i < 16; i++) out[i] = 0;
       this.currentIndex = 1 - this.currentIndex;
       return this;
     }
-    */
 
     // Combine matrix * matrix and matrix * vector and vector * matrix multiplication.
     for (let row = 0; row < aRows; row++) {
