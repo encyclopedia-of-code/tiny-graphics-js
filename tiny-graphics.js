@@ -349,7 +349,7 @@ export class Shader {
         cached_info.uniform_info = JSON.parse( localStorage.getItem(`uniform_info:${shader_hash}`) );
       } catch (e) {}
 
-      cached_info = {};   // TODO: Remove this when done debugging to re-enable cache.
+      // cached_info = {};   // Remove this when done debugging to re-enable cache.
 
       renderer.uniform_addresses.set(this, new Uniform_Addresses(program, gl, cached_info));
 
@@ -384,9 +384,10 @@ export class Shader {
           if (sampler && sampler.ready) {
 
             const sampler_location = renderer.uniform_addresses.get(this)[name];
-            const previous_offset_for_location = renderer.gpu_versions.get(sampler_location);
-            renderer.gpu_versions.set(sampler_location, offset);
-            if(previous_offset_for_location != offset )
+            const binding = renderer.gpu_versions.get("texture_binding");
+            const previous_offset_for_sampler = binding.sampler_location;
+            binding.sampler_location = offset;
+            if(previous_offset_for_sampler != offset )
               renderer.context.uniform1i (sampler_location, offset);
             // For this draw, use the texture image from correct the GPU buffer:
             sampler.activate (renderer, offset);
@@ -672,7 +673,7 @@ export class Renderer extends Component {
     this.VAOs = new Map(); // RenderListItem -> <gl vao ref>
     this.VBOs = new Map(); // VBO_plan -> <gl vao ref>
     this.gpu_versions = new Map(); // VBO_plan, UBO_plan, <gl ebo ref> -> version number existing on GPU
-        // Other values: Bound_UBO_#, Program, VAO, Active_EBO -> Their respective objects
+        // Other values: Bound_UBO_#, Program, uniforms, VAO, texture_binding, Active_EBO -> Their respective objects/values
     this.index_buffers = new Map();  // Shape -> <gl ebo ref>
     this.shaders = new Map();  // Shader -> { program, vertex_shader, fragment_shader }
     this.attribute_addresses = new Map();  // Shader -> Attribute_Addresses
@@ -680,6 +681,8 @@ export class Renderer extends Component {
     this.textures = new Map();  // Texture -> texture buffer
     this.shadow_maps = new Map();  // Shadow_Map -> texture buffer
 
+    this.gpu_versions.set("uniforms", {});
+    this.gpu_versions.set("texture_binding", {});
     if( this.state === undefined ) {
       this.state = Object.create(null);
       Object.assign( this.state,
@@ -1165,11 +1168,12 @@ export class Texture {
     const type = gl[this.type];
 
     const texture_buffer = renderer.textures.get (this) || this.copy_onto_graphics_card (renderer);
-    const previous_texture_unit = renderer.gpu_versions.get("Texture unit");
+    const binding = renderer.gpu_versions.get("texture_binding");
+    const previous_texture_unit = binding.texture_unit;
     const field_ID = gl.TEXTURE0 + textureUnit;
-    renderer.gpu_versions.set("Texture unit", field_ID);
-    const previous_buffer = renderer.gpu_versions.get("Texture buffer pointer");
-    renderer.gpu_versions.set("Texture buffer pointer", texture_buffer);
+    binding.texture_unit = field_ID;
+    const previous_buffer = binding.texture_buffer_pointer;
+    binding.texture_buffer_pointer = texture_buffer;
     if(previous_texture_unit != field_ID || previous_buffer != texture_buffer) {
       gl.activeTexture (field_ID);
       gl.bindTexture (type, texture_buffer);

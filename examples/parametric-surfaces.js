@@ -130,9 +130,8 @@ export class Parametric_Surfaces_Section extends Renderer {
       if( !overridden_options.show_canvas )
         canvas.style.display = "none";
 
-      this.make_context( canvas );
+      this.make_context( canvas, undefined, [ 1080,300 + this.section_index * 100 ] );
 
-      this.set_canvas_size( [ 1080,300 ] )
                                       // Start WebGL main loop - render() will re-queue itself for continuous calls.
       this.event = window.requestAnimFrame( this.frame_advance.bind( this ) );
 

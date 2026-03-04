@@ -14,13 +14,13 @@ export class PBR_Shader extends Shader {
       const gpu_addresses = renderer.uniform_addresses.get(this);
       const state = renderListItem.render_state;
 
-      if( this.previous_animation_time != state.animation_time ) {
-        this.previous_animation_time = state.animation_time;
+      if( renderer.gpu_versions.get("uniforms")?.previous_animation_time != state.animation_time ) {
+        renderer.gpu_versions.get("uniforms").previous_animation_time = state.animation_time;
         renderer.context.uniform1f (gpu_addresses.animation_time, state.animation_time / 1000);
       }
-      if( !this.previous_group_matrix || !this.previous_group_matrix.equals(renderListItem.group_transform) ) {
-        if( !this.previous_group_matrix ) this.previous_group_matrix = renderListItem.group_transform.clone();
-        else this.previous_group_matrix.loadArray( renderListItem.group_transform.data );
+      if( !renderer.gpu_versions.get("uniforms")?.previous_group_matrix || !renderer.gpu_versions.get("uniforms").previous_group_matrix.equals(renderListItem.group_transform) ) {
+        if( !renderer.gpu_versions.get("uniforms")?.previous_group_matrix ) renderer.gpu_versions.get("uniforms").previous_group_matrix = renderListItem.group_transform.clone();
+        else renderer.gpu_versions.get("uniforms").previous_group_matrix.loadMatrix( renderListItem.group_transform.data );
         renderer.context.uniformMatrix4fv (gpu_addresses.group_transform, true, renderListItem.group_transform.data );
       }
     }
@@ -271,7 +271,7 @@ export class Minimal_Phong_Shader extends Shader {
       }
       if( !this.previous_group_matrix || !this.previous_group_matrix.equals(renderListItem.group_transform) ) {
         if( !this.previous_group_matrix ) this.previous_group_matrix = renderListItem.group_transform.clone();
-        else this.previous_group_matrix.loadArray( renderListItem.group_transform.data );
+        else this.previous_group_matrix.loadMatrix( renderListItem.group_transform.data );
         renderer.context.uniformMatrix4fv (gpu_addresses.group_transform, true, renderListItem.group_transform.data );
       }
     }
