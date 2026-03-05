@@ -37,14 +37,6 @@ export class Instanced_Cubes_Demo extends Renderer {
 
     this.state.materials = new Materials( materials );
     this.state.samplers.set("texture_array", this.state.materials.texture_array );
-    /*
-    this.state.materials.set("turtle", {
-          fallback_roughness: 1,
-          fallback_metallicity: .2,
-          textured_roughness_amount: .5,
-          textured_metallicity_amount: .5,
-    });
-    */
     this.state.materials.set("gold", { textured_roughness_amount: .8 });
 
     this.state.shader = new defs.PBR_Shader (LightArray.NUM_LIGHTS, Materials.NUM_MATERIALS, {has_shadows: false, has_textures: true});
@@ -73,17 +65,13 @@ export class Instanced_Cubes_Demo extends Renderer {
           material_index: j%this.num_materials } } ) );
       this.renderList.insert( items[i] );
     }
-/*
-    for( let i=0; i<this.num_objects; i++) {
-      const item = new RenderListItem(this.passes[0], this.shapes.box, 1);
-      item.hint = "STREAM_DRAW";
-      item.instance_vars.push( { model_transform:
-              Mat4.translation(...vec3(Math.random()*2 - 1, 1,  Math.random()*2 - 1)
-                                  .times_pairwise(vec3(20, 10, 20))).times(Mat4.scale(.5,.5,.5))
-                              , color: vec3(.7,.7,.7).randomized(.5), material_index: i%this.num_materials } );
-      this.renderList.insert( item );
-    }
-
+/*   TURTLE
+    this.state.materials.set("turtle", {
+          fallback_roughness: 1,
+          fallback_metallicity: .2,
+          textured_roughness_amount: .5,
+          textured_metallicity_amount: .5,
+    });
     const item = new RenderListItem(this.passes[0], this.shapes.turtle, 0);
       item.instance_vars.push( { model_transform:
               Mat4.translation(...vec3(0, .25, .5).times_pairwise(vec3(20, 10, 20)))
@@ -101,19 +89,6 @@ render_frame () {
       this.controls.add_mouse_controls( this.canvas );
       this.animated_children.push( this.controls );
     }
-/*
-    this.renderList.get(this.passes[0], this.shapes.box, 1).clear();
-    for( let i=0; i<this.num_objects; i++) {
-      const item = new RenderListItem(this.passes[0], this.shapes.box, 1);
-      item.hint = "STREAM_DRAW";
-      item.instance_vars.push( { model_transform:
-              Mat4.translation(...vec3(Math.random()* 2 - 1, 1,  Math.random()*2 - 1)
-                                  .times_pairwise(vec3(20, 10, 20))).times(Mat4.scale(.5,.5,.5))
-                              , color: vec3(.5,.5,.5).randomized(.5), material_index: i%this.num_materials } );
-      this.renderList.insert( item );
-    }
-    this.renderList.get(this.passes[0], this.shapes.box, 1).update_per_instance_buffer();
-*/
     this.renderList.traverse( (item) => this.draw( item ) );
   }
 };

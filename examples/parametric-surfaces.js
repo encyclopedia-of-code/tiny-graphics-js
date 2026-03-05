@@ -1,6 +1,6 @@
 import * as tiny from '../tiny-graphics.js';
 import * as defs from './common.js';
-import { MatVec, matvec, RenderListItem, Component, Renderer } from './common.js';
+import { MatVec, matvec, RenderListItem, Shape, Component, Renderer } from './common.js';
 import { Camera, LightArray, Materials } from './common.js';
 
 export class Parametric_Surfaces extends Renderer {
@@ -101,6 +101,14 @@ export class Parametric_Surfaces_Section extends Renderer {
       // All sections do this every frame:
       this.r.loadVector( MatVec.quick.set_identity().rotate( -.5*Math.sin( this.state.animation_time/3000 ),  1,1,1 ) );
 
+      this.shapes.square = new defs.Square();
+      // Draw the ground:
+      const item = new RenderListItem(this.passes[0], this.shapes.square, 0);
+      item.instance_vars.push( { model_transform: matvec().set_identity().translate( 0,-10,0 )
+                                    .rotate( Math.PI/2,  -1,0,0 ).scale( 50,50,1 ),
+                                 color: matvec([ .5,1,.5] ), material_index: this.state.materials.name_to_index["rgb"] } );
+      this.renderList.insert( item );
+
       // Switch on section_index to decide what to draw.
       this[ "display_section_" + this.section_index ]();
   }
@@ -176,12 +184,6 @@ export class Parametric_Surfaces_Section extends Renderer {
       }
 
       this.shapes.square = new defs.Square();
-      // Draw the ground:
-      const item = new RenderListItem(this.passes[0], this.shapes.square, 0);
-      item.instance_vars.push( { model_transform: matvec().set_identity().translate( 0,-10,0 )
-                                    .rotate( Math.PI/2,  -1,0,0 ).scale( 50,50,1 ),
-                                 color: matvec([ .5,1,.5] ), material_index: this.state.materials.name_to_index["rgb"] } );
-      this.renderList.insert( item );
     }
   display_section_0()
     {
@@ -204,12 +206,13 @@ export class Parametric_Surfaces_Section extends Renderer {
   { const initial_corner_point = matvec([ 1,-1,0 ]);
     const row_operation = (s,p) => p ? matvec().set_identity().translate(  0,.2,0 ).multiply(p) : initial_corner_point;
     const column_operation = (t,p) =>  matvec().set_identity().translate( -.2,0,0 ).multiply(p);
-    this.shapes = { sheet : new defs.Grid_Patch( 10, 10, row_operation, column_operation ) };
+    this.shapes = { sheet : new Shape() };
 
     this.passes = [];
     this.passes.push( Object.create( this.state ) );
 
     const items = [ new RenderListItem(this.passes[0], this.shapes.sheet, 0) ];
+    items[0].hint = "STREAM_DRAW";
     items[0].instance_vars.push( { model_transform: matvec().set_identity(), color: matvec([ 1,1,1 ]), material_index: 0 } );
     this.renderList.insert( items[0] );
   }
@@ -217,34 +220,21 @@ export class Parametric_Surfaces_Section extends Renderer {
   {
     const random = ( x ) => Math.sin( 1000*x + this.state.animation_time/1000 );
 
-   // this.renderList.get(this.passes[0], this.shapes.box, 1).update_per_instance_buffer();
-    this.renderList.traverse( (item) => this.draw( item ) );
-/*
-    // Update the JavaScript-side shape with new vertices:
-    this.shapes.sheet.arrays.position.forEach( (p,i,a) =>
-        a[i] = vec3( p[0], p[1], .15*random( i/a.length ) ) );
-    // Update the normals to reflect the surface's new arrangement.
-    // This won't be perfect flat shading because vertices are shared.
-    this.shapes.sheet.flat_shade();
-    // Draw the current sheet shape.
-    this.shapes.sheet.draw( caller, this.uniforms, this.r, this.parent.material );
+    const initial_corner_point = matvec([ 1,-1,0 ]);
+    const row_operation = (s,p) => p ? matvec().set_identity().translate(  0,.2,0 ).multiply(p) : initial_corner_point;
+    const column_operation = (t,p) =>  matvec().set_identity().translate( -.2,0,.15*random( t ) ).multiply(p);
+    const new_sheet = new defs.Grid_Patch( 10, 10, row_operation, column_operation );
 
-
-    this.renderList.get(this.passes[0], this.shapes.box, 1).clear();
-    for( let i=0; i<this.num_objects; i++) {
-      const item = new RenderListItem(this.passes[0], this.shapes.box, 1);
-      item.hint = "STREAM_DRAW";
-      item.instance_vars.push( { model_transform:
-              Mat4.translation(...vec3(Math.random()* 2 - 1, 1,  Math.random()*2 - 1)
-                                  .times_pairwise(vec3(20, 10, 20))).times(Mat4.scale(.5,.5,.5))
-                              , color: vec3(.5,.5,.5).randomized(.5), material_index: i%this.num_materials } );
-      this.renderList.insert( item );
-    }
-
+    const sheet = this.shapes.sheet;
+    sheet.vertices = new_sheet.vertices;
+    sheet.indices = new_sheet.indices;
+    // this.index_buffers.delete( sheet );   // If indices need updating every frame.  (Uncommon)
 
     // Update the gpu-side shape with new vertices.
-    // Warning:  You can't call this until you've already drawn the shape once.
-    this.shapes.sheet.copy_onto_graphics_card( caller.context, ["position","normal"], false ); */
+    sheet.VBO_plans = [ {attributes: [...Object.keys(sheet.vertices[0])] }];
+    Shape.build_VBO_plan (sheet.vertices, sheet.VBO_plans[0]);
+
+    this.renderList.traverse( (item) => this.draw( item ) );
   }
   explain_section_1()
   { this.document_region.innerHTML =
