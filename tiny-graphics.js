@@ -616,7 +616,7 @@ class Sorted_RenderList {
     return true;
   }
 
-  traverse(callback, options) {
+  traverse(callback, options={prune: true}) {
     let current = this.linked_list.head;
     while (current) {
       let next = current.next; // Save next in case we remove current

@@ -112,7 +112,8 @@ render_frame () {
                               , color: vec3(.5,.5,.5).randomized(.5), material_index: i%this.num_materials } );
       this.renderList.insert( item );
     }
+    this.renderList.get(this.passes[0], this.shapes.box, 1).update_per_instance_buffer();
 */
-    this.renderList.traverse( (item) => this.draw( item ), {prune: true} );
+    this.renderList.traverse( (item) => this.draw( item ) );
   }
 };
