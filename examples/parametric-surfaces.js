@@ -144,15 +144,7 @@ export class Parametric_Surfaces_Section extends Renderer {
       this.secondary_embedded_code_nav = new defs.widgets.Code_Widget( this, { code_in_focus: this[ "display_section_" + this.section_index ], hide_navigator: true } );
     }
   init_section_9() {
-
- //   this.shape = new defs.Cube();
- //   this.passes = [ Object.create( this.state ) ];
- //   this.item = new defs.RenderListItem(this.passes[0], this.shape, 0);
- //   this.renderList.insert( this.item );
- //   this.renderList.traverse( (item) => item.update_per_instance_buffer(), {prune: false} );
-
     this.shape = new defs.Cube();
-
     this.passes = [ Object.create( this.state ) ];
     this.item = new defs.RenderListItem(this.passes[0], this.shape, 0);
     this.renderList.insert( this.item );
@@ -275,7 +267,11 @@ export class Parametric_Surfaces_Section extends Renderer {
   }
   display_section_0()
     {
-                        // Draw the sheets, flipped 180 degrees so their normals point at us.
+                  // Draw the sheets, flipped 180 degrees so their normals point at us.
+   //   const r = Mat4.rotation( Math.PI,   0,1,0 ).times( this.r );
+   //   this.shapes.sheet .draw( caller, this.uniforms, Mat4.translation( -1.5,0,0 ).times(r), this.parent.material );
+   //   this.shapes.sheet2.draw( caller, this.uniforms, Mat4.translation(  1.5,0,0 ).times(r), this.parent.material );
+
       const r = matvec().set_identity().rotate( Math.PI,   0,1,0 ).multiply( this.r );
 
       this.renderList.traverse( (item) => this.draw( item ), {prune: true} );
@@ -294,6 +290,19 @@ export class Parametric_Surfaces_Section extends Renderer {
     this.shapes.sheet.flat_shade();
     // Draw the current sheet shape.
     this.shapes.sheet.draw( caller, this.uniforms, this.r, this.parent.material );
+
+
+    this.renderList.get(this.passes[0], this.shapes.box, 1).clear();
+    for( let i=0; i<this.num_objects; i++) {
+      const item = new RenderListItem(this.passes[0], this.shapes.box, 1);
+      item.hint = "STREAM_DRAW";
+      item.instance_vars.push( { model_transform:
+              Mat4.translation(...vec3(Math.random()* 2 - 1, 1,  Math.random()*2 - 1)
+                                  .times_pairwise(vec3(20, 10, 20))).times(Mat4.scale(.5,.5,.5))
+                              , color: vec3(.5,.5,.5).randomized(.5), material_index: i%this.num_materials } );
+      this.renderList.insert( item );
+    }
+
 
     // Update the gpu-side shape with new vertices.
     // Warning:  You can't call this until you've already drawn the shape once.

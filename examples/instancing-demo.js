@@ -90,7 +90,6 @@ export class Instanced_Cubes_Demo extends Renderer {
                               , color: vec3(.7,.7,.7).randomized(.5), material_index: 11 } );
     this.renderList.insert( item );
 */
-   // this.renderList.traverse( (item) => item.update_per_instance_buffer(), {prune: false} );
 
 }
 render_frame () {
@@ -113,7 +112,6 @@ render_frame () {
                               , color: vec3(.5,.5,.5).randomized(.5), material_index: i%this.num_materials } );
       this.renderList.insert( item );
     }
-    this.renderList.get(this.passes[0], this.shapes.box, 1).update_per_instance_buffer();
 */
     this.renderList.traverse( (item) => this.draw( item ), {prune: true} );
   }
