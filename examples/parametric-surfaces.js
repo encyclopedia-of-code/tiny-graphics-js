@@ -4,7 +4,7 @@ import { MatVec, matvec, RenderListItem, Shape, Component, Renderer } from './co
 import { Camera, LightArray, Materials } from './common.js';
 
 export class Parametric_Surfaces extends Renderer {
-  num_sections = 2;
+  num_sections = 3;
   init() {
       super.init();
 
@@ -17,9 +17,8 @@ export class Parametric_Surfaces extends Renderer {
    //    this.state.materials = new defs.Simple_Materials( { "solid": undefined } );
 
     this.state.lightArray = new defs.LightArray({ambient: .035, lights:[
-
-           {direction_or_position: matvec([ 0,0,2, 1 ]),
-             color: matvec([ 1,1,1 ]), diffuse: 1.0, specular: 1.0, attenuation_factor: 0.0001},
+           { direction_or_position: matvec([ 0,0,0, 1 ]),
+             color: matvec([ 1,1,1 ]), diffuse: 1.0, specular: 1.0, attenuation_factor: 0.0001 },
          ]});
     }
   render_layout( div, options = {} )
@@ -66,11 +65,10 @@ export class Parametric_Surfaces extends Renderer {
         this.controls = new defs.Movement_Controls( { state: this.state } );
         this.animated_children.push( this.controls );
       }
-
                              // Tick values that update only once per frame (not per section).
       const t = this.t = this.state.animation_time/1000;
       const angle = Math.sin( t );
-      const light_position = matvec().set_identity().rotate( angle,  1,0,0 ).multiply( matvec([ 0,0,1,0] ) );
+      const light_position = matvec().set_identity().rotate( angle,  0,1,0 ).multiply( matvec([ 0,1,1,0] ) );
 
       this.state.lightArray.fields.lights[0].direction_or_position = light_position;
       this.state.lightArray.dirty = true;
@@ -84,8 +82,23 @@ export class Parametric_Surfaces_Section extends Renderer {
       this.section_index = this.props.section_index;
       this.r = matvec();
 
+      this.passes = [];
+      this.passes.push( Object.create( this.state ) );
+
       // Switch on section_index to decide what to init:
       this[ "init_section_" + this.section_index ]();
+
+      // Draw the ground:
+      const initial_corner_point = matvec([ 1,-1,0 ]);
+      const row_operation = (s,p) => p ? matvec().set_identity().translate(  0,.2,0 ).multiply(p) : initial_corner_point;
+      const column_operation = (t,p) =>  matvec().set_identity().translate( -.2,0,0 ).multiply(p);
+      const square = new defs.Grid_Patch( 10, 10, row_operation, column_operation )
+      const item = new RenderListItem(this.passes[0], square, 0);
+      item.instance_vars.push( { model_transform: matvec().set_identity().translate( 0,-10,0 )
+                                    .rotate( Math.PI/2,  -1,0,0 ).scale( 50,50,1 ),
+                                 color: matvec([ .5,1,.5] ), material_index: this.state.materials.name_to_index["rgb"] } );
+      this.renderList.insert( item );
+
   }
   render_frame() {
       if( this.parent.controls && !this.controls )  {
@@ -100,14 +113,6 @@ export class Parametric_Surfaces_Section extends Renderer {
 
       // All sections do this every frame:
       this.r.loadVector( MatVec.quick.set_identity().rotate( -.5*Math.sin( this.state.animation_time/3000 ),  1,1,1 ) );
-
-      this.shapes.square = new defs.Square();
-      // Draw the ground:
-      const item = new RenderListItem(this.passes[0], this.shapes.square, 0);
-      item.instance_vars.push( { model_transform: matvec().set_identity().translate( 0,-10,0 )
-                                    .rotate( Math.PI/2,  -1,0,0 ).scale( 50,50,1 ),
-                                 color: matvec([ .5,1,.5] ), material_index: this.state.materials.name_to_index["rgb"] } );
-      this.renderList.insert( item );
 
       // Switch on section_index to decide what to draw.
       this[ "display_section_" + this.section_index ]();
@@ -158,66 +163,53 @@ export class Parametric_Surfaces_Section extends Renderer {
     this.renderList.insert( this.item );
     this.renderList.traverse( (item) => item.update_per_instance_buffer() );
   }
-  init_section_0()
-    { const initial_corner_point = matvec([ 1,-1,0 ]);
-                          // These two callbacks will step along s and t of the first sheet:
-      const row_operation = (s,p) => p ? matvec().set_identity().translate( 0,.2,0 ).multiply(p)
-                                       : initial_corner_point;
-      const column_operation = (t,p) =>  matvec().set_identity().translate( -.2,0,0 ).multiply(p);
-                          // These two callbacks will step along s and t of the second sheet:
-      const row_operation_2    = (s,p)   => matvec([     1,2*s-1,Math.random()/2 ]);
-      const column_operation_2 = (t,p,s) => matvec([ 1-2*t,2*s-1,Math.random()/2 ]);
+  init_section_0() {
+    const initial_corner_point = matvec([ 1,-1,0 ]);
+                        // These two callbacks will step along s and t of the first sheet:
+    const row_operation = (s,p) => p ? matvec().set_identity().translate( 0,.2,0 ).multiply(p)
+                                     : initial_corner_point;
+    const column_operation = (t,p) =>  matvec().set_identity().translate( -.2,0,0 ).multiply(p);
+                        // These two callbacks will step along s and t of the second sheet:
+    const row_operation_2    = (s,p)   => matvec([     1,2*s-1,Math.random()/2 ]);
+    const column_operation_2 = (t,p,s) => matvec([ 1-2*t,2*s-1,Math.random()/2 ]);
 
-      this.shapes = { sheet : new defs.Grid_Patch( 10, 10, row_operation, column_operation ),
-                      sheet2: new defs.Grid_Patch( 10, 10, row_operation_2, column_operation_2 ) };
+    this.shapes = { sheet : new defs.Grid_Patch( 10, 10, row_operation, column_operation ),
+                    sheet2: new defs.Grid_Patch( 10, 10, row_operation_2, column_operation_2 ) };
 
-      this.passes = [];
-      this.passes.push( Object.create( this.state ) );
+    this.items = [ new RenderListItem(this.passes[0], this.shapes.sheet, 0),
+                    new RenderListItem(this.passes[0], this.shapes.sheet2, 0) ];
 
-      this.items = [ new RenderListItem(this.passes[0], this.shapes.sheet, 0),
-                      new RenderListItem(this.passes[0], this.shapes.sheet2, 0) ];
-
-      for( let i=0; i<2; i++ ) {
-        this.items[i].hint = "STREAM_DRAW";
-        this.items[i].instance_vars.push( { model_transform: matvec(), color: matvec([ 1,1,1 ]), material_index: 0 } );
-        this.renderList.insert( this.items[i] );
-      }
-
-      this.shapes.square = new defs.Square();
+    for( let i=0; i<2; i++ ) {
+      this.items[i].hint = "STREAM_DRAW";
+      this.items[i].instance_vars.push( { model_transform: matvec(), color: matvec([ 1,1,1 ]), material_index: 0 } );
+      this.renderList.insert( this.items[i] );
     }
-  display_section_0()
-    {
-      const positions = [-1.5, 1.5];
-      for( let i=0; i<2; i++ ) {
-        this.items[i].instance_vars[0].model_transform = matvec().set_identity().translate( positions[i],0,0 ).multiply(this.r);
-      }
-      this.items.forEach( (item) => item.update_per_instance_buffer() );
-      this.renderList.traverse( (item) => this.draw( item ) );
+  }
+  display_section_0() {
+    const positions = [-1.5, 1.5];
+    for( let i=0; i<2; i++ ) {
+      this.items[i].instance_vars[0].model_transform = matvec().set_identity().translate( positions[i],0,0 ).multiply(this.r);
     }
-  explain_section_0()
-    { this.document_region.innerHTML =
+    this.items.forEach( (item) => item.update_per_instance_buffer() );
+    this.renderList.traverse( (item) => this.draw( item ) );
+  }
+  explain_section_0() {
+    this.document_region.innerHTML =
           `<p>Parametric Surfaces can be generated by parametric functions that are driven by changes to two variables - s and t.  As either s or t increase, we can step along the shape's surface in some direction aligned with the shape, not the usual X,Y,Z axes.</p>
            <p>Grid_Patch is a generalized parametric surface.  It is always made of a sheet of squares arranged in rows and columns, corresponding to s and t.  The sheets are always guaranteed to have this row/column arrangement, but where it goes as you follow an edge to the next row or column over could vary.  When generating the shape below, we told it to do the most obvious thing whenever s or t increase; just increase X and Y.  A flat rectangle results.</p>
            <p>The shape on the right is the same except instead of building it incrementally by moving from the previous point, we assigned points manually.  The z values are a random height map.  The light is moving over its static peaks and valleys.  We have full control over where the sheet's points go.</p>
            <p>To create a new Grid_Patch shape, initialize it with the desired amounts of rows and columns you'd like.  The next two arguments are callback functions that return a new point given an old point (called p) and the current (s,t) coordinates.  The first callback is for rows, and will recieve arguments (s,p) back from Grid_Patch.  The second one is for columns, and will recieve arguments (t,p,s) back from Grid_Patch. </p>
            <p>Scroll down for more animations!</p>`;
-    }
-  init_section_1()
-  { const initial_corner_point = matvec([ 1,-1,0 ]);
-    const row_operation = (s,p) => p ? matvec().set_identity().translate(  0,.2,0 ).multiply(p) : initial_corner_point;
-    const column_operation = (t,p) =>  matvec().set_identity().translate( -.2,0,0 ).multiply(p);
-    this.shapes = { sheet : new Shape() };
-
-    this.passes = [];
-    this.passes.push( Object.create( this.state ) );
+  }
+  init_section_1() {
+    this.shapes = { sheet: new Shape() };
 
     const items = [ new RenderListItem(this.passes[0], this.shapes.sheet, 0) ];
     items[0].hint = "STREAM_DRAW";
     items[0].instance_vars.push( { model_transform: matvec().set_identity(), color: matvec([ 1,1,1 ]), material_index: 0 } );
     this.renderList.insert( items[0] );
   }
-  display_section_1()
-  {
+  display_section_1() {
     const random = ( x ) => Math.sin( 1000*x + this.state.animation_time/1000 );
 
     const initial_corner_point = matvec([ 1,-1,0 ]);
@@ -236,19 +228,36 @@ export class Parametric_Surfaces_Section extends Renderer {
 
     this.renderList.traverse( (item) => this.draw( item ) );
   }
-  explain_section_1()
-  { this.document_region.innerHTML =
+  explain_section_1() {
+    this.document_region.innerHTML =
       `<p>Shapes in tiny-graphics.js can also be modified and animated if need be.  The shape drawn below has vertex positions and normals that are recalculated for every frame.</p>
           <p>Call copy_onto_graphics_card() on the Shape to make this happen.  Pass in the context, then an array of the buffer names you'd like to overwrite, then false to indicate that indices should be left alone.  Overwriting buffers in place saves us from slow reallocations.  Warning:  Do not try calling copy_onto_graphics_card() to update a shape until after the shape's first draw() call has completed.</p>`;
   }
-  init_section_2()
-  { this.shapes = { donut : new defs.Torus             ( 15, 15, [[0,2],[0,1]] ),
-    hexagon : new defs.Regular_2D_Polygon( 1, 5 ),
-    cone : new defs.Cone_Tip          ( 4, 10,  [[0,2],[0,1]] ),
-    tube : new defs.Cylindrical_Tube  ( 1, 10,  [[0,2],[0,1]] ),
-    ball : new defs.Grid_Sphere       ( 6, 6,   [[0,2],[0,1]] ),
-    donut2 : new ( defs.Torus.prototype.make_flat_shaded_version() )( 20, 20, [[0,2],[0,1]] ),
-  };
+  init_section_2() {
+    this.shapes = {
+      donut : new defs.Torus             ( 10, 10, [[0,2],[0,1]] ),
+      hexagon : new defs.Regular_2D_Polygon( 1, 5 ),
+      cone : new defs.Cone_Tip          ( 3, 10,  [[0,2],[0,1]] ),
+      tube : new defs.Cylindrical_Tube  ( 1, 15,  [[0,2],[0,1]] ),
+      ball : new defs.Grid_Sphere       ( 6, 6,   [[0,2],[0,1]] ),
+  //    donut2 : new ( defs.Torus.prototype.make_flat_shaded_version() )( 20, 20, [[0,2],[0,1]] ),
+    };
+
+    let matrix = matvec().set_identity().translate(-7,0,-2);
+    for( let s in this.shapes ) {
+      matrix = matrix.clone().translate( 2,0,0 );
+      const item = new RenderListItem(this.passes[0], this.shapes[s], 0);
+      item.instance_vars.push( { model_transform: matrix, color: matvec([ 1,1,1 ]), material_index: 0 } );
+      this.renderList.insert( item );
+    }
+  }
+  display_section_2( caller ) {
+    this.renderList.traverse( (item) => this.draw( item ) );
+  }
+  explain_section_2() {
+    this.document_region.innerHTML =
+      `<p>Parametric surfaces can be wrapped around themselves in circles, if increasing one of s or t causes a rotation around an axis.  These are called <a href="http://mathworld.wolfram.com/SurfaceofRevolution.html" target="blank">surfaces of revolution.</a></p>
+          <p>To draw these using Grid_Patch, we provide another class called Surface_Of_Revolution that extends Grid_Patch and takes a set of points as input.  Surface_Of_Revolution automatically sweeps the given points around the Z axis to make each column.  Your list of points, which become the rows, could be arranged to make any 1D curve.  The direction of your points matters; be careful not to end up with your normal vectors all pointing inside out after the sweep.</p>`;
   }
   init_section_3()
   { const points = Vector3.cast( [0,0,.8], [.5,0,1], [.5,0,.8], [.4,0,.7], [.4,0,.5], [.5,0,.4], [.5,0,-1], [.4,0,-1.5], [.25,0,-1.8], [0,0,-1.7] );
@@ -311,14 +320,6 @@ export class Parametric_Surfaces_Section extends Renderer {
   display_section_9() {
     this.renderList.traverse( (item) => this.draw( item ) );
   }
-  display_section_2( caller )
-  { const model_transform = Mat4.translation( -5,0,-2 );
-    // Draw all the shapes stored in this.shapes side by side.
-    for( let s of Object.values( this.shapes ) )
-    { s.draw( caller, this.uniforms, model_transform.times( this.r ), this.parent.material );
-      model_transform.post_multiply( Mat4.translation( 2,0,0 ) );
-    }
-  }
   display_section_3( caller )
   { const model_transform = Mat4.rotation( this.uniforms.animation_time/5000,   0,1,0 );
     this.shapes.bullet.draw( caller, this.uniforms, model_transform.times( this.r ), this.solid );
@@ -360,11 +361,6 @@ export class Parametric_Surfaces_Section extends Renderer {
   display_section_6( caller )
   { const model_transform = Mat4.rotation( this.uniforms.animation_time/5000,   0,1,0 );
     this.shapes.shell.draw( caller, this.uniforms, model_transform.times( this.r ), this.parent.material );
-  }
-  explain_section_2()
-  { this.document_region.innerHTML =
-      `<p>Parametric surfaces can be wrapped around themselves in circles, if increasing one of s or t causes a rotation around an axis.  These are called <a href="http://mathworld.wolfram.com/SurfaceofRevolution.html" target="blank">surfaces of revolution.</a></p>
-          <p>To draw these using Grid_Patch, we provide another class called Surface_Of_Revolution that extends Grid_Patch and takes a set of points as input.  Surface_Of_Revolution automatically sweeps the given points around the Z axis to make each column.  Your list of points, which become the rows, could be arranged to make any 1D curve.  The direction of your points matters; be careful not to end up with your normal vectors all pointing inside out after the sweep.</p>`;
   }
   explain_section_3()
   { this.document_region.innerHTML =

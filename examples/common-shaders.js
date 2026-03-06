@@ -250,7 +250,7 @@ export class PBR_Shader extends Shader {
           vec3 gamma_corrected = pow(tone_mapped, vec3(1.0 / 2.2));
           gamma_corrected = max(gamma_corrected, vec3(ambient));
           frag_color = vec4(gamma_corrected, alpha);
-          // frag_color.xyz = normalize(VERTEX_NORMAL);
+        //  frag_color.xyz = normalize(VERTEX_NORMAL);
       }`
     }
 };

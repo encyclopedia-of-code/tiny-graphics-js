@@ -16,7 +16,7 @@ export class Shape {
           this.init(...args);
           this.indices_version = 0;
       }
-      init() {}
+      init() {}   // Abstract -- user must override this.
       static build_VBO_plan( entries, destination, buffer_hint = "STATIC_DRAW", divisor = 0 ) {
         if (!entries[0] || this.waiting) return;
         this.ready = true;
