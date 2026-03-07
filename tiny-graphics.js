@@ -84,116 +84,6 @@ export class Shape {
           });
         return destination;
       }
-
-      // NOTE: All the below functions make a further assumption: that your vertex buffer includes fields called
-      // "position" and "normal" stored at each point, instead of just any arbitrary fields.
-
-      static insert_transformed_copy_into (recipient, args, points_transform = matvec().set_identity ()) {
-          // Append one of these shapes onto recipient's vertex list. Transform points/normals as desired when inserting.
-          // For transforming normals, the math requires the inverse transpose matrix.
-          const dummy_instance = new this (...args);
-          recipient.indices.push (...dummy_instance.indices.map (i => i + recipient.vertices.length));
-          for (let v of dummy_instance.vertices) {
-            const position = points_transform.clone().multiply(v.position);
-            const normal   = points_transform.clone().invert().transpose().multiply(v.normal);
-            const tangent  = points_transform.clone().multiply(v.tangent);
-            recipient.vertices.push( Object.assign( { ...v, position, tangent, normal } ) );
-          }
-      }
-      subdivide(count) {
-          const starting_length = this.indices.length;
-          for (let i = 0; i < starting_length; i += 3) {
-              const a = this.indices[i], b = this.indices[i+1], c = this.indices[i+2];
-              this.subdivide_triangle(a, b, c, count);
-          }
-      }
-      subdivide_triangle(a, b, c, count) {
-          const v = this.vertices;
-          const stack = [[a, b, c, count]];
-          while (stack.length > 0) {
-              const [a, b, c, count] = stack.pop();
-
-              // Base case of recursion: The finest level of detail we want.
-              if (count <= 0) {
-                  this.indices.push(a, b, c);
-                  continue;
-              }
-              // Add vertices along the three edges at midpoints.
-              const ab_pos = v[a].position.clone().mix(v[b].position, 0.5);
-              const ac_pos = v[a].position.clone().mix(v[c].position, 0.5);
-              const bc_pos = v[b].position.clone().mix(v[c].position, 0.5);
-              const ab = v.push({ position: ab_pos }) - 1;
-              const ac = v.push({ position: ac_pos }) - 1;
-              const bc = v.push({ position: bc_pos }) - 1;
-
-              // Recurse on four smaller triangles.
-              stack.push([a, ab, ac,  count - 1]);
-              stack.push([ab, b, bc,  count - 1]);
-              stack.push([ac, bc, c,  count - 1]);
-              stack.push([ab, bc, ac, count - 1]);
-          }
-      }
-      make_flat_shaded_version () {
-          return class extends this.constructor {
-              constructor (...args) {
-                  super (...args);
-                  this.duplicate_the_shared_vertices ();
-                  this.flat_shade ();
-              }
-          };
-      }
-      duplicate_the_shared_vertices () {
-          const arrays = {};
-          for (let arr in this.arrays) arrays[ arr ] = [];
-          for (let index of this.indices)
-              for (let arr in this.arrays)
-                  arrays[ arr ].push (this.arrays[ arr ][ index ]);      // Make re-arranged versions of each data
-                                                                         // field, with
-          Object.assign (this.arrays, arrays);                       // copied values every time an index was formerly
-                                                                     // re-used.
-          this.indices = this.indices.map ((x, i) => i);    // Without shared vertices, we can use sequential
-                                                            // numbering.
-      }
-      flat_shade () {
-          // First, iterate through the index or position triples:
-          for (let counter = 0; counter < (this.indices ? this.indices.length : this.arrays.position.length);
-               counter += 3) {
-              const indices      = this.indices.length ?
-                                   [this.indices[ counter ], this.indices[ counter + 1 ], this.indices[ counter + 2 ]]
-                                                       : [counter, counter + 1, counter + 2];
-              const [p1, p2, p3] = indices.map (i => this.arrays.position[ i ]);
-              // Cross the two edge vectors of this triangle together to get its normal:
-              const n1           = p1.minus (p2).cross (p3.minus (p1)).normalized ();
-              // Flip the normal if adding it to the triangle brings it closer to the origin:
-              if (n1.times (.1).plus (p1).norm () < p1.norm ()) n1.scale_by (-1);
-              // Propagate this normal to the 3 vertices:
-              for (let i of indices) this.arrays.normal[ i ] = Vector3.from (n1);
-          }
-      }
-      normalize_positions (keep_aspect_ratios = true) {
-          const average_position = this.vertices.reduce( (acc, v) =>
-                acc.add( v.position.quickClone().multiply( 1/this.vertices.length) ),
-                matvec([0,0,0]) );
-
-          // Center the point cloud on the origin.
-          this.vertices.forEach( v => v.position.subtract( average_position ) );
-
-          const average_scale = this.vertices.reduce( (acc, v) =>
-                acc.add( matvec([ Math.abs(v.position.data[0]), Math.abs(v.position.data[1]),
-                                  Math.abs(v.position.data[2]) ])
-                       ), matvec([0,0,0]) );
-
-          average_scale.multiply(1 / this.vertices.length);
-
-          const a = average_scale.data;
-          const average_scale_inv = matvec([ 1/a[0], 1/a[1], 1/a[2] ]);
-
-          if (keep_aspect_ratios)
-            // Divide each axis by its average distance from the origin.
-            this.vertices.forEach( v => v.position.multiply( 1/average_scale.norm() ) );
-          else
-            this.vertices.forEach( v => v.position.multiply( average_scale_inv ) );
-      }
   };
 
 const test_rookie_mistake = function () {
@@ -327,13 +217,6 @@ export class Shader {
       if ( !gl.getProgramParameter (program, gl.LINK_STATUS))
           throw "Shader linker error: " + gl.getProgramInfoLog (program);
 
-/*      async function hashShaderSource(src) {
-        const msgUint8 = new TextEncoder().encode(src);
-        const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-      }
-*/
       function fnv1aHash(str) {
         let hash = 2166136261;
         for (let i = 0; i < str.length; i++) {
@@ -350,7 +233,7 @@ export class Shader {
         cached_info.uniform_info = JSON.parse( localStorage.getItem(`uniform_info:${shader_hash}`) );
       } catch (e) {}
 
-      // cached_info = {};   // Remove this when done debugging to re-enable cache.
+      // cached_info = {};   // Comment this out to enable cache.
 
       renderer.uniform_addresses.set(this, new Uniform_Addresses(program, gl, cached_info));
 
@@ -623,7 +506,7 @@ class Sorted_RenderList {
       let next = current.next; // Save next in case we remove current
 
       // Prune empty entries we encounter, from both the linked list and dictionary.
-      // remove() also handles pruning empty maps up the chain.
+      // This remove() also handles pruning empty maps up the chain.
       if (options.prune && current.instance_vars.length === 0)
         this.remove(current.render_state, current.shape, current.group_ID);
       else
@@ -1213,5 +1096,4 @@ export class Texture {
       gl.viewport(0, 0, renderer.width, renderer.height);
   }
 }
-
 

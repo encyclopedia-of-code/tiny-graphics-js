@@ -360,8 +360,8 @@ export class Rigid_Body {           // **Rigid_Body** can store and update the p
     }
 }
 
-export class Simulation extends Renderer
-{                                         // **Simulation** manages the stepping of simulation time.  Subclass it when making
+export class Simulation extends Renderer {
+  // **Simulation** manages the stepping of simulation time.  Subclass it when making
                                           // a Component that is a physics demo.  This technique is careful to totally decouple
                                           // the simulation from the frame rate (see below).
   init()
@@ -418,3 +418,114 @@ export class Simulation extends Renderer
   update_state( dt )      // update_state(): Your subclass of Simulation has to override this abstract function.
     { throw "Override this" }
 }
+
+export class Geometry {
+  // Assumed vertex format: this.vertices[#].[position, normal, tangent, texture_coord]
+  static insert_transformed_copy_into (source_class, recipient, args, points_transform = matvec().set_identity ()) {
+      // Append one of these shapes onto recipient's vertex list. Transform points/normals as desired when inserting.
+      // For transforming normals, the math requires the inverse transpose matrix.
+      const dummy_instance = new source_class(...args);
+      recipient.indices.push (...dummy_instance.indices.map (i => i + recipient.vertices.length));
+      for (let v of dummy_instance.vertices) {
+        const position = points_transform.clone().multiply(v.position);
+        const normal   = points_transform.clone().invert().transpose().multiply(v.normal);
+        const tangent  = points_transform.clone().multiply(v.tangent);
+        recipient.vertices.push( Object.assign( { ...v, position, tangent, normal } ) );
+      }
+  }
+  static subdivide(shape, count) {
+      const starting_length = shape.indices.length;
+      for (let i = 0; i < starting_length; i += 3) {
+          const a = shape.indices[i], b = shape.indices[i+1], c = shape.indices[i+2];
+          Geometry.subdivide_triangle(shape, a, b, c, count);
+      }
+  }
+  static subdivide_triangle(shape, a, b, c, count) {
+      const v = shape.vertices;
+      const stack = [[a, b, c, count]];
+      while (stack.length > 0) {
+          const [a, b, c, count] = stack.pop();
+
+          // Base case of recursion: The finest level of detail we want.
+          if (count <= 0) {
+              shape.indices.push(a, b, c);
+              continue;
+          }
+          // Add vertices along the three edges at midpoints.
+          const ab_pos = v[a].position.clone().mix(v[b].position, 0.5);
+          const ac_pos = v[a].position.clone().mix(v[c].position, 0.5);
+          const bc_pos = v[b].position.clone().mix(v[c].position, 0.5);
+          const ab = v.push({ position: ab_pos }) - 1;
+          const ac = v.push({ position: ac_pos }) - 1;
+          const bc = v.push({ position: bc_pos }) - 1;
+
+          // Recurse on four smaller triangles.
+          stack.push([a, ab, ac,  count - 1]);
+          stack.push([ab, b, bc,  count - 1]);
+          stack.push([ac, bc, c,  count - 1]);
+          stack.push([ab, bc, ac, count - 1]);
+      }
+  }
+  static make_flat_shaded_version (shape) {
+      return class extends shape.constructor {
+          constructor (...args) {
+              super (...args);
+              shape.duplicate_the_shared_vertices ();
+              shape.flat_shade ();
+          }
+      };
+  }
+  static duplicate_the_shared_vertices (shape) {
+      const arrays = {};
+      for (let arr in shape.arrays) arrays[ arr ] = [];
+      for (let index of shape.indices)
+          for (let arr in shape.arrays)
+              arrays[ arr ].push (shape.arrays[ arr ][ index ]);      // Make re-arranged versions of each data
+                                                                     // field, with
+      Object.assign (shape.arrays, arrays);                       // copied values every time an index was formerly
+                                                                 // re-used.
+      shape.indices = shape.indices.map ((x, i) => i);    // Without shared vertices, we can use sequential
+                                                        // numbering.
+  }
+  static flat_shade (shape) {
+      // First, iterate through the index or position triples:
+      for (let counter = 0; counter < (shape.indices ? shape.indices.length : shape.arrays.position.length);
+           counter += 3) {
+          const indices      = shape.indices.length ?
+                               [shape.indices[ counter ], shape.indices[ counter + 1 ], shape.indices[ counter + 2 ]]
+                                                   : [counter, counter + 1, counter + 2];
+          const [p1, p2, p3] = indices.map (i => shape.arrays.position[ i ]);
+          // Cross the two edge vectors of this triangle together to get its normal:
+          const n1           = p1.minus (p2).cross (p3.minus (p1)).normalized ();
+          // Flip the normal if adding it to the triangle brings it closer to the origin:
+          if (n1.times (.1).plus (p1).norm () < p1.norm ()) n1.scale_by (-1);
+          // Propagate this normal to the 3 vertices:
+          for (let i of indices) shape.arrays.normal[ i ] = Vector3.from (n1);
+      }
+  }
+  static normalize_positions (shape, keep_aspect_ratios = true) {
+      const average_position = shape.vertices.reduce( (acc, v) =>
+            acc.add( v.position.quickClone().multiply( 1/shape.vertices.length) ),
+            matvec([0,0,0]) );
+
+      // Center the point cloud on the origin.
+      shape.vertices.forEach( v => v.position.subtract( average_position ) );
+
+      const average_scale = shape.vertices.reduce( (acc, v) =>
+            acc.add( matvec([ Math.abs(v.position.data[0]), Math.abs(v.position.data[1]),
+                              Math.abs(v.position.data[2]) ])
+                   ), matvec([0,0,0]) );
+
+      average_scale.multiply(1 / shape.vertices.length);
+
+      const a = average_scale.data;
+      const average_scale_inv = matvec([ 1/a[0], 1/a[1], 1/a[2] ]);
+
+      if (keep_aspect_ratios)
+        // Divide each axis by its average distance from the origin.
+        shape.vertices.forEach( v => v.position.multiply( 1/average_scale.norm() ) );
+      else
+        shape.vertices.forEach( v => v.position.multiply( average_scale_inv ) );
+  }
+}
+

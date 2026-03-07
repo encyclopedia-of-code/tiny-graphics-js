@@ -6,10 +6,10 @@ export class Instanced_Cubes_Demo extends Renderer {
   init () {
     super.init();
 
-    this.num_objects = 100;
+    this.num_objects = 1000;
     this.shapes = { box: new defs.Cube(),
 //                    teapot: new defs.Shape_From_File("assets/teapot.obj"),
-                      ball: new defs.Shape_From_File("assets/teapot.obj"), //new defs.Subdivision_Sphere(3),
+                      ball: new defs.Subdivision_Sphere(3),
 //                    turtle: new defs.Shape_From_File("assets/13103_pearlturtle_v1_l2.obj"),
 //                    cone: new defs.Rounded_Closed_Cone(12, 12, [[0,1],[0,1]])
                    };

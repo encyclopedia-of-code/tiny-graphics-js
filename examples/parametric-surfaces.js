@@ -290,17 +290,47 @@ export class Parametric_Surfaces_Section extends Renderer {
     this.document_region.innerHTML =
       `<p>Here's a surface of revolution drawn using a manually specified point list.  The points spell out a 1D curve of the outline of a bullet's right side.  The Surface_Of_Revolution sweeps this around the Z axis.</p>`;
   }
-  init_section_4()
-  { this.shapes = { axis : new defs.Axis_Arrows(),
-    ball : new defs.Subdivision_Sphere( 3 ),
-    box : new defs.Cube(),
-    cone_0 : new defs.Closed_Cone     ( 4, 10, [[ .67, 1  ], [ 0,1 ]] ),
-    tube_0 : new defs.Cylindrical_Tube( 7, 7,  [[ .67, 1  ], [ 0,1 ]] ),
-    cone_1 : new defs.Closed_Cone     ( 4, 10, [[ .34,.66 ], [ 0,1 ]] ),
-    tube_1 : new defs.Cylindrical_Tube( 7, 7,  [[ .34,.66 ], [ 0,1 ]] ),
-    cone_2 : new defs.Closed_Cone     ( 4, 10, [[  0 ,.33 ], [ 0,1 ]] ),
-    tube_2 : new defs.Cylindrical_Tube( 7, 7,  [[  0 ,.33 ], [ 0,1 ]] ),
-  };
+  init_section_4() {
+    this.shapes = {
+      axis : new defs.Axis_Arrows(),
+      ball : new defs.Subdivision_Sphere( 3 ),
+      box : new defs.Cube(),
+      cone_0 : new defs.Closed_Cone     ( 4, 10, [[ .67, 1  ], [ 0,1 ]] ),
+      tube_0 : new defs.Cylindrical_Tube( 7, 7,  [[ .67, 1  ], [ 0,1 ]] ),
+      cone_1 : new defs.Closed_Cone     ( 4, 10, [[ .34,.66 ], [ 0,1 ]] ),
+      tube_1 : new defs.Cylindrical_Tube( 7, 7,  [[ .34,.66 ], [ 0,1 ]] ),
+      cone_2 : new defs.Closed_Cone     ( 4, 10, [[  0 ,.33 ], [ 0,1 ]] ),
+      tube_2 : new defs.Cylindrical_Tube( 7, 7,  [[  0 ,.33 ], [ 0,1 ]] ),
+    };
+  }
+  display_section_4( caller ) {
+    // First, draw the compound axis shape all at once:
+    this.shapes.axis.draw( caller, this.uniforms, Mat4.translation( 2,-1,-2 ), this.parent.material );
+
+    // Manually recreate the above compound Shape out of individual components:
+    const base = Mat4.translation( -1,-1,-2 );
+    const ball_matrix = base.times( Mat4.rotation( Math.PI/2,   0,1,0 ).times( Mat4.scale( .25, .25, .25 ) ) );
+    this.shapes.ball.draw( caller, this.uniforms, ball_matrix, this.parent.material );
+    const matrices = [ Mat4.identity(),
+      Mat4.rotation(-Math.PI/2,  1,0,0 ).times( Mat4.scale(  1,-1,1 )),
+      Mat4.rotation( Math.PI/2,  0,1,0 ).times( Mat4.scale( -1, 1,1 )) ];
+    for( let i = 0; i < 3; i++ )
+    { const m = base.times( matrices[i] );
+      const cone_matrix = m.times( Mat4.translation(   0,   0,  2 ) ).times( Mat4.scale( .25, .25, .25 ) ),
+          box1_matrix = m.times( Mat4.translation( .95, .95, .45) ).times( Mat4.scale( .05, .05, .45 ) ),
+          box2_matrix = m.times( Mat4.translation( .95,   0, .5 ) ).times( Mat4.scale( .05, .05, .4  ) ),
+          box3_matrix = m.times( Mat4.translation(   0, .95, .5 ) ).times( Mat4.scale( .05, .05, .4  ) ),
+          tube_matrix = m.times( Mat4.translation(   0,   0,  1 ) ).times( Mat4.scale(  .1,  .1,  2  ) );
+      this.shapes[ "cone_"+i ].draw( caller, this.uniforms, cone_matrix, this.parent.material );
+      this.shapes.box         .draw( caller, this.uniforms, box1_matrix, this.parent.material );
+      this.shapes.box         .draw( caller, this.uniforms, box2_matrix, this.parent.material );
+      this.shapes.box         .draw( caller, this.uniforms, box3_matrix, this.parent.material );
+      this.shapes[ "tube_"+i ].draw( caller, this.uniforms, tube_matrix, this.parent.material );
+    }
+  }
+  explain_section_4() {
+    this.document_region.innerHTML =
+      `<p>Several Shapes can be compounded together into one, forming a single high-performance array.  Both of the axis arrows shapes below look identical and contain the same shapes, but the one on the right is must faster to draw because the shapes all exist together in one Vertex_Array object.</p>`;
   }
   init_section_5()
   { this.shapes = { box : new defs.Cube(),
@@ -343,31 +373,6 @@ export class Parametric_Surfaces_Section extends Renderer {
   display_section_9() {
     this.renderList.traverse( (item) => this.draw( item ) );
   }
-  display_section_4( caller )
-  {                                       // First, draw the compound axis shape all at once:
-    this.shapes.axis.draw( caller, this.uniforms, Mat4.translation( 2,-1,-2 ), this.parent.material );
-
-    // Manually recreate the above compound Shape out of individual components:
-    const base = Mat4.translation( -1,-1,-2 );
-    const ball_matrix = base.times( Mat4.rotation( Math.PI/2,   0,1,0 ).times( Mat4.scale( .25, .25, .25 ) ) );
-    this.shapes.ball.draw( caller, this.uniforms, ball_matrix, this.parent.material );
-    const matrices = [ Mat4.identity(),
-      Mat4.rotation(-Math.PI/2,  1,0,0 ).times( Mat4.scale(  1,-1,1 )),
-      Mat4.rotation( Math.PI/2,  0,1,0 ).times( Mat4.scale( -1, 1,1 )) ];
-    for( let i = 0; i < 3; i++ )
-    { const m = base.times( matrices[i] );
-      const cone_matrix = m.times( Mat4.translation(   0,   0,  2 ) ).times( Mat4.scale( .25, .25, .25 ) ),
-          box1_matrix = m.times( Mat4.translation( .95, .95, .45) ).times( Mat4.scale( .05, .05, .45 ) ),
-          box2_matrix = m.times( Mat4.translation( .95,   0, .5 ) ).times( Mat4.scale( .05, .05, .4  ) ),
-          box3_matrix = m.times( Mat4.translation(   0, .95, .5 ) ).times( Mat4.scale( .05, .05, .4  ) ),
-          tube_matrix = m.times( Mat4.translation(   0,   0,  1 ) ).times( Mat4.scale(  .1,  .1,  2  ) );
-      this.shapes[ "cone_"+i ].draw( caller, this.uniforms, cone_matrix, this.parent.material );
-      this.shapes.box         .draw( caller, this.uniforms, box1_matrix, this.parent.material );
-      this.shapes.box         .draw( caller, this.uniforms, box2_matrix, this.parent.material );
-      this.shapes.box         .draw( caller, this.uniforms, box3_matrix, this.parent.material );
-      this.shapes[ "tube_"+i ].draw( caller, this.uniforms, tube_matrix, this.parent.material );
-    }
-  }
   display_section_5( caller )
   { const model_transform = Mat4.translation( -5,0,-2 );
     const r = Mat4.rotation( this.uniforms.animation_time/3000,   1,1,1 );
@@ -380,10 +385,6 @@ export class Parametric_Surfaces_Section extends Renderer {
   display_section_6( caller )
   { const model_transform = Mat4.rotation( this.uniforms.animation_time/5000,   0,1,0 );
     this.shapes.shell.draw( caller, this.uniforms, model_transform.times( this.r ), this.parent.material );
-  }
-  explain_section_4()
-  { this.document_region.innerHTML =
-      `<p>Several Shapes can be compounded together into one, forming a single high-performance array.  Both of the axis arrows shapes below look identical and contain the same shapes, but the one on the right is must faster to draw because the shapes all exist together in one Vertex_Array object.</p>`;
   }
   explain_section_5()
   { this.document_region.innerHTML =

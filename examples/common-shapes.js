@@ -1,5 +1,6 @@
 import * as tiny from '../tiny-graphics.js';
 import { MatVec, matvec, Shape, Shader, Component } from '../tiny-graphics.js';
+import { Geometry } from './common.js';
 
 export class Triangle extends Shape {
       // **Triangle** The simplest possible 2D Shape – one triangle.  It stores 3 corner vertices, each with sufficient data to shade them.
@@ -149,7 +150,7 @@ export class Cube extends Shape {
                                             .translate(0, 0, 1);
                     // Calling this function of a Square (or any Shape) copies it into the specified
                     // Shape (this one) at the specified matrix offset (square_transform):
-                    Square.insert_transformed_copy_into (this, [], square_transform);
+                    Geometry.insert_transformed_copy_into (Square, this, [], square_transform);
                 }
         }
     };
@@ -163,7 +164,7 @@ export class Subdivision_Sphere extends Shape {
           this.vertices[3] = { position: matvec([.8165, -.4714, .3333]) };
 
           this.indices.push (0, 1, 2, 3, 2, 1, 1, 0, 3, 0, 2, 3);
-          this.subdivide(max_subdivisions)
+          Geometry.subdivide(this, max_subdivisions)
 
           for( let v of this.vertices ) {
             v.position.normalize();
@@ -343,9 +344,9 @@ export class Grid_Sphere extends Surface_Of_Revolution {
 
 export class Closed_Cone extends Shape {
       init (rows, columns, texture_range) {
-          Cone_Tip.insert_transformed_copy_into (this, [rows, columns, texture_range]);
+          Geometry.insert_transformed_copy_into (Cone_Tip, this, [rows, columns, texture_range]);
           const m = matvec().set_identity().rotate(Math.PI, 0,1,0).translate(0, 0, 1);
-          Regular_2D_Polygon.insert_transformed_copy_into (this, [1, columns], m);
+          Geometry.insert_transformed_copy_into (Regular_2D_Polygon, this, [1, columns], m);
       }
   };
 
@@ -360,9 +361,9 @@ export class Capped_Cylinder extends Shape {
           const m1 = matvec().set_identity().translate(0, 0, .5);
           const m2 = matvec().set_identity().rotate(Math.PI, 0,1,0).translate(0, 0, .5);
 
-          Cylindrical_Tube  .insert_transformed_copy_into (this, [rows, columns, texture_range]);
-          Regular_2D_Polygon.insert_transformed_copy_into (this, [1, columns], m1);
-          Regular_2D_Polygon.insert_transformed_copy_into (this, [1, columns], m2);
+          Geometry.insert_transformed_copy_into (Cylindrical_Tube, this, [rows, columns, texture_range]);
+          Geometry.insert_transformed_copy_into (Regular_2D_Polygon, this, [1, columns], m1);
+          Geometry.insert_transformed_copy_into (Regular_2D_Polygon, this, [1, columns], m2);
       }
   };
 
@@ -376,7 +377,7 @@ export class Axis_Arrows extends Shape {
       init () {
           var stack = [];
           const m = matvec().set_identity().rotate(Math.PI/2, 0,1,0).scale(.25, .25, .25);
-          Subdivision_Sphere.insert_transformed_copy_into (this, [3], m.clone());
+          Geometry.insert_transformed_copy_into (Subdivision_Sphere, this, [3], m.clone());
           this.drawOneAxis (matvec().set_identity(), [[.67, 1], [0, 1]]);
 
           m.set_identity().rotate(-Math.PI/2, 1,0,0).scale(1, -1, 1);
@@ -389,19 +390,19 @@ export class Axis_Arrows extends Shape {
           // Use a different texture coordinate range for each of the three axes, so they show up differently
 
           let m = transform.clone().translate(0, 0, 2).scale(.25, .25, .25);
-          Closed_Cone.insert_transformed_copy_into (this, [4, 10, tex], m);
+          Geometry.insert_transformed_copy_into (Closed_Cone, this, [4, 10, tex], m);
 
           m = transform.clone().translate(.95, .95, .45).scale(.05, .05, .45);
-          Cube.insert_transformed_copy_into (this, [], m);
+          Geometry.insert_transformed_copy_into (Cube, this, [], m);
 
           m = transform.clone().translate(.95, 0, .5).scale(.05, .05, .4);
-          Cube.insert_transformed_copy_into (this, [], m);
+          Geometry.insert_transformed_copy_into (Cube, this, [], m);
 
           m = transform.clone().translate(0, .95, .5).scale(.05, .05, .4);
-          Cube.insert_transformed_copy_into (this, [], m);
+          Geometry.insert_transformed_copy_into (Cube, this, [], m);
 
           m = transform.clone().translate(0, 0, 1).scale(.1, .1, 2);
-          Cylindrical_Tube.insert_transformed_copy_into (this, [7, 7, tex], m);
+          Geometry.insert_transformed_copy_into (Cylindrical_Tube, this, [7, 7, tex], m);
       }
   };
 
@@ -505,7 +506,7 @@ export class Shape_From_File extends tiny.Shape {
           t.subtract( n.quickClone().multiply( n.dot(t) ) ).normalize(); // Subtract out component along normal
         }
 
-        this.normalize_positions( true );
+        Geometry.normalize_positions( this, true );
         this.waiting = false;
       }
   };
