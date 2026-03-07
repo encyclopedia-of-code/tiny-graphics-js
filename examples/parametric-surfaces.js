@@ -4,12 +4,15 @@ import { MatVec, matvec, RenderListItem, Shape, Component, Renderer } from './co
 import { Camera, LightArray, Materials } from './common.js';
 
 export class Parametric_Surfaces extends Renderer {
-  num_sections = 3;
+  num_sections = 4;
   init() {
       super.init();
 
-      const materials = { "rgb":  "assets/rgb.jpg" };
+      const materials = { "rgb":  "assets/rgb.jpg",
+                          "green": "assets/rgb.jpg"};
+
       this.state.materials = new Materials( materials );
+      this.state.materials.set("green", { textured_albedo_amount: .4 });
       this.state.samplers.set("texture_array", this.state.materials.texture_array );
       this.state.shader = new defs.PBR_Shader (LightArray.NUM_LIGHTS, Materials.NUM_MATERIALS, {has_shadows: false, has_textures: true});
 
@@ -89,15 +92,15 @@ export class Parametric_Surfaces_Section extends Renderer {
       this[ "init_section_" + this.section_index ]();
 
       // Draw the ground:
-      const initial_corner_point = matvec([ 1,-1,0 ]);
-      const row_operation = (s,p) => p ? matvec().set_identity().translate(  0,.2,0 ).multiply(p) : initial_corner_point;
-      const column_operation = (t,p) =>  matvec().set_identity().translate( -.2,0,0 ).multiply(p);
-      const square = new defs.Grid_Patch( 10, 10, row_operation, column_operation )
-      const item = new RenderListItem(this.passes[0], square, 0);
-      item.instance_vars.push( { model_transform: matvec().set_identity().translate( 0,-10,0 )
-                                    .rotate( Math.PI/2,  -1,0,0 ).scale( 50,50,1 ),
-                                 color: matvec([ .5,1,.5] ), material_index: this.state.materials.name_to_index["rgb"] } );
-      this.renderList.insert( item );
+ //     const initial_corner_point = matvec([ 1,-1,0 ]);
+ //     const row_operation = (s,p) => p ? matvec().set_identity().translate(  0,.2,0 ).multiply(p) : initial_corner_point;
+ //     const column_operation = (t,p) =>  matvec().set_identity().translate( -.2,0,0 ).multiply(p);
+ //     const square = new defs.Grid_Patch( 10, 10, row_operation, column_operation )
+ //     const item = new RenderListItem(this.passes[0], square, 0);
+ //     item.instance_vars.push( { model_transform: matvec().set_identity().translate( 0,-10,0 )
+ //                                   .rotate( Math.PI/2,  -1,0,0 ).scale( 50,50,1 ),
+ //                                color: matvec([ 1,1,1 ] ), material_index: this.state.materials.name_to_index["green"] } );
+ //     this.renderList.insert( item );
 
   }
   render_frame() {
@@ -213,7 +216,7 @@ export class Parametric_Surfaces_Section extends Renderer {
     const random = ( x ) => Math.sin( 1000*x + this.state.animation_time/1000 );
 
     const initial_corner_point = matvec([ 1,-1,0 ]);
-    const row_operation = (s,p) => p ? matvec().set_identity().translate(  0,.2,0 ).multiply(p) : initial_corner_point;
+    const row_operation = (s,p) => p ? matvec().set_identity().translate(  0,.2,.15*random( s ) ).multiply(p) : initial_corner_point;
     const column_operation = (t,p) =>  matvec().set_identity().translate( -.2,0,.15*random( t ) ).multiply(p);
     const new_sheet = new defs.Grid_Patch( 10, 10, row_operation, column_operation );
 
@@ -259,13 +262,33 @@ export class Parametric_Surfaces_Section extends Renderer {
       `<p>Parametric surfaces can be wrapped around themselves in circles, if increasing one of s or t causes a rotation around an axis.  These are called <a href="http://mathworld.wolfram.com/SurfaceofRevolution.html" target="blank">surfaces of revolution.</a></p>
           <p>To draw these using Grid_Patch, we provide another class called Surface_Of_Revolution that extends Grid_Patch and takes a set of points as input.  Surface_Of_Revolution automatically sweeps the given points around the Z axis to make each column.  Your list of points, which become the rows, could be arranged to make any 1D curve.  The direction of your points matters; be careful not to end up with your normal vectors all pointing inside out after the sweep.</p>`;
   }
-  init_section_3()
-  { const points = Vector3.cast( [0,0,.8], [.5,0,1], [.5,0,.8], [.4,0,.7], [.4,0,.5], [.5,0,.4], [.5,0,-1], [.4,0,-1.5], [.25,0,-1.8], [0,0,-1.7] );
+  init_section_3() {
+    const points = [ [0,0,.8], [.5,0,1], [.5,0,.8], [.4,0,.7], [.4,0,.5], [.5,0,.4], [.5,0,-1], [.4,0,-1.5], [.25,0,-1.8], [0,0,-1.7] ];
+    const vec_points = points.map( p => matvec(p) );
+    this.shapes = { bullet: new defs.Surface_Of_Revolution( 9, 9, vec_points ) };
 
-    this.shapes = { bullet: new defs.Surface_Of_Revolution( 9, 9, points ) };
+    const item = new RenderListItem(this.passes[0], this.shapes.bullet, 0);
+    item.instance_vars.push( { model_transform: matvec().set_identity(), color: matvec([ .7,.8,.6 ]), material_index: 0 } );
+    this.renderList.insert( item );
 
-    const phong = new defs.Phong_Shader( 1 );
-    this.solid = { shader: phong, diffusivity: .5, smoothness: 800, color: color( .7,.8,.6,1 ) };
+    this.state.shader = new defs.Minimal_Phong_Shader (1, 1);
+    this.state.materials = new defs.Simple_Materials( { "solid": undefined } );
+
+    this.state.materials.set("solid", { diffusivity: .5 });
+    this.state.materials.set("solid", { smoothness: 800 });
+  }
+  display_section_3( caller ) {
+    const matrix = matvec().set_identity().translate( 0,0,-1 );
+    matrix.rotate( this.state.animation_time/3000, 0,1,0 ).multiply(this.r);
+    this.renderList.traverse( (item) => {
+      item.instance_vars[0].model_transform = matrix;
+      item.update_per_instance_buffer();
+      this.draw( item )
+    } );
+  }
+  explain_section_3() {
+    this.document_region.innerHTML =
+      `<p>Here's a surface of revolution drawn using a manually specified point list.  The points spell out a 1D curve of the outline of a bullet's right side.  The Surface_Of_Revolution sweeps this around the Z axis.</p>`;
   }
   init_section_4()
   { this.shapes = { axis : new defs.Axis_Arrows(),
@@ -320,10 +343,6 @@ export class Parametric_Surfaces_Section extends Renderer {
   display_section_9() {
     this.renderList.traverse( (item) => this.draw( item ) );
   }
-  display_section_3( caller )
-  { const model_transform = Mat4.rotation( this.uniforms.animation_time/5000,   0,1,0 );
-    this.shapes.bullet.draw( caller, this.uniforms, model_transform.times( this.r ), this.solid );
-  }
   display_section_4( caller )
   {                                       // First, draw the compound axis shape all at once:
     this.shapes.axis.draw( caller, this.uniforms, Mat4.translation( 2,-1,-2 ), this.parent.material );
@@ -361,10 +380,6 @@ export class Parametric_Surfaces_Section extends Renderer {
   display_section_6( caller )
   { const model_transform = Mat4.rotation( this.uniforms.animation_time/5000,   0,1,0 );
     this.shapes.shell.draw( caller, this.uniforms, model_transform.times( this.r ), this.parent.material );
-  }
-  explain_section_3()
-  { this.document_region.innerHTML =
-      `<p>Here's a surface of revolution drawn using a manually specified point list.  The points spell out a 1D curve of the outline of a bullet's right side.  The Surface_Of_Revolution sweeps this around the Z axis.</p>`;
   }
   explain_section_4()
   { this.document_region.innerHTML =

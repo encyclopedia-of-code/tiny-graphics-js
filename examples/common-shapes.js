@@ -286,6 +286,11 @@ export class Surface_Of_Revolution extends Grid_Patch {
                                                      .rotate(total_curvature_angle / columns, 0,0,1)
                                                      .multiply(p);
           super.init (rows, columns, row_operation, column_operation, texture_coord_range);
+          for( let r=0; r <= rows; r++ ) {
+            this.vertices[ (columns+1)*r + columns ].normal.loadVector(
+                this.vertices[ (columns+1)*r ].normal
+              );
+          }
       }
   };
 
