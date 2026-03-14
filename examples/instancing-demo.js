@@ -40,7 +40,7 @@ export class Instanced_Cubes_Demo extends Renderer {
     this.state.materials.set("gold", { textured_roughness_amount: .8 });
 
     this.state.shader = new defs.PBR_Shader (LightArray.NUM_LIGHTS, Materials.NUM_MATERIALS, {has_shadows: false, has_textures: true});
-    this.state.lightArray = new defs.LightArray({ambient: .025, lights:[
+    this.state.lightArray = new defs.LightArray({ambient: .01, lights:[
            {direction_or_position: matvec([-3.0, 10.0, 0.0, 0.0]),
              color: matvec([1.0, 0.7, 0.7]), diffuse: 1.0, specular: 1.0, attenuation_factor: 0.0001},
            {direction_or_position: matvec([5.0, 10.0, 0.0, 0.0]),
@@ -61,7 +61,7 @@ export class Instanced_Cubes_Demo extends Renderer {
                                      .rotate(Math.PI, ...matvec().random().normalize().data )
                                      .scale(.5, .5, .5)
         ).map( (m,j) => { return {
-          model_transform: m, color: matvec().random().multiply(.3).add( matvec([.7,.7,.7])), 
+          model_transform: m, color: matvec().random().multiply(.3).add( matvec([.5,.5,.5])), 
           material_index: j%this.num_materials } } ) );
       this.renderList.insert( items[i] );
     }

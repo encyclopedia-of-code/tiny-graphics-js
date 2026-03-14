@@ -14,19 +14,19 @@ export class Parametric_Surfaces extends Renderer {
       this.state.samplers.set("texture_array", this.state.materials.texture_array );
       this.state.shader = new defs.PBR_Shader (LightArray.NUM_LIGHTS, Materials.NUM_MATERIALS, {has_shadows: false, has_textures: true});
 
-      this.state.materials.set("rgb", { fallback_roughness: .3 });
-      this.state.materials.set("rgb", { fallback_metallicity: .6 });
+      this.state.materials.set("rgb", { fallback_roughness: .2 });
+      this.state.materials.set("rgb", { fallback_metallicity: .2 });
       this.state.materials.set("rgb", { textured_roughness_amount: .3 });
       this.state.materials.set("rgb", { textured_metallicity_amount: .4 });
       this.state.materials.set("rgb", { textured_albedo_amount: .8 });
-      this.state.materials.set("rgb", { textured_normal_amount: .4 });
+      this.state.materials.set("rgb", { textured_normal_amount: .2 });
 
    //    this.state.shader = new defs.Minimal_Phong_Shader (1, 1);
    //    this.state.materials = new defs.Simple_Materials( { "solid": undefined } );
 
-    this.state.lightArray = new defs.LightArray({ambient: .04, lights:[
+    this.state.lightArray = new defs.LightArray({ambient: .01, lights:[
            { direction_or_position: matvec([ 0,0,0, 0 ]),
-             color: matvec([ 1,1,1 ]), diffuse: 1.0, specular: 1.0, attenuation_factor: 0.0001 },
+             color: matvec([ 2,2,2 ]), diffuse: 1.0, specular: 1.0, attenuation_factor: 0.0001 },
          ]});
     }
   render_layout( div, options = {} )
@@ -182,7 +182,7 @@ export class Parametric_Surfaces_Section extends Renderer {
 
     for( let i=0; i<2; i++ ) {
       this.items[i].hint = "STREAM_DRAW";
-      this.items[i].instance_vars.push( { model_transform: matvec(), color: matvec([ .5,.5,.5 ]), material_index: 0 } );
+      this.items[i].instance_vars.push( { model_transform: matvec(), color: matvec([ .1,.1,.1 ]), material_index: 0 } );
       this.renderList.insert( this.items[i] );
     }
   }
@@ -272,7 +272,7 @@ export class Parametric_Surfaces_Section extends Renderer {
     this.state.shader = new defs.Minimal_Phong_Shader (1, 1);
     this.state.materials = new defs.Simple_Materials( { "solid": undefined } );
 
-    this.state.materials.set("solid", { diffusivity: .5 });
+    this.state.materials.set("solid", { diffusivity: .05 });
     this.state.materials.set("solid", { smoothness: 500 });
   }
   display_section_3( caller ) {

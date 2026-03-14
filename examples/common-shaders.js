@@ -247,9 +247,9 @@ export class PBR_Shader extends Shader {
               totalLight += PBRLight(n, v, l, ao * albedo, metallicity, roughness, F0, intensity);
           }
 
-          totalLight += albedo * ambient * ao;
+          totalLight += ao * albedo * ambient;
           //vec3 tone_mapped = totalLight / (totalLight + vec3(1.0)); // simple Reinhard operator
-          float exposure = 1.5;
+          float exposure = 1.0;
           vec3 tone_mapped = vec3(1.0) - exp(-totalLight * exposure);
           vec3 gamma_corrected = pow(tone_mapped, vec3(1.0 / 2.2));
           frag_color = vec4(gamma_corrected, alpha);
