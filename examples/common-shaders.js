@@ -165,11 +165,13 @@ export class PBR_Shader extends Shader {
           float nDotH = max(dot(n, h), 0.0);
           float vDotH = max(dot(v, h), 0.0);
 
-          float alpha2 = roughness * roughness * roughness * roughness;
+          float alpha = roughness * roughness;
+          float alpha2 = alpha * alpha;
           float denom = (nDotH * nDotH) * (alpha2 - 1.0) + 1.0;
           float D = alpha2 / (PI * denom * denom);
 
-          float k = pow(roughness + 1.0, 2.0) / 8.0;
+          float k = roughness + 1.0;
+          k = k * k / 8.0;
           float G_V = nDotV / (nDotV * (1.0 - k) + k);
           float G_L = nDotL / (nDotL * (1.0 - k) + k);
           float G = G_V * G_L;
@@ -228,10 +230,9 @@ export class PBR_Shader extends Shader {
           if( mat.textured_normal_amount > 0. && mat.is_textured > 0. ) {
             vec3 normalmap_value = texture(texture_array, vec3(uv, mat.starting_texture_layer+4.*c)).rgb;
             normalmap_value = normalmap_value * 2.0 - 1.0;
-            if(c > 0.)
-              n = normalize(TBN * normalmap_value);
-            else
-              n += .25 * normalize(TBN * normalmap_value);
+            float amount = c > .0 ? 1. : .75;   // A little less for collapsed textures, since the values are off.
+            n = mix(n, TBN * normalmap_value, amount * mat.textured_normal_amount);
+            n = normalize(n);
           }
 
           vec3 totalLight = vec3(0.0);
@@ -246,11 +247,14 @@ export class PBR_Shader extends Shader {
               totalLight += PBRLight(n, v, l, ao * albedo, metallicity, roughness, F0, intensity);
           }
 
-          vec3 tone_mapped = totalLight / (totalLight + vec3(1.0)); // simple Reinhard operator
+          totalLight += albedo * ambient * ao;
+          //vec3 tone_mapped = totalLight / (totalLight + vec3(1.0)); // simple Reinhard operator
+          float exposure = 1.5;
+          vec3 tone_mapped = vec3(1.0) - exp(-totalLight * exposure);
           vec3 gamma_corrected = pow(tone_mapped, vec3(1.0 / 2.2));
-          gamma_corrected = max(gamma_corrected, vec3(ambient));
           frag_color = vec4(gamma_corrected, alpha);
         //  frag_color.xyz = normalize(VERTEX_NORMAL);
+        //  frag_color.xyz = totalLight;
       }`
     }
 };

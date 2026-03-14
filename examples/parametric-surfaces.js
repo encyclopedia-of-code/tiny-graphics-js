@@ -8,19 +8,24 @@ export class Parametric_Surfaces extends Renderer {
   init() {
       super.init();
 
-      const materials = { "rgb":  "assets/rgb.jpg",
-                          "green": "assets/rgb.jpg"};
+      const materials = { "rgb":  "assets/rgb.jpg" };
 
       this.state.materials = new Materials( materials );
-      this.state.materials.set("green", { textured_albedo_amount: .4 });
       this.state.samplers.set("texture_array", this.state.materials.texture_array );
       this.state.shader = new defs.PBR_Shader (LightArray.NUM_LIGHTS, Materials.NUM_MATERIALS, {has_shadows: false, has_textures: true});
+
+      this.state.materials.set("rgb", { fallback_roughness: .3 });
+      this.state.materials.set("rgb", { fallback_metallicity: .6 });
+      this.state.materials.set("rgb", { textured_roughness_amount: .3 });
+      this.state.materials.set("rgb", { textured_metallicity_amount: .4 });
+      this.state.materials.set("rgb", { textured_albedo_amount: .8 });
+      this.state.materials.set("rgb", { textured_normal_amount: .4 });
 
    //    this.state.shader = new defs.Minimal_Phong_Shader (1, 1);
    //    this.state.materials = new defs.Simple_Materials( { "solid": undefined } );
 
-    this.state.lightArray = new defs.LightArray({ambient: .035, lights:[
-           { direction_or_position: matvec([ 0,0,0, 1 ]),
+    this.state.lightArray = new defs.LightArray({ambient: .04, lights:[
+           { direction_or_position: matvec([ 0,0,0, 0 ]),
              color: matvec([ 1,1,1 ]), diffuse: 1.0, specular: 1.0, attenuation_factor: 0.0001 },
          ]});
     }
@@ -159,13 +164,6 @@ export class Parametric_Surfaces_Section extends Renderer {
       this.secondary_embedded_code_nav_area.className = "code-widget";
       this.secondary_embedded_code_nav = new defs.widgets.Code_Widget( this, { code_in_focus: this[ "display_section_" + this.section_index ], hide_navigator: true } );
     }
-  init_section_9() {
-    this.shape = new defs.Cube();
-    this.passes = [ Object.create( this.state ) ];
-    this.item = new defs.RenderListItem(this.passes[0], this.shape, 0);
-    this.renderList.insert( this.item );
-    this.renderList.traverse( (item) => item.update_per_instance_buffer() );
-  }
   init_section_0() {
     const initial_corner_point = matvec([ 1,-1,0 ]);
                         // These two callbacks will step along s and t of the first sheet:
@@ -173,8 +171,8 @@ export class Parametric_Surfaces_Section extends Renderer {
                                      : initial_corner_point;
     const column_operation = (t,p) =>  matvec().set_identity().translate( -.2,0,0 ).multiply(p);
                         // These two callbacks will step along s and t of the second sheet:
-    const row_operation_2    = (s,p)   => matvec([     1,2*s-1,Math.random()/2 ]);
-    const column_operation_2 = (t,p,s) => matvec([ 1-2*t,2*s-1,Math.random()/2 ]);
+    const row_operation_2    = (s,p)   => matvec([     1,2*s-1,Math.random()/4 ]);
+    const column_operation_2 = (t,p,s) => matvec([ 1-2*t,2*s-1,Math.random()/4 ]);
 
     this.shapes = { sheet : new defs.Grid_Patch( 10, 10, row_operation, column_operation ),
                     sheet2: new defs.Grid_Patch( 10, 10, row_operation_2, column_operation_2 ) };
@@ -184,7 +182,7 @@ export class Parametric_Surfaces_Section extends Renderer {
 
     for( let i=0; i<2; i++ ) {
       this.items[i].hint = "STREAM_DRAW";
-      this.items[i].instance_vars.push( { model_transform: matvec(), color: matvec([ 1,1,1 ]), material_index: 0 } );
+      this.items[i].instance_vars.push( { model_transform: matvec(), color: matvec([ .5,.5,.5 ]), material_index: 0 } );
       this.renderList.insert( this.items[i] );
     }
   }
@@ -209,7 +207,7 @@ export class Parametric_Surfaces_Section extends Renderer {
 
     const items = [ new RenderListItem(this.passes[0], this.shapes.sheet, 0) ];
     items[0].hint = "STREAM_DRAW";
-    items[0].instance_vars.push( { model_transform: matvec().set_identity(), color: matvec([ 1,1,1 ]), material_index: 0 } );
+    items[0].instance_vars.push( { model_transform: matvec().set_identity(), color: matvec([ .5,.5,.5 ]), material_index: 0 } );
     this.renderList.insert( items[0] );
   }
   display_section_1() {
@@ -250,7 +248,7 @@ export class Parametric_Surfaces_Section extends Renderer {
     for( let s in this.shapes ) {
       matrix = matrix.clone().translate( 2,0,0 );
       const item = new RenderListItem(this.passes[0], this.shapes[s], 0);
-      item.instance_vars.push( { model_transform: matrix, color: matvec([ 1,1,1 ]), material_index: 0 } );
+      item.instance_vars.push( { model_transform: matrix, color: matvec([ .5,.5,.5 ]), material_index: 0 } );
       this.renderList.insert( item );
     }
   }
@@ -275,7 +273,7 @@ export class Parametric_Surfaces_Section extends Renderer {
     this.state.materials = new defs.Simple_Materials( { "solid": undefined } );
 
     this.state.materials.set("solid", { diffusivity: .5 });
-    this.state.materials.set("solid", { smoothness: 800 });
+    this.state.materials.set("solid", { smoothness: 500 });
   }
   display_section_3( caller ) {
     const matrix = matvec().set_identity().translate( 0,0,-1 );
@@ -369,9 +367,6 @@ export class Parametric_Surfaces_Section extends Renderer {
 
     this.shapes = { shell : new defs.Grid_Patch( 30, 30, sampler2, sample_two_arrays, [[0,1],[0,1]] )
     };
-  }
-  display_section_9() {
-    this.renderList.traverse( (item) => this.draw( item ) );
   }
   display_section_5( caller )
   { const model_transform = Mat4.translation( -5,0,-2 );
