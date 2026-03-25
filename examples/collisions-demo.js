@@ -102,7 +102,7 @@ export class Inertia_Demo extends Physics_Demo {
   make_body( position, velocity, spin_axis ) {
     return new Rigid_Body(
           { shape: this.random_shape(),
-            material_index: Math.random()*9999%this.num_materials,
+            material: this.state.materials.random(),
             color: this.random_color(),
             size: matvec([ 1,1+Math.random(),1 ])
           }).situate( position, velocity, Math.random(), spin_axis );
@@ -132,20 +132,13 @@ export class Inertia_Demo extends Physics_Demo {
       this.renderList.traverse( (item) => item.clear(), {prune: false} );
 
       // Draw the ground:
-      const item = new RenderListItem(this.passes[0], this.shapes.square, 0);
-      item.instance_vars.push( { model_transform: matvec().set_identity().translate( 0,-10,0 )
-                                    .rotate( Math.PI/2,  -1,0,0 ).scale( 50,50,1 ),
-                                 color: matvec([ .5,1,.5] ), material_index: this.state.materials.name_to_index["grass"] } );
-      this.renderList.insert( item );
+      const ground_matrix = matvec().set_identity().translate( 0,-10,0 )
+                                    .rotate( Math.PI/2,  -1,0,0 ).scale( 50,50,1 );
+      this.submit( this.shapes.square, ground_matrix, matvec([ .5,1,.5] ), "grass" );
 
       // Draw each shape at its current location:
-      for( let b of this.state.bodies ) {
-        const item = new RenderListItem(this.passes[0], b.shape, 0);
+      this.state.bodies.forEach( b => this.submit( b.shape, b.drawn_location, b.color, b.material ) );
 
-        item.instance_vars.push( { model_transform: b.drawn_location, color: b.color, material_index: b.material_index } );
-
-        this.renderList.insert( item );
-      }
       this.renderList.traverse( (item) => item.update_per_instance_buffer(), {prune: false} );
       this.renderList.traverse( (item) => this.draw( item ), {prune: false} );
     }

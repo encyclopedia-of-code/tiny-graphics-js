@@ -11,7 +11,7 @@ export class MatVec {
 
     if (Array.isArray(data) && data.length) {
       if (Array.isArray(data[0])) {
-        this.loadMatrix(data);
+        this.loadArrays(data);
       } else {
         this.loadVector(data);
       }
@@ -57,7 +57,7 @@ export class MatVec {
   }
 
   // Load matrix given array of rows, padded to 4x4, row-major order
-  loadMatrix(rowsArr) {
+  loadArrays(rowsArr) {
     const buf = this.data;
     buf.fill(0);
     for (let r = 0; r < Math.min(rowsArr.length, 4); r++)
@@ -327,7 +327,7 @@ export class MatVec {
     const c = Math.cos(angle), s = Math.sin(angle), t = 1 - c;
 
     const rotMat = MatVec.helper;
-    rotMat.loadMatrix([
+    rotMat.loadArrays([
       [t*x*x + c,   t*x*y - s*z, t*x*z + s*y, 0],
       [t*x*y + s*z, t*y*y + c,   t*y*z - s*x, 0],
       [t*x*z - s*y, t*y*z + s*x, t*z*z + c,   0],
@@ -342,7 +342,7 @@ export class MatVec {
       x = d[0]; y = d[1]; z = d[2];
     }
     const scaleMat = MatVec.helper;
-    scaleMat.loadMatrix([
+    scaleMat.loadArrays([
       [x, 0, 0, 0],
       [0, y, 0, 0],
       [0, 0, z, 0],
@@ -357,7 +357,7 @@ export class MatVec {
       dx = d[0]; dy = d[1]; dz = d[2];
     }
     const transMat = MatVec.helper;
-    transMat.loadMatrix([
+    transMat.loadArrays([
       [1, 0, 0, dx],
       [0, 1, 0, dy],
       [0, 0, 1, dz],
@@ -381,7 +381,7 @@ export class MatVec {
 
     z.multiply(-1); // Enforce right-handed coordinate system.
 
-    this.loadMatrix([
+    this.loadArrays([
       [x.data[0], x.data[1], x.data[2], -x.dot(eye)],
       [y.data[0], y.data[1], y.data[2], -y.dot(eye)],
       [z.data[0], z.data[1], z.data[2], -z.dot(eye)],
@@ -395,7 +395,7 @@ export class MatVec {
     const ty = -(top + bottom) / (top - bottom);
     const tz = -(far + near) / (far - near);
 
-    this.loadMatrix([
+    this.loadArrays([
       [2 / (right - left), 0, 0, tx],
       [0, 2 / (top - bottom), 0, ty],
       [0, 0, -2 / (far - near), tz],
@@ -408,7 +408,7 @@ export class MatVec {
     const f = 1 / Math.tan(fovY / 2);
     const d = far - near;
 
-    this.loadMatrix([
+    this.loadArrays([
       [f / aspect, 0, 0, 0],
       [0, f, 0, 0],
       [0, 0, -(far + near) / d, (-2 * near * far) / d],
@@ -666,7 +666,7 @@ export function matvec(data) { return new MatVec(data); }
   assert(Math.abs(matrix.data[14] + 1) < EPS, "21. Perspective depth exact");
 
   // 22. Invert translation matrix
-  matrix.loadMatrix([
+  matrix.loadArrays([
     [1, 0, 0, 1],
     [0, 1, 0, 2],
     [0, 0, 1, 3],

@@ -50,21 +50,16 @@ export class Instanced_Cubes_Demo extends Renderer {
     this.passes = [];
     this.passes.push( Object.create( this.state ) );
 
-    const items = [ new RenderListItem(this.passes[0], this.shapes.box, 0),
-                    new RenderListItem(this.passes[0], this.shapes.ball, 0) ];
-
-    for( let i=0; i<2; i++ ) {
-      items[i].instance_vars.push(
-        ...Array(this.num_objects).fill(0).map( (x,j) =>
-              matvec().set_identity().translate( ...matvec([ Math.random()* 2 - 1, 2*i+1,  Math.random()*2 - 1 ])
-                                                   .multiply( matvec([20, 2, 20]) ).data )
+    Array(this.num_objects).fill(0).forEach( (x,j) => {
+        const matrix = matvec().set_identity().translate( ...matvec([ Math.random()* 2 - 1, 1-2*(j%2),  Math.random()*2 - 1 ])
+                                     .multiply( matvec([20, 2, 20]) ).data )
                                      .rotate(Math.PI, ...matvec().random().normalize().data )
                                      .scale(.5, .5, .5)
-        ).map( (m,j) => { return {
-          model_transform: m, color: matvec().random().multiply(.3).add( matvec([.5,.5,.5])), 
-          material_index: j%this.num_materials } } ) );
-      this.renderList.insert( items[i] );
-    }
+
+        const color = matvec().random().multiply(.3).add( matvec([.5,.5,.5]));
+        this.submit( ( (j%2) ? this.shapes.box : this.shapes.ball), matrix, color, this.state.materials.random() );
+    });
+
 /*   TURTLE
     this.state.materials.set("turtle", {
           fallback_roughness: 1,

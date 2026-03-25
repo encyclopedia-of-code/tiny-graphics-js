@@ -239,6 +239,10 @@ export class Materials extends UBO_Plan {
     set(name, material_fields = {}) {
       Object.assign( this.fields.materials[ this.name_to_index[name] ], material_fields );
     }
+    random() {
+      const names = Object.keys( this.materials_list );
+      return names[ ~~(Math.random() * names.length) ];
+    }
     static default_values () {
       return {
                 is_textured: 0,
@@ -278,9 +282,9 @@ export class Simple_Materials extends UBO_Plan {
 export class Rigid_Body {           // **Rigid_Body** can store and update the properties of a 3D body that incrementally
                                     // moves from its previous place due to velocities.  It conforms to the
                                     // approach outlined in the "Fix Your Timestep!" blog post by Glenn Fiedler.
-  constructor( { shape, material_index, color, size } )
+  constructor( { shape, material, color, size } )
     { Object.assign( this,
-             { shape, material_index, color, size } )
+             { shape, material, color, size } )
       this.center = matvec();
       this.rotation = matvec();
       this.previous = { center: matvec(), rotation: matvec() };

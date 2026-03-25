@@ -256,7 +256,7 @@ export class Grid_Patch extends Shape {
                   normal.normalize ();           // Normalize the sum to get the average vector.
                   // Store the normal if it's valid (not NaN or zero length), otherwise use a default:
                   if (normal.data.every (x => x == x) && normal.norm () > .01) v.normal = normal;
-                  else v.normal = matvec([0, 0, 1]);
+                  else v.normal = curr.clone();
 
                   const proj = v.normal.quickClone().multiply( v.tangent.dot(v.normal) ); // component of tangent along normal
 
@@ -288,6 +288,7 @@ export class Surface_Of_Revolution extends Grid_Patch {
                                                      .multiply(p);
           super.init (rows, columns, row_operation, column_operation, texture_coord_range);
           for( let r=0; r <= rows; r++ ) {
+            // We need the last column's normal to match the first column's.
             this.vertices[ (columns+1)*r + columns ].normal.loadVector(
                 this.vertices[ (columns+1)*r ].normal
               );
