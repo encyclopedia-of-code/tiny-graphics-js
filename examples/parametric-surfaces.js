@@ -96,16 +96,13 @@ export class Parametric_Surfaces_Section extends Renderer {
       this[ "init_section_" + this.section_index ]();
 
       // Draw the ground:
- //     const initial_corner_point = matvec([ 1,-1,0 ]);
- //     const row_operation = (s,p) => p ? matvec().set_identity().translate(  0,.2,0 ).multiply(p) : initial_corner_point;
- //     const column_operation = (t,p) =>  matvec().set_identity().translate( -.2,0,0 ).multiply(p);
- //     const square = new defs.Grid_Patch( 10, 10, row_operation, column_operation )
- //     const item = new RenderListItem(this.passes[0], square, 0);
- //     item.instance_vars.push( { model_transform: matvec().set_identity().translate( 0,-10,0 )
- //                                   .rotate( Math.PI/2,  -1,0,0 ).scale( 50,50,1 ),
- //                                color: matvec([ 1,1,1 ] ), material_index: this.state.materials.name_to_index["green"] } );
- //     this.renderList.insert( item );
+      const initial_corner_point = matvec([ 1,-1,0 ]);
+      const row_operation = (s,p) => p ? matvec().set_identity().translate(  0,.2,0 ).multiply(p) : initial_corner_point;
+      const column_operation = (t,p) =>  matvec().set_identity().translate( -.2,0,0 ).multiply(p);
+      const square = new defs.Grid_Patch( 10, 10, row_operation, column_operation )
 
+      const matrix = matvec().set_identity().translate( 0,-10,0 ).rotate( Math.PI/2,  -1,0,0 ).scale( 50,50,1 );
+      this.submit( square, matrix, matvec([ 0,.1,0 ] ), "rgb" );
   }
   render_frame() {
       if( this.parent.controls && !this.controls )  {
@@ -173,24 +170,21 @@ export class Parametric_Surfaces_Section extends Renderer {
     const row_operation_2    = (s,p)   => matvec([     1,2*s-1,Math.random()/4 ]);
     const column_operation_2 = (t,p,s) => matvec([ 1-2*t,2*s-1,Math.random()/4 ]);
 
-    this.shapes = { sheet : new defs.Grid_Patch( 10, 10, row_operation, column_operation ),
-                    sheet2: new defs.Grid_Patch( 10, 10, row_operation_2, column_operation_2 ) };
+    const sheet1 = new defs.Grid_Patch( 10, 10, row_operation, column_operation );
+    const sheet2 = new defs.Grid_Patch( 10, 10, row_operation_2, column_operation_2 );
 
-    this.items = [ new RenderListItem(this.passes[0], this.shapes.sheet, 0),
-                    new RenderListItem(this.passes[0], this.shapes.sheet2, 0) ];
+    this.sheets = [];
+    for( let s of [ sheet1, sheet2 ] )
+      this.sheets.push( this.submit( s, matvec().set_identity(), matvec([ 1,1,1 ]), "rgb" ) );
 
-    for( let i=0; i<2; i++ ) {
-      this.items[i].hint = "STREAM_DRAW";
-      this.items[i].instance_vars.push( { model_transform: matvec(), color: matvec([ .1,.1,.1 ]), material_index: this.state.materials.name_to_index["rgb"] } );
-      this.renderList.insert( this.items[i] );
-    }
+    this.sheets.forEach( s => s.hint = "STREAM_DRAW" );
   }
   display_section_0() {
     const positions = [-1.5, 1.5];
-    for( let i=0; i<2; i++ ) {
-      this.items[i].instance_vars[0].model_transform = matvec().set_identity().translate( positions[i],0,0 ).multiply(this.r);
-    }
-    this.items.forEach( (item) => item.update_per_instance_buffer() );
+    this.sheets.forEach( (s,i) => {
+      s.group_transform = matvec().set_identity().translate( positions[i],0,0 ).multiply(this.r);
+      s.update_per_instance_buffer();
+    });
     this.renderList.traverse( (item) => this.draw( item ) );
   }
   explain_section_0() {
@@ -270,28 +264,25 @@ export class Parametric_Surfaces_Section extends Renderer {
           <p>To draw these using Grid_Patch, we provide another class called Surface_Of_Revolution that extends Grid_Patch and takes a set of points as input.  Surface_Of_Revolution automatically sweeps the given points around the Z axis to make each column.  Your list of points, which become the rows, could be arranged to make any 1D curve.  The direction of your points matters; be careful not to end up with your normal vectors all pointing inside out after the sweep.</p>`;
   }
   init_section_3() {
-    const points = [ [0,0,.8], [.5,0,1], [.5,0,.8], [.4,0,.7], [.4,0,.5], [.5,0,.4], [.5,0,-1], [.4,0,-1.5], [.25,0,-1.8], [0,0,-1.7] ];
+    const points = [ [0,0,.8], [.5,0,1], [.5,0,.8], [.4,0,.7], [.4,0,.5], [.5,0,.4], [.5,0,-1], [.4,0,-1.5], [.25,0,-1.8], [0,0,-1.6] ];
     const vec_points = points.map( p => matvec(p) );
     this.shapes = { bullet: new defs.Surface_Of_Revolution( 9, 9, vec_points ) };
 
-    const item = new RenderListItem(this.passes[0], this.shapes.bullet, 0);
-    item.instance_vars.push( { model_transform: matvec().set_identity(), color: matvec([ .7,.8,.6 ]), material_index: this.state.materials.name_to_index["rgb"] } );
-    this.renderList.insert( item );
+    this.passes.push( Object.create( this.state ) );
+    this.passes[1].shader = new defs.Minimal_Phong_Shader (1, 1);
+    this.passes[1].materials = new defs.Simple_Materials( { "solid": undefined } );
 
-    this.state.shader = new defs.Minimal_Phong_Shader (1, 1);
-    this.state.materials = new defs.Simple_Materials( { "solid": undefined } );
+    this.passes[1].materials.set("solid", { diffusivity: .2 });
+    this.passes[1].materials.set("solid", { smoothness: 500 });
 
-    this.state.materials.set("solid", { diffusivity: .2 });
-    this.state.materials.set("solid", { smoothness: 500 });
+    this.bullet = this.submit( this.shapes.bullet, matvec().set_identity(), matvec([ .7,.8,.6 ]), "solid", 0, this.passes[1]);
   }
   display_section_3( caller ) {
     const matrix = matvec().set_identity().translate( 0,0,-1 );
     matrix.rotate( this.state.animation_time/3000, 0,1,0 ).multiply(this.r);
-    this.renderList.traverse( (item) => {
-      item.instance_vars[0].model_transform = matrix;
-      item.update_per_instance_buffer();
-      this.draw( item )
-    } );
+    this.bullet.instance_vars[0].model_transform = matrix;
+    this.bullet.update_per_instance_buffer();
+    this.renderList.traverse( (item) => this.draw( item ) );
   }
   explain_section_3() {
     this.document_region.innerHTML =
@@ -330,12 +321,12 @@ export class Parametric_Surfaces_Section extends Renderer {
 
 
     // Manually recreate the above compound Shape out of individual components:
-    const base = Mat4.translation( -1,-1,-2 );
-    const ball_matrix = base.times( Mat4.rotation( Math.PI/2,   0,1,0 ).times( Mat4.scale( .25, .25, .25 ) ) );
+//    const base = Mat4.translation( -1,-1,-2 );
+//    const ball_matrix = base.times( Mat4.rotation( Math.PI/2,   0,1,0 ).times( Mat4.scale( .25, .25, .25 ) ) );
     this.shapes.ball.draw( caller, this.uniforms, ball_matrix, this.parent.material );
-    const matrices = [ Mat4.identity(),
-      Mat4.rotation(-Math.PI/2,  1,0,0 ).times( Mat4.scale(  1,-1,1 )),
-      Mat4.rotation( Math.PI/2,  0,1,0 ).times( Mat4.scale( -1, 1,1 )) ];
+//    const matrices = [ Mat4.identity(),
+//      Mat4.rotation(-Math.PI/2,  1,0,0 ).times( Mat4.scale(  1,-1,1 )),
+//      Mat4.rotation( Math.PI/2,  0,1,0 ).times( Mat4.scale( -1, 1,1 )) ];
     for( let i = 0; i < 3; i++ )
     { const m = base.times( matrices[i] );
       const cone_matrix = m.times( Mat4.translation(   0,   0,  2 ) ).times( Mat4.scale( .25, .25, .25 ) ),

@@ -19,7 +19,7 @@ export class PBR_Shader extends Shader {
       }
       if( !renderer.gpu_versions.get("uniforms")?.previous_group_matrix || !renderer.gpu_versions.get("uniforms").previous_group_matrix.equals(renderListItem.group_transform) ) {
         if( !renderer.gpu_versions.get("uniforms")?.previous_group_matrix ) renderer.gpu_versions.get("uniforms").previous_group_matrix = renderListItem.group_transform.clone();
-        else renderer.gpu_versions.get("uniforms").previous_group_matrix.loadMatrix( renderListItem.group_transform.data );
+        else renderer.gpu_versions.get("uniforms").previous_group_matrix.loadVector( renderListItem.group_transform.data );
         renderer.context.uniformMatrix4fv (gpu_addresses.group_transform, true, renderListItem.group_transform.data );
       }
     }
@@ -207,9 +207,10 @@ export class PBR_Shader extends Shader {
           vec3 albedo = INSTANCE_COLOR;
           float alpha = 1.;
           if( mat.textured_albedo_amount > 0. && mat.is_textured > 0. ) {
-            vec4 albedo_tex = texture(texture_array, vec3(uv, mat.starting_texture_layer));
-            alpha = albedo_tex.a;
-            albedo = mix(albedo, pow(albedo_tex.rgb, vec3(2.2)), mat.textured_albedo_amount);    //2.2
+            vec4 albedo_texture = texture( texture_array, vec3(uv, mat.starting_texture_layer) );
+            alpha = albedo_texture.a;
+            vec3 texture_color = pow( albedo_texture.rgb, vec3(2.2) );    //2.2
+            albedo = mix(albedo, albedo * texture_color, mat.textured_albedo_amount);
           }
           float metallicity = mat.fallback_metallicity;
           if( mat.textured_metallicity_amount > 0. && mat.is_textured > 0. ) {
@@ -247,7 +248,7 @@ export class PBR_Shader extends Shader {
               totalLight += PBRLight(n, v, l, ao * albedo, metallicity, roughness, F0, intensity);
           }
 
-          totalLight += ao * albedo * ambient;
+          totalLight += ao * albedo * ambient * (1.0 - metallicity);
           //vec3 tone_mapped = totalLight / (totalLight + vec3(1.0)); // simple Reinhard operator
           float exposure = 1.0;
           vec3 tone_mapped = vec3(1.0) - exp(-totalLight * exposure);
@@ -268,13 +269,13 @@ export class Minimal_Phong_Shader extends Shader {
       const gpu_addresses = renderer.uniform_addresses.get(this);
       const state = renderListItem.render_state;
 
-      if( this.previous_animation_time != state.animation_time ) {
-        this.previous_animation_time = state.animation_time;
+      if( renderer.gpu_versions.get("uniforms")?.previous_animation_time != state.animation_time ) {
+        renderer.gpu_versions.get("uniforms").previous_animation_time = state.animation_time;
         renderer.context.uniform1f (gpu_addresses.animation_time, state.animation_time / 1000);
       }
-      if( !this.previous_group_matrix || !this.previous_group_matrix.equals(renderListItem.group_transform) ) {
-        if( !this.previous_group_matrix ) this.previous_group_matrix = renderListItem.group_transform.clone();
-        else this.previous_group_matrix.loadMatrix( renderListItem.group_transform.data );
+      if( !renderer.gpu_versions.get("uniforms")?.previous_group_matrix || !renderer.gpu_versions.get("uniforms").previous_group_matrix.equals(renderListItem.group_transform) ) {
+        if( !renderer.gpu_versions.get("uniforms")?.previous_group_matrix ) renderer.gpu_versions.get("uniforms").previous_group_matrix = renderListItem.group_transform.clone();
+        else renderer.gpu_versions.get("uniforms").previous_group_matrix.loadVector( renderListItem.group_transform.data );
         renderer.context.uniformMatrix4fv (gpu_addresses.group_transform, true, renderListItem.group_transform.data );
       }
     }

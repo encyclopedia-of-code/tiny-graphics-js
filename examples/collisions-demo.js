@@ -98,7 +98,7 @@ export class Inertia_Demo extends Physics_Demo {
         this.renderList.insert(item);
       }
     }
-  random_color() { return matvec([ .6,.6*Math.random(),.6*Math.random() ]) }
+  random_color() { return matvec([ Math.random(), Math.random(), Math.random() ]) }
   make_body( position, velocity, spin_axis ) {
     return new Rigid_Body(
           { shape: this.random_shape(),
@@ -134,7 +134,7 @@ export class Inertia_Demo extends Physics_Demo {
       // Draw the ground:
       const ground_matrix = matvec().set_identity().translate( 0,-10,0 )
                                     .rotate( Math.PI/2,  -1,0,0 ).scale( 50,50,1 );
-      this.submit( this.shapes.square, ground_matrix, matvec([ .5,1,.5] ), "grass" );
+      this.submit( this.shapes.square, ground_matrix, matvec([ .1,.5,.1] ), "grass" );
 
       // Draw each shape at its current location:
       this.state.bodies.forEach( b => this.submit( b.shape, b.drawn_location, b.color, b.material ) );

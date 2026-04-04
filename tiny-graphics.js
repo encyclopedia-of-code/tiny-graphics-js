@@ -758,9 +758,10 @@ export class Renderer extends Component {
     }
   }
   submit( shape, model_transform, color, material_name, group_id=0, state=this.passes[0]) {
-        const item = new RenderListItem(state, shape, group_id);
-        item.instance_vars.push( { model_transform, color, material_index: state.materials.name_to_index[material_name]  } );
-        this.renderList.insert( item );
+    const item = new RenderListItem(state, shape, group_id);
+    item.instance_vars.push( { model_transform, color, material_index: state.materials.name_to_index[material_name]  } );
+    this.renderList.insert( item );
+    return item;
   }
   draw (renderListItem) {
     const shader = renderListItem.render_state.shader;
