@@ -24,7 +24,11 @@ Promise.all([
 ]).then(([Main_Scene_Class, ...Additional_Scene_Classes]) => {
   const root = new Main_Scene_Class();                    // This line creates your scene.
   root.animated_children.push(...Additional_Scene_Classes.map(Scene => new Scene()));
-  root.render_layout(element_to_replace);
+      const options = {
+         // show_canvas: true, make_controls: false,
+         // make_editor: false, make_code_nav: false
+      };
+  root.render_layout(element_to_replace, options);
 });
 </script>
 

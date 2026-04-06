@@ -67,7 +67,7 @@ export class Parametric_Surfaces extends Renderer {
     }
   render_frame() {
       if( !this.controls )  {
-        const camera = { camera_inverse: matvec().set_identity().translate( matvec([ 0,0,-2 ]) ) };
+        const camera = { camera_inverse: matvec().set_identity().translate( matvec([ 0,0,-2.5 ]) ) };
         this.state.camera = new defs.Camera( camera );
         this.controls = new defs.Movement_Controls( { state: this.state } );
         this.animated_children.push( this.controls );
@@ -109,7 +109,7 @@ export class Parametric_Surfaces_Section extends Renderer {
                             // Each section's canvas listens (by mouse) for the master Movement_Controls.
         this.parent.controls.add_mouse_controls( this.canvas );
         this.controls = this.parent.controls;
-        this.state.camera.fields.projection = matvec().perspective(Math.PI/2, this.width/this.height, 0.01, 500);
+        this.state.camera.fields.projection = matvec().perspective(Math.PI/4, this.width/this.height, 0.1, 100);
         this.state.camera.dirty = true;
       }
       if( !this.parent.controls )
@@ -140,14 +140,13 @@ export class Parametric_Surfaces_Section extends Renderer {
 
       const overridden_options = Object.assign( defaults, this.widget_options, options );
 
-            // TODO:  One use case may have required canvas to be styled as a rule instead of as an element.  Keep an eye out.
       const canvas = this.program_stuff.appendChild( document.createElement( "canvas" ) );
-      canvas.style = `width:1080px; height:600px; background:DimGray; margin:auto; margin-bottom:-4px`;
+      canvas.style = `margin-bottom:-4px`;
 
       if( !overridden_options.show_canvas )
         canvas.style.display = "none";
 
-      this.make_context( canvas, undefined, [ 1080,300 + this.section_index * 100 ] );
+      this.make_context( canvas, undefined, [ 1080,300 ] );
 
                                       // Start WebGL main loop - render() will re-queue itself for continuous calls.
       this.event = window.requestAnimFrame( this.frame_advance.bind( this ) );
@@ -198,11 +197,8 @@ export class Parametric_Surfaces_Section extends Renderer {
   }
   init_section_1() {
     this.shapes = { sheet: new Shape() };
-
-    const items = [ new RenderListItem(this.passes[0], this.shapes.sheet, 0) ];
-    items[0].hint = "STREAM_DRAW";
-    items[0].instance_vars.push( { model_transform: matvec().set_identity(), color: matvec([ .5,.5,.5 ]), material_index: this.state.materials.name_to_index["rgb"] } );
-    this.renderList.insert( items[0] );
+    this.sheet = this.submit( this.shapes.sheet, matvec().set_identity(), matvec([ .5,.5,.5 ]), "rgb" );
+    this.sheet.hint = "STREAM_DRAW";
   }
   display_section_1() {
     const random = ( x ) => Math.sin( 1000*x + this.state.animation_time/1000 );
@@ -238,23 +234,20 @@ export class Parametric_Surfaces_Section extends Renderer {
   //    donut2 : new ( defs.Torus.prototype.make_flat_shaded_version() )( 20, 20, [[0,2],[0,1]] ),
     };
 
-    for( let s in this.shapes ) {
-      const item = new RenderListItem(this.passes[0], this.shapes[s], 0);
-      item.instance_vars.push( { model_transform: matvec().set_identity(), color: matvec([ .5,.5,.5 ]), material_index: this.state.materials.name_to_index["rgb"] } );
-      this.renderList.insert( item );
-    }
+    for( let s in this.shapes )
+      this.submit( this.shapes[s], matvec().set_identity(), matvec([ .5,.5,.5 ]), "rgb" );
 
     this.model_transform = matvec();
   }
   display_section_2( caller ) {
-    this.model_transform.set_identity().translate( -5,0,-3 );
+    this.model_transform.set_identity().translate( -5,0,-1 );
     // Draw all the shapes stored in this.shapes side by side.
     this.renderList.traverse( (item) => {
       item.instance_vars[0].model_transform.loadVector( this.model_transform.quickClone()
                                   .rotate( this.state.animation_time/3000,  1,1,1 ) );
       item.update_per_instance_buffer();
       this.model_transform.multiply( this.model_transform.quickClone().set_identity()
-                                     .translate( 2,0,0 ) );
+                                     .translate( 2.5,0,0 ) );
     } );
     this.renderList.traverse( (item) => this.draw( item ) );
   }
@@ -302,9 +295,7 @@ export class Parametric_Surfaces_Section extends Renderer {
       tube_2 : new defs.Cylindrical_Tube( 7, 7,  [[  0 ,.33 ], [ 0,1 ]] ),
     };
 
-    const items = [ new RenderListItem(this.passes[0], this.shapes.axis, 0) ];
-    items[0].instance_vars.push( { model_transform: matvec().set_identity().translate( 2,-1,-2), color: matvec([ .5,.5,.5 ]), material_index: this.state.materials.name_to_index["rgb"] } );
-    this.renderList.insert( items[0] );
+    this.submit( this.shapes.axis, matvec().set_identity().translate( 2,-1,-2), matvec([ .5,.5,.5 ]), "rgb" );
 
     return;
 
@@ -373,7 +364,7 @@ export class Parametric_Surfaces_Section extends Renderer {
                                   .rotate( this.state.animation_time/3000,  1,1,1 ) );
       item.update_per_instance_buffer();
       this.model_transform.multiply( this.model_transform.quickClone().set_identity()
-                                     .translate( 2.5,0,0 ) );
+                                     .translate( 3,0,0 ) );
     } );
     this.renderList.traverse( (item) => this.draw( item ) );
   }
