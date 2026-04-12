@@ -234,8 +234,8 @@ export class Parametric_Surfaces_Section extends Renderer {
   //    donut2 : new ( defs.Torus.prototype.make_flat_shaded_version() )( 20, 20, [[0,2],[0,1]] ),
     };
 
-    for( let s in this.shapes )
-      this.submit( this.shapes[s], matvec().set_identity(), matvec([ .5,.5,.5 ]), "rgb" );
+    for( let s of Object.values( this.shapes ) )
+      this.submit( s, matvec().set_identity(), matvec([ .5,.5,.5 ]), "rgb" );
 
     this.model_transform = matvec();
   }
@@ -297,39 +297,31 @@ export class Parametric_Surfaces_Section extends Renderer {
 
     this.submit( this.shapes.axis, matvec().set_identity().translate( 2,-1,-2), matvec([ .5,.5,.5 ]), "rgb" );
 
-    return;
-
+    // Manually draw an Axis_Arrows without using a compound shape to consolidate GPU draw calls.
     const base = matvec().set_identity().translate(-1,-1,-2);
     const ball = base.clone().rotate( Math.PI/2,  0,1,0 )
                              .scale( .25,.25,.25 );
     const angles = [ matvec().set_identity(),
                      matvec().set_identity()
-                             .rotate( -Math.PI/2,  0,1,0 )
+                             .rotate( -Math.PI/2,  1,0,0 )
                              .scale(1,-1,1),
                      matvec().set_identity()
                              .rotate( Math.PI/2,  0,1,0 )
                              .scale(-1,1,1) ];
 
-
-    // Manually recreate the above compound Shape out of individual components:
-//    const base = Mat4.translation( -1,-1,-2 );
-//    const ball_matrix = base.times( Mat4.rotation( Math.PI/2,   0,1,0 ).times( Mat4.scale( .25, .25, .25 ) ) );
-    this.shapes.ball.draw( caller, this.uniforms, ball_matrix, this.parent.material );
-//    const matrices = [ Mat4.identity(),
-//      Mat4.rotation(-Math.PI/2,  1,0,0 ).times( Mat4.scale(  1,-1,1 )),
-//      Mat4.rotation( Math.PI/2,  0,1,0 ).times( Mat4.scale( -1, 1,1 )) ];
-    for( let i = 0; i < 3; i++ )
-    { const m = base.times( matrices[i] );
-      const cone_matrix = m.times( Mat4.translation(   0,   0,  2 ) ).times( Mat4.scale( .25, .25, .25 ) ),
-          box1_matrix = m.times( Mat4.translation( .95, .95, .45) ).times( Mat4.scale( .05, .05, .45 ) ),
-          box2_matrix = m.times( Mat4.translation( .95,   0, .5 ) ).times( Mat4.scale( .05, .05, .4  ) ),
-          box3_matrix = m.times( Mat4.translation(   0, .95, .5 ) ).times( Mat4.scale( .05, .05, .4  ) ),
-          tube_matrix = m.times( Mat4.translation(   0,   0,  1 ) ).times( Mat4.scale(  .1,  .1,  2  ) );
-      this.shapes[ "cone_"+i ].draw( caller, this.uniforms, cone_matrix, this.parent.material );
-      this.shapes.box         .draw( caller, this.uniforms, box1_matrix, this.parent.material );
-      this.shapes.box         .draw( caller, this.uniforms, box2_matrix, this.parent.material );
-      this.shapes.box         .draw( caller, this.uniforms, box3_matrix, this.parent.material );
-      this.shapes[ "tube_"+i ].draw( caller, this.uniforms, tube_matrix, this.parent.material );
+    this.submit( this.shapes.ball, ball, matvec([ .5,.5,.5 ]), "rgb" );
+    for( let i = 0; i < 3; i++ ) {
+      const m = base.clone().multiply( angles[i] );
+      const cone_matrix = m.clone().translate( 0,0,2 ).scale( .25, .25, .25 ),
+          tube_matrix = m.clone().translate( 0,0,1 ).scale( .1, .1, 2 );
+      const boxes = [ m.clone().translate( .95, .95, .45 ).scale( .05, .05, .45 ),
+                      m.clone().translate( .95, 0, .5 ).scale( .05, .05, .4 ),
+                      m.clone().translate( 0, .95, .5 ).scale( .05, .05, .4 )
+        ];
+      this.submit( this.shapes[ "cone_"+i ], cone_matrix, matvec([ .5,.5,.5 ]), "rgb" );
+      this.submit( this.shapes[ "tube_"+i ],  tube_matrix, matvec([ .5,.5,.5 ]), "rgb" );
+      for( let j = 0; j < 3; j++ )
+        this.submit( this.shapes.box, boxes[j], matvec([ .5,.5,.5 ]), "rgb" );
     }
   }
   display_section_4( caller ) {
@@ -347,14 +339,10 @@ export class Parametric_Surfaces_Section extends Renderer {
       cone2 : new defs.Rounded_Closed_Cone    ( 5, 10,  [[0,2],[0,1]] ),
       capped2 : new defs.Rounded_Capped_Cylinder( 5, 10,  [[0,2],[0,1]] )
     };
-
-    for( let s in this.shapes ) {
-      const item = new RenderListItem(this.passes[0], this.shapes[s], 0);
-      item.instance_vars.push( { model_transform: matvec().set_identity(), color: matvec([ .5,.5,.5 ]), material_index: this.state.materials.name_to_index["rgb"] } );
-      this.renderList.insert( item );
-    }
-
     this.model_transform = matvec();
+
+    for( let s of Object.values( this.shapes ) )
+      this.submit( s, matvec().set_identity(), matvec([ .5,.5,.5 ]), "rgb");
   }
   display_section_5( caller ) {
     this.model_transform.set_identity().translate( -5,0,-2 );
