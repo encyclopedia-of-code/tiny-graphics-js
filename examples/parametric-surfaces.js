@@ -4,7 +4,7 @@ import { MatVec, matvec, RenderListItem, Shape, Component, Renderer } from './co
 import { Camera, LightArray, Materials } from './common.js';
 
 export class Parametric_Surfaces extends Renderer {
-  num_sections = 6;
+  num_sections = 7;
   init() {
       super.init();
 
@@ -234,15 +234,16 @@ export class Parametric_Surfaces_Section extends Renderer {
   //    donut2 : new ( defs.Torus.prototype.make_flat_shaded_version() )( 20, 20, [[0,2],[0,1]] ),
     };
 
+    this.showcase = [];
     for( let s of Object.values( this.shapes ) )
-      this.submit( s, matvec().set_identity(), matvec([ .5,.5,.5 ]), "rgb" );
+      this.showcase.push( this.submit( s, matvec().set_identity(), matvec([ .5,.5,.5 ]), "rgb" ) );
 
     this.model_transform = matvec();
   }
   display_section_2( caller ) {
     this.model_transform.set_identity().translate( -5,0,-1 );
     // Draw all the shapes stored in this.shapes side by side.
-    this.renderList.traverse( (item) => {
+    this.showcase.forEach( item => {
       item.instance_vars[0].model_transform.loadVector( this.model_transform.quickClone()
                                   .rotate( this.state.animation_time/3000,  1,1,1 ) );
       item.update_per_instance_buffer();
@@ -282,7 +283,7 @@ export class Parametric_Surfaces_Section extends Renderer {
       `<p>Here's a surface of revolution drawn using a manually specified point list.  The points spell out a 1D curve of the outline of a bullet's right side.  The Surface_Of_Revolution sweeps this around the Z axis.</p>`;
   }
   init_section_4() {
-    // Custom per-primitive colors inside a compound shape can be achieved by keying into a texture atlas via coords:
+    // The axis's rgb texture colors its arrows, demonstrating keying into a texture atlas via coords.
     this.shapes = {
       axis : new defs.Axis_Arrows(),
       ball : new defs.Subdivision_Sphere( 3 ),
@@ -295,33 +296,29 @@ export class Parametric_Surfaces_Section extends Renderer {
       tube_2 : new defs.Cylindrical_Tube( 7, 7,  [[  0 ,.33 ], [ 0,1 ]] ),
     };
 
+    // Draw an axis from the compound shape definition Axis_Arrows.
     this.submit( this.shapes.axis, matvec().set_identity().translate( 2,-1,-2), matvec([ .5,.5,.5 ]), "rgb" );
 
-    // Manually draw an Axis_Arrows without using a compound shape to consolidate GPU draw calls.
+    // Manually draw an Axis_Arrows without using a compound shape, costing more GPU draw calls.
     const base = matvec().set_identity().translate(-1,-1,-2);
     const ball = base.clone().rotate( Math.PI/2,  0,1,0 )
                              .scale( .25,.25,.25 );
     const angles = [ matvec().set_identity(),
-                     matvec().set_identity()
-                             .rotate( -Math.PI/2,  1,0,0 )
-                             .scale(1,-1,1),
-                     matvec().set_identity()
-                             .rotate( Math.PI/2,  0,1,0 )
-                             .scale(-1,1,1) ];
-
+                     matvec().set_identity().rotate( -Math.PI/2,  1,0,0 ).scale(1,-1,1),
+                     matvec().set_identity().rotate( Math.PI/2,  0,1,0 ).scale(-1,1,1)
+                   ];
     this.submit( this.shapes.ball, ball, matvec([ .5,.5,.5 ]), "rgb" );
     for( let i = 0; i < 3; i++ ) {
       const m = base.clone().multiply( angles[i] );
       const cone_matrix = m.clone().translate( 0,0,2 ).scale( .25, .25, .25 ),
-          tube_matrix = m.clone().translate( 0,0,1 ).scale( .1, .1, 2 );
-      const boxes = [ m.clone().translate( .95, .95, .45 ).scale( .05, .05, .45 ),
-                      m.clone().translate( .95, 0, .5 ).scale( .05, .05, .4 ),
-                      m.clone().translate( 0, .95, .5 ).scale( .05, .05, .4 )
-        ];
+            tube_matrix = m.clone().translate( 0,0,1 ).scale( .1, .1, 2 );
+      const boxes = [     m.clone().translate( .95, .95, .45 ).scale( .05, .05, .45 ),
+                          m.clone().translate( .95, 0, .5 ).scale( .05, .05, .4 ),
+                          m.clone().translate( 0, .95, .5 ).scale( .05, .05, .4 )
+                    ];
       this.submit( this.shapes[ "cone_"+i ], cone_matrix, matvec([ .5,.5,.5 ]), "rgb" );
       this.submit( this.shapes[ "tube_"+i ],  tube_matrix, matvec([ .5,.5,.5 ]), "rgb" );
-      for( let j = 0; j < 3; j++ )
-        this.submit( this.shapes.box, boxes[j], matvec([ .5,.5,.5 ]), "rgb" );
+      boxes.forEach( box => this.submit( this.shapes.box, box, matvec([ .5,.5,.5 ]), "rgb" ) );
     }
   }
   display_section_4( caller ) {
@@ -341,13 +338,14 @@ export class Parametric_Surfaces_Section extends Renderer {
     };
     this.model_transform = matvec();
 
+    this.showcase = [];
     for( let s of Object.values( this.shapes ) )
-      this.submit( s, matvec().set_identity(), matvec([ .5,.5,.5 ]), "rgb");
+      this.showcase.push( this.submit( s, matvec().set_identity(), matvec([ .5,.5,.5 ]), "rgb" ) );
   }
   display_section_5( caller ) {
     this.model_transform.set_identity().translate( -5,0,-2 );
     // Draw all the shapes stored in this.shapes side by side.
-    this.renderList.traverse( (item) => {
+    this.showcase.forEach( item => {
       item.instance_vars[0].model_transform.loadVector( this.model_transform.quickClone()
                                   .rotate( this.state.animation_time/3000,  1,1,1 ) );
       item.update_per_instance_buffer();
@@ -362,36 +360,29 @@ export class Parametric_Surfaces_Section extends Renderer {
   }
   init_section_6() {
     // Some helper arrays of points located along curves.  We'll extrude these into surfaces:
-    let square_array = Vector3.cast( [ 1,0,-1 ], [ 0,1,-1 ], [ -1,0,-1 ], [ 0,-1,-1 ], [ 1,0,-1 ] ),
-        star_array = Array(19).fill( vec3( 1,0,-1 ) );
+    const square_array = [ [ 1,0,-1 ], [ 0,1,-1 ], [ -1,0,-1 ], [ 0,-1,-1 ], [ 1,0,-1 ] ].map( (x,i,a) =>
+                          matvec().set_identity().rotate( .5*Math.PI,   1,1,1 )
+                              .translate( 0,0,2 )
+                              .multiply( matvec(x) ) );
 
-    // Fill in the correct points for a 1D star curve:
+    const star_array = Array(19).fill( [ 1,0,-1 ] ).map( (x,i,a) =>
+                          matvec().set_identity().rotate( i/(a.length-1) * 2*Math.PI,   0,0,1 )
+                              .translate( (i%2)/2,0,0 )
+                              .multiply( matvec(x) ) );
 
-    star_array   =   star_array.map( (x,i,a) =>
-        Mat4.rotation( i/(a.length-1) * 2*Math.PI,   0,0,1 )
-            .times( Mat4.translation( (i%2)/2,0,0 ) )
-            .times( x.to4(1) ).to3() );
+    // With the two 1D curves, sample a surface between them:
+    const sampler1 = i => defs.Grid_Patch.sample_array( square_array, i );
+    const sampler2 = i => defs.Grid_Patch.sample_array( star_array,   i );
+    const sample_two_arrays = (j,p,i) => sampler2(i).mix( sampler1(i), j );
 
-    // The square is transformed away from the origin:
-
-    square_array = square_array.map( (x,i,a) =>
-        a[i] = Mat4.rotation( .5*Math.PI,   1,1,1 )
-            .times( Mat4.translation( 0,0,2 ) )
-            .times( x.to4(1) ).to3() );
-
-    // Now that we have two 1D curves, let's make a surface between them:
-
-    let sampler1 = i => defs.Grid_Patch.sample_array( square_array, i );
-    let sampler2 = i => defs.Grid_Patch.sample_array( star_array,   i );
-
-    let sample_two_arrays = (j,p,i) => sampler2(i).mix( sampler1(i), j );
-
-
-    this.shapes = { shell : new defs.Grid_Patch( 30, 30, sampler2, sample_two_arrays, [[0,1],[0,1]] ) };
+    const shell = new defs.Grid_Patch( 30, 30, sampler2, sample_two_arrays, [[0,1],[0,1]] );
+    this.submit( shell, matvec().set_identity(), matvec([ .5,.5,.5 ]), "rgb");
   }
-  display_section_6( caller ) {
-    const model_transform = Mat4.rotation( this.uniforms.animation_time/5000,   0,1,0 );
-    this.shapes.shell.draw( caller, this.uniforms, model_transform.times( this.r ), this.parent.material );
+  display_section_6() {
+    this.renderList.traverse( (item) => this.draw( item ) );
+
+  //  const model_transform = Mat4.rotation( this.uniforms.animation_time/5000,   0,1,0 );
+  //  this.shapes.shell.draw( caller, this.uniforms, model_transform.times( this.r ), this.parent.material );
   }
   explain_section_6() {
     this.document_region.innerHTML =
