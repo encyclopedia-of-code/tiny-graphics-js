@@ -1,8 +1,6 @@
 import * as tiny from '../tiny-graphics.js';
 import { MatVec, matvec, Shape, Shader, Component } from '../tiny-graphics.js';
 
-/* Firefox bug: Won't run unless Material UBO is removed from shader. Even simplifying the UBO to one vector isn't enough. */
-
 export class PBR_Shader extends Shader {
     constructor (num_lights = 2, num_materials = 0, options) {
       super();
@@ -13,13 +11,16 @@ export class PBR_Shader extends Shader {
       const gpu_addresses = renderer.uniform_addresses.get(this);
       const state = renderListItem.render_state;
 
-      if( renderer.gpu_versions.get("uniforms")?.previous_animation_time != state.animation_time ) {
-        renderer.gpu_versions.get("uniforms").previous_animation_time = state.animation_time;
+      if( !renderer.gpu_versions.get(this) ) renderer.gpu_versions.set(this, {} );
+      const cache = renderer.gpu_versions.get(this);
+
+      if( cache?.previous_animation_time != state.animation_time ) {
+        cache.previous_animation_time = state.animation_time;
         renderer.context.uniform1f (gpu_addresses.animation_time, state.animation_time / 1000);
       }
-      if( !renderer.gpu_versions.get("uniforms")?.previous_group_matrix || !renderer.gpu_versions.get("uniforms").previous_group_matrix.equals(renderListItem.group_transform) ) {
-        if( !renderer.gpu_versions.get("uniforms")?.previous_group_matrix ) renderer.gpu_versions.get("uniforms").previous_group_matrix = renderListItem.group_transform.clone();
-        else renderer.gpu_versions.get("uniforms").previous_group_matrix.loadVector( renderListItem.group_transform.data );
+      if( ! cache?.previous_group_matrix?.equals(renderListItem.group_transform) ) {
+        if( !cache.previous_group_matrix ) cache.previous_group_matrix = renderListItem.group_transform.clone();
+        else cache.previous_group_matrix.loadVector( renderListItem.group_transform.data );
         renderer.context.uniformMatrix4fv (gpu_addresses.group_transform, true, renderListItem.group_transform.data );
       }
     }
@@ -269,13 +270,16 @@ export class Minimal_Phong_Shader extends Shader {
       const gpu_addresses = renderer.uniform_addresses.get(this);
       const state = renderListItem.render_state;
 
-      if( renderer.gpu_versions.get("uniforms")?.previous_animation_time != state.animation_time ) {
-        renderer.gpu_versions.get("uniforms").previous_animation_time = state.animation_time;
+      if( !renderer.gpu_versions.get(this) ) renderer.gpu_versions.set(this, {} );
+      const cache = renderer.gpu_versions.get(this);
+
+      if( cache?.previous_animation_time != state.animation_time ) {
+        cache.previous_animation_time = state.animation_time;
         renderer.context.uniform1f (gpu_addresses.animation_time, state.animation_time / 1000);
       }
-      if( !renderer.gpu_versions.get("uniforms")?.previous_group_matrix || !renderer.gpu_versions.get("uniforms").previous_group_matrix.equals(renderListItem.group_transform) ) {
-        if( !renderer.gpu_versions.get("uniforms")?.previous_group_matrix ) renderer.gpu_versions.get("uniforms").previous_group_matrix = renderListItem.group_transform.clone();
-        else renderer.gpu_versions.get("uniforms").previous_group_matrix.loadVector( renderListItem.group_transform.data );
+      if( ! cache?.previous_group_matrix?.equals(renderListItem.group_transform) ) {
+        if( !cache.previous_group_matrix ) cache.previous_group_matrix = renderListItem.group_transform.clone();
+        else cache.previous_group_matrix.loadVector( renderListItem.group_transform.data );
         renderer.context.uniformMatrix4fv (gpu_addresses.group_transform, true, renderListItem.group_transform.data );
       }
     }

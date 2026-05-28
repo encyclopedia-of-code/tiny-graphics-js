@@ -149,17 +149,16 @@ export class Shader {
               this.uniform_block_info = {};  // block_name -> { buffer_size, element_offsets, next_offsets }
               const num_blocks = gl.getProgramParameter(program, gl.ACTIVE_UNIFORM_BLOCKS);
               this.index_to_uniform_info = given_info.uniform_info || {};
-              for (let i = 0; i < num_blocks; i++ ) {
-                  const UBO_name = gl.getActiveUniformBlockName(program, i);
-                  const UBO_size = gl.getActiveUniformBlockParameter(program, i, gl.UNIFORM_BLOCK_DATA_SIZE);
-                  const UBO_index = gl.getUniformBlockIndex(program, UBO_name);
+              for (let UBO_index  = 0; UBO_index < num_blocks; UBO_index++ ) {
+                  const UBO_name = gl.getActiveUniformBlockName(program, UBO_index);
+                  const UBO_size = gl.getActiveUniformBlockParameter(program, UBO_index, gl.UNIFORM_BLOCK_DATA_SIZE);
                   gl.uniformBlockBinding(program, UBO_index, UBO_index);
 
                   if( !given_info?.ubo_offsets?.[UBO_name] ) {
                     this.uniform_block_info[UBO_name] =
                           { buffer_size: UBO_size, element_offsets: {}, next_offsets: {} };
 
-                    const indices = gl.getActiveUniformBlockParameter(program, i, gl.UNIFORM_BLOCK_ACTIVE_UNIFORM_INDICES);
+                    const indices = gl.getActiveUniformBlockParameter(program, UBO_index, gl.UNIFORM_BLOCK_ACTIVE_UNIFORM_INDICES);
                     const offsets = gl.getActiveUniforms(program, indices, gl.UNIFORM_OFFSET);
                     for (let j = 0; j < indices.length; j++) {
                         const idx = indices[j];
@@ -557,7 +556,8 @@ export class Renderer extends Component {
     this.VAOs = new Map(); // RenderListItem -> <gl vao ref>
     this.VBOs = new Map(); // VBO_plan -> <gl vao ref>
     this.gpu_versions = new Map(); // VBO_plan, UBO_plan, <gl ebo ref> -> version number existing on GPU
-        // Other values: Bound_UBO_#, Program, uniforms, VAO, texture_binding, Active_EBO -> Their respective objects/values
+        // Other values: Bound_UBO_#, Program, VAO, texture_binding, Active_EBO -> Their respective objects/values
+        // or Shader (map of loose uniform names -> values)
     this.index_buffers = new Map();  // Shape -> <gl ebo ref>
     this.shaders = new Map();  // Shader -> { program, vertex_shader, fragment_shader }
     this.attribute_addresses = new Map();  // Shader -> Attribute_Addresses
@@ -759,7 +759,7 @@ export class Renderer extends Component {
   }
   submit( shape, model_transform, color, material_name, group_id=0, state=this.passes[0]) {
     const item = new RenderListItem(state, shape, group_id);
-    item.instance_vars.push( { model_transform, color, material_index: state.materials.name_to_index[material_name]  } );
+    item.instance_vars.push( { model_transform, color, material_index: state.materials?.name_to_index?.[material_name] || 0 } );
     this.renderList.insert( item );
     return item;
   }
@@ -785,19 +785,22 @@ export class Renderer extends Component {
       if(previous_bound_ubo != ubo )
         gl.bindBufferBase (gl.UNIFORM_BUFFER, ubo_plan.get_binding_point(), ubo);
 
-      if( ubo_plan.dirty )
+      if( ubo_plan.dirty ) {
         ubo_plan.fill_buffer(this.uniform_addresses.get(shader).uniform_block_info[ ubo_plan.constructor.name ]);
-      ubo_plan.dirty = false;
+        if( ubo_plan.local_buffer )
+          ubo_plan.dirty = false;
+      }
       if( !ubo_plan.local_buffer || this.gpu_versions.get(ubo_plan) >= ubo_plan.version )
         continue;
-      this.gpu_versions.set(ubo_plan, ubo_plan.version);
 
       gl.bindBuffer(gl.UNIFORM_BUFFER, ubo);
-      if(! existing) {
+      if( this.gpu_versions.get(ubo_plan) === undefined ) {
         test_rookie_mistake ();
         gl.bufferData (gl.UNIFORM_BUFFER, ubo_plan.local_buffer.length * 4, gl.DYNAMIC_DRAW);
       }
       gl.bufferSubData(gl.UNIFORM_BUFFER, 0, ubo_plan.local_buffer);
+
+      this.gpu_versions.set(ubo_plan, ubo_plan.version);
     }
 
     // Run the shaders to draw every triangle now:

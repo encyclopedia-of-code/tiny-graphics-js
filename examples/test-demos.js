@@ -61,9 +61,7 @@ export class Minimal_Shading_Demo extends Renderer {
          ]});
 
     this.passes = [ Object.create( this.state ) ];
-    this.item = new defs.RenderListItem(this.passes[0], this.shape, 0);
-    this.renderList.insert( this.item );
-    this.renderList.traverse( (item) => item.update_per_instance_buffer(), {prune: false} );
+    this.submit( this.shape, matvec().set_identity(), matvec([ 1,1,1 ]) );
   }
   render_frame () {
     if( !this.controls )  {

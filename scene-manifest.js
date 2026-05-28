@@ -4,6 +4,7 @@ const scene_list = [
   {name: "Instanced_Cubes_Demo", path: "./examples/instancing-demo.js"},
   {name: "Inertia_Demo", path: "./examples/collisions-demo.js"},
   {name: "Parametric_Surfaces", path: "./examples/parametric-surfaces.js"},
+  {name: "Ephemeral_Demo", path: "./examples/ephemeral-demos.js"},
 ];
 
 export async function load_scene(name) {

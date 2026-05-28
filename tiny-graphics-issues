@@ -1,0 +1,10 @@
+In some situations, switching between mutliple UBO bufferBase every draw fails to render primitives other than the first per frame.
+  Bug may require differing size / layout between the UBOs.
+
+Firefox bug: Won't run unless Material UBO is removed from shader. Even simplifying the UBO to one vector isn't enough.
+  May disappear after fixing above.
+
+Uniforms of type "array of primitive" are unsupported (offsets not collected for each unique index), even though "array of non-primitive" (nested) items are supported.
+
+UBO Subclasses match up with their shader block via BOTH an exact name match and a binding point match; surely one can be eliminated.
+  The binding point was kept separate as an API for custom binding points differing from block index; but does it work?

@@ -12,7 +12,7 @@ export class Parametric_Surfaces extends Renderer {
 
       this.state.materials = new Materials( materials );
       this.state.samplers.set("texture_array", this.state.materials.texture_array );
-      this.state.shader = new defs.PBR_Shader (LightArray.NUM_LIGHTS, Materials.NUM_MATERIALS, {has_shadows: false, has_textures: true});
+      this.state.shader = new defs.PBR_Shader (1, Materials.NUM_MATERIALS, {has_shadows: false, has_textures: true});
 
       this.state.materials.set("rgb", { fallback_roughness: .2 });
       this.state.materials.set("rgb", { fallback_metallicity: .2 });
@@ -102,7 +102,7 @@ export class Parametric_Surfaces_Section extends Renderer {
       const square = new defs.Grid_Patch( 10, 10, row_operation, column_operation )
 
       const matrix = matvec().set_identity().translate( 0,-10,0 ).rotate( Math.PI/2,  -1,0,0 ).scale( 50,50,1 );
-      this.submit( square, matrix, matvec([ 0,.1,0 ] ), "rgb" );
+      this.ground = this.submit( square, matrix, matvec([ 0,.1,0 ] ), "rgb" );
   }
   render_frame() {
       if( this.parent.controls && !this.controls )  {
@@ -276,7 +276,9 @@ export class Parametric_Surfaces_Section extends Renderer {
     matrix.rotate( this.state.animation_time/3000, 0,1,0 ).multiply(this.r);
     this.bullet.instance_vars[0].model_transform = matrix;
     this.bullet.update_per_instance_buffer();
-    this.renderList.traverse( (item) => this.draw( item ) );
+    this.draw( this.bullet );
+    this.draw( this.ground );
+    // this.renderList.traverse( (item) => this.draw( item ) );
   }
   explain_section_3() {
     this.document_region.innerHTML =
