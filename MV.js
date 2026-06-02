@@ -15,7 +15,8 @@ export class MatVec {
       } else {
         this.loadVector(data);
       }
-    }
+    } else
+      this.set_identity();
     return this;
   }
 
@@ -609,7 +610,7 @@ export function matvec(data) { return new MatVec(data); }
     return arraysAlmostEqual(mat.data, expectedArray);
   }
 
-  let matrix = matvec().set_identity();
+  let matrix = matvec();
 
   // 16. Rotate 90deg around Z axis (right-hand rule)
   matrix.rotate(Math.PI/2, 0,0,1);
@@ -632,7 +633,7 @@ export function matvec(data) { return new MatVec(data); }
   assert(matricesAlmostEqual(matrix, expectedScale, EPS), "17. Scale 2x3x4");
 
   // 18. Translate world by (5,6,7)
-  const translation = matvec().set_identity().translate(5,6,7);
+  const translation = matvec().translate(5,6,7);
   translation.multiply(matrix);
   let expectedTranslate = expectedScale.slice();
   expectedTranslate[3] += 5;
@@ -688,7 +689,7 @@ export function matvec(data) { return new MatVec(data); }
   assert(mv_23_zeroNorm.data[0] === 0 && mv_23_zeroNorm.data[1] === 0 && mv_23_zeroNorm.data[2] === 0, "23. Zero-length vector stays zero");
 
   // 24. Identity matrix multiplication
-  let mv_24_identity = matvec().set_identity();
+  let mv_24_identity = matvec();
   let mv_24_M = matvec([
     [2, 3, 4, 5],
     [1, 0, 3, 2],
@@ -714,7 +715,7 @@ export function matvec(data) { return new MatVec(data); }
   assert(mv_25_threw, "25. Non-invertible matrix throws on invert");
 
   // 26. Rotation by 0 and 2 * PI
-  let mv_26_identity = matvec().set_identity();
+  let mv_26_identity = matvec();
   let mv_26_rot0 = mv_26_identity.clone().rotate(0, 0, 1, 0);
   let mv_26_rot2pi = mv_26_identity.clone().rotate(2 * Math.PI, 0, 1, 0);
   assert(mv_26_rot0.equals(mv_26_identity), "26. Rotate 0 radians unchanged");
@@ -798,7 +799,7 @@ export function matvec(data) { return new MatVec(data); }
   assert(arraysAlmostEqual(mv_32_res.data.slice(0,16), mv_32_expected), "32. pre_multiply matrix correct");
 
   // 33. pre_multiply leaves the input size, A is not mutated, and buffer is correct
-  let mv_33_A = matvec().set_identity();
+  let mv_33_A = matvec();
   let mv_33_B = matvec([[2,0,0,0],[0,3,0,0],[0,0,4,0],[0,0,0,1]]);
   let mv_33_B_clone = mv_33_B.clone();
   let mv_33_pre = mv_33_B.pre_multiply(mv_33_A);
@@ -820,7 +821,7 @@ export function matvec(data) { return new MatVec(data); }
   assert(arraysAlmostEqual(mv_35_result1.data.slice(0,16), mv_35_result2.data.slice(0,16)), "35. pre_multiply matches multiply");
 
  // 36. Transpose of identity matrix is itself
-  let mv_36_identity = matvec().set_identity().transpose();
+  let mv_36_identity = matvec().transpose();
   let mv_36_expected = [
     1,0,0,0,
     0,1,0,0,

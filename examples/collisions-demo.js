@@ -66,7 +66,7 @@ class Physics_Demo extends Renderer {
     }
   render_frame() {
       if( !this.controls )  {
-        const camera = { camera_world: matvec().set_identity().translate(0,0,50),
+        const camera = { camera_world: matvec().translate(0,0,50),
                             projection: matvec().perspective(Math.PI/4, this.width/this.height, 1, 500) };
         this.state.camera = new defs.Camera( camera );
         this.controls = new defs.Movement_Controls( { state: this.state } );
@@ -112,7 +112,7 @@ export class Inertia_Demo extends Physics_Demo {
                       // scene should do to its bodies every frame -- including applying forces.
                       // Generate additional moving bodies if there ever aren't enough:
       while( this.state.bodies.length < this.num_falling_bodies ) {
-        const position = matvec().set_identity().translate( matvec().random(10).add( matvec([ 0,15,0 ]) ) );
+        const position = matvec().translate( matvec().random(10).add( matvec([ 0,15,0 ]) ) );
         const velocity = matvec().random(2).add( matvec([ 0,-1,2 ]) ).normalize().multiply(3);
         const spin_axis = velocity.clone().cross( matvec([ 0,-1,0 ]) ).normalize();
         this.state.bodies.push( this.make_body( position, velocity, spin_axis ) );
@@ -132,7 +132,7 @@ export class Inertia_Demo extends Physics_Demo {
       this.renderList.traverse( (item) => item.clear(), {prune: false} );
 
       // Draw the ground:
-      const ground_matrix = matvec().set_identity().translate( 0,-10,0 )
+      const ground_matrix = matvec().translate( 0,-10,0 )
                                     .rotate( Math.PI/2,  -1,0,0 ).scale( 50,50,1 );
       this.submit( this.shapes.square, ground_matrix, matvec([ .1,.5,.1] ), "grass" );
 

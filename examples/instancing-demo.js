@@ -51,7 +51,7 @@ export class Instanced_Cubes_Demo extends Renderer {
     this.passes.push( Object.create( this.state ) );
 
     Array(this.num_objects).fill(0).forEach( (x,j) => {
-        const matrix = matvec().set_identity().translate( 20*(Math.random()* 2 - 1), 2-4*(j%2), 20*(Math.random()*2 - 1) )
+        const matrix = matvec().translate( 20*(Math.random()* 2 - 1), 2-4*(j%2), 20*(Math.random()*2 - 1) )
                                      .rotate(Math.PI, ...matvec().random().normalize().data )
                                      .scale(.5, .5, .5)
 

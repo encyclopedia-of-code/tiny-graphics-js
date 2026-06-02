@@ -12,7 +12,7 @@ export class Parametric_Surfaces extends Renderer {
 
       this.state.materials = new Materials( materials );
       this.state.samplers.set("texture_array", this.state.materials.texture_array );
-      this.state.shader = new defs.PBR_Shader (1, Materials.NUM_MATERIALS, {has_shadows: false, has_textures: true});
+      this.state.shader = new defs.PBR_Shader (LightArray.NUM_Lights, Materials.NUM_MATERIALS, {has_shadows: false, has_textures: true});
 
       this.state.materials.set("rgb", { fallback_roughness: .2 });
       this.state.materials.set("rgb", { fallback_metallicity: .2 });
@@ -21,10 +21,7 @@ export class Parametric_Surfaces extends Renderer {
       this.state.materials.set("rgb", { textured_albedo_amount: .8 });
       this.state.materials.set("rgb", { textured_normal_amount: .2 });
 
-   //    this.state.shader = new defs.Minimal_Phong_Shader (1, 1);
-   //    this.state.materials = new defs.Simple_Materials( { "solid": undefined } );
-
-    this.state.lightArray = new defs.LightArray({ambient: .01, lights:[
+      this.state.lightArray = new defs.LightArray({ambient: .01, lights:[
            { direction_or_position: matvec([ 0,0,0, 0 ]),
              color: matvec([ 2,2,2 ]), diffuse: 1.0, specular: 1.0, attenuation_factor: 0.0001 },
          ]});
@@ -67,7 +64,7 @@ export class Parametric_Surfaces extends Renderer {
     }
   render_frame() {
       if( !this.controls )  {
-        const camera = { camera_inverse: matvec().set_identity().translate( matvec([ 0,0,-2.5 ]) ) };
+        const camera = { camera_inverse: matvec().translate( matvec([ 0,0,-2.5 ]) ) };
         this.state.camera = new defs.Camera( camera );
         this.controls = new defs.Movement_Controls( { state: this.state } );
         this.animated_children.push( this.controls );
@@ -75,7 +72,7 @@ export class Parametric_Surfaces extends Renderer {
                              // Tick values that update only once per frame (not per section).
       const t = this.t = this.state.animation_time/1000;
       const angle = Math.sin( t );
-      const light_position = matvec().set_identity().rotate( angle,  0,1,0 ).multiply( matvec([ 0,1,1,0] ) );
+      const light_position = matvec().rotate( angle,  0,1,0 ).multiply( matvec([ 0,1,1,0] ) );
 
       this.state.lightArray.fields.lights[0].direction_or_position = light_position;
       this.state.lightArray.dirty = true;
@@ -97,11 +94,11 @@ export class Parametric_Surfaces_Section extends Renderer {
 
       // Draw the ground:
       const initial_corner_point = matvec([ 1,-1,0 ]);
-      const row_operation = (s,p) => p ? matvec().set_identity().translate(  0,.2,0 ).multiply(p) : initial_corner_point;
-      const column_operation = (t,p) =>  matvec().set_identity().translate( -.2,0,0 ).multiply(p);
+      const row_operation = (s,p) => p ? matvec().translate(  0,.2,0 ).multiply(p) : initial_corner_point;
+      const column_operation = (t,p) =>  matvec().translate( -.2,0,0 ).multiply(p);
       const square = new defs.Grid_Patch( 10, 10, row_operation, column_operation )
 
-      const matrix = matvec().set_identity().translate( 0,-10,0 ).rotate( Math.PI/2,  -1,0,0 ).scale( 50,50,1 );
+      const matrix = matvec().translate( 0,-10,0 ).rotate( Math.PI/2,  -1,0,0 ).scale( 50,50,1 );
       this.ground = this.submit( square, matrix, matvec([ 0,.1,0 ] ), "rgb" );
   }
   render_frame() {
@@ -162,9 +159,9 @@ export class Parametric_Surfaces_Section extends Renderer {
   init_section_0() {
     const initial_corner_point = matvec([ 1,-1,0 ]);
                         // These two callbacks will step along s and t of the first sheet:
-    const row_operation = (s,p) => p ? matvec().set_identity().translate( 0,.2,0 ).multiply(p)
+    const row_operation = (s,p) => p ? matvec().translate( 0,.2,0 ).multiply(p)
                                      : initial_corner_point;
-    const column_operation = (t,p) =>  matvec().set_identity().translate( -.2,0,0 ).multiply(p);
+    const column_operation = (t,p) =>  matvec().translate( -.2,0,0 ).multiply(p);
                         // These two callbacks will step along s and t of the second sheet:
     const row_operation_2    = (s,p)   => matvec([     1,2*s-1,Math.random()/4 ]);
     const column_operation_2 = (t,p,s) => matvec([ 1-2*t,2*s-1,Math.random()/4 ]);
@@ -174,14 +171,14 @@ export class Parametric_Surfaces_Section extends Renderer {
 
     this.sheets = [];
     for( let s of [ sheet1, sheet2 ] )
-      this.sheets.push( this.submit( s, matvec().set_identity(), matvec([ 1,1,1 ]), "rgb" ) );
+      this.sheets.push( this.submit( s, matvec(), matvec([ 1,1,1 ]), "rgb" ) );
 
     this.sheets.forEach( s => s.hint = "STREAM_DRAW" );
   }
   display_section_0() {
     const positions = [-1.5, 1.5];
     this.sheets.forEach( (s,i) => {
-      s.group_transform = matvec().set_identity().translate( positions[i],0,0 ).multiply(this.r);
+      s.group_transform = matvec().translate( positions[i],0,0 ).multiply(this.r);
       s.update_per_instance_buffer();
     });
     this.renderList.traverse( (item) => this.draw( item ) );
@@ -197,15 +194,15 @@ export class Parametric_Surfaces_Section extends Renderer {
   }
   init_section_1() {
     this.shapes = { sheet: new Shape() };
-    this.sheet = this.submit( this.shapes.sheet, matvec().set_identity(), matvec([ .5,.5,.5 ]), "rgb" );
+    this.sheet = this.submit( this.shapes.sheet, matvec(), matvec([ .5,.5,.5 ]), "rgb" );
     this.sheet.hint = "STREAM_DRAW";
   }
   display_section_1() {
     const random = ( x ) => Math.sin( 1000*x + this.state.animation_time/1000 );
 
     const initial_corner_point = matvec([ 1,-1,0 ]);
-    const row_operation = (s,p) => p ? matvec().set_identity().translate(  0,.2,.15*random( s ) ).multiply(p) : initial_corner_point;
-    const column_operation = (t,p) =>  matvec().set_identity().translate( -.2,0,.15*random( t ) ).multiply(p);
+    const row_operation = (s,p) => p ? matvec().translate(  0,.2,.15*random( s ) ).multiply(p) : initial_corner_point;
+    const column_operation = (t,p) =>  matvec().translate( -.2,0,.15*random( t ) ).multiply(p);
     const new_sheet = new defs.Grid_Patch( 10, 10, row_operation, column_operation );
 
     const sheet = this.shapes.sheet;
@@ -236,7 +233,7 @@ export class Parametric_Surfaces_Section extends Renderer {
 
     this.showcase = [];
     for( let s of Object.values( this.shapes ) )
-      this.showcase.push( this.submit( s, matvec().set_identity(), matvec([ .5,.5,.5 ]), "rgb" ) );
+      this.showcase.push( this.submit( s, matvec(), matvec([ .5,.5,.5 ]), "rgb" ) );
 
     this.model_transform = matvec();
   }
@@ -247,8 +244,7 @@ export class Parametric_Surfaces_Section extends Renderer {
       item.instance_vars[0].model_transform.loadVector( this.model_transform.quickClone()
                                   .rotate( this.state.animation_time/3000,  1,1,1 ) );
       item.update_per_instance_buffer();
-      this.model_transform.multiply( this.model_transform.quickClone().set_identity()
-                                     .translate( 2.5,0,0 ) );
+      this.model_transform.multiply( MatVec.quick.set_identity().translate( 2.5,0,0 ) );
     } );
     this.renderList.traverse( (item) => this.draw( item ) );
   }
@@ -269,16 +265,14 @@ export class Parametric_Surfaces_Section extends Renderer {
     this.passes[1].materials.set("solid", { diffusivity: .2 });
     this.passes[1].materials.set("solid", { smoothness: 500 });
 
-    this.bullet = this.submit( this.shapes.bullet, matvec().set_identity(), matvec([ .7,.8,.6 ]), "solid", 0, this.passes[1]);
+    this.bullet = this.submit( this.shapes.bullet, matvec(), matvec([ .7,.8,.6 ]), "solid", 0, this.passes[1]);
   }
   display_section_3( caller ) {
-    const matrix = matvec().set_identity().translate( 0,0,-1 );
+    const matrix = matvec().translate( 0,0,-1 );
     matrix.rotate( this.state.animation_time/3000, 0,1,0 ).multiply(this.r);
     this.bullet.instance_vars[0].model_transform = matrix;
     this.bullet.update_per_instance_buffer();
-    this.draw( this.bullet );
-    this.draw( this.ground );
-    // this.renderList.traverse( (item) => this.draw( item ) );
+    this.renderList.traverse( (item) => this.draw( item ) );
   }
   explain_section_3() {
     this.document_region.innerHTML =
@@ -299,15 +293,15 @@ export class Parametric_Surfaces_Section extends Renderer {
     };
 
     // Draw an axis from the compound shape definition Axis_Arrows.
-    this.submit( this.shapes.axis, matvec().set_identity().translate( 2,-1,-2), matvec([ .5,.5,.5 ]), "rgb" );
+    this.submit( this.shapes.axis, matvec().translate( 2,-1,-2), matvec([ .5,.5,.5 ]), "rgb" );
 
     // Manually draw an Axis_Arrows without using a compound shape, costing more GPU draw calls.
-    const base = matvec().set_identity().translate(-1,-1,-2);
+    const base = matvec().translate(-1,-1,-2);
     const ball = base.clone().rotate( Math.PI/2,  0,1,0 )
                              .scale( .25,.25,.25 );
-    const angles = [ matvec().set_identity(),
-                     matvec().set_identity().rotate( -Math.PI/2,  1,0,0 ).scale(1,-1,1),
-                     matvec().set_identity().rotate( Math.PI/2,  0,1,0 ).scale(-1,1,1)
+    const angles = [ matvec(),
+                     matvec().rotate( -Math.PI/2,  1,0,0 ).scale(1,-1,1),
+                     matvec().rotate( Math.PI/2,  0,1,0 ).scale(-1,1,1)
                    ];
     this.submit( this.shapes.ball, ball, matvec([ .5,.5,.5 ]), "rgb" );
     for( let i = 0; i < 3; i++ ) {
@@ -342,7 +336,7 @@ export class Parametric_Surfaces_Section extends Renderer {
 
     this.showcase = [];
     for( let s of Object.values( this.shapes ) )
-      this.showcase.push( this.submit( s, matvec().set_identity(), matvec([ .5,.5,.5 ]), "rgb" ) );
+      this.showcase.push( this.submit( s, matvec(), matvec([ .5,.5,.5 ]), "rgb" ) );
   }
   display_section_5( caller ) {
     this.model_transform.set_identity().translate( -5,0,-2 );
@@ -351,8 +345,7 @@ export class Parametric_Surfaces_Section extends Renderer {
       item.instance_vars[0].model_transform.loadVector( this.model_transform.quickClone()
                                   .rotate( this.state.animation_time/3000,  1,1,1 ) );
       item.update_per_instance_buffer();
-      this.model_transform.multiply( this.model_transform.quickClone().set_identity()
-                                     .translate( 3,0,0 ) );
+      this.model_transform.multiply( MatVec.quick.set_identity().translate( 3,0,0 ) );
     } );
     this.renderList.traverse( (item) => this.draw( item ) );
   }
@@ -363,12 +356,12 @@ export class Parametric_Surfaces_Section extends Renderer {
   init_section_6() {
     // Some helper arrays of points located along curves.  We'll extrude these into surfaces:
     const square_array = [ [ 1,0,-1 ], [ 0,1,-1 ], [ -1,0,-1 ], [ 0,-1,-1 ], [ 1,0,-1 ] ].map( (x,i,a) =>
-                          matvec().set_identity().rotate( .5*Math.PI,   1,1,1 )
+                          matvec().rotate( .5*Math.PI,   1,1,1 )
                               .translate( 0,0,2 )
                               .multiply( matvec(x) ) );
 
     const star_array = Array(19).fill( [ 1,0,-1 ] ).map( (x,i,a) =>
-                          matvec().set_identity().rotate( i/(a.length-1) * 2*Math.PI,   0,0,1 )
+                          matvec().rotate( i/(a.length-1) * 2*Math.PI,   0,0,1 )
                               .translate( (i%2)/2,0,0 )
                               .multiply( matvec(x) ) );
 
@@ -378,7 +371,7 @@ export class Parametric_Surfaces_Section extends Renderer {
     const sample_two_arrays = (j,p,i) => sampler2(i).mix( sampler1(i), j );
 
     const shell = new defs.Grid_Patch( 30, 30, sampler2, sample_two_arrays, [[0,1],[0,1]] );
-    this.submit( shell, matvec().set_identity(), matvec([ .5,.5,.5 ]), "rgb");
+    this.submit( shell, matvec(), matvec([ .5,.5,.5 ]), "rgb");
   }
   display_section_6() {
     this.renderList.traverse( (item) => this.draw( item ) );

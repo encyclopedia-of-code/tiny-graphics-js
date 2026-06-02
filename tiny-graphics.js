@@ -521,7 +521,7 @@ export class RenderListItem {
     this.shape = shape;
     this.render_state = state;
     this.group_ID = group_ID;
-    this.group_transform = matvec().set_identity();
+    this.group_transform = matvec();
     this.hint = "STATIC_DRAW";
     this.type = "TRIANGLES";
     this.instance_vars = [];
@@ -531,7 +531,7 @@ export class RenderListItem {
     if( !this.instance_VBO_plan ) {
       if (!this.instance_vars.length) {     // The user may specify no matrices for the single instance case.
                                             // TODO:  Does that still hold true?  They need to be able to set material/color.
-        this.instance_vars.push( { model_transform: matvec().set_identity(), color: matvec([1,1,1]),  material_index: 0 } );
+        this.instance_vars.push( { model_transform: matvec(), color: matvec([1,1,1]),  material_index: 0 } );
       }
       this.instance_VBO_plan = { attributes: [...Object.keys(this.instance_vars[0])] };
     }

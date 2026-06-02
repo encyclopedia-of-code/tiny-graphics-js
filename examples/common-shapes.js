@@ -112,7 +112,7 @@ export class Windmill extends Shape {
           // A for loop to automatically generate the triangles:
           for (let i = 0; i < num_blades; i++) {
               // Rotate around a few degrees in the XZ plane to place each new point:
-              const spin     = matvec().set_identity().rotate(i * 2*Math.PI / num_blades, 0,1,0);
+              const spin     = matvec().rotate(i * 2*Math.PI / num_blades, 0,1,0);
               // Apply that XZ rotation matrix to point (1,0,0) of the base triangle.
               const newPoint = spin.clone().multiply( matvec([1, 0, 0]) );
               const triangle = [newPoint,                      // Store that XZ position as point 1.
@@ -144,7 +144,7 @@ export class Cube extends Shape {
             // Loop 3 times (for each axis), and inside loop twice (for opposing cube sides):
             for (var i = 0; i < 3; i++)
                 for (var j = 0; j < 2; j++) {
-                    const square_transform = matvec().set_identity()
+                    const square_transform = matvec()
                                             .rotate(i == 0 ? Math.PI / 2 : 0, 1,0,0)
                                             .rotate (Math.PI * j - (i == 1 ? Math.PI / 2 : 0), 0,1,0)
                                             .translate(0, 0, 1);
@@ -283,7 +283,7 @@ export class Grid_Patch extends Shape {
 export class Surface_Of_Revolution extends Grid_Patch {
       init (rows, columns, points, texture_coord_range, total_curvature_angle = 2 * Math.PI) {
           const row_operation    = i => Grid_Patch.sample_array (points, i),
-                column_operation = (j, p) => matvec().set_identity()
+                column_operation = (j, p) => matvec()
                                                      .rotate(total_curvature_angle / columns, 0,0,1)
                                                      .multiply(p);
           super.init (rows, columns, row_operation, column_operation, texture_coord_range);
@@ -323,10 +323,10 @@ export class Cone_Tip extends Surface_Of_Revolution { // Note:  Touches the Z ax
 export class Torus extends Surface_Of_Revolution {
       init (rows, columns, texture_range) {
           const circle_points = Array (rows).fill( matvec([1/3, 0, 0]) )
-                                            .map ((p, i, a) => matvec().set_identity()
-                                                                       .translate( -2/3, 0, 0)
-                                                                       .rotate( i/(a.length - 1) * 2*Math.PI, 0,-1,0)
-                                                                       .scale(1, 1, 3).multiply(p)
+                                            .map ((p, i, a) => matvec()
+                                                               .translate( -2/3, 0, 0)
+                                                               .rotate( i/(a.length - 1) * 2*Math.PI, 0,-1,0)
+                                                               .scale(1, 1, 3).multiply(p)
                                                  );
           super.init(rows, columns, circle_points, texture_range);
       }
@@ -335,7 +335,7 @@ export class Torus extends Surface_Of_Revolution {
 export class Grid_Sphere extends Surface_Of_Revolution {
       init (rows, columns, texture_range) {
           const semi_circle_points = Array (rows).fill( matvec([0, 0, 1]) )
-                                                 .map ((p, i, a) => { return matvec().set_identity()
+                                                 .map ((p, i, a) => { return matvec()
                                                                             .rotate( i/(a.length - 1) * Math.PI, 0,1,0)
                                                                             .multiply(p);
                                                       });
@@ -346,7 +346,7 @@ export class Grid_Sphere extends Surface_Of_Revolution {
 export class Closed_Cone extends Shape {
       init (rows, columns, texture_range) {
           Geometry.insert_transformed_copy_into (Cone_Tip, this, [rows, columns, texture_range]);
-          const m = matvec().set_identity().rotate(Math.PI, 0,1,0).translate(0, 0, 1);
+          const m = matvec().rotate(Math.PI, 0,1,0).translate(0, 0, 1);
           Geometry.insert_transformed_copy_into (Regular_2D_Polygon, this, [1, columns], m);
       }
   };
@@ -359,8 +359,8 @@ export class Rounded_Closed_Cone extends Surface_Of_Revolution {
 
 export class Capped_Cylinder extends Shape {
       init (rows, columns, texture_range) {
-          const m1 = matvec().set_identity().translate(0, 0, .5);
-          const m2 = matvec().set_identity().rotate(Math.PI, 0,1,0).translate(0, 0, .5);
+          const m1 = matvec().translate(0, 0, .5);
+          const m2 = matvec().rotate(Math.PI, 0,1,0).translate(0, 0, .5);
 
           Geometry.insert_transformed_copy_into (Cylindrical_Tube, this, [rows, columns, texture_range]);
           Geometry.insert_transformed_copy_into (Regular_2D_Polygon, this, [1, columns], m1);
@@ -377,9 +377,9 @@ export class Rounded_Capped_Cylinder extends Surface_Of_Revolution {
 export class Axis_Arrows extends Shape {
       init () {
           var stack = [];
-          const m = matvec().set_identity().rotate(Math.PI/2, 0,1,0).scale(.25, .25, .25);
+          const m = matvec().rotate(Math.PI/2, 0,1,0).scale(.25, .25, .25);
           Geometry.insert_transformed_copy_into (Subdivision_Sphere, this, [3], m.clone());
-          this.drawOneAxis (matvec().set_identity(), [[.67, 1], [0, 1]]);
+          this.drawOneAxis (matvec(), [[.67, 1], [0, 1]]);
 
           m.set_identity().rotate(-Math.PI/2, 1,0,0).scale(1, -1, 1);
           this.drawOneAxis ( m.clone(), [[.34, .66], [0, 1]]);

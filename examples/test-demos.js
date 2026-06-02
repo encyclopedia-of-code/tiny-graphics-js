@@ -61,7 +61,7 @@ export class Minimal_Shading_Demo extends Renderer {
          ]});
 
     this.passes = [ Object.create( this.state ) ];
-    this.submit( this.shape, matvec().set_identity(), matvec([ 1,1,1 ]) );
+    this.submit( this.shape, matvec(), matvec([ 1,1,1 ]) );
   }
   render_frame () {
     if( !this.controls )  {

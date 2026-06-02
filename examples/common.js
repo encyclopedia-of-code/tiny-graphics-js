@@ -8,9 +8,9 @@ export * from './common-components.js';
 
 export class Camera extends UBO_Plan {
     init(fields) {
-      this.fields = { projection: matvec().set_identity(),
-                    camera_world: matvec().set_identity(),
-                  camera_inverse: matvec().set_identity() };
+      this.fields = { projection: matvec(),
+                    camera_world: matvec(),
+                  camera_inverse: matvec() };
      this.assign(fields);
     }
     assign(fields) {
