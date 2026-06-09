@@ -1,0 +1,42 @@
+cd assets
+
+dry run example:
+find . -type f -name "*-albedo.png" -exec bash -c 'for f; do echo mv "$f" "${f%-albedo.png}_albedo.png"; done' _ {} +
+
+real:
+find . -type f -name "*-albedo.png" -exec bash -c 'for f; do mv "$f" "${f%-albedo.png}_albedo.png"; done' _ {} +
+find . -type f -name "*-ao.png" -exec bash -c 'for f; do mv "$f" "${f%-ao.png}_ao.png"; done' _ {} +
+find . -type f -name "*-normal4-ogl.png" -exec bash -c 'for f; do mv "$f" "${f%-normal4-ogl.png}_normal-ogl.png"; done' _ {} +
+find . -type f -name "*-roughness.png" -exec bash -c 'for f; do mv "$f" "${f%-roughness.png}_roughness.png"; done' _ {} +
+find . -type f -name "*preview.jpg" -delete
+find . -type f -name "*_Height.png" -exec bash -c 'for f; do mv "$f" "${f%_Height.png}_height.png"; done' _ {} +
+find . -type f -name "*_Metallic.png" -exec bash -c 'for f; do mv "$f" "${f%_Metallic.png}_metallic.png"; done' _ {} +
+find . -type f -name "*_Normal-ogl.png" -exec bash -c 'for f; do mv "$f" "${f%_Normal-ogl.png}_normal-ogl.png"; done' _ {} +
+find . -type f -name "*_Roughness.png" -exec bash -c 'for f; do mv "$f" "${f%_Roughness.png}_roughness.png"; done' _ {} +
+find . -type f -name "*_normal.png" -exec bash -c 'for f; do mv "$f" "${f%_normal.png}_normal-ogl.png"; done' _ {} +
+find . -type f -name "*_basecolor.png" -exec bash -c 'for f; do mv "$f" "${f%_basecolor.png}_albedo.png"; done' _ {} +
+find . -type f -name "*_Normal.png" -exec bash -c 'for f; do mv "$f" "${f%_Normal.png}_normal-ogl.png"; done' _ {} +
+find . -type f -name "*_Base_Color.png" -exec bash -c 'for f; do mv "$f" "${f%_Base_Color.png}_albedo.png"; done' _ {} +
+find . -type f -name "*_Ambient_Occlusion.png" -exec bash -c 'for f; do mv "$f" "${f%_Ambient_Occlusion.png}_ao.png"; done' _ {} +
+find . -type f -name "*-albedo3.png" -exec bash -c 'for f; do mv "$f" "${f%-albedo3.png}_albedo.png"; done' _ {} +
+find . -type f -name "*-height.png" -exec bash -c 'for f; do mv "$f" "${f%-height.png}_height.png"; done' _ {} +
+find . -type f -name "*-normal1-ogl.png" -exec bash -c 'for f; do mv "$f" "${f%-normal1-ogl.png}_normal-ogl.png"; done' _ {} +
+find . -type f -name "*-rough.png" -exec bash -c 'for f; do mv "$f" "${f%-rough.png}_roughness.png"; done' _ {} +
+find . -type f -name "desktop.ini" -delete
+find . -type f -name "About these *" -delete
+find . -type f -name "*-Metalness.png" -exec bash -c 'for f; do mv "$f" "${f%-Metalness.png}_metallic.png"; done' _ {} +
+find . -type f -name "*-normal-ogl.png" -exec bash -c 'for f; do mv "$f" "${f%-normal-ogl.png}_normal-ogl.png"; done' _ {} +
+find . -type f -name "*_AO.png" -exec bash -c 'for f; do mv "$f" "${f%_AO.png}_ao.png"; done' _ {} +
+find . -type f -name "*-metalness.png" -exec bash -c 'for f; do mv "$f" "${f%-metalness.png}_metallic.png"; done' _ {} +
+find . -type f -name "*-normal2-ogl.png" -exec bash -c 'for f; do mv "$f" "${f%-normal2-ogl.png}_normal-ogl.png"; done' _ {} +
+find . -type f -name "*-roughness2.png" -exec bash -c 'for f; do mv "$f" "${f%-roughness2.png}_roughness.png"; done' _ {} +
+find . -type f -name "*-Height.png" -exec bash -c 'for f; do mv "$f" "${f%-Height.png}_height.png"; done' _ {} +
+find . -type f -name "*-Metallic.png" -exec bash -c 'for f; do mv "$f" "${f%-Metallic.png}_metallic.png"; done' _ {} +
+find . -type f -name "*-Roughness.png" -exec bash -c 'for f; do mv "$f" "${f%-Roughness.png}_roughness.png"; done' _ {} +
+find . -type f -name "*-Normal-ogl.png" -exec bash -c 'for f; do mv "$f" "${f%-Normal-ogl.png}_normal-ogl.png"; done' _ {} +
+
+
+find . -mindepth 2 -type f -name "*.png" -exec mogrify -resize 512x512 {} +
+Then on separate copies of assets:
+find . -mindepth 2 -type f -name "*.png" -exec mogrify -resize 256x256 {} +
+find . -mindepth 2 -type f -name "*.png" -exec mogrify -resize 128x128 {} +
