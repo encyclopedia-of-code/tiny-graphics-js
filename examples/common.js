@@ -22,7 +22,6 @@ export class Camera extends UBO_Plan {
       this.fields.camera_position = matvec([this.fields.camera_world.data[3], this.fields.camera_world.data[7],
                                          this.fields.camera_world.data[11]]);
     }
-    get_binding_point () { return 0; }
     post_multiply (matrix) {
         this.assign( { camera_world: this.fields.camera_world.multiply(matrix) } );
     }
@@ -61,7 +60,6 @@ export class LightArray extends UBO_Plan {
                         ]
               };
     }
-    get_binding_point () { return 1; }
     activate (gl, gpu_addresses, is_shadow_pass, shadow_map_index = 0)     // TODO: Unused/Unimplemented anywhere?
     { }
     deactivate (caller, shadow_map_index = 0)
@@ -257,7 +255,6 @@ export class Materials extends UBO_Plan {
                 collapse_textures: 0,
             };
     }
-    get_binding_point () { return 2; }
 };
 
 export class Simple_Materials extends UBO_Plan {
@@ -276,7 +273,6 @@ export class Simple_Materials extends UBO_Plan {
                smoothness:  1.0
             };
     }
-    get_binding_point () { return 2; }
 };
 
 export class Rigid_Body {           // **Rigid_Body** can store and update the properties of a 3D body that incrementally

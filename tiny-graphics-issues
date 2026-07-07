@@ -1,17 +1,5 @@
-Get rid of rookie_mistake
 
-Consider a better shader error reporter, throwing like this way:
-    if (!gl.getShaderParameter(vertex_shader, gl.COMPILE_STATUS)) {
-      const log = gl.getShaderInfoLog(vertex_shader);
-      // Add line numbers to error output
-      const lines = vertex_src.split('\n');
-      const errorLine = log.match(/ERROR: \d+:(\d+):/);
-      if (errorLine) {
-        const lineNum = parseInt(errorLine[1]) - 1;
-        console.error(`Error at line ${lineNum}: ${lines[lineNum]}`);
-      }
-      throw `Vertex shader compile error: ${log}\n${vertex_src}`;
-    }
+Does the server.py serve missing .js files (ie. invalid scene imports) as .png instead?
 
 Performance issue with widgets; overhaul them.
 
@@ -20,9 +8,11 @@ Firefox:
   Corrupt image warning on 5 of my random PBR files.
   Firefox buttons render with different shadows and a pixel more of padding, throwing off alignment in panels.
 
-Uniforms of type "array of primitive" are unsupported (offsets not collected for each unique index), even though "array of non-primitive" (nested) items are supported.
+UBOs cannot handle type "array of primitive".  
+  This happens because offsets are not collected for each unique index, even though "array of non-primitive" (nested) items are supported.
 
-Unsupported:  Shaders being re-loaded from their respective file (hot loaded), compiled, and replacing the program / references / metadata in their original Shader object.  All without the user having to stop/re-run their animation/game.
+Feature needed or not:  Shaders being hot re-loaded from their respective file, compiled, and replacing the program / references / metadata in their original Shader object.  
+    This would be for users not wanting to stop/re-run their whole scene to see the change.
 
 
 
@@ -47,4 +37,20 @@ Firefox bug: Won't run unless Material UBO is removed from shader. Even simplify
 UBO Subclasses match up with their shader block via BOTH an exact name match and a binding point match; surely one can be eliminated.
   The binding point was kept separate as an API for custom binding points differing from block index; but does that work?
     Removed; no one will need WebGL's binding channel system.  See LLM.
+
+Get rid of rookie_mistake
+  Nope, it's necessary; just need to watch out for it getting triggered in valid use cases, and workarounds.
+
+Consider a better shader error reporter, throwing like this way:
+    if (!gl.getShaderParameter(vertex_shader, gl.COMPILE_STATUS)) {
+      const log = gl.getShaderInfoLog(vertex_shader);
+      // Add line numbers to error output
+      const lines = vertex_src.split('\n');
+      const errorLine = log.match(/ERROR: \d+:(\d+):/);
+      if (errorLine) {
+        const lineNum = parseInt(errorLine[1]) - 1;
+        console.error(`Error at line ${lineNum}: ${lines[lineNum]}`);
+      }
+      throw `Vertex shader compile error: ${log}\n${vertex_src}`;
+    }
 

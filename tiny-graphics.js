@@ -94,8 +94,8 @@ const test_rookie_mistake = function () {
         Shape, Shader, UBO, or Texture with "new" anywhere that's called repeatedly (such as inside render_frame()).
         You don't want simple definitions to be re-created and re-transmitted every frame.  Your scene's constructor is
         a better option; it's only called once.  Call "new" there instead, then keep the result as a class member.  If
-        you somehow have a deformable shape that must really be updated every frame, then refer to the documentation of
-        copy_onto_graphics_card() -- you need a special call to it rather than calling new.`;
+        you somehow have a deformable shape that must really be updated every frame, then you need a special call to
+        update it rather than calling new.`;
 };
 
 
@@ -120,7 +120,6 @@ export class Shader {
         gl.deleteShader (existing.vertex_shader);
         gl.deleteShader (existing.fragment_shader);
       }
-      const {program, vertex_shader, fragment_shader} = instance;
 
       class Attribute_Addresses {
         // Attributes_Addresses: Helper inner class. Retrieve the GPU addresses of each attribute.
@@ -202,21 +201,30 @@ export class Shader {
           }
       }
 
-      const vertex_src   = this.vertex_glsl_code();
-      const fragment_src = this.fragment_glsl_code();
+      function compile_shader( program, shader, source, type ) {
+        gl.shaderSource (shader, source);
+        gl.compileShader (shader);
 
-      gl.shaderSource (vertex_shader, vertex_src);
-      gl.compileShader (vertex_shader);
-      if ( !gl.getShaderParameter (vertex_shader, gl.COMPILE_STATUS))
-          throw "Vertex shader compile error: " + gl.getShaderInfoLog (vertex_shader) + vertex_src;
+        if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+          const log = gl.getShaderInfoLog(shader);
 
-      gl.shaderSource (fragment_shader, fragment_src);
-      gl.compileShader (fragment_shader);
-      if ( !gl.getShaderParameter (fragment_shader, gl.COMPILE_STATUS))
-          throw "Fragment shader compile error: " + gl.getShaderInfoLog (fragment_shader) + fragment_src;
+          const lines = source.split('\n');
+          const errorLine = log.match(/ERROR: \d+:(\d+):/);
+          if (errorLine) {
+            const lineNum = parseInt(errorLine[1]) - 1;
+            console.error(`${type} shader error at line ${lineNum}: ${lines[lineNum]}`);
+            console.error(log);
+          }
+          throw "";
+        }
+        gl.attachShader (program, shader);
+      }
 
-      gl.attachShader (program, vertex_shader);
-      gl.attachShader (program, fragment_shader);
+      const{ program, vertex_shader, fragment_shader } = instance;
+
+      compile_shader( program, vertex_shader, this.vertex_glsl_code(), "Vertex" )
+      compile_shader( program, fragment_shader, this.fragment_glsl_code(), "Fragment" )
+
       gl.linkProgram (program);
       if ( !gl.getProgramParameter (program, gl.LINK_STATUS))
           throw "Shader linker error: " + gl.getProgramInfoLog (program);
@@ -230,7 +238,7 @@ export class Shader {
         // Convert to 8-digit hex
         return (hash >>> 0).toString(16).padStart(8, '0');
       }
-      const shader_hash = fnv1aHash(vertex_src + '|' + fragment_src);
+      const shader_hash = fnv1aHash(this.vertex_glsl_code() + '|' + this.fragment_glsl_code() );
       let cached_info = {};
       try {
         cached_info.ubo_offsets  = JSON.parse( localStorage.getItem( `ubo_offsets:${shader_hash}`) );
@@ -668,7 +676,7 @@ export class Renderer extends Component {
     const existing_VAO = this.VAOs.get (renderListItem);
     const VAO  = existing_VAO ?? gl.createVertexArray();
     this.VAOs.set (renderListItem, VAO);
-  //  if (!existing_VAO) test_rookie_mistake();   // FINISH
+    if (!existing_VAO) test_rookie_mistake();
 
     const previous_VAO = this.gpu_versions.get("VAO");
     this.gpu_versions.set("VAO", VAO);
@@ -710,7 +718,7 @@ export class Renderer extends Component {
     for( let VBO_plan of [ ...renderListItem.shape.VBO_plans, renderListItem.instance_VBO_plan ] ) {
 
       if( VBO_plan.version < 0 )
-        throw "This VBO is blank somehow; build_VBO_plans() was never called for it.";
+        throw "This VBO is blank somehow; build_VBO_plan() was never called for it.";
 
       if( existing_VAO && this.gpu_versions.get(VBO_plan) >= VBO_plan.version  )
         continue;
@@ -834,8 +842,6 @@ export class UBO_Plan {
     this.init(...args);
   }
   init (fields) { }     // Abstract -- user overrides this
-  get_binding_point () {
-    throw `Abstract function.  Each subclass of UBO_Plan must specify its own binding point for its corresponding GLSL program uniform block.`; }
   traverse_fields() {
     const out = {};
     const stack = [{ value: this.fields, path: [] }];
