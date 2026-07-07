@@ -1,15 +1,28 @@
+Get rid of rookie_mistake
+
+Consider a better shader error reporter, throwing like this way:
+    if (!gl.getShaderParameter(vertex_shader, gl.COMPILE_STATUS)) {
+      const log = gl.getShaderInfoLog(vertex_shader);
+      // Add line numbers to error output
+      const lines = vertex_src.split('\n');
+      const errorLine = log.match(/ERROR: \d+:(\d+):/);
+      if (errorLine) {
+        const lineNum = parseInt(errorLine[1]) - 1;
+        console.error(`Error at line ${lineNum}: ${lines[lineNum]}`);
+      }
+      throw `Vertex shader compile error: ${log}\n${vertex_src}`;
+    }
+
+Performance issue with widgets; overhaul them.
+
+
 Firefox:
-  Phong shader fails to draw bullet, and warns:
-    drawElementsInstanced: Buffer for uniform block is smaller than UNIFORM_BLOCK_DATA_SIZE.
   Corrupt image warning on 5 of my random PBR files.
+  Firefox buttons render with different shadows and a pixel more of padding, throwing off alignment in panels.
 
 Uniforms of type "array of primitive" are unsupported (offsets not collected for each unique index), even though "array of non-primitive" (nested) items are supported.
 
-UBO Subclasses match up with their shader block via BOTH an exact name match and a binding point match; surely one can be eliminated.
-  The binding point was kept separate as an API for custom binding points differing from block index; but does that work?
-
-
-
+Unsupported:  Shaders being re-loaded from their respective file (hot loaded), compiled, and replacing the program / references / metadata in their original Shader object.  All without the user having to stop/re-run their animation/game.
 
 
 
@@ -17,7 +30,21 @@ done:
 
 In some situations, switching between mutliple UBO bufferBase every draw fails to render primitives other than the first per frame.
   Bug may require differing size / layout between the UBOs.
+        Turned out the UBO warning I was getting was unrelated to the main draw issue.
+          UBO warning:  2 lights sent by CPU, but GPU expected 1.  Should have passed 1 to LightArray.
+          Draw issue:  group_transform was only being sent to the first context to draw; second got a garbage matrix.
+             Fixed.
 
 Firefox bug: Won't run unless Material UBO is removed from shader. Even simplifying the UBO to one vector isn't enough.
   May disappear after fixing above.
+
+  Phong shader fails to draw bullet, and warns:
+    drawElementsInstanced: Buffer for uniform block is smaller than UNIFORM_BLOCK_DATA_SIZE.
+    Verdict:  Turns out that Firefox does not index UBOs in order of their declarations.
+      Chromium:  Camera: 0, Light: 1, Materials: 2
+      Firefox:   Light: 0, Materials: 1, Camera: 2
+
+UBO Subclasses match up with their shader block via BOTH an exact name match and a binding point match; surely one can be eliminated.
+  The binding point was kept separate as an API for custom binding points differing from block index; but does that work?
+    Removed; no one will need WebGL's binding channel system.  See LLM.
 

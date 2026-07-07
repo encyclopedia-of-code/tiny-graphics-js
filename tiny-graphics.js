@@ -117,6 +117,8 @@ export class Shader {
       else {
         gl.detachShader (existing.program, existing.vertex_shader);
         gl.detachShader (existing.program, existing.fragment_shader);
+        gl.deleteShader (existing.vertex_shader);
+        gl.deleteShader (existing.fragment_shader);
       }
       const {program, vertex_shader, fragment_shader} = instance;
 
@@ -145,16 +147,19 @@ export class Shader {
       class Uniform_Addresses {
         // Uniform_Addresses: Helper inner class. Retrieve the GPU addresses of each uniform variable in
         // the shader based on their names.  Store these pointers for later.
-          constructor (program, gl, given_info) {
+          constructor (program, gl, cached_info) {
               this.uniform_block_info = {};  // block_name -> { buffer_size, element_offsets, next_offsets }
               const num_blocks = gl.getProgramParameter(program, gl.ACTIVE_UNIFORM_BLOCKS);
-              this.index_to_uniform_info = given_info.uniform_info || {};
+              this.index_to_uniform_info = cached_info.uniform_info || {};
+              this.ubo_binding_points = {};
+
               for (let UBO_index  = 0; UBO_index < num_blocks; UBO_index++ ) {
                   const UBO_name = gl.getActiveUniformBlockName(program, UBO_index);
                   const UBO_size = gl.getActiveUniformBlockParameter(program, UBO_index, gl.UNIFORM_BLOCK_DATA_SIZE);
+                  this.ubo_binding_points[UBO_name] = UBO_index;
                   gl.uniformBlockBinding(program, UBO_index, UBO_index);
 
-                  if( !given_info?.ubo_offsets?.[UBO_name] ) {
+                  if( !cached_info?.ubo_offsets?.[UBO_name] ) {
                     this.uniform_block_info[UBO_name] =
                           { buffer_size: UBO_size, element_offsets: {}, next_offsets: {} };
 
@@ -181,7 +186,7 @@ export class Shader {
               }
 
               for (const [block_name, info] of Object.entries(this.uniform_block_info)) {
-                  if( given_info?.ubo_offsets && given_info.ubo_offsets[block_name] )
+                  if( cached_info?.ubo_offsets && cached_info.ubo_offsets[block_name] )
                     continue;
                   // Find all fields for this block:
                   const fields = [...Object.values(this.index_to_uniform_info)].filter(u => u.block === block_name);
@@ -193,7 +198,7 @@ export class Shader {
                       info.next_offsets[fields[j].offset] = j+1 < fields.length ? fields[j+1].offset : info.buffer_size;
                   }
               }
-              Object.assign( this.uniform_block_info, given_info.ubo_offsets);
+              Object.assign( this.uniform_block_info, cached_info.ubo_offsets);
           }
       }
 
@@ -775,18 +780,24 @@ export class Renderer extends Component {
       const ubo_plan = renderListItem.render_state[key];
       if( !(ubo_plan instanceof UBO_Plan) )
         continue;
+
+      const UBO_info = this.uniform_addresses.get(shader);
+      const binding_point = UBO_info.ubo_binding_points[ ubo_plan.constructor.name ];
+      if( binding_point === undefined )
+        continue;
+
       const existing = this.UBOs.get(ubo_plan);
       const ubo = existing ?? gl.createBuffer();
       this.UBOs.set(ubo_plan, ubo);
 
-      const ID = "Bound_UBO_" + ubo_plan.get_binding_point();
+      const ID = "Bound_UBO_" + binding_point;
       const previous_bound_ubo = this.gpu_versions.get(ID);
       this.gpu_versions.set(ID, ubo);
       if(previous_bound_ubo != ubo )
-        gl.bindBufferBase (gl.UNIFORM_BUFFER, ubo_plan.get_binding_point(), ubo);
+        gl.bindBufferBase (gl.UNIFORM_BUFFER, binding_point, ubo);
 
       if( ubo_plan.dirty ) {
-        ubo_plan.fill_buffer(this.uniform_addresses.get(shader).uniform_block_info[ ubo_plan.constructor.name ]);
+        ubo_plan.fill_buffer( UBO_info.uniform_block_info[ ubo_plan.constructor.name ] );
         if( ubo_plan.local_buffer )
           ubo_plan.dirty = false;
       }

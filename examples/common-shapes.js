@@ -58,9 +58,8 @@ export class Tetrahedron extends Shape {
       // corners with each other. Unless we store duplicate points at each corner
       // (storing the same position at each, but different normal vectors), the lighting
       // will look "off". To get crisp seams at the edges we need the repeats.
+      static a = 1 / Math.sqrt(3);
       init(using_flat_shading) {
-          var a = 1 / Math.sqrt(3);
-
           if (!using_flat_shading) {
               // Method 1: A tetrahedron with shared vertices. Compact, performs better,
               // but can't produce flat shading or discontinuous seams in textures.
@@ -125,6 +124,7 @@ export class Windmill extends Shape {
               // matrices you have to apply the transposed inverse of that matrix instead.  But right now we've
               // got a pure rotation matrix, where the inverse and transpose operations cancel out, so it's ok.
               var newNormal = spin.clone().multiply ( matvec([0, 0, 1, 0]) );
+              //var newNormal = spin.clone().invert().transpose().multiply ( matvec([0, 0, 1, 0]) );
               // Propagate the same normal to all three vertices:
               for( let i=0; i<3; i++ )
                 this.vertices.push( { position: triangle[i], normal: newNormal, texture_coord: tex_coords[i] } );
