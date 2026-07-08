@@ -19,18 +19,28 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
     def send_head(self):
         path = self.translate_path(self.path)
         if not os.path.exists(path):
-            # Serve minimal PNG for missing files
-            self.send_response(200)
-            self.send_header("Content-type", "image/png")
-            self.send_header("Content-Length", str(len(MINIMAL_PNG)))
-            self.end_headers()
-            return None  # Indicates we handle sending the body ourselves
+            accept = self.headers.get('Accept', '')
+            self.is_image_request = 'image/' in accept and not 'text/html' in accept
+            
+            if self.is_image_request:
+                self.send_response(200)
+                self.send_header("Content-type", "image/png")
+                self.send_header("Content-Length", str(len(MINIMAL_PNG)))
+                self.end_headers()
+                return None
+            else:
+                self.send_response(404)
+                self.send_header("Content-type", "text/plain")
+                self.end_headers()
+                self.wfile.write(b"404 Not Found")
+                return None
         return super().send_head()
 
     def do_GET(self):
         res = self.send_head()
         if res is None:
-            self.wfile.write(MINIMAL_PNG)
+            if getattr(self, 'is_image_request', False):
+                self.wfile.write(MINIMAL_PNG)
         else:
             if res:
                 self.copyfile(res, self.wfile)

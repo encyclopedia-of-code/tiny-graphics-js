@@ -1,11 +1,17 @@
-
 Does the server.py serve missing .js files (ie. invalid scene imports) as .png instead?
+
+Make unit tester page for shapes.
+Make transforms demo.
+Make cover demo.
+Update readme.
+Update wiki.
 
 Performance issue with widgets; overhaul them.
 
 
 Firefox:
   Corrupt image warning on 5 of my random PBR files.
+      Do they at least draw?
   Firefox buttons render with different shadows and a pixel more of padding, throwing off alignment in panels.
 
 UBOs cannot handle type "array of primitive".  
