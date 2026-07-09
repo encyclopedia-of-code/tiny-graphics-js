@@ -2,17 +2,14 @@ import argparse
 import http.server
 import socketserver
 import os
+import base64
 
 parser = argparse.ArgumentParser()
 parser.add_argument("port", nargs="?", type=int, default=8000, help="Port to serve on (default: 8000)")
 args = parser.parse_args()
 
-
-MINIMAL_PNG = (
-    b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR'
-    b'\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89'
-    b'\x00\x00\x00\nIDATx\xda\x63\x00\x01\x00\x00\x05\x00\x01'
-    b'\x0d\n\x2d\xb4\x00\x00\x00\x00IEND\xaeB`\x82'
+MINIMAL_PNG = base64.b64decode(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='
 )
 
 class CustomHandler(http.server.SimpleHTTPRequestHandler):

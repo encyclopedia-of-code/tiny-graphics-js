@@ -336,8 +336,6 @@ export class Component {
       static initialize_CSS (classType, rules) {
           if (Component.types_used_before.has (classType))
               return;
-
-          if (document.styleSheets.length === 0) document.head.appendChild (document.createElement ("style"));
           for (const r of rules) document.styleSheets[ document.styleSheets.length - 1 ].insertRule (r, 0);
           Component.types_used_before.add (classType);
       }

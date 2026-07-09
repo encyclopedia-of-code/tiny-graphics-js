@@ -1,5 +1,3 @@
-Does the server.py serve missing .js files (ie. invalid scene imports) as .png instead?
-
 Make unit tester page for shapes.
 Make transforms demo.
 Make cover demo.
@@ -8,18 +6,14 @@ Update wiki.
 
 Performance issue with widgets; overhaul them.
 
-
-Firefox:
-  Corrupt image warning on 5 of my random PBR files.
-      Do they at least draw?
-  Firefox buttons render with different shadows and a pixel more of padding, throwing off alignment in panels.
-
-UBOs cannot handle type "array of primitive".  
+UBOs cannot handle type "array of primitive".
   This happens because offsets are not collected for each unique index, even though "array of non-primitive" (nested) items are supported.
 
-Feature needed or not:  Shaders being hot re-loaded from their respective file, compiled, and replacing the program / references / metadata in their original Shader object.  
-    This would be for users not wanting to stop/re-run their whole scene to see the change.
+Possible features?
+  Shaders being hot re-loaded from their respective file, compiled, and replacing the program / references / metadata in their original Shader object.
+      This would be for users not wanting to stop/re-run their whole scene to see the change.
 
+  Error widget that only opens when errors are in the console
 
 
 done:
@@ -60,3 +54,9 @@ Consider a better shader error reporter, throwing like this way:
       throw `Vertex shader compile error: ${log}\n${vertex_src}`;
     }
 
+Does the server.py serve missing .js files (ie. invalid scene imports) as .png instead?
+
+Firefox:
+  Corrupt image warning on 5 of my random PBR files.
+      Do they at least draw?
+  Firefox buttons render with different shadows and a pixel more of padding, throwing off alignment in panels.

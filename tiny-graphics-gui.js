@@ -21,8 +21,7 @@ export class Controls_Widget {
                                                box-shadow: 5px 10px 16px 0px rgba(0,0,0,0.2) inset; border-radius:10px }",
                          ".dropdown-content a { color: black; padding: 4px 4px; display: block }",
                          ".dropdown a:hover { background: #f1f1f1 }",
-                         ".controls-widget button { background: #4C9F50; color: white; padding: 6px; border-radius:9px; \
-                                                   box-shadow: 4px 6px 16px 0px rgba(0,0,0,0.3); transition: background .3s, transform .3s }",
+                         ".controls-widget button { background: #4C9F50; color: white; margin: 2px; padding: 6px; border: none; box-shadow: 1px 1px 1px 0 #999999, inset 0 1px 0 rgba(255,255,255,0.3), inset 0 -2px 0 rgba(0,0,0,0.2), 4px 6px 16px 0px rgba(0,0,0,0.3); border-radius:9px; transition: background .3s, transform .3s }",
                          ".controls-widget button:hover, button:focus { transform: scale(1.3); color:gold }",
                          ".link { text-decoration:underline; cursor: pointer }",
                          ".show { transform: scaleY(1); height:200px; overflow:auto }",
