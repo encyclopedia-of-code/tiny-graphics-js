@@ -39,7 +39,7 @@ export class Instanced_Cubes_Demo extends Renderer {
     this.state.samplers.set("texture_array", this.state.materials.texture_array );
     this.state.materials.set("gold", { textured_roughness_amount: .8 });
 
-    this.state.shader = new defs.PBR_Shader (LightArray.NUM_LIGHTS, Materials.NUM_MATERIALS, {has_shadows: false, has_textures: true});
+    this.state.shader = new defs.PBR_Shader (2, Materials.NUM_MATERIALS, {has_shadows: false, has_textures: true});
     this.state.lightArray = new defs.LightArray({ambient: .01, lights:[
            {direction_or_position: matvec([-3.0, 10.0, 0.0, 0.0]),
              color: matvec([1.0, 0.7, 0.7]), diffuse: 1.0, specular: 1.0, attenuation_factor: 0.0001},

@@ -4,7 +4,6 @@ import { MatVec, matvec, RenderListItem, Shape, Component, Renderer } from './co
 import { Camera, LightArray, Materials } from './common.js';
 
 export class Parametric_Surfaces extends Renderer {
-  num_sections = 7;
   init() {
       super.init();
 
@@ -12,7 +11,7 @@ export class Parametric_Surfaces extends Renderer {
 
       this.state.materials = new Materials( materials );
       this.state.samplers.set("texture_array", this.state.materials.texture_array );
-      this.state.shader = new defs.PBR_Shader (LightArray.NUM_Lights, Materials.NUM_MATERIALS, {has_shadows: false, has_textures: true});
+      this.state.shader = new defs.PBR_Shader (1, Materials.NUM_MATERIALS, {has_shadows: false, has_textures: true});
 
       this.state.materials.set("rgb", { fallback_roughness: .2 });
       this.state.materials.set("rgb", { fallback_metallicity: .2 });
@@ -37,9 +36,10 @@ export class Parametric_Surfaces extends Renderer {
       const rules = [ `.documentation-big { width:1030px; padding:0 25px; font-size: 29px; font-family: Arial` ];
       Component.initialize_CSS( Parametric_Surfaces, rules );
 
-      // TODO:  Should a loop like below exist in the core library, to loop through all document_children and call their render_layout()?
-
-      for( let i = 0; i < this.num_sections; i++ ) {
+      // TODO:  Refactor a build_section() into the core library?
+      // for( let i of [ 0, 1, 2, 3, 4, 5, 6 ] )
+      //   this.build_section(i);
+      for( let i of [ 0, 1, 2, 3, 4, 5, 6 ] ) {
         const inner_div = div.appendChild( document.createElement( "div" ) );
         this[ "region_" + i ] = inner_div
 
@@ -122,14 +122,14 @@ export class Parametric_Surfaces_Section extends Renderer {
     {
       this.div = div;
       div.className = "documentation_treenode";
-                                                        // Fit the existing document content to a fixed size:
+      // Fit the existing document content to a fixed size:
       div.style.margin = "auto";
       div.style.width = "1080px";
 
       this.document_region = div.appendChild( document.createElement( "div" ) );
       this.document_region.classList.add( "documentation", "documentation-big" );
       this[ "explain_section_" + this.section_index ]();
-                                                        // The next div down will hold a canvas and/or related interactive areas.
+      // The next div down will hold a canvas and/or related interactive areas.
       this.program_stuff = div.appendChild( document.createElement( "div" ) );
 
       const defaults = { show_canvas: true,  make_controls: true,
@@ -145,7 +145,7 @@ export class Parametric_Surfaces_Section extends Renderer {
 
       this.make_context( canvas, undefined, [ 1080,300 ] );
 
-                                      // Start WebGL main loop - render() will re-queue itself for continuous calls.
+      // Start WebGL main loop - render() will re-queue itself for continuous calls.
       this.event = window.requestAnimFrame( this.frame_advance.bind( this ) );
 
       this.embedded_code_nav_area = this.program_stuff.appendChild( document.createElement( "div" ) );

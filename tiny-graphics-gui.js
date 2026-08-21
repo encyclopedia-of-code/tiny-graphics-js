@@ -194,10 +194,11 @@ export class Code_Widget {
           sceneManifest.main_scene_name,
           ...sceneManifest.additional_scene_names
         ];
-        const sceneDefs = await Promise.all(sceneNames.map(sceneManifest.load_scene));
+        const modules = await Promise.all(sceneNames.map(sceneManifest.load_scenes))
+        const sceneDefs = modules.reduce( (acc, x) => { acc = { ...acc, ...x }; return acc; }, {});
         return {
           ...commonModule,
-          ...Object.fromEntries(sceneNames.map((name, i) => [name, sceneDefs[i]]))
+          ...sceneDefs
         };
       }
       build_reader (element, main_scene, definitions) {     // (Internal helper function)

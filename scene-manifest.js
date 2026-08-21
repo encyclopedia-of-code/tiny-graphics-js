@@ -4,15 +4,20 @@ const scene_list = [
   {name: "Instanced_Cubes_Demo", path: "./examples/instancing-demo.js"},
   {name: "Inertia_Demo", path: "./examples/collisions-demo.js"},
   {name: "Parametric_Surfaces", path: "./examples/parametric-surfaces.js"},
-  {name: "Ephemeral_Demo", path: "./examples/ephemeral/ephemeral-demo.js"},
+  {name: "Ephemeral_Demo", path: "./examples/ephemeral/ephemeral-demos.js"},
   {name: "Firefox_Test", path: "./examples/ephemeral/firefox-test.js"},
 ];
 
-export async function load_scene(name) {
+export async function load_scenes(name) {
   const entry = scene_list.find( s => s.name === name );
   if (!entry) throw new Error("Scene not found");
-  const definition = await import( entry.path );
-  return definition[name];
+  const module = await import( entry.path );
+  return module;
+}
+
+export async function load_scene(name) {
+  const module = await load_scenes(name);
+  return module[name];
 }
 
 const urlParams = new URLSearchParams(window.location.search);

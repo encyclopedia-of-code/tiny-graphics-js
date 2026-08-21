@@ -1,13 +1,21 @@
 Make unit tester page for shapes.
+Make everything dark mode, wtf
 Make transforms demo.
 Make cover demo.
 Update readme.
 Update wiki.
 
 Performance issue with widgets; overhaul them.
+  Goals:
+    More standard way of propagating state to live strings
+    Borrow design from React and its successors for future-proofing
+    Support all widget types
+    Keep simplicity
+
 
 UBOs cannot handle type "array of primitive".
   This happens because offsets are not collected for each unique index, even though "array of non-primitive" (nested) items are supported.
+    It should be easy to infer these offsets without excessive calls.
 
 Possible features?
   Shaders being hot re-loaded from their respective file, compiled, and replacing the program / references / metadata in their original Shader object.

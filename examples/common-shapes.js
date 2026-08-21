@@ -3,15 +3,7 @@ import { MatVec, matvec, Shape, Shader, Component } from '../tiny-graphics.js';
 import { Geometry } from './common.js';
 
 export class Triangle extends Shape {
-      // **Triangle** The simplest possible 2D Shape – one triangle.  It stores 3 corner vertices, each with sufficient data to shade them.
-
       init () {
-          // Multiple data fields live at our triangle's corner points, besides just a position.  We will describe one "vertex" as the combination of a position, a normal vector, and lastly a coordinate in texture image space in case a texture image is applied.
-
-          // Vertex positions: the three point locations of an imaginary triangle.
-          // "Normal" vectors:  Vectors that point away from the triangle face.  They're needed so the graphics engine can know if the shape is pointed at light or not, and then color it accordingly.
-          // Texture coordinates: Points in the seperate 2D X/Y pixel space belonging to any 2D images we might like to paint the shape with.
-
           this.vertices[0] = { position: matvec([0, 0, 0]),
                                normal: matvec([0, 0, 1]),
                                texture_coord: matvec([0, 0]) };
@@ -24,20 +16,13 @@ export class Triangle extends Shape {
                                normal: matvec([0, 0, 1]),
                                texture_coord: matvec([0, 1]) };
 
-          // Next, describe how to connect whole triangles out of individual vertices.  Say a list of indices of vertex entries in your desired order. Every three indices in "this.indices" traces out one triangle.
-          this.indices              = [0, 1, 2];
+          this.indices = [0, 1, 2];
       }
   };
 
 
 export class Square extends Shape {
-      // **Square** demonstrates two triangles that share vertices.  On any planar surface, the
-      // interior edges don't make any important seams.  In these cases there's no reason not
-      // to re-use data of the common vertices between triangles.  This makes all the vertex
-      // arrays (position, normals, etc) smaller and more cache friendly.
       init () {
-          // Specify the 4 square corner locations, and match those up with normal vectors.
-          // Arrange the vertices into a square shape in texture space too.
           this.vertices[0] = { position: matvec([-1, -1, 0]), normal: matvec([0, 0, 1]), tangent: matvec([1, 0, 0]),
                                texture_coord: matvec([0, 0]) };
           this.vertices[1] = { position: matvec([ 1, -1, 0]), normal: matvec([0, 0, 1]), tangent: matvec([1, 0, 0]),
@@ -48,18 +33,14 @@ export class Square extends Shape {
                                texture_coord: matvec([1, 1]) };
 
           // Use two triangles this time, indexing into four distinct vertices:
-          this.indices.push (0, 1, 2, 1, 3, 2);
+          this.indices = [ 0, 1, 2, 1, 3, 2 ];
       }
   };
 
 export class Tetrahedron extends Shape {
-      // **Tetrahedron** demonstrates flat vs smooth shading (a boolean argument selects
-      // which one). It is also our first 3D, non-planar shape. Four triangles share
-      // corners with each other. Unless we store duplicate points at each corner
-      // (storing the same position at each, but different normal vectors), the lighting
-      // will look "off". To get crisp seams at the edges we need the repeats.
-      static a = 1 / Math.sqrt(3);
       init(using_flat_shading) {
+          const a = 1 / Math.sqrt(3);
+
           if (!using_flat_shading) {
               // Method 1: A tetrahedron with shared vertices. Compact, performs better,
               // but can't produce flat shading or discontinuous seams in textures.
